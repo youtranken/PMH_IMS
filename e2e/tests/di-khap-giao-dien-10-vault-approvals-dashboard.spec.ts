@@ -510,15 +510,15 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * Ba câu bài này hỏi, không câu nào bài kia hỏi được:
    *   1. Thanh tab có ĐỦ BA ngăn, và ngăn "Chờ duyệt" có đếm số.
    *   2. Phiếu treo hiện đủ thứ người duyệt cần để QUYẾT (ai xin, lúc nào, lý do, đối tượng,
-   *      xin bao lâu) và có ĐÚNG hai nút. Một nút thứ ba mọc ra ở đây — "Duyệt nhanh", "Duyệt
-   *      tất cả" — là một quyết định an ninh, không phải một cải tiến giao diện.
+   *      xin bao lâu, mã đang gửi tới ai) và có ĐÚNG một nút: Từ chối. Q-30 bỏ nút Duyệt — một
+   *      nút Duyệt mọc lại ở đây là một quyết định an ninh, không phải một cải tiến giao diện.
    *   3. Nút Xuất Excel CHỈ ở tab Nhật ký. File luôn là toàn bộ lịch sử, nên để nó ở tab "Chờ
    *      duyệt" là người đang xem 1 phiếu bấm Xuất và im lặng nhận cả kho.
    *
    * Phiếu treo dựng bằng `page.request` từ một trình duyệt thứ hai của Member: điều đang kiểm
    * là PHÒNG CÓ GÌ, không phải nghiệp vụ duyệt.
    */
-  test('Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút', async ({
+  test('Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và chỉ có nút Từ chối', async ({
     page,
     browser,
   }) => {
@@ -551,7 +551,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
       const asked = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: await writeHeaders(memberPage),
-        data: { ownerType: 'device', ownerId: deviceId, reason, hours: 4 },
+        data: { ownerType: 'device', ownerId: deviceId, reason, hours: 4, approver: E2E_SA.email },
       });
       expect(asked.status(), 'không dựng được phiếu treo thì cả bài không có gì để soi').toBe(201);
     } finally {
@@ -618,9 +618,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     expect(
       await panel.getByRole('button').allTextContents(),
-      'phiếu treo phải có ĐÚNG hai nút: Từ chối (trái) và Duyệt (phải, vùng ngón cái). Một nút ' +
-        'thứ ba ở đây ("duyệt tất cả") là một quyết định an ninh, không phải một cải tiến giao diện',
-    ).toEqual(['Từ chối', 'Duyệt']);
+      'phiếu treo chỉ có Từ chối (Q-30): đồng ý là đọc mã trong thư cho người xin, không bấm trong IMS',
+    ).toEqual(['Từ chối']);
+    await expect(panel.getByText(`Chờ người xin nhập mã đã gửi tới ${E2E_SA.email}.`)).toBeVisible();
 
     /* ---- Nút Xuất Excel CHỈ ở ngăn Nhật ký ---- */
 
@@ -1060,27 +1060,24 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   });
 
   /* ================================================================== *
-   * BÀI 6 — Bên trong hai hộp quyết định và hộp gán quyền hàng loạt
+   * BÀI 6 — Bên trong hộp Từ chối và hộp gán quyền hàng loạt
    * ================================================================== */
 
   /*
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * Hộp "Duyệt" và hộp "Từ chối" nhìn ngoài giống nhau, và đó chính là bẫy: chúng KHÔNG được
-   * giống nhau. Hộp Duyệt có ô SỐ GIỜ và ô đó sửa được — người duyệt nhìn lý do rồi quyết,
-   * chứ không phải bấm đồng ý với con số người xin tự đặt ("xin 24 giờ để đổi một cái mật
-   * khẩu" thì duyệt 2 giờ là đủ). Hộp Từ chối KHÔNG được có ô đó: cấp giờ cho một phiếu bị từ
-   * chối là vô nghĩa, và một ô thừa ở đó là một cú bấm nhầm chờ sẵn.
+   * Q-30 bỏ hộp Duyệt: người duyệt đồng ý bằng cách đọc mã trong thư cho người xin. Hộp còn lại
+   * trên phiếu treo là Từ chối, và nó KHÔNG được có ô số giờ: cấp giờ cho một phiếu bị từ chối là
+   * vô nghĩa, và một ô thừa cạnh nút đỏ là một cú bấm nhầm chờ sẵn.
    *
    * Hộp gán hàng loạt có một luật âm không kém quan trọng: danh sách người bên trong CHỈ gồm
    * Member. SA/Admin xem được mọi secret theo VAI, nên gán thêm cho họ là một dòng quyền không
    * có tác dụng gì — và người gán sẽ tưởng là đã siết xong.
    *
-   * ĐỎ KHI: hai hộp quyết định trôi về giống nhau; ô "Cấp trong bao lâu" bị khóa hoặc biến
-   * mất; hộp gán hàng loạt liệt kê cả SA/Admin; hoặc gửi hộp gán khi chưa chọn ai mà nó im
-   * lặng đóng lại.
+   * ĐỎ KHI: nút Duyệt mọc lại; hộp Từ chối có thêm ô; hộp gán hàng loạt liệt kê cả SA/Admin;
+   * hoặc gửi hộp gán khi chưa chọn ai mà nó im lặng đóng lại.
    */
-  test('Bên trong hộp Duyệt, hộp Từ chối và hộp gán quyền hàng loạt', async ({ page, browser }) => {
+  test('Bên trong hộp Từ chối và hộp gán quyền hàng loạt', async ({ page, browser }) => {
     // Hai luồng đăng nhập lần đầu (SA ở đây, Member ở trình duyệt thứ hai).
     test.setTimeout(150_000);
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
@@ -1110,6 +1107,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
           ownerId: deviceId,
           reason: `E2E ${stamp}: cần vào cấu hình switch`,
           hours: 6,
+          approver: E2E_SA.email,
         },
       });
       expect(asked.status(), 'không dựng được phiếu treo thì không có hộp nào để mở').toBe(201);
@@ -1117,47 +1115,13 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       await memberCtx.close();
     }
 
-    /* ---------- HỘP "DUYỆT" ---------- */
-
     await page.goto('/approvals');
-    await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).click();
-
-    const approve = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
-    await expect(approve).toBeVisible();
     await expect(
-      approve.getByText(E2E_MEMBER.email),
-      'thân hộp phải nêu đích danh người xin — người trực đêm mở ba phiếu liền là quyết nhầm phiếu',
-    ).toBeVisible();
+      page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }),
+      'Q-30: không còn nút Duyệt trong IMS',
+    ).toHaveCount(0);
 
-    expect(
-      await textboxLabels(approve),
-      'hộp Duyệt phải có ĐÚNG hai ô: số giờ cấp và ghi chú cho người xin',
-    ).toEqual(['Cấp trong bao lâu (giờ)', 'Ghi chú cho người xin']);
-    await expect(
-      approve.getByLabel('Cấp trong bao lâu (giờ)'),
-      'ô giờ điền sẵn con số NGƯỜI XIN đề nghị — người duyệt nhìn lý do rồi mới quyết',
-    ).toHaveValue('6');
-    await expect(
-      approve.getByLabel('Cấp trong bao lâu (giờ)'),
-      'và nó phải SỬA ĐƯỢC: khóa lại là biến người duyệt thành cái nút "đồng ý" cho con số ' +
-        'người xin tự đặt',
-    ).toBeEditable();
-    await expect(
-      approve.getByText(
-        'Rút ngắn được, tối đa 6 giờ như người xin.',
-      ),
-      'và phải nói ra là sửa được (chỉ rút ngắn, không cấp quá số xin), không để người duyệt tự đoán',
-    ).toBeVisible();
-    expect(
-      await approve.getByTestId('dialog-footer').getByRole('button').allTextContents(),
-      'chân hộp Duyệt: Hủy rồi mới tới Duyệt — thứ tự này giống nhau ở mọi hộp trong app. Nút ' +
-        'Duyệt ghi rõ số giờ sẽ cấp, để không ai cấp nhầm 6 giờ khi định cấp 1',
-    ).toEqual(['Hủy', 'Duyệt 6 giờ']);
-
-    await approve.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(approve, 'nút ✕ phải đóng được hộp Duyệt mà không quyết gì cả').toBeHidden();
-
-    /* ---------- HỘP "TỪ CHỐI" — phải KHÁC hộp Duyệt ---------- */
+    /* ---------- HỘP "TỪ CHỐI" ---------- */
 
     await page.getByRole('tabpanel').getByRole('button', { name: 'Từ chối', exact: true }).click();
     const deny = page.getByRole('dialog', { name: 'Từ chối yêu cầu', exact: true });
@@ -1177,8 +1141,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.keyboard.press('Escape');
     await expect(deny, 'Esc phải đóng được hộp Từ chối').toBeHidden();
     await expect(
-      page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }),
-      'đóng hộp = KHÔNG quyết: phiếu phải còn treo nguyên với đủ nút',
+      page.getByRole('tabpanel').getByRole('button', { name: 'Từ chối', exact: true }),
+      'đóng hộp = KHÔNG quyết: phiếu phải còn treo nguyên',
     ).toBeVisible();
 
     /* ---------- HỘP GÁN QUYỀN HÀNG LOẠT ---------- */

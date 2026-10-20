@@ -20,6 +20,7 @@ import {
   uniqueStamp,
   openNavGroup,
   stepUpViaApi,
+  approveBreakGlassByCode,
 } from './helpers';
 
 /**
@@ -440,17 +441,19 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     const memberPage = await memberCtx.newPage();
     await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const memberHeaders = await writeHeaders(memberPage);
+    // Q-30: người xin chọn đúng Quản trị viên này — chỉ họ nhận thư mang mã.
+    const ids: Record<string, string> = {};
     for (const [ownerId, reason] of [
       [deviceA, reasonA],
       [deviceB, reasonB],
     ] as const) {
       const sent = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: memberHeaders,
-        data: { ownerType: 'device', ownerId, reason, hours: 4 },
+        data: { ownerType: 'device', ownerId, reason, hours: 4, approver: ADMIN_EMAIL },
       });
       expect(sent.status(), `Member phải gửi được phiếu: ${reason}`).toBe(201);
+      ids[reason] = ((await sent.json()) as { id: string }).id;
     }
-    await memberCtx.close();
 
     // ===== Quản trị viên: xử phiếu bằng tay =====
     await stepUpViaApi(page, await firstLogin(page, { email: ADMIN_EMAIL, password: tempPassword }));
@@ -485,12 +488,11 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      */
     await expect(page.getByText(rejectedReason)).toHaveCount(0);
 
-    // --- DUYỆT phiếu còn lại (giờ chỉ còn một, không cần `.first()`), cấp 1 giờ.
-    await page.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    const approveDialog = page.getByRole('dialog');
-    await approveDialog.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('1');
-    await approveDialog.getByRole('button', { name: 'Duyệt 1 giờ', exact: true }).click();
-    await expect(page.getByText('Đã duyệt.')).toBeVisible();
+    // --- DUYỆT phiếu còn lại (Q-30): không có nút Duyệt; người xin nhập mã Quản trị viên đọc cho.
+    await expect(page.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0);
+    await approveBreakGlassByCode(memberPage, ids[approvedReason], ADMIN_EMAIL);
+    await memberCtx.close();
+    await page.reload();
 
     // Hàng chờ phải sạch — cả hai phiếu đã có người quyết.
     await expect(page.getByText('Không có yêu cầu nào đang chờ.')).toBeVisible();
@@ -551,6 +553,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     expect(
       sql(`SELECT decided_by FROM approval WHERE reason = '${rejectedReason}'`),
       'người quyết phải là chính Quản trị viên vừa bấm — nhật ký phải chỉ đúng người',
+    ).toBe(ADMIN_EMAIL);
+    expect(
+      sql(`SELECT decided_by FROM approval WHERE reason = '${approvedReason}'`),
+      'duyệt bằng mã: người duyệt là người nhận mã',
     ).toBe(ADMIN_EMAIL);
   });
 });

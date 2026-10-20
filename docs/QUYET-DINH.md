@@ -55,10 +55,8 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 
 - Break-glass và phiếu ISO (Epic 9) **dùng chung** bảng `approval`/`approval_history`: ai xin, lý do,
   ai duyệt, lúc nào, hạn, lịch sử. Nghiệp vụ của từng loại vẫn tách biệt (AD-6).
-- **Break-glass:** duyệt điện tử. SA bấm nút trong mail, đi tới màn duyệt, đăng nhập và qua TOTP,
-  rồi bấm Duyệt. Hệ thống ghi họ tên và thời điểm. **Không cần chữ ký.**
-  - Link trong mail **không** tự duyệt khi chưa đăng nhập. Nếu làm vậy, ai có mail là mở được két.
-  - Cải tiến nhỏ: link nên trỏ thẳng tới yêu cầu cụ thể thay vì cả màn duyệt.
+- **Break-glass:** ~~duyệt điện tử: SA bấm nút trong mail, đăng nhập, qua TOTP rồi bấm Duyệt~~ —
+  **thay bằng duyệt bằng mã từ 20/10/2026, xem Q-30.** **Không cần chữ ký.**
 - **Phiếu ISO (Epic 9):** in đúng mẫu có ô ký tay, ký sống, scan rồi đính kèm vào phiếu. Phiếu đã
   duyệt thì khoá nội dung. Họ tên người lập và người duyệt được in sẵn trên mẫu.
 - Mỗi lần mở két ghi `audit_log` kèm `grantId`. Bảng `approval` chỉ giữ vòng đời của yêu cầu.
@@ -1277,6 +1275,29 @@ IT dùng hằng ngày.
   trị SĐT, ngày sinh, họ tên, mã nhân viên. Lý do: `audit_log` chỉ-thêm, giữ vĩnh viễn, nên giá trị
   ghi vào đó không bao giờ xoá được. Giới hạn: các dòng ghi trước thay đổi này vẫn còn giá trị cũ, vì
   bảng chỉ-thêm không sửa được; muốn xoá phải làm theo quy trình lưu trữ năm cũ của audit.
+
+### Q-30 · "Xin mở két" duyệt bằng mã gửi qua mail (20/10/2026, chủ dự án chốt)
+
+Sửa Q-05 (vế break-glass). Lý do: IMS chỉ chạy trong LAN, không mở ra Internet, nên người duyệt ở
+ngoài không vào IMS bấm Duyệt được. Chủ dự án chấp nhận rủi ro vì người xin đã phải đăng nhập bằng
+mật khẩu + mã 2 lớp, còn hộp mail SA/Admin có 2FA của Google Workspace.
+
+- **Người xin chọn đúng một người duyệt** (SA/Admin đang hoạt động, không phải chính mình) khi gửi
+  yêu cầu. Chỉ người đó nhận thư.
+- **Thư mang mã 6 số ngẫu nhiên**, cùng đối tượng · lý do · số giờ xin. Người duyệt đồng ý thì đọc
+  mã cho người xin (gọi điện, gặp trực tiếp); không đồng ý thì không báo mã.
+- **Người xin nhập mã trong IMS = được duyệt.** Số giờ cấp đúng bằng số giờ xin (kẹp theo
+  `breakglass.max_grant_hours`). Quyền gắn ngay vào phiên đã nhập mã (Q-15); bước Xem vẫn đòi mã
+  2 lớp như cũ. Nhật ký ghi người duyệt là người nhận mã, kèm "duyệt bằng mã".
+- **Mã sống 10 phút, viết cố định trong code, không đưa vào `system_config`.** Đây là ngoại lệ có
+  chủ ý của AD-11: không ai nới được hạn mã từ màn Tham số.
+- **"Gửi lại mã" tối đa 3 lần** cho một yêu cầu. Mã mới huỷ mã cũ. Quá 3 lần thì gửi yêu cầu mới.
+- **Mã dùng một lần**, chỉ người xin nhập được, chỉ lưu dạng băm (HMAC). **Sai 5 lần** (cộng dồn cả
+  các lần gửi lại) thì yêu cầu bị huỷ.
+- **Bỏ nút Duyệt trong IMS.** Người duyệt vẫn **Từ chối** được trong IMS (khi đang ở LAN) và vẫn
+  **Thu hồi sớm** quyền đã cấp. Người xin vẫn tự rút yêu cầu và tự trả quyền.
+- Yêu cầu chờ quá `breakglass.pending_expire_hours` vẫn tự hết hạn (Q-15). Thư nhắc định kỳ
+  (`approval.reminder_hours`) không gửi cho yêu cầu mở két nữa, vì người xin tự bấm "Gửi lại mã".
 
 ### Q-09 · Tài liệu
 

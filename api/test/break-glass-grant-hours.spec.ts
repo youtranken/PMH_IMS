@@ -14,22 +14,25 @@ import type { VaultService } from '../src/modules/vault/vault.service';
 import type { UsersApiService } from '../src/modules/users/users.api';
 import type { AuthApiService } from '../src/modules/auth/auth.api';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { approveByCode, breakGlassCodes } from './break-glass-codes';
+import type { MailContentRegistry } from '../src/common/mail-content.registry';
 
 /**
- * Số giờ cấp khi DUYỆT break-glass không được vượt số giờ người ta XIN.
+ * Duyệt bằng mã (Q-30) cấp ĐÚNG số giờ người ta xin, kẹp theo trần `breakglass.max_grant_hours`.
  *
- * Người duyệt được RÚT NGẮN (nhìn lý do rồi quyết), nhưng cấp dài hơn yêu cầu là mở két lâu hơn
- * chính người cần nó nghĩ là cần — và nhật ký FR-025 in ra một grant "đã duyệt" mà người xin
- * chưa từng xin. Trần cấu hình `breakglass.max_grant_hours` vẫn là trần thứ hai.
+ * Người duyệt không còn ô gõ giờ: đọc mã là đồng ý với số giờ ghi trong thư. Phiếu xin trước khi
+ * trần bị hạ vẫn chỉ được cấp tới trần hiện tại — trần đọc lúc nhập mã, không lúc xin.
  */
 
 const TEST_TIMEOUT = 120_000;
 const MAX_GRANT_HOURS = 24;
 
-describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hình', () => {
+describe('Break-glass: số giờ cấp = số giờ xin, kẹp theo trần cấu hình', () => {
   let scratch: ScratchDb;
   let approvals: ApprovalsService;
   let breakGlass: BreakGlassService;
+  let contents: MailContentRegistry;
+  const SESSION = randomUUID();
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_bg_grant_hours');
@@ -44,22 +47,32 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
           : key === 'breakGlassPendingExpireHours'
             ? Promise.resolve(8)
             : Promise.reject(new Error(`khoá không ngờ tới: ${key}`)),
+      getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),
     } as unknown as SystemConfigService;
+    const users = {
+      recipientsByRole: () => Promise.resolve([{ email: 'duyet@qa.test', fullName: 'Duyệt' }]),
+      namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e, e]))),
+    } as unknown as UsersApiService;
+    const approvalsApi = new ApprovalsApiService(approvals);
+    const outbox = new OutboxService(scratch.db, config, {} as SweepService);
+    const built = breakGlassCodes({ db: scratch.db, outbox, approvals: approvalsApi, kinds, users, config });
+    contents = built.contents;
     breakGlass = new BreakGlassService(
       scratch.db,
       kinds,
-      new ApprovalsApiService(approvals),
-      {} as AccessListService,
+      approvalsApi,
+      { tierFor: () => Promise.resolve('needs_approval') } as unknown as AccessListService,
       config,
-      new OutboxService(scratch.db, config, {} as SweepService),
-      {} as VaultOwnersService,
+      outbox,
+      { describe: () => Promise.resolve({ orphan: true }) } as unknown as VaultOwnersService,
       {} as VaultService,
-      {} as UsersApiService,
+      users,
       {
         isSessionAlive: () => Promise.resolve(true),
         aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
       } as unknown as AuthApiService,
       { register: () => undefined } as unknown as SweepService,
+      built.codes,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);
@@ -68,18 +81,22 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
     await scratch?.drop();
   }, TEST_TIMEOUT);
 
-  /** Phiếu dựng thẳng trong DB với số giờ xin tuỳ ý — kể cả phiếu cũ vượt trần hiện tại. */
-  function request(hours: number) {
-    return scratch.db.transaction((tx) =>
-      approvals.createWithin(tx, {
-        kind: 'break_glass',
-        requester: `xin-${randomUUID().slice(0, 8)}@qa.test`,
-        subjectType: 'device',
-        subjectId: randomUUID(),
-        reason: 'Sự cố lúc 2 giờ sáng',
-        payload: { hours },
-      }),
+  /**
+   * Phiếu qua đúng đường gửi; `storedHours` ghi đè số giờ trong phiếu để dựng phiếu cũ xin vượt
+   * trần hiện tại (trần bị hạ sau khi xin).
+   */
+  async function request(hours: number, storedHours?: number) {
+    const created = await breakGlass.request(
+      { email: `xin-${randomUUID().slice(0, 8)}@qa.test`, sessionId: SESSION },
+      { ownerType: 'device', ownerId: randomUUID(), reason: 'Sự cố lúc 2 giờ sáng', hours, approver: 'duyet@qa.test' },
     );
+    if (storedHours !== undefined) {
+      await scratch.pool.query(`UPDATE approval SET payload = jsonb_build_object('hours', $2::int) WHERE id = $1`, [
+        created.id,
+        storedHours,
+      ]);
+    }
+    return created;
   }
 
   async function grantedHours(id: string): Promise<number> {
@@ -92,26 +109,15 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
   }
 
   it.each([
-    ['người duyệt gõ nhiều hơn số xin → cấp đúng số xin', 4, 10, 4],
-    ['người duyệt rút ngắn → cấp số rút ngắn', 4, 2, 2],
-    ['không gõ → cấp số xin', 4, undefined, 4],
-    ['người duyệt gõ bằng số xin → giữ nguyên', 6, 6, 6],
-    [
-      'phiếu xin vượt trần (cấu hình hạ sau khi xin) → kẹp theo trần',
-      30,
-      undefined,
-      MAX_GRANT_HOURS,
-    ],
-    ['phiếu xin vượt trần, người duyệt gõ 40 → vẫn trần', 30, 40, MAX_GRANT_HOURS],
+    ['xin 4 giờ → cấp 4 giờ', 4, undefined, 4],
+    ['xin 6 giờ → cấp 6 giờ', 6, undefined, 6],
+    ['xin vượt trần lúc gửi → kẹp ngay lúc gửi', 30, undefined, MAX_GRANT_HOURS],
+    ['phiếu cũ ghi số giờ vượt trần hiện tại → kẹp theo trần lúc nhập mã', 4, 30, MAX_GRANT_HOURS],
   ])(
     '%s',
-    async (_label, asked, typed, expected) => {
-      const created = await request(asked);
-      await breakGlass.approve(
-        'duyet@qa.test',
-        created.id,
-        typed === undefined ? {} : { hours: typed },
-      );
+    async (_label, asked, stored, expected) => {
+      const created = await request(asked, stored);
+      await approveByCode(breakGlass, contents, { email: created.requester, sessionId: SESSION }, created.id);
       expect(await grantedHours(created.id)).toBe(expected);
     },
     TEST_TIMEOUT,

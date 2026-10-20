@@ -31,6 +31,7 @@ import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
 import { SecretDue } from '@/ui/secret-due';
 import { Chevron } from '@/ui/chevron';
+import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
 
 /*
  * Danh sách loại chủ thể nằm ở `lib/secret-owner-kinds.ts` — ở đó nó đứng cạnh
@@ -53,8 +54,11 @@ export interface AccessVerdict {
    * phiên đang xem. `canReveal` đã là `true` trong trường hợp này.
    */
   claimable?: { id: string; expiresAt: string | null } | null;
-  /** Số người duyệt được đã nhận thư báo phiếu đang treo — chỉ con số. */
-  notifiedApprovers?: number | null;
+  /**
+   * Phiếu đang treo (Q-30): người duyệt đã chọn, lượt gửi lại / lượt nhập còn lại, mã hiện hành
+   * còn bao nhiêu giây (`null` = thư chưa đi hoặc mã vừa bị thay).
+   */
+  pendingCode?: PendingCode | null;
   /** Giây còn lại của quyền (đang chạy hoặc chờ xem lần đầu), tính từ lúc duyệt — server tính (AD-6). */
   grantSecondsLeft?: number | null;
   /** `breakglass.pending_expire_hours` — phiếu treo quá chừng này thì tự hết hạn. */
@@ -67,11 +71,27 @@ export interface AccessVerdict {
   otherSessionHeld?: boolean;
 }
 
+export interface PendingCode {
+  approver: string;
+  approverName: string;
+  /** Người duyệt đã chọn còn là SA/Admin đang hoạt động; không thì mã không dùng được nữa. */
+  approverActive: boolean;
+  resendsLeft: number;
+  attemptsLeft: number;
+  codeSecondsLeft: number | null;
+}
+
 /**
  * Đang có phiếu treo thì hỏi lại verdict định kỳ: người xin đang ngồi chờ, và quyết định đến
  * từ máy người khác — không làm mới thì họ phải F5 mới biết đã được duyệt.
  */
 const PENDING_REFETCH_MS = 15_000;
+
+/**
+ * Thư mang mã chưa đi (Q-30): worker gửi trong vài giây, mà người xin đang cầm điện thoại chờ
+ * người duyệt đọc mã — 15 giây mới đổi sang "mã đã gửi tới …" thì họ tưởng hệ thống treo.
+ */
+const CODE_SENDING_REFETCH_MS = 3_000;
 
 export interface SecretMeta {
   id: string;
@@ -129,7 +149,13 @@ export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me:
       apiFetch<AccessVerdict>(
         `/api/v1/vault/secrets/verdict?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
       ),
-    refetchInterval: (query) => (query.state.data?.pending ? PENDING_REFETCH_MS : false),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data?.pending) return false;
+      return data.pendingCode?.approverActive && data.pendingCode.codeSecondsLeft === null
+        ? CODE_SENDING_REFETCH_MS
+        : PENDING_REFETCH_MS;
+    },
   });
 
   const tier = verdict.data?.tier;
@@ -398,14 +424,21 @@ export function VaultPanel({
               ? ` ${t('vault.pendingExpiresIn', { hours: verdict.data.pendingExpireHours })}`
               : null}
           </p>
-          {/* Người xin ngồi chờ lúc 2 giờ sáng cần biết có ai được báo không — chỉ con số. */}
-          {typeof verdict.data.notifiedApprovers === 'number' ? (
-            <p>
-              {verdict.data.notifiedApprovers > 0
-                ? t('vault.pendingNotified', { count: verdict.data.notifiedApprovers })
-                : t('vault.pendingNoApprover')}
-            </p>
-          ) : null}
+          {/* Không có ô nhập mã thì phải nói vì sao — không thì người xin ngồi chờ một mã không
+              bao giờ tới (phiếu gửi trước Q-30, hoặc người duyệt vừa mất quyền duyệt). */}
+          {!verdict.data.pendingCode ? (
+            <p>{t('vault.pendingLegacy')}</p>
+          ) : !verdict.data.pendingCode.approverActive ? (
+            <p>{t('vault.pendingApproverGone', { name: verdict.data.pendingCode.approverName })}</p>
+          ) : (
+            <PendingCodeBox
+              approvalId={verdict.data.pending.id}
+              code={verdict.data.pendingCode}
+              receivedAt={verdict.dataUpdatedAt}
+              csrfToken={me.csrfToken}
+              onChanged={() => void refetchVerdict()}
+            />
+          )}
           <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
             <Link to={PATHS.approval(verdict.data.pending.id)}>{t('vault.pendingDetail')}</Link>
             <button
@@ -1123,6 +1156,115 @@ function RotateForm({
   );
 }
 
+/**
+ * Khung nhập mã duyệt của người xin (Q-30).
+ *
+ * Hạn mã đếm lùi từ con số server đưa, không tự tính theo đồng hồ máy (AD-6). Nút "Gửi lại mã"
+ * tắt khi hết lượt: bấm rồi mới bị từ chối là người xin đã gọi người duyệt thêm một lần vô ích.
+ * Sai mã thì xoá ô và nói còn mấy lượt; mọi lỗi khác (hết hạn, bị huỷ, hết hạn chờ) đổi trạng
+ * thái phiếu nên hỏi lại verdict.
+ */
+function PendingCodeBox({
+  approvalId,
+  code,
+  receivedAt,
+  csrfToken,
+  onChanged,
+}: {
+  approvalId: string;
+  code: PendingCode;
+  /** Lúc nhận verdict — mốc của `codeSecondsLeft`. */
+  receivedAt: number;
+  csrfToken: string;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const actions = useBreakGlassActions(csrfToken);
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
+  const deadline = code.codeSecondsLeft === null ? null : receivedAt + code.codeSecondsLeft * 1000;
+  const now = useNow(1000, deadline !== null);
+  const left = deadline === null ? null : Math.max(0, Math.round((deadline - now) / 1000));
+  const name = code.approverName;
+
+  const submit = useOtpSubmit(async (typed: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await actions.submitCode(approvalId, typed);
+      toast({ message: t('vault.codeApproved') });
+      void actions.refresh();
+    } catch (err) {
+      setValue('');
+      setError(errorMessage(err));
+      if (errorCode(err) === 'BREAK_GLASS_CODE_WRONG') onChanged();
+      else void actions.refresh();
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  const resend = async () => {
+    setResending(true);
+    setError(null);
+    try {
+      await actions.resendCode(approvalId);
+      setValue('');
+      toast({ message: t('vault.codeResent', { name }) });
+      onChanged();
+    } catch (err) {
+      toast({ message: errorMessage(err), tone: 'error' });
+      onChanged();
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="form-grid" data-columns={1}>
+      <p>
+        {left === null
+          ? t('vault.pendingCodeSending', { name })
+          : left > 0
+            ? t('vault.pendingCodeTo', { name, left: leftText(left, t) })
+            : t('vault.pendingCodeExpired')}
+      </p>
+      <OtpInput
+        id={`bg-code-${approvalId}`}
+        label={t('vault.codeLabel')}
+        value={value}
+        onChange={setValue}
+        onComplete={(typed) => void submit(typed)}
+        autoFocus={false}
+        readOnly={busy}
+        error={error}
+        hint={t('vault.codeAttemptsLeft', { count: code.attemptsLeft })}
+      />
+      <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="btn sm primary"
+          disabled={busy || value.length !== 6}
+          onClick={() => void submit(value)}
+        >
+          {busy ? t('common.working') : t('vault.codeSubmit')}
+        </button>
+        <button
+          type="button"
+          className="btn sm"
+          disabled={resending || code.resendsLeft === 0}
+          onClick={() => void resend()}
+        >
+          {code.resendsLeft > 0 ? t('vault.codeResend', { count: code.resendsLeft }) : t('vault.codeResendNone')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** "3 giờ 52 phút" / "12 phút" / "45 giây" — đơn vị lớn nhất còn khác 0 quyết định cách nói. */
 function leftText(seconds: number, t: (key: string, options?: Record<string, unknown>) => string) {
   const parts = remainingParts(seconds);
@@ -1164,7 +1306,13 @@ function BreakGlassDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [hours, setHours] = useState('4');
-  const [error, setError] = useSubmitError([reason, hours]);
+  const [approver, setApprover] = useState('');
+  const [error, setError] = useSubmitError([reason, hours, approver]);
+  /* Danh sách chọn do server dựng (SA/Admin đang hoạt động trừ chính mình) — client không tự lọc vai. */
+  const approvers = useQuery({
+    queryKey: ['vault', 'break-glass', 'approvers'],
+    queryFn: () => apiFetch<{ email: string; name: string }[]>('/api/v1/vault/break-glass/approvers'),
+  });
   /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
   const askedHours = Number(hours.trim());
   const check = useFormErrors({
@@ -1172,6 +1320,7 @@ function BreakGlassDialog({
       (reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired')) ||
       secretTextRule(t, reason),
     hours: (!Number.isInteger(askedHours) || askedHours <= 0) && t('vault.requestHoursInvalid'),
+    approver: !approver && t('vault.requestApproverRequired'),
   });
 
   /* Server trả về PHIẾU vừa tạo — số giờ (đã kẹp theo trần) nằm ở `payload.hours`. */
@@ -1211,7 +1360,7 @@ function BreakGlassDialog({
           setError(null);
           if (!check.check()) return;
           send.mutate(
-            { ownerType, ownerId, reason: reason.trim(), hours: askedHours },
+            { ownerType, ownerId, reason: reason.trim(), hours: askedHours, approver },
             {
               onSuccess: (result) =>
                 onSent({ askedHours, grantedHours: result.payload?.hours ?? askedHours }),
@@ -1222,6 +1371,28 @@ function BreakGlassDialog({
       >
         <p className="muted">{t('vault.requestHint')}</p>
         <p className="muted">{t('vault.requestSessionNote')}</p>
+
+        <Field
+          label={t('vault.requestApprover')}
+          required
+          htmlFor="bg-approver"
+          error={check.error('approver')}
+          hint={
+            approvers.isSuccess && approvers.data.length === 0 ? t('vault.requestApproverNone') : undefined
+          }
+        >
+          <Select
+            id="bg-approver"
+            value={approver}
+            onChange={setApprover}
+            placeholder={t('vault.requestApproverPlaceholder')}
+            failed={approvers.isError}
+            options={(approvers.data ?? []).map((a) => ({
+              value: a.email,
+              label: a.name === a.email ? a.email : `${a.name} · ${a.email}`,
+            }))}
+          />
+        </Field>
 
         <Field
           label={t('vault.requestReason')}

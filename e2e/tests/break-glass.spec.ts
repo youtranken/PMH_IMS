@@ -2,6 +2,8 @@ import { execSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import {
   fillOtp,
+  approveBreakGlassByCode,
+  mailedApprovalCode,
   APP_ORIGIN,
   COMPOSE,
   E2E_MEMBER,
@@ -86,9 +88,10 @@ async function setUpAs(page: Page, stamp: string, tier: 'whitelist' | 'needs_app
 /** FR-023: ba tầng, xin–duyệt, và hiệu lực tính bằng đồng hồ (AD-6). */
 test.describe('Break-glass', () => {
   /**
-   * Kịch bản đầy đủ của AC: Member cần-duyệt → xin → SA duyệt → xem được → nhật ký ghi đủ.
+   * Kịch bản đầy đủ của AC: Member cần-duyệt → xin (chọn SA) → SA nhận mã → Member nhập mã →
+   * xem được → nhật ký ghi đủ (Q-30).
    */
-  test('đường hạnh phúc: xin → duyệt → xem được trong hạn, nhật ký ghi đủ', async ({
+  test('đường hạnh phúc: xin → nhập mã duyệt → xem được trong hạn, nhật ký ghi đủ', async ({
     page,
     browser,
   }) => {
@@ -126,11 +129,13 @@ test.describe('Break-glass', () => {
     const form = member.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('switch tầng 3 mất kết nối');
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('button', { name: /Người duyệt/ }).click();
+    await member.getByRole('option', { name: E2E_SA.email }).click();
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
     await expect(member.getByText('Đang chờ duyệt')).toBeVisible();
 
-    // --- SA duyệt, ở phiên của mình.
-    // DOM-06: nút trong thư mở `/approvals?id=<yêu cầu>` — yêu cầu đó lên đầu và được đánh dấu.
+    // --- SA: hàng chờ nói ai giữ mã, KHÔNG có nút Duyệt (Q-30).
+    // DOM-06: link `/approvals?id=<yêu cầu>` — yêu cầu đó lên đầu và được đánh dấu.
     const pending = (await (await page.request.get('/api/v1/vault/break-glass/pending')).json()) as {
       id: string;
       reason: string;
@@ -141,24 +146,19 @@ test.describe('Break-glass', () => {
     await expect(card).toContainText('switch tầng 3 mất kết nối');
     await expect(card).toHaveAttribute('aria-current', 'true');
     await expect(card.getByText('Yêu cầu trong thư')).toBeVisible();
-    await card.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    const decide = page.getByRole('dialog');
-    await decide.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('2');
-    await decide.getByRole('button', { name: 'Duyệt 2 giờ', exact: true }).click();
-    await expect(page.getByText('Đã duyệt')).toBeVisible();
+    await expect(card.getByText(`Chờ người xin nhập mã đã gửi tới ${E2E_SA.email}.`)).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0);
 
-    // --- Member, CÙNG phiên đã xin: giờ xem được, và mỗi lần xem vẫn phải gõ TOTP (4.2).
+    // --- Member, CÙNG phiên đã xin: nhập mã SA đọc cho, rồi xem — mỗi lần xem vẫn gõ TOTP (4.2).
+    await fillOtp(member, await mailedApprovalCode(requestId), 'Mã duyệt do người duyệt đọc cho bạn');
+    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
     expireStepUp(E2E_MEMBER.email);
-    await member.goto(`/devices/${deviceId}`);
-    await member.getByRole('tab', { name: 'Két sắt' }).click();
-    // Q-15: không có nút riêng — khung chỉ đường "bấm Xem, nhập mã 6 số".
-    await expect(member.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
 
     await member.getByRole('button', { name: 'Xem' }).click();
     await expect(member.getByRole('dialog', { name: 'Nhập mã 6 số để xem' })).toBeVisible();
     await fillOtp(member, await freshTotpCode(totpSecret));
     await expect(member.getByTestId('secret-value')).toHaveText(secretValue);
-    // Lần xem đầu vừa gắn quyền vào phiên này: khung chuyển sang quyền đang chạy.
+    // Nhập mã đã gắn quyền vào phiên này: khung là quyền đang chạy.
     await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
     await memberCtx.close();
 
@@ -211,16 +211,12 @@ test.describe('Break-glass', () => {
     const memberHeaders = { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN };
     const asked = await member.request.post('/api/v1/vault/break-glass', {
       headers: memberHeaders,
-      data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng', hours: 4 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng', hours: 4, approver: E2E_SA.email },
     });
     expect(asked.status()).toBe(201);
     const approvalId = ((await asked.json()) as { id: string }).id;
 
-    const saHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
-    await page.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
-      headers: saHeaders,
-      data: { hours: 4 },
-    });
+    await approveBreakGlassByCode(member, approvalId);
 
     // Vế đối chứng: còn hạn thì quyền MỞ — không có nó thì 403 bên dưới không chứng minh gì.
     const before = await member.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
@@ -275,6 +271,7 @@ test.describe('Break-glass', () => {
         ownerId: deviceId,
         reason: 'không cần thiết',
         hours: 2,
+        approver: E2E_SA.email,
       },
     });
     expect(pointless.status()).toBe(400);
@@ -297,7 +294,7 @@ test.describe('Break-glass', () => {
 
     const ask = await page.request.post('/api/v1/vault/break-glass', {
       headers,
-      data: { ownerType: 'device', ownerId: deviceId, reason: 'thử xin', hours: 2 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'thử xin', hours: 2, approver: E2E_SA.email },
     });
     expect(ask.status()).toBe(403);
     expect(await ask.json()).toMatchObject({ code: 'ACCESS_DENIED' });
@@ -319,7 +316,7 @@ test.describe('Break-glass', () => {
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       // Xin 100 giờ; trần mặc định là 24. Phải được CHẤP NHẬN và kẹp xuống, không bị từ chối.
-      data: { ownerType: 'device', ownerId: deviceId, reason: 'xin quá nhiều', hours: 100 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'xin quá nhiều', hours: 100, approver: E2E_SA.email },
     });
     expect(asked.status()).toBe(201);
     expect(((await asked.json()) as { payload: { hours: number } }).payload.hours).toBe(24);
@@ -342,7 +339,7 @@ test.describe('Break-glass', () => {
     await firstLogin(member, E2E_MEMBER);
     const asked = await member.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN },
-      data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4, approver: E2E_SA.email },
     });
     expect(asked.status()).toBe(201);
     const id = ((await asked.json()) as { id: string }).id;
@@ -377,6 +374,7 @@ test.describe('Break-glass', () => {
       ownerId: deviceId,
       reason: 'bấm hai lần liên tiếp',
       hours: 2,
+      approver: E2E_SA.email,
     };
 
     const [a, b] = await Promise.all([
@@ -439,7 +437,7 @@ test.describe('Break-glass', () => {
     await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
-      data: { ownerType: 'device', ownerId: deviceId, reason: 'lý do của tôi', hours: 2 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'lý do của tôi', hours: 2, approver: E2E_SA.email },
     });
 
     await page.goto('/approvals');
@@ -448,7 +446,8 @@ test.describe('Break-glass', () => {
     await expect(page.getByRole('tab', { name: 'Chờ duyệt' })).toHaveCount(0);
   });
 
-  test('Member không duyệt được yêu cầu của chính mình', async ({ page }) => {
+  /** Q-30: IMS không còn cửa Duyệt — kể cả gọi thẳng API, kể cả SA. */
+  test('không còn cửa Duyệt trong IMS: gọi thẳng /approve → 404, phiếu vẫn chờ mã', async ({ page }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
@@ -458,7 +457,7 @@ test.describe('Break-glass', () => {
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers,
-      data: { ownerType: 'device', ownerId: deviceId, reason: 'tự duyệt thử', hours: 2 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'tự duyệt thử', hours: 2, approver: E2E_SA.email },
     });
     const id = ((await asked.json()) as { id: string }).id;
 
@@ -466,7 +465,7 @@ test.describe('Break-glass', () => {
       headers,
       data: { hours: 2 },
     });
-    expect(selfApprove.status()).toBe(403);
+    expect(selfApprove.status()).toBe(404);
 
     // Hàng chờ của người duyệt cũng không đọc được.
     expect((await page.request.get('/api/v1/vault/break-glass/pending')).status()).toBe(403);

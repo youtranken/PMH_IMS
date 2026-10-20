@@ -9,19 +9,19 @@ import { OWNER_PATH } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog, DialogCancel, DialogDescription } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
-import { grantHoursCheck, hourSteps, requestedHours } from '@/ui/grant-hours';
+import { requestedHours } from '@/ui/grant-hours';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
 
 /**
- * Luồng quyết phiếu break-glass dùng chung — màn Duyệt yêu cầu, trang chi tiết một phiếu, khối
- * "Cần bạn duyệt" của bảng điều khiển và khung Két của hồ sơ (rút yêu cầu).
+ * Luồng phiếu break-glass dùng chung — màn Duyệt mở két, trang chi tiết một phiếu, khối "Cần bạn
+ * duyệt" của bảng điều khiển và khung Két của hồ sơ (nhập mã duyệt, gửi lại mã, rút yêu cầu).
  *
- * Một bản duy nhất vì Duyệt và Thu hồi sớm ĐÒI STEP-UP: bản nào tự gọi API mà quên bọc
- * `useStepUpRetry` thì người duyệt đã đăng nhập quá 10 phút gặp lỗi "nhập mã 6 số" mà không
- * có ô nào để nhập — ngõ cụt đúng lúc 2 giờ sáng.
+ * Duyệt là người xin NHẬP MÃ người duyệt đọc cho (Q-30); IMS không có nút Duyệt. Một bản duy
+ * nhất vì Thu hồi sớm ĐÒI STEP-UP: bản nào tự gọi API mà quên bọc `useStepUpRetry` thì người
+ * duyệt đã đăng nhập quá 10 phút gặp lỗi "nhập mã 6 số" mà không có ô nào để nhập.
  */
 
 export interface BreakGlassRow {
@@ -58,8 +58,10 @@ export interface BreakGlassRow {
   timeline?: { state: string; actor: string; at: string; note: string | null }[] | null;
   /** Lần đổi trạng thái cuối — với phiếu đã thu hồi thì là lúc quyền bị cắt. */
   updatedAt?: string;
-  /** Lúc người xin xem lần đầu và quyền gắn vào phiên đó (Q-15); `null` = chưa xem. */
+  /** Lúc quyền gắn vào một phiên (nhập mã duyệt, hoặc xem lần đầu với grant cũ — Q-15). */
   claimedAt?: string | null;
+  /** Người duyệt người xin đã chọn (Q-30); `null` với phiếu gửi trước khi duyệt bằng mã. */
+  approver?: string | null;
 }
 
 export const BREAK_GLASS_KEY = ['break-glass'] as const;
@@ -140,23 +142,24 @@ export function BreakGlassSubject({
 }
 
 /**
- * Bốn lệnh của phiếu. `approve`/`revoke` tự hỏi mã 6 số khi server đòi step-up rồi làm lại
- * đúng lệnh đó — đặt `dialog` vào cây JSX. `refresh` làm mới mọi nơi đang hiện phiếu (danh sách,
+ * Các lệnh của phiếu. `revoke` tự hỏi mã 6 số khi server đòi step-up rồi làm lại đúng lệnh đó —
+ * đặt `dialog` vào cây JSX. `refresh` làm mới mọi nơi đang hiện phiếu (danh sách,
  * badge menu, bảng điều khiển, khung Két của hồ sơ).
  */
 export function useBreakGlassActions(csrfToken: string) {
   const stepUp = useStepUpRetry(csrfToken);
   const queryClient = useQueryClient();
-  const post = (id: string, action: string, body: Record<string, unknown> = {}) =>
-    apiFetch<BreakGlassRow>(`/api/v1/vault/break-glass/${id}/${action}`, {
+  const post = <T = BreakGlassRow,>(id: string, action: string, body: Record<string, unknown> = {}) =>
+    apiFetch<T>(`/api/v1/vault/break-glass/${id}/${action}`, {
       method: 'POST',
       csrfToken,
       body: JSON.stringify(body),
     });
 
   return {
-    approve: (id: string, input: { hours: number; note?: string }, purpose?: string) =>
-      stepUp.run(() => post(id, 'approve', input), purpose),
+    /** Người xin nhập mã duyệt (Q-30) — đúng mã là được duyệt, quyền gắn phiên này. */
+    submitCode: (id: string, code: string) => post(id, 'code', { code }),
+    resendCode: (id: string) => post<{ resendsLeft: number }>(id, 'resend-code'),
     deny: (id: string, note: string) => post(id, 'deny', { note }),
     revoke: (id: string, note?: string, purpose?: string) =>
       stepUp.run(() => post(id, 'revoke', note ? { note } : {}), purpose),
@@ -190,27 +193,22 @@ const RACE_CODES = new Set([
 ]);
 
 /**
- * Hộp Duyệt / Từ chối / Thu hồi sớm.
+ * Hộp Từ chối / Thu hồi sớm. Không còn Duyệt (Q-30): người duyệt đồng ý bằng cách đọc mã trong
+ * thư cho người xin.
  *
- * Duyệt: nấc giờ chọn nhanh ≤ số xin + ô giờ sửa được — người duyệt cấp vừa đủ việc, không phải
- * bấm đồng ý với con số người xin tự đặt. Từ chối và Thu hồi: ghi chú BẮT BUỘC, vì người xin
- * đọc nó trong thư; thiếu lý do thì họ gửi lại y nguyên.
- *
- * Tiêu đề ngắn (một dòng ở 390px); thân hộp nhắc lại người xin · lúc gửi · đối tượng · lý do ·
- * số giờ xin, để người trực mở ba phiếu liền không quyết nhầm phiếu. Ghi chú là ô nhiều dòng:
- * Enter trong ô một dòng là gửi luôn quyết định trước khi kịp xem lại số giờ.
+ * Ghi chú BẮT BUỘC, vì người xin đọc nó trong thư; thiếu lý do thì họ gửi lại y nguyên. Tiêu đề
+ * ngắn (một dòng ở 390px); thân hộp nhắc lại người xin · lúc gửi · đối tượng · lý do · số giờ xin,
+ * để người trực mở ba phiếu liền không quyết nhầm phiếu.
  */
 export function DecisionDialog({
   row,
-  approve,
   revoke = false,
   csrfToken,
   onClose,
   onDone,
 }: {
   row: BreakGlassRow;
-  approve: boolean;
-  /** Thu hồi sớm một quyền ĐANG chạy — thắng `approve`. */
+  /** Thu hồi sớm một quyền ĐANG chạy; không có thì là Từ chối phiếu đang chờ. */
   revoke?: boolean;
   csrfToken: string;
   onClose: () => void;
@@ -219,28 +217,15 @@ export function DecisionDialog({
   const { t } = useTranslation();
   const toast = useToast();
   const actions = useBreakGlassActions(csrfToken);
-  const mode: 'approve' | 'deny' | 'revoke' = revoke ? 'revoke' : approve ? 'approve' : 'deny';
+  const mode: 'deny' | 'revoke' = revoke ? 'revoke' : 'deny';
   const requested = requestedHours(row.payload);
-  const [hours, setHours] = useState(String(requested ?? 4));
   const [note, setNote] = useState('');
-  const [error, setError] = useSubmitError([hours, note]);
+  const [error, setError] = useSubmitError([note]);
   const [busy, setBusy] = useState(false);
 
-  /* Không âm thầm rơi về một con số mặc định: "2 tiếng" hay "0" phải bị báo, không được thành
-     một quyền mở két dài hơn người duyệt định cấp. */
-  // Số giờ: số nguyên dương và KHÔNG vượt số giờ người xin (kẹp lại ở API) — xem grant-hours.ts.
-  const hoursCheck = grantHoursCheck(hours, requested);
-  const noteRequired = mode !== 'approve';
   const check = useFormErrors({
-    hours:
-      mode === 'approve' &&
-      hoursCheck.reason !== null &&
-      t(hoursCheck.reason === 'aboveAsked' ? 'approvals.grantHoursAboveAsked' : 'approvals.grantHoursInvalid', {
-        hours: requested,
-      }),
     note:
-      (noteRequired &&
-        note.trim().length < NOTE_MIN_LEN &&
+      (note.trim().length < NOTE_MIN_LEN &&
         t(mode === 'revoke' ? 'approvals.revokeNoteRequired' : 'approvals.denyNoteRequired', {
           min: NOTE_MIN_LEN,
         })) ||
@@ -253,16 +238,9 @@ export function DecisionDialog({
     const trimmed = note.trim();
     setBusy(true);
     try {
-      if (mode === 'approve') {
-        await actions.approve(
-          row.id,
-          { hours: hoursCheck.value ?? 0, note: trimmed },
-          t('approvals.stepUpApprove', { name: row.requesterName }),
-        );
-      } else if (mode === 'revoke') {
+      if (mode === 'revoke') {
         await actions.revoke(row.id, trimmed, t('approvals.stepUpRevoke', { name: row.requesterName }));
-      }
-      else await actions.deny(row.id, trimmed);
+      } else await actions.deny(row.id, trimmed);
       void actions.refresh();
       onDone();
     } catch (err) {
@@ -281,15 +259,6 @@ export function DecisionDialog({
     }
   };
 
-  const submitLabel =
-    mode === 'approve'
-      ? hoursCheck.value !== null
-        ? t('approvals.approveHours', { hours: hoursCheck.value })
-        : t('approvals.approve')
-      : mode === 'revoke'
-        ? t('approvals.revoke')
-        : t('approvals.deny');
-
   return (
     <Dialog
       open
@@ -299,25 +268,14 @@ export function DecisionDialog({
       dismissible={!busy}
       guardUnsaved
       maxWidth={460}
-      title={t(
-        mode === 'approve'
-          ? 'approvals.approveTitle'
-          : mode === 'revoke'
-            ? 'approvals.revokeTitle'
-            : 'approvals.denyTitle',
-      )}
+      title={t(mode === 'revoke' ? 'approvals.revokeTitle' : 'approvals.denyTitle')}
       footer={
         <>
           <DialogCancel disabled={busy}>
             {t('common.cancel')}
           </DialogCancel>
-          <button
-            type="submit"
-            form="decision-form"
-            className={mode === 'approve' ? 'btn primary' : 'btn danger'}
-            disabled={busy}
-          >
-            {busy ? t('common.working') : submitLabel}
+          <button type="submit" form="decision-form" className="btn danger" disabled={busy}>
+            {busy ? t('common.working') : t(mode === 'revoke' ? 'approvals.revoke' : 'approvals.deny')}
           </button>
         </>
       }
@@ -362,50 +320,7 @@ export function DecisionDialog({
           </div>
         </DialogDescription>
 
-        {mode === 'approve' ? (
-          <>
-            <div className="segmented fill" role="group" aria-label={t('approvals.durationBlock')}>
-              {hourSteps(requested).map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  aria-pressed={hoursCheck.value === h}
-                  onClick={() => setHours(String(h))}
-                >
-                  {h === requested
-                    ? t('approvals.durationAsked', { hours: h })
-                    : t('approvals.hours', { hours: h })}
-                </button>
-              ))}
-            </div>
-            <Field
-              label={t('approvals.grantHours')}
-              required
-              hint={
-                requested !== null
-                  ? t('approvals.grantHoursHintMax', { hours: requested })
-                  : t('approvals.grantHoursHint')
-              }
-              error={check.error('hours')}
-            >
-              <input
-                className="inp"
-                required
-                inputMode="numeric"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-              />
-            </Field>
-            {/* Ước tính để người duyệt hình dung — hạn thật do server đặt lúc duyệt (AD-6). */}
-            {hoursCheck.value !== null ? (
-              <p className="muted">
-                {t('approvals.endsAtAbout', {
-                  at: formatDateTime(new Date(Date.now() + hoursCheck.value * 3_600_000)),
-                })}
-              </p>
-            ) : null}
-          </>
-        ) : mode === 'deny' ? (
+        {mode === 'deny' ? (
           <div className="chip-list" role="group" aria-label={t('approvals.denyQuickPick')}>
             {DENY_QUICK.map((key) => (
               <button key={key} type="button" className="btn sm" onClick={() => setNote(t(key))}>
@@ -418,14 +333,8 @@ export function DecisionDialog({
         )}
 
         <Field
-          label={t(
-            mode === 'approve'
-              ? 'approvals.note'
-              : mode === 'revoke'
-                ? 'approvals.revokeNoteLabel'
-                : 'approvals.denyNoteLabel',
-          )}
-          required={noteRequired}
+          label={t(mode === 'revoke' ? 'approvals.revokeNoteLabel' : 'approvals.denyNoteLabel')}
+          required
           error={check.error('note')}
         >
           <textarea

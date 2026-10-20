@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -19,15 +19,9 @@ import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { useConfirm } from '@/ui/confirm-provider';
 import { DetailHeader } from '@/ui/detail-header';
 import { DetailLoadFailed, Loading } from '@/ui/load-state';
-import { Field } from '@/ui/page-header';
-import { SegmentedRadio } from '@/ui/segmented-radio';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
-import { hourSteps } from '@/ui/grant-hours';
-
-/** Nút "Duyệt" phải chạm lần hai trong khoảng này mới cấp — sau đó tự trở về. */
-const CONFIRM_WINDOW_MS = 3_000;
 
 const ROLE_LABEL: Record<string, string> = {
   sa: 'accounts.roleSa',
@@ -36,11 +30,11 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 /**
- * Trang chi tiết MỘT phiếu break-glass — đích của nút "Xem và duyệt" trong thư.
+ * Trang chi tiết MỘT phiếu break-glass — đích của nút "Xem yêu cầu" trong thư.
  *
- * Mục tiêu là quyết trên điện thoại mà không cuộn, không tìm: người xin, đối tượng, lý do, thời
- * hạn, rồi thanh quyết định dính đáy. Phiếu đã có người xử lý thì hiện trạng thái cuối thay vì
- * nút; phiếu của chính mình thì chỉ rút được (bốn mắt — FR-023).
+ * Không có nút Duyệt (Q-30): người duyệt đồng ý bằng cách đọc mã trong thư cho người xin. Trang
+ * này để xem người xin, đối tượng, lý do, số giờ, và Từ chối / Thu hồi sớm. Phiếu đã có người xử
+ * lý thì hiện trạng thái cuối; phiếu của chính mình thì chỉ rút được.
  */
 export function ApprovalDetailScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -50,9 +44,6 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
   const navigate = useNavigate();
   const actions = useBreakGlassActions(me.csrfToken);
   const canDecide = me.role === 'sa' || me.role === 'admin';
-  const [hours, setHours] = useState<number | null>(null);
-  const [note, setNote] = useState('');
-  const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
   /** Hộp Từ chối / Thu hồi sớm — cả hai bắt ghi lý do vì người xin đọc nó trong thư. */
   const [dialogMode, setDialogMode] = useState<'deny' | 'revoke' | null>(null);
@@ -64,12 +55,6 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
     queryFn: () => apiFetch<BreakGlassRow>(`/api/v1/vault/break-glass/${id}`),
     retry: false,
   });
-
-  useEffect(() => {
-    if (!armed) return;
-    const timer = window.setTimeout(() => setArmed(false), CONFIRM_WINDOW_MS);
-    return () => window.clearTimeout(timer);
-  }, [armed]);
 
   if (detail.isLoading) return <Loading />;
   if (detail.isError) {
@@ -91,38 +76,18 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
   const pending = row.state === 'pending';
   const decidable = pending && canDecide && !own;
   const asked = row.payload?.hours;
-  const choices = hourSteps(asked);
-  const granted = hours ?? choices[choices.length - 1];
 
   const run = async (work: () => Promise<unknown>, done: string) => {
     setBusy(true);
     try {
       await work();
-      // Vòng xanh chỉ cho quyết định DUYỆT (Q-21); hủy / từ chối thì toast thường.
-      toast({ message: t(done), burst: done === 'approvals.approved' });
+      toast({ message: t(done) });
       void actions.refresh();
     } catch (error) {
       if (!isStepUpCancelled(error)) toast({ message: errorMessage(error), tone: 'error' });
     } finally {
       setBusy(false);
-      setArmed(false);
     }
-  };
-
-  const onApprove = () => {
-    if (!armed) {
-      setArmed(true);
-      return;
-    }
-    void run(
-      () =>
-        actions.approve(
-          row.id,
-          { hours: granted, note: note.trim() },
-          t('approvals.stepUpApprove', { name: row.requesterName }),
-        ),
-      'approvals.approved',
-    );
   };
 
   const onCancel = async () => {
@@ -203,35 +168,13 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
         <blockquote className="approval-reason">{row.reason}</blockquote>
       </section>
 
-      {decidable ? (
-        <section className="card" aria-label={t('approvals.durationBlock')}>
-          <p className="approval-detail-label">{t('approvals.durationBlock')}</p>
-          <SegmentedRadio
-            label={t('approvals.durationBlock')}
-            value={String(granted)}
-            onChange={(next) => {
-              setHours(Number(next));
-              setArmed(false);
-            }}
-            options={choices.map((h) => ({
-              value: String(h),
-              label:
-                h === asked
-                  ? t('approvals.durationAsked', { hours: h })
-                  : t('approvals.hours', { hours: h }),
-            }))}
-          />
-          {/* Chỉ để người duyệt hình dung — hạn thật do server đặt lúc duyệt (AD-6). */}
-          <p className="muted">
-            {t('approvals.endsAt', {
-              at: formatDateTime(new Date(Date.now() + granted * 3_600_000)),
-            })}
-          </p>
-          <Field label={t('approvals.approveNoteLabel')}>
-            <input className="inp" value={note} onChange={(e) => setNote(e.target.value)} />
-          </Field>
-        </section>
-      ) : null}
+      <section className="card" aria-label={t('approvals.durationBlock')}>
+        <p className="approval-detail-label">{t('approvals.durationBlock')}</p>
+        <p>{asked !== undefined ? t('approvals.askedHours', { hours: asked }) : t('approvals.hoursUnknown')}</p>
+        {row.approver ? (
+          <p className="muted">{t('approvals.chosenApprover', { approver: row.approver })}</p>
+        ) : null}
+      </section>
 
       {row.timeline && row.timeline.length > 0 ? (
         /* `decidedBy` chỉ giữ người duyệt đầu tiên — không có dòng này thì phiếu đã thu hồi
@@ -272,11 +215,10 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
         </p>
       ) : null}
 
-      {/* Phía người xin (Q-15): chờ thì không phải canh trang; được duyệt thì không có nút riêng —
-          mở lại đối tượng và bấm "Xem", lần xem đầu gắn quyền vào phiên đó. */}
+      {/* Phía người xin (Q-15, Q-30): mã nhập ở khung Két của đúng hồ sơ — nút ở thanh đáy. */}
       {own && pending ? (
         <p className="muted" role="status">
-          {t('vault.pendingCanLeave')}
+          {t('approvals.enterCodeAtVault')}
         </p>
       ) : own && row.state === 'approved' && row.active ? (
         <p className="muted" role="status">
@@ -289,7 +231,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       ) : null}
 
       {decidable ? (
-        <StickyActionBar label={t('approvals.decisionBar')}>
+        <StickyActionBar label={t('approvals.decisionBar')} note={t('approvals.byCodeHint')}>
           <button
             type="button"
             className="btn danger-ghost"
@@ -297,13 +239,6 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
             onClick={() => setDialogMode('deny')}
           >
             {t('approvals.deny')}
-          </button>
-          <button type="button" className="btn primary" disabled={busy} onClick={onApprove}>
-            {busy
-              ? t('common.working')
-              : armed
-                ? t('approvals.approveConfirm', { hours: granted })
-                : t('approvals.approveHours', { hours: granted })}
           </button>
         </StickyActionBar>
       ) : pending && own ? (
@@ -323,6 +258,15 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
           >
             {t('approvals.cancel')}
           </button>
+          {row.subjectLabel ? (
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => navigate(`${OWNER_PATH[row.subjectType](row.subjectId)}?tab=vault`)}
+            >
+              {t('approvals.enterCode')}
+            </button>
+          ) : null}
         </StickyActionBar>
       ) : row.state === 'approved' && row.active && (canDecide || own) ? (
         <StickyActionBar label={t('approvals.decisionBar')}>
@@ -354,7 +298,6 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       {dialogMode ? (
         <DecisionDialog
           row={row}
-          approve={false}
           revoke={dialogMode === 'revoke'}
           csrfToken={me.csrfToken}
           onClose={() => setDialogMode(null)}

@@ -2,7 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  approveBreakGlassByCode,
   firstLogin,
+  requestBreakGlass,
   resetAccessList,
   resetApprovals,
   resetDevices,
@@ -18,7 +20,7 @@ import {
  *
  * ===== VÌ SAO HAI CỬA NÀY CẦN BÀI RIÊNG =====
  *
- * `break-glass.spec.ts` phủ kín `request` / `approve` / `cancel` — nhưng hai cửa TỪ CHỐI và
+ * `break-glass.spec.ts` phủ kín `request` / nhập mã / `cancel` — nhưng hai cửa TỪ CHỐI và
  * THU HỒI thì không, và chúng
  * mới là hai cửa nói "KHÔNG". Một cửa cấp quyền hỏng thì người dùng kêu ngay trong ngày; một
  * cửa TỪ CHỐI hỏng thì không ai kêu cả, vì thứ nó tạo ra là im lặng: người xin không được
@@ -95,15 +97,8 @@ async function setUp(page: Page, stamp: string): Promise<Kit> {
  * Phiếu gắn với chủ thể (thiết bị), không với từng secret: `tierFor(ownerType, ownerId)` xét
  * quyền theo nhóm, và một cái switch thường có nhiều secret mà người trực cần cả cụm.
  */
-async function request(memberPage: Page, deviceId: string, reason: string): Promise<string> {
-  const res = await memberPage.request.post('/api/v1/vault/break-glass', {
-    headers: await writeHeaders(memberPage),
-    data: { ownerType: 'device', ownerId: deviceId, reason, hours: 2 },
-  });
-  expect(res.status(), 'member phải xin được quyền — đó là bước đầu của cả luồng').toBeLessThan(
-    300,
-  );
-  return ((await res.json()) as { id: string }).id;
+function request(memberPage: Page, deviceId: string, reason: string): Promise<string> {
+  return requestBreakGlass(memberPage, { ownerId: deviceId, reason, hours: 2 });
 }
 
 function stateOf(id: string): string {
@@ -169,11 +164,7 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
 
     const id = await request(memberPage, kit.deviceId, 'kiem tra cau hinh switch');
-    const approved = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
-      headers: await writeHeaders(page),
-      data: { note: 'ok, trong 2 gio' },
-    });
-    expect(approved.status()).toBeLessThan(300);
+    await approveBreakGlassByCode(memberPage, id);
     expect(stateOf(id)).toBe('approved');
 
     /*
@@ -238,10 +229,10 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
   });
 
   /**
-   * Duyệt được RÚT NGẮN, không được KÉO DÀI: cấp nhiều giờ hơn số xin là mở két lâu hơn chính
-   * người cần nó nghĩ là cần. Hộp Duyệt báo ngay; gọi thẳng API với số lớn hơn thì server kẹp.
+   * Q-30: không còn ô gõ giờ của người duyệt — đọc mã là đồng ý với đúng số giờ ghi trong thư.
+   * Nhập mã thì cấp ĐÚNG số giờ đã xin, không hơn.
    */
-  test('duyệt không cấp quá số giờ đã xin — hộp báo lỗi, API gọi thẳng thì bị kẹp', async ({
+  test('nhập mã duyệt cấp đúng số giờ đã xin; màn người duyệt không có ô gõ giờ', async ({
     page,
     browser,
   }) => {
@@ -255,33 +246,20 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
     await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     // `request` xin 2 giờ.
     const id = await request(memberPage, kit.deviceId, 'doi mat khau admin switch E2E');
-    await memberContext.close();
 
     await page.goto(`/approvals?id=${id}`);
     const card = page.getByRole('region', { name: /^Yêu cầu của / }).first();
-    await card.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    const decide = page.getByRole('dialog');
-    await expect(
-      decide.getByText('Rút ngắn được, tối đa 2 giờ như người xin.'),
-    ).toBeVisible();
-    await decide.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('5');
-    await decide.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    await expect(
-      decide.getByText('Không cấp quá số giờ đã xin (2 giờ). Cần lâu hơn thì người xin gửi yêu cầu mới.'),
-    ).toBeVisible();
-    expect(stateOf(id), 'hộp đã chặn thì phiếu vẫn chờ').toBe('pending');
+    await expect(card.getByRole('button', { name: 'Từ chối' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: /Cấp trong bao lâu/ })).toHaveCount(0);
 
-    // Dựng lại đòn: bỏ qua hộp, gọi thẳng API với 20 giờ.
-    const approved = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
-      headers: await writeHeaders(page),
-      data: { hours: 20, note: 'E2E thu keo dai' },
-    });
-    expect(approved.status()).toBeLessThan(300);
+    await approveBreakGlassByCode(memberPage, id);
     expect(
       sql(
         `SELECT round(extract(epoch FROM expires_at - decided_at) / 3600) FROM approval WHERE id = '${id}'`,
       ),
-      'server phải kẹp về đúng số giờ đã xin',
+      'cấp đúng số giờ đã xin',
     ).toBe('2');
+    await memberContext.close();
   });
 });

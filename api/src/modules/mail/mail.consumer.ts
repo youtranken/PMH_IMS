@@ -56,6 +56,7 @@ export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
   'diagram.drift',
   'iso.period.event',
   'iso.reminder',
+  'break_glass.code',
 ]);
 
 @Injectable()
@@ -155,8 +156,9 @@ export class MailConsumer {
       return this.buildRegisteredMail(`approval:${request.kind}`, { approvalId, reminder: isReminder });
     }
 
-    /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
-       gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
+    /* Bốn mắt (FR-023): người xin không nhận thư "cần bạn duyệt" cho chính phiếu của mình.
+       Mẫu chung này chỉ còn cho loại yêu cầu chưa tự lo thư — mở két gửi thư mang mã riêng
+       (Q-30) và đã đăng ký `approval:break_glass` vào sổ ở trên. */
     const requester = request.requester.toLowerCase();
     const approvers = (await this.users.recipientsByRole(['sa', 'admin'])).filter(
       (a) => a.email.toLowerCase() !== requester,
@@ -260,7 +262,7 @@ export class MailConsumer {
         ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
         ctaWide: true,
         footnote:
-          'Giờ được cấp tính từ lúc duyệt. Quyền gắn với phiên đăng nhập bạn xem lần đầu: ' +
+          'Giờ được cấp tính từ lúc duyệt. Quyền gắn với phiên đăng nhập bạn đã nhập mã duyệt: ' +
           'đăng xuất hay hết phiên là mất quyền. Xong việc sớm thì bấm "Trả quyền" trên màn két.',
       });
       return {
@@ -490,6 +492,8 @@ export class MailConsumer {
     if (topic === 'diagram.drift') return this.buildRegisteredMail(topic, payload);
     // Phiếu ISO: người nhận là người phụ trách / SA/Admin, nằm trong bảng của `iso-forms`.
     if (topic === 'iso.period.event' || topic === 'iso.reminder') return this.buildRegisteredMail(topic, payload);
+    // Thư mang mã duyệt mở két (Q-30): mã sinh lúc dựng thư trong `vault`, chỉ HMAC nằm ở DB.
+    if (topic === 'break_glass.code') return this.buildRegisteredMail(topic, payload);
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
     const sa = await this.users.recipientsByRole(['sa']);

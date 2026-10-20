@@ -74,6 +74,8 @@ export const ACTION_KEY: Record<string, string> = {
   'break_glass.revoked': 'audit.actions.breakGlassRevoked',
   'break_glass.expired': 'audit.actions.breakGlassExpired',
   'break_glass.claimed': 'audit.actions.breakGlassClaimed',
+  'break_glass.code_resent': 'audit.actions.breakGlassCodeResent',
+  'break_glass.code_failed': 'audit.actions.breakGlassCodeFailed',
   'break_glass.exported': 'audit.actions.breakGlassExported',
   'catalog.created': 'audit.actions.catalogCreated',
   'catalog.updated': 'audit.actions.catalogUpdated',

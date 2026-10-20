@@ -12,6 +12,7 @@ import { SecretAuditLabeler } from './secret-audit-labeler';
 import { AccessListService } from './access-list.service';
 import { BreakGlassController } from './break-glass.controller';
 import { BreakGlassService } from './break-glass.service';
+import { BreakGlassCodeService } from './break-glass-code.service';
 import { AuthModule } from '../auth/auth.module';
 import { StepUpGuard } from '../auth/step-up.guard';
 import { VaultApiService } from './vault.api';
@@ -38,7 +39,7 @@ import { VaultService } from './vault.service';
   controllers: [VaultController, VaultOwnersController, VaultAccessController, BreakGlassController],
   providers: [
     ExcelExportService,
-    VaultService, VaultApiService, VaultOwnersService, SecretDueService, SecretAuditLabeler, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+    VaultService, VaultApiService, VaultOwnersService, SecretDueService, SecretAuditLabeler, VaultDevicePanel, AccessListService, BreakGlassService, BreakGlassCodeService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

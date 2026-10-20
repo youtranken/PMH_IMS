@@ -748,6 +748,71 @@ ${body.HTML ?? ''}`;
 }
 
 /**
+ * "Xin mở két" duyệt bằng mã (Q-30) — dùng chung cho mọi spec mở két (AD-15).
+ *
+ * Không còn API Duyệt: người xin chọn một SA/Admin, người đó nhận thư mang mã 6 số, người xin
+ * nhập mã. Bài kiểm đi đúng đường đó, đọc mã thật trong Mailpit. Mặc định người duyệt là `E2E_SA`
+ * (tài khoản E2E nhận thư); quyền gắn vào PHIÊN của trang nhập mã.
+ */
+export async function requestBreakGlass(
+  page: Page,
+  input: { ownerId: string; reason: string; hours?: number; ownerType?: string; approver?: string },
+): Promise<string> {
+  const res = await page.request.post('/api/v1/vault/break-glass', {
+    headers: await writeHeaders(page),
+    data: {
+      ownerType: input.ownerType ?? 'device',
+      ownerId: input.ownerId,
+      reason: input.reason,
+      hours: input.hours ?? 4,
+      approver: input.approver ?? E2E_SA.email,
+    },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  return ((await res.json()) as { id: string }).id;
+}
+
+/**
+ * Mã 6 số trong thư MỚI NHẤT gửi `approver` cho đúng yêu cầu `approvalId` (thư có link
+ * `/approvals/<id>`). Hỏi Mailpit tới khi worker gửi xong.
+ */
+export async function mailedApprovalCode(approvalId: string, approver: string = E2E_SA.email): Promise<string> {
+  let code = '';
+  await expect
+    .poll(
+      async () => {
+        const mails = (await mailpitMessages()).filter(
+          (m) => m.Subject.includes('Mã duyệt mở két') && m.To.some((t) => t.Address === approver),
+        );
+        for (const mail of mails) {
+          const body = await mailBody(mail.ID);
+          if (!body.includes(`/approvals/${approvalId}`)) continue;
+          code = /Mã duyệt\D{0,40}?(\d{6})/.exec(body)?.[1] ?? '';
+          return code;
+        }
+        return '';
+      },
+      { message: `thư mang mã của yêu cầu ${approvalId} tới ${approver}`, timeout: 30_000 },
+    )
+    .toMatch(/^\d{6}$/);
+  return code;
+}
+
+/** Người xin (trang `page`) nhập mã người duyệt đọc cho — được duyệt, quyền gắn phiên này. */
+export async function approveBreakGlassByCode(
+  page: Page,
+  approvalId: string,
+  approver: string = E2E_SA.email,
+): Promise<void> {
+  const code = await mailedApprovalCode(approvalId, approver);
+  const res = await page.request.post(`/api/v1/vault/break-glass/${approvalId}/code`, {
+    headers: await writeHeaders(page),
+    data: { code },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+}
+
+/**
  * Đổi một khóa `system_config` (AD-11).
  *
  * CẨN THẬN: `SystemConfigService` cache 30 giây. Test nào đổi ngưỡng rồi kiểm hệ quả NGAY

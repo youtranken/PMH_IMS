@@ -5,7 +5,7 @@ import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
 import { ApprovalsScreen, logFilterQuery } from './approvals-screen';
 
-function row(id: string, requester: string) {
+function row(id: string, requester: string, approver: string | null = null) {
   return {
     id,
     kind: 'break_glass',
@@ -24,6 +24,7 @@ function row(id: string, requester: string) {
     expiresAt: null,
     createdAt: '2026-09-20T01:30:00.000Z',
     active: false,
+    approver,
   };
 }
 
@@ -149,12 +150,13 @@ function renderRouted(me: Me, routes: Record<string, unknown>) {
 describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('thẻ chờ duyệt: Từ chối đứng TRƯỚC Duyệt (Duyệt ở vùng ngón cái), Từ chối không đỏ đặc', async () => {
-    renderAt('/approvals', [row('a1', 'an@pmh.com.vn')]);
+  it('thẻ chờ duyệt (Q-30): không có Duyệt — nói ai đang giữ mã; chỉ Từ chối, không đỏ đặc', async () => {
+    renderAt('/approvals', [row('a1', 'an@pmh.com.vn', 'admin@pmh.com.vn')]);
     const card = await screen.findByRole('region', { name: /an@pmh\.com\.vn/ });
     const buttons = within(card).getAllByRole('button');
-    expect(buttons.map((b) => b.textContent)).toEqual(['Từ chối', 'Duyệt']);
+    expect(buttons.map((b) => b.textContent)).toEqual(['Từ chối']);
     expect(buttons[0]).toHaveClass('danger-ghost');
+    expect(within(card).getByText('Chờ người xin nhập mã đã gửi tới admin@pmh.com.vn.')).toBeInTheDocument();
     expect(within(card).getByText('Thời hạn xin')).toBeInTheDocument();
   });
 

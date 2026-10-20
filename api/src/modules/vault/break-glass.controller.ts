@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import {
+  IsEmail,
   IsIn,
   IsInt,
   IsOptional,
@@ -60,11 +61,18 @@ export class RequestDto {
    * đây chỉ để một con số vô lý không đi xa hơn cửa vào — không phải để thay cho trần cấu hình.
    */
   @Min(1) @Max(168) @IsInt() hours!: number;
+
+  /** SA/Admin người xin chọn (Q-30). Service đối chiếu với danh sách chọn, không tin chữ gõ vào. */
+  @IsEmail({}, { message: 'Chọn người duyệt.' }) @MaxLength(255) approver!: string;
 }
 
 export class DecisionDto {
-  @IsOptional() @Min(1) @Max(168) @IsInt() hours?: number;
   @IsOptional() @IsString() @Length(0, 500) @NoSecretText() note?: string;
+}
+
+export class CodeDto {
+  /** Giữ chuỗi: mã có thể bắt đầu bằng 0. Hình dạng 6 chữ số kiểm ở `judgeCode`, sai thì tính lượt. */
+  @IsString() @MaxLength(20) code!: string;
 }
 
 class IdParamDto {
@@ -93,6 +101,13 @@ export class BreakGlassController {
   @Get('mine')
   mine(@Req() req: AuthedRequest, @Query() query: { page?: string; limit?: string }) {
     return this.breakGlass.mine(actor(req), parsePageQuery(query));
+  }
+
+  /** Người xin chọn người duyệt (Q-30): SA/Admin đang hoạt động trừ chính mình. */
+  @Roles('sa', 'admin', 'member')
+  @Get('approvers')
+  approvers(@Req() req: AuthedRequest) {
+    return this.breakGlass.approverChoices(actor(req));
   }
 
   /** Hàng chờ của người duyệt. */
@@ -183,21 +198,32 @@ export class BreakGlassController {
   @Post()
   @Audited('break_glass.requested', 'approval', { writtenByService: true })
   request(@Body() body: RequestDto, @Req() req: AuthedRequest) {
-    // Phiên lấy từ guard, không từ body. Yêu cầu không gắn phiên; quyền gắn lúc xem lần đầu (Q-15).
+    // Phiên lấy từ guard, không từ body. Yêu cầu không gắn phiên; quyền gắn lúc nhập mã (Q-15, Q-30).
     return this.breakGlass.request(
       { email: actor(req), sessionId: req.user!.sessionId },
       body,
     );
   }
 
-  @Roles('sa', 'admin')
-  // Duyệt = cấp quyền đọc két trong nhiều giờ. Đây là cửa CẤP QUYỀN, nặng ngang
-  // `POST /vault/access`, nên nó đòi mã như mọi cửa cấp quyền khác.
-  @RequiresStepUp()
-  @Post(':id/approve')
-  @Audited('break_glass.approved', 'approval', { writtenByService: true })
-  approve(@Param() params: IdParamDto, @Body() body: DecisionDto, @Req() req: AuthedRequest) {
-    return this.breakGlass.approve(actor(req), params.id, body);
+  /**
+   * Người xin nhập mã người duyệt đọc cho = được duyệt (Q-30). Không có nút Duyệt trong IMS nữa.
+   * Không đòi mã 2 lớp ở đây: quyền chỉ mở được két qua `reveal`, và route đó đòi step-up.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/code')
+  @Audited(['break_glass.approved', 'break_glass.claimed', 'break_glass.code_failed', 'break_glass.cancelled'], 'approval', {
+    writtenByService: true,
+  })
+  submitCode(@Param() params: IdParamDto, @Body() body: CodeDto, @Req() req: AuthedRequest) {
+    return this.breakGlass.submitCode({ email: actor(req), sessionId: req.user!.sessionId }, params.id, body.code);
+  }
+
+  /** "Gửi lại mã": tối đa 3 lần cho một yêu cầu (Q-30). */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/resend-code')
+  @Audited('break_glass.code_resent', 'approval', { writtenByService: true })
+  resendCode(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.breakGlass.resendCode({ email: actor(req), sessionId: req.user!.sessionId }, params.id);
   }
 
   @Roles('sa', 'admin')
@@ -238,7 +264,7 @@ export class BreakGlassController {
 
   /**
    * Một phiếu — đích của nút trong thư. Người duyệt đọc mọi phiếu, Member chỉ phiếu của mình
-   * (service gác). Khai SAU cùng: `:id` đứng trước thì nuốt mất `mine`/`pending`/`log`.
+   * (service gác). Khai SAU cùng: `:id` đứng trước thì nuốt mất `mine`/`pending`/`approvers`/`log`.
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id')

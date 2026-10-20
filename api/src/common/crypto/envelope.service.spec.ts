@@ -151,3 +151,23 @@ describe('EnvelopeCryptoService.deriveKey — khoá dẫn xuất theo mục đí
     expect(key.toString('hex').includes('1111111111')).toBe(false);
   });
 });
+
+describe('EnvelopeCryptoService.deriveKeyAt — khoá dẫn xuất theo ĐÚNG phiên bản chìa (Q-30)', () => {
+  const info = 'break-glass-code|v1';
+
+  it('phiên bản hiện hành cho đúng khoá của deriveKey', () => {
+    const svc = service(`1=${KEY_V1}\n2=${KEY_V2}`);
+    expect(svc.deriveKeyAt(info, 2)!.equals(svc.deriveKey(info))).toBe(true);
+  });
+
+  it('chìa cũ còn trong chùm: vẫn ra khoá cũ (mã băm trước lúc xoay so lại được), khác khoá mới', () => {
+    const before = service(`1=${KEY_V1}`).deriveKey(info);
+    const svc = service(`1=${KEY_V1}\n2=${KEY_V2}`);
+    expect(svc.deriveKeyAt(info, 1)!.equals(before)).toBe(true);
+    expect(svc.deriveKeyAt(info, 1)!.equals(svc.deriveKeyAt(info, 2)!)).toBe(false);
+  });
+
+  it('chìa đã gỡ khỏi chùm: trả null, không ném', () => {
+    expect(service(`2=${KEY_V2}`).deriveKeyAt(info, 1)).toBeNull();
+  });
+});

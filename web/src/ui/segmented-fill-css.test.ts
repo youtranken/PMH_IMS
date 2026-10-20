@@ -42,7 +42,6 @@ describe('dải nút chọn một trong form trải đều', () => {
       'features/software/assign-dialog.tsx',
       'features/diagrams/draft-from-port-map-dialog.tsx',
       'ui/port-form-dialog.tsx',
-      'ui/break-glass.tsx',
     ];
     for (const file of files) {
       const text = readFileSync(join(SRC, file), 'utf8');

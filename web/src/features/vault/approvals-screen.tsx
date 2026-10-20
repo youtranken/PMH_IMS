@@ -136,7 +136,6 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   const [tab, setTab] = useState(canDecide ? "pending" : "mine");
   const [deciding, setDeciding] = useState<{
     row: ApprovalRow;
-    approve: boolean;
     revoke?: boolean;
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -372,7 +371,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
             <LogTable
               rows={activeGrants.data}
               busyId={busyId}
-              onRevoke={(row) => setDeciding({ row, approve: false, revoke: true })}
+              onRevoke={(row) => setDeciding({ row, revoke: true })}
               onGoPending={() => setTab("pending")}
             />
           </section>
@@ -415,7 +414,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
             rows={items}
             busyId={busyId}
             onRevoke={(row) =>
-              setDeciding({ row, approve: false, revoke: true })
+              setDeciding({ row, revoke: true })
             }
             onGoPending={() => setTab("pending")}
           />
@@ -515,22 +514,20 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                   tab === "pending" &&
                   row.state === "pending" &&
                   !own ? (
-                    /* Từ chối TRÁI (viền đỏ, không đặc), Duyệt PHẢI (vùng ngón cái). Trên điện
-                       thoại hai nút chia đôi hàng, cao 48px, cách nhau đủ xa để không chạm nhầm. */
+                    /* Không có nút Duyệt (Q-30): người được chọn đồng ý bằng cách đọc mã trong thư
+                       cho người xin. Ở đây chỉ nói ai đang giữ mã, và cho Từ chối. */
                     <div className="approval-decide">
+                      <p className="muted">
+                        {row.approver
+                          ? t("approvals.waitingCode", { approver: row.approver })
+                          : t("approvals.byCodeHint")}
+                      </p>
                       <button
                         type="button"
                         className="btn danger-ghost"
-                        onClick={() => setDeciding({ row, approve: false })}
+                        onClick={() => setDeciding({ row })}
                       >
                         {t("approvals.deny")}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn primary"
-                        onClick={() => setDeciding({ row, approve: true })}
-                      >
-                        {t("approvals.approve")}
                       </button>
                     </div>
                   ) : null}
@@ -603,22 +600,13 @@ export function ApprovalsScreen({ me }: { me: Me }) {
       {deciding ? (
         <DecisionDialog
           row={deciding.row}
-          approve={deciding.approve}
           revoke={deciding.revoke}
           csrfToken={me.csrfToken}
           onClose={() => setDeciding(null)}
           onDone={() => {
             setDeciding(null);
             toast({
-              message: t(
-                deciding.revoke
-                  ? "approvals.revoked"
-                  : deciding.approve
-                    ? "approvals.approved"
-                    : "approvals.denied",
-              ),
-              // Vòng xanh chỉ cho quyết định DUYỆT (Q-21).
-              burst: deciding.approve && !deciding.revoke,
+              message: t(deciding.revoke ? "approvals.revoked" : "approvals.denied"),
             });
           }}
         />

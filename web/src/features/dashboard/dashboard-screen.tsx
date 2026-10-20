@@ -523,13 +523,14 @@ function MobileLimited<T>({ items, render }: { items: T[]; render: (item: T) => 
  * có nút ngay tại chỗ (cùng hộp quyết định, cùng luồng step-up với màn Duyệt yêu cầu). Không có
  * gì chờ thì khối biến mất — tin tốt đã nằm ở hàng số bên dưới.
  *
- * Phiếu của chính mình không đếm: bốn mắt (FR-023) cấm tự duyệt.
+ * Chỉ phiếu người xin CHỌN mình duyệt (Q-30): phiếu chọn người khác thì mình không có mã. Không
+ * có nút Duyệt — đồng ý là đọc mã trong thư cho người xin; ở đây chỉ còn Từ chối.
  */
 function NeedsYouBlock({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const canDecide = me.role === 'sa' || me.role === 'admin';
-  const [deciding, setDeciding] = useState<{ row: BreakGlassRow; approve: boolean } | null>(null);
+  const [deciding, setDeciding] = useState<BreakGlassRow | null>(null);
 
   const pending = useQuery({
     queryKey: [...BREAK_GLASS_KEY, 'pending'],
@@ -539,7 +540,7 @@ function NeedsYouBlock({ me }: { me: Me }) {
 
   const mine = me.email.toLowerCase();
   const rows = (Array.isArray(pending.data) ? pending.data : []).filter(
-    (row) => row.requester.toLowerCase() !== mine,
+    (row) => row.approver?.toLowerCase() === mine,
   );
   if (!canDecide || rows.length === 0) return null;
 
@@ -569,18 +570,12 @@ function NeedsYouBlock({ me }: { me: Me }) {
             <p className="approval-reason" title={row.reason}>
               {row.reason}
             </p>
+            <p className="muted">{t('approvals.byCodeHint')}</p>
             <div className="action-cell">
               <button
                 type="button"
-                className="btn sm primary"
-                onClick={() => setDeciding({ row, approve: true })}
-              >
-                {t('approvals.approve')}
-              </button>
-              <button
-                type="button"
                 className="btn sm danger-ghost"
-                onClick={() => setDeciding({ row, approve: false })}
+                onClick={() => setDeciding(row)}
               >
                 {t('approvals.deny')}
               </button>
@@ -592,13 +587,12 @@ function NeedsYouBlock({ me }: { me: Me }) {
 
       {deciding ? (
         <DecisionDialog
-          row={deciding.row}
-          approve={deciding.approve}
+          row={deciding}
           csrfToken={me.csrfToken}
           onClose={() => setDeciding(null)}
           onDone={() => {
             setDeciding(null);
-            toast({ message: t(deciding.approve ? 'approvals.approved' : 'approvals.denied') });
+            toast({ message: t('approvals.denied') });
           }}
         />
       ) : null}

@@ -7,10 +7,9 @@ import {
   NEW_PASSWORD,
   clearMailbox,
   confirmAction,
-  expireStepUp,
   firstLogin,
-  freshTotpCode,
   horizontalOverflow,
+  mailedApprovalCode,
   loginWithTotp,
   logout,
   mailBody,
@@ -26,10 +25,10 @@ import {
 /**
  * Luồng break-glass trên ĐIỆN THOẠI (390×844) — ưu tiên số 1 của chủ dự án (VLT-FLOW).
  *
- * Người duyệt mở link trong thư, thấy ngay máy nào, lý do, thời hạn, và quyết bằng thanh dính
- * đáy mà không phải cuộn. Duyệt đòi step-up: quá 10 phút sau đăng nhập thì hộp mã 6 số phải
- * hiện ngay tại chỗ (VLT-002). Người xin nhận thư kết quả (VLT-005), rút được yêu cầu
- * (VLT-007), và toast sau khi gửi nói đúng số giờ (VLT-006).
+ * Q-30: người duyệt đọc thư mang mã trên điện thoại (IMS chỉ trong LAN, không mở được từ ngoài),
+ * đồng ý thì đọc mã cho người xin; người xin nhập mã ở khung Két trên điện thoại của họ. Trang
+ * chi tiết vẫn đủ để Từ chối mà không phải cuộn. Người xin nhận thư kết quả (VLT-005), rút được
+ * yêu cầu (VLT-007), và toast sau khi gửi nói đúng số giờ (VLT-006).
  */
 
 test.beforeEach(() => {
@@ -113,81 +112,81 @@ async function pendingRequest(page: Page, hours = 4) {
       ownerId: deviceId,
       reason: `E2E ${stamp}: switch tầng 3 mất kết nối, cần vào cấu hình VLAN`,
       hours,
+      approver: E2E_SA.email,
     },
   });
   expect(asked.status()).toBe(201);
   const approvalId = ((await asked.json()) as { id: string }).id;
-  return { stamp, saTotp, memberTotp, deviceId, code, approvalId };
+  return { stamp, saTotp, memberTotp, deviceId, code, approvalId, member, memberCtx };
 }
 
-test.describe('Duyệt break-glass từ trang chi tiết, 390px', () => {
+/** Người xin chọn người duyệt trong hộp Xin mở két (Q-30). */
+async function pickApprover(page: Page) {
+  await page.getByRole('dialog').getByRole('button', { name: /Người duyệt/ }).click();
+  await page.getByRole('option', { name: E2E_SA.email }).click();
+}
+
+test.describe('Duyệt break-glass bằng mã, 390px (Q-30)', () => {
   test.setTimeout(180_000);
 
-  test('đường hạnh phúc: mở link thư → thấy đủ không cần cuộn → chạm hai lần → người xin nhận thư', async ({
+  test('đường hạnh phúc: thư mang mã tới đúng người duyệt → người xin nhập mã trên điện thoại → nhận thư đã duyệt', async ({
     page,
   }) => {
-    const { saTotp, deviceId, code, approvalId } = await pendingRequest(page);
+    const { code, deviceId, approvalId, member, memberCtx } = await pendingRequest(page);
 
-    // Thư xin duyệt nói máy nào, bao nhiêu giờ, và trỏ thẳng trang chi tiết.
-    const asking = await waitForMail(`xin mở két ${code} (4 giờ)`);
-    expect(asking.length, 'thư xin duyệt phải có mã máy và số giờ trong tiêu đề').toBeGreaterThan(0);
-    expect(asking[0].Subject).toMatch(/^\[IMS\] Duyệt: /);
+    // Thư mang mã: chỉ tới người được chọn, tiêu đề nói ai · máy nào · bao lâu nhưng KHÔNG có mã.
+    const asking = await waitForMail(`· ${code} (4 giờ)`);
+    expect(asking.length, 'thư mang mã phải có mã máy và số giờ trong tiêu đề').toBeGreaterThan(0);
+    expect(asking[0].Subject).toMatch(/^\[IMS\] Mã duyệt mở két: /);
+    expect(asking[0].To.map((to) => to.Address)).toEqual([E2E_SA.email]);
     const askingBody = await mailBody(asking[0].ID);
+    const mailed = /Mã duyệt\D{0,40}?(\d{6})/.exec(askingBody)![1];
+    expect(asking[0].Subject, 'tiêu đề hiện trên màn khoá — không được có mã').not.toContain(mailed);
     expect(askingBody).toContain(`/approvals/${approvalId}`);
-    expect(askingBody).toContain('Xem và duyệt');
     expect(askingBody, 'thư KHÔNG được có tên ngăn két').not.toContain('enable E2E');
 
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    await stepUpViaApi(page, saTotp);
+    // Người xin trên điện thoại: khung chờ nói mã gửi tới ai, ô 6 số nằm trong khung nhìn.
+    await member.setViewportSize({ width: 390, height: 844 });
     await clearMailbox();
-    await page.goto(`/approvals/${approvalId}`);
-
-    // Đủ để quyết, trong một màn 844px, không cuộn.
-    const subject = page.getByRole('link', { name: new RegExp(`^${code} · Switch lõi tầng 3`) });
-    await expect(subject).toBeInViewport();
-    await expect(subject).toHaveAttribute('href', `/devices/${deviceId}`);
-    await expect(page.getByText(/switch tầng 3 mất kết nối/)).toBeInViewport();
-    const approve = page.getByRole('button', { name: 'Duyệt 4 giờ' });
-    await expect(approve).toBeInViewport();
-    const box = await approve.boundingBox();
-    expect(box!.height, 'nút chính phải cao ≥ 48px — chạm bằng ngón cái').toBeGreaterThanOrEqual(47);
-    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-
-    // Chạm lần đầu chỉ hỏi lại, chưa cấp gì.
-    await approve.click();
-    await page.getByRole('button', { name: 'Chạm lần nữa để cấp 4 giờ' }).click();
-    await expect(page.getByText(/Đã cấp cho .* tới/)).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Duyệt/ })).toHaveCount(0);
+    await member.goto(`/devices/${deviceId}?tab=vault`);
+    await expect(member.getByText(/Mã duyệt đã gửi tới .* \(còn hiệu lực \d+ phút\)/)).toBeVisible();
+    expect(await horizontalOverflow(member)).toBeLessThanOrEqual(1);
+    await fillOtp(member, mailed, 'Mã duyệt do người duyệt đọc cho bạn');
+    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
 
     // Người xin nhận thư kết quả, có nút mở thẳng két của hồ sơ.
     const decided = await waitForMail(`[IMS] Đã duyệt: mở két ${code}`);
     expect(decided.length, 'người xin phải nhận thư "đã duyệt"').toBeGreaterThan(0);
     expect(decided[0].To.map((to) => to.Address)).toEqual([E2E_MEMBER.email]);
     expect(await mailBody(decided[0].ID)).toContain(`/devices/${deviceId}?tab=vault`);
+    await memberCtx.close();
   });
 
-  test('đã quá 10 phút sau đăng nhập: duyệt vẫn đi tiếp được qua hộp mã 6 số (VLT-002)', async ({
+  test('người duyệt mở link trong thư: đủ để quyết trong một màn, chỉ có Từ chối, không có Duyệt', async ({
     page,
   }) => {
-    const { saTotp, approvalId } = await pendingRequest(page);
+    const { saTotp, deviceId, code, approvalId, memberCtx } = await pendingRequest(page);
+    await memberCtx.close();
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await stepUpViaApi(page, saTotp);
-    expireStepUp(E2E_SA.email);
-
     await page.goto(`/approvals/${approvalId}`);
-    await page.getByRole('button', { name: 'Duyệt 4 giờ' }).click();
-    await page.getByRole('button', { name: 'Chạm lần nữa để cấp 4 giờ' }).click();
 
-    // Không phải một dòng lỗi "nhập mã" mà không có ô nào: hộp mã hiện ngay tại chỗ.
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
+    const subject = page.getByRole('link', { name: new RegExp(`^${code} · Switch lõi tầng 3`) });
+    await expect(subject).toBeInViewport();
+    await expect(subject).toHaveAttribute('href', `/devices/${deviceId}`);
+    await expect(page.getByText(/switch tầng 3 mất kết nối/)).toBeInViewport();
+    await expect(page.getByText(/đọc mã trong thư cho người xin/)).toBeVisible();
+    const deny = page.getByRole('button', { name: 'Từ chối', exact: true });
+    await expect(deny).toBeInViewport();
+    const box = await deny.boundingBox();
+    expect(box!.height, 'nút trong thanh đáy phải cao ≥ 48px — chạm bằng ngón cái').toBeGreaterThanOrEqual(47);
+    await expect(page.getByRole('button', { name: /^Duyệt/ })).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await fillOtp(page, await freshTotpCode(saTotp));
-
-    await expect(page.getByText(/Đã cấp cho .* tới/)).toBeVisible();
   });
 
   test('từ chối phải ghi lý do; người xin nhận đúng lý do trong thư', async ({ page }) => {
-    const { saTotp, code, approvalId } = await pendingRequest(page);
+    const { saTotp, code, approvalId, memberCtx } = await pendingRequest(page);
+    await memberCtx.close();
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await stepUpViaApi(page, saTotp);
     await clearMailbox();
@@ -230,13 +229,14 @@ test.describe('Phía người xin, 390px', () => {
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: cần đổi VLAN`);
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await pickApprover(page);
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
 
     // Không còn cảnh báo "vượt trần… chỉ còn  giờ" sai ở mỗi lần gửi.
-    await expect(page.getByText('Đã gửi yêu cầu. Quản trị sẽ nhận được email.')).toBeVisible();
+    await expect(page.getByText('Đã gửi yêu cầu. Người duyệt sẽ nhận thư có mã.')).toBeVisible();
     await expect(page.getByText(/vượt mức tối đa/)).toHaveCount(0);
 
-    await expect(page.getByText(/đang chờ Quản trị duyệt/)).toBeVisible();
+    await expect(page.getByText(/đang chờ mã duyệt/)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     // Phiếu của chính mình trên trang chi tiết: không duyệt được, chỉ rút.
@@ -253,50 +253,33 @@ test.describe('Phía người xin, 390px', () => {
   });
 });
 
-test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
+test.describe('Hộp Từ chối từ danh sách, 390px (VLT-008, B1)', () => {
   test.setTimeout(180_000);
 
-  test('tiêu đề ngắn, thân hộp nêu người xin · đối tượng · lý do, nút Duyệt nằm trong khung nhìn', async ({
+  test('tiêu đề ngắn, thân hộp nêu người xin · đối tượng · lý do, nút Từ chối nằm trong khung nhìn', async ({
     page,
   }) => {
-    const { saTotp, code, stamp } = await pendingRequest(page);
+    const { saTotp, code, stamp, memberCtx } = await pendingRequest(page);
+    await memberCtx.close();
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await stepUpViaApi(page, saTotp);
     await page.goto('/approvals');
-    await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
+    await page.getByRole('tabpanel').getByRole('button', { name: 'Từ chối', exact: true }).first().click();
 
-    const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Từ chối yêu cầu', exact: true });
     await expect(dialog).toBeVisible();
-    // Tiêu đề một dòng ở 390px — không còn "Duyệt yêu cầu của <email dài>" gãy hai dòng.
-    const heading = await dialog.getByRole('heading', { name: 'Duyệt mở két', exact: true }).boundingBox();
-    expect(heading!.height, 'tiêu đề hộp Duyệt phải nằm trên một dòng').toBeLessThan(40);
+    // Tiêu đề một dòng ở 390px — không gãy hai dòng vì email dài.
+    const heading = await dialog.getByRole('heading', { name: 'Từ chối yêu cầu', exact: true }).boundingBox();
+    expect(heading!.height, 'tiêu đề hộp phải nằm trên một dòng').toBeLessThan(40);
     await expect(dialog.getByText(E2E_MEMBER.email)).toBeVisible();
     await expect(dialog.getByRole('link', { name: new RegExp(`^${code}`) })).toBeVisible();
     await expect(dialog.getByText(new RegExp(`E2E ${stamp}: switch tầng 3`))).toBeVisible();
 
     // Hộp cao theo nội dung, nút chính trong khung nhìn — không bị thanh công cụ đáy che.
-    const approve = dialog.getByRole('button', { name: /^Duyệt \d+ giờ$/ });
-    await expect(approve).toBeInViewport({ ratio: 1 });
+    await expect(dialog.getByRole('button', { name: 'Từ chối', exact: true })).toBeInViewport({ ratio: 1 });
     const box = await dialog.boundingBox();
-    expect(box!.height, 'hộp ba ô không được chiếm gần hết màn 844px').toBeLessThan(844 * 0.9);
+    expect(box!.height, 'hộp không được chiếm gần hết màn 844px').toBeLessThan(844 * 0.9);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-  });
-
-  test('số giờ gõ chữ → lỗi tiếng Việt dưới ô, phiếu vẫn chờ (không bong bóng tiếng Anh)', async ({
-    page,
-  }) => {
-    const { saTotp, approvalId } = await pendingRequest(page);
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    await stepUpViaApi(page, saTotp);
-    await page.goto('/approvals');
-    await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Duyệt mở két', exact: true });
-    await dialog.getByLabel('Cấp trong bao lâu (giờ)').fill('hai');
-    await dialog.getByRole('button', { name: 'Duyệt', exact: true }).click();
-    await expect(dialog.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeVisible();
-    await expect(dialog.getByLabel('Cấp trong bao lâu (giờ)')).toBeFocused();
-    const still = await page.request.get(`/api/v1/vault/break-glass/${approvalId}`);
-    expect(((await still.json()) as { state: string }).state).toBe('pending');
   });
 });
 
@@ -304,7 +287,8 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
   test.setTimeout(180_000);
 
   test('người duyệt: đầu trang "Gửi … trước", khối người xin có vai và số lần xin', async ({ page }) => {
-    const { saTotp, approvalId } = await pendingRequest(page);
+    const { saTotp, approvalId, memberCtx } = await pendingRequest(page);
+    await memberCtx.close();
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await stepUpViaApi(page, saTotp);
     await page.goto(`/approvals/${approvalId}`);
@@ -323,7 +307,8 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
   });
 
   test('người xin tự đọc phiếu mình: không nhận ngữ cảnh của người duyệt', async ({ page }) => {
-    const { memberTotp, approvalId } = await pendingRequest(page);
+    const { memberTotp, approvalId, memberCtx } = await pendingRequest(page);
+    await memberCtx.close();
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
     await stepUpViaApi(page, memberTotp);
     const own = await page.request.get(`/api/v1/vault/break-glass/${approvalId}`);
@@ -335,12 +320,11 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
   });
 
   /**
-   * Phiếu chờ không gắn phiên (Q-15): khung chờ nói cứ đóng trang, chờ thư. Người duyệt ở ngữ
-   * cảnh riêng. Được duyệt thì khung két chỉ đường "bấm Xem, nhập mã 6 số", đếm lùi TỪ LÚC
-   * DUYỆT, nói lần xem đầu gắn quyền vào phiên, và có nút Trả quyền — tất cả ở 390px, vì người
-   * trực xin và trả ngay trên điện thoại.
+   * Phiếu chờ không gắn phiên (Q-15): khung chờ nói cứ đóng trang. Q-30: khung nói mã đã gửi tới
+   * ai, người xin nhập mã ngay trên điện thoại; được duyệt thì đếm lùi, nói quyền gắn phiên, có
+   * nút Trả quyền — tất cả ở 390px, vì người trực xin và trả ngay trên điện thoại.
    */
-  test('người xin: khung chờ nói đã báo bao nhiêu người duyệt; được duyệt thì đếm lùi, trả quyền được', async ({
+  test('người xin: khung chờ nói mã gửi tới ai; nhập mã xong thì đếm lùi, trả quyền được', async ({
     page,
     browser,
   }) => {
@@ -349,6 +333,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     const sa = await saCtx.newPage();
     await stepUpViaApi(sa, await firstLogin(sa, E2E_SA));
     const { deviceId } = await seedDevice(sa, stamp);
+    await saCtx.close();
 
     await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto(`/devices/${deviceId}?tab=vault`);
@@ -357,30 +342,25 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: switch tầng 3 mất kết nối`);
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await pickApprover(page);
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
-    await expect(page.getByText(/^Đã báo \d+ người duyệt qua email\.$/)).toBeVisible();
     await expect(page.getByText(/Bạn có thể đóng trang/)).toBeVisible();
     await expect(page.getByText(/Giữ trang này mở/)).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-    // SA đã nhập mã cho két ngay sau đăng nhập (`stepUpViaApi`), duyệt qua API được ngay.
-    const pending = (await (await sa.request.get('/api/v1/vault/break-glass/pending')).json()) as {
-      id: string;
-      subjectId: string;
-    }[];
-    const approvalId = pending.find((r) => r.subjectId === deviceId)!.id;
-    const approved = await sa.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
-      headers: await headersOf(sa),
-      data: { hours: 4 },
-    });
-    expect(approved.status()).toBe(201);
-    await saCtx.close();
+    const approvalId = (
+      (await (await page.request.get('/api/v1/vault/break-glass/mine')).json()) as {
+        items: { id: string; subjectId: string; state: string }[];
+      }
+    ).items.find((r) => r.subjectId === deviceId && r.state === 'pending')!.id;
+    // Thư vừa đi thì khung đổi từ "đang gửi" sang "mã đã gửi tới …" trong vài giây, không phải F5.
+    const mailed = await mailedApprovalCode(approvalId);
+    await expect(page.getByText(/Mã duyệt đã gửi tới/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gửi lại mã (còn 3 lần)' })).toBeInViewport();
+    await fillOtp(page, mailed, 'Mã duyệt do người duyệt đọc cho bạn');
 
-    await page.reload();
-    await expect(page.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
-    await expect(page.getByText(/Quyền còn 3 giờ 5\d phút \(tới .*\), tính từ lúc duyệt/)).toBeVisible();
-    await expect(page.getByText(/Lần xem đầu gắn quyền vào phiên/)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Nhận quyền/ })).toHaveCount(0);
+    await expect(page.getByText(/Bạn được xem tới .* \(còn 3 giờ 5\d phút\)/)).toBeVisible();
+    await expect(page.getByText(/gắn với phiên đăng nhập này/)).toBeVisible();
     const release = page.getByRole('button', { name: 'Trả quyền' });
     await expect(release).toBeInViewport();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

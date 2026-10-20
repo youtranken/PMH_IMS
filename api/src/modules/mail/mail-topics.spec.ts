@@ -38,8 +38,8 @@ const API_SRC = join(__dirname, '..', '..');
  */
 function casesInBuild(): string[] {
   const source = stripComments(readFileSync(CONSUMER, 'utf8'));
-  const fromSwitch = [...source.matchAll(/case '([a-z0-9.]+)':/g)].map((m) => m[1]);
-  const fromIf = [...source.matchAll(/topic === '([a-z0-9.]+)'/g)].map((m) => m[1]);
+  const fromSwitch = [...source.matchAll(/case '([a-z0-9._]+)':/g)].map((m) => m[1]);
+  const fromIf = [...source.matchAll(/topic === '([a-z0-9._]+)'/g)].map((m) => m[1]);
   return [...new Set([...fromSwitch, ...fromIf])];
 }
 
@@ -57,7 +57,7 @@ function enqueuedTopics(): string[] {
   const found = new Set<string>();
   for (const file of files) {
     const source = stripComments(readFileSync(file, 'utf8'));
-    for (const m of source.matchAll(/enqueueWithin\(\s*tx,\s*'([a-z0-9.]+)'/g)) found.add(m[1]);
+    for (const m of source.matchAll(/enqueueWithin\(\s*tx,\s*'([a-z0-9._]+)'/g)) found.add(m[1]);
   }
   return [...found];
 }

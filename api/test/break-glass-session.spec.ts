@@ -20,6 +20,8 @@ import type { VaultOwnersService } from '../src/modules/vault/vault-owners.servi
 import type { VaultService } from '../src/modules/vault/vault.service';
 import type { UsersApiService } from '../src/modules/users/users.api';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { approveByCode, breakGlassCodes, mailedCode } from './break-glass-codes';
+import type { MailContentRegistry } from '../src/common/mail-content.registry';
 
 /**
  * Q-15 — quyền mở két gắn với PHIÊN đã xem nó lần đầu.
@@ -48,6 +50,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
   let approvals: ApprovalsService;
   let sessions: SessionService;
   let breakGlass: BreakGlassService;
+  let contents: MailContentRegistry;
   let accounts: AccountsService;
   let sweepJobs: Map<string, () => Promise<unknown>>;
   let userId: string;
@@ -74,6 +77,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
     };
     const config = {
       getNumber: (key: string) => Promise.resolve(numbers[key] ?? 24),
+      getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),
     } as unknown as SystemConfigService;
     sessions = new SessionService(scratch.db, config, noopSweep);
     sweepJobs = new Map();
@@ -87,6 +91,15 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       recipientsByRole: () => Promise.resolve([{ email: sa, fullName: 'SA' }]),
     } as unknown as UsersApiService;
     const approvalsApi = new ApprovalsApiService(approvals);
+    const built = breakGlassCodes({
+      db: scratch.db,
+      outbox: new OutboxService(scratch.db, config, noopSweep),
+      approvals: approvalsApi,
+      kinds,
+      users,
+      config,
+    });
+    contents = built.contents;
     breakGlass = new BreakGlassService(
       scratch.db,
       kinds,
@@ -99,6 +112,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       users,
       new AuthApiService(sessions, config),
       sweep,
+      built.codes,
     );
     breakGlass.onModuleInit();
     accounts = new AccountsService(
@@ -157,21 +171,30 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       ownerId: subject,
       reason: 'Sự cố lúc 2 giờ sáng',
       hours: 4,
+      approver: sa,
     });
   }
 
-  /** Xin + duyệt, CHƯA xem lần nào — grant chưa gắn phiên. */
+  /**
+   * Grant duyệt kiểu trước Q-30 — đã duyệt mà CHƯA gắn phiên. Duyệt bằng mã luôn gắn ngay phiên
+   * nhập mã, nhưng đường "gắn ở lần xem đầu" vẫn còn cho grant cũ nên vẫn phải giữ đúng luật.
+   */
   async function approved(sessionId: string, subject = randomUUID()) {
     const req = await ask(sessionId, subject);
-    await breakGlass.approve(sa, req.id, { hours: 4 });
+    await approvals.transition(req.id, {
+      to: 'approved',
+      actor: sa,
+      expiresAt: new Date(Date.now() + 4 * 3_600_000),
+      detail: { hours: 4 },
+    });
     return { id: req.id, subject };
   }
 
-  /** Xin + duyệt + xem lần đầu ở đúng phiên đó (grant gắn vào phiên này). */
-  async function held(sessionId: string, subject = randomUUID()) {
-    const grant = await approved(sessionId, subject);
-    await breakGlass.assertCanReveal(as(sessionId), 'device', subject);
-    return grant;
+  /** Xin + nhập mã ở đúng phiên đó (Q-30): grant gắn vào phiên này ngay. */
+  async function held(sessionId: string, subject = randomUUID(), email = member) {
+    const req = await ask(sessionId, subject, email);
+    await approveByCode(breakGlass, contents, as(sessionId, email), req.id);
+    return { id: req.id, subject };
   }
 
   async function row(id: string) {
@@ -197,7 +220,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
   const OTHER_SESSION = { status: 403, response: { code: 'BREAK_GLASS_OTHER_SESSION' } };
 
   describe('yêu cầu đang chờ KHÔNG gắn phiên', () => {
-    it('phiên A xin → A chết → vẫn chờ → duyệt → phiên B xem lần đầu và mở được', async () => {
+    it('phiên A xin → A chết → vẫn chờ → phiên B nhập mã và mở được', async () => {
       const a = await login();
       const subject = randomUUID();
       const req = await ask(a, subject);
@@ -211,9 +234,9 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       expect(waiting.pending?.id).toBe(req.id);
       expect(waiting.canRequest).toBe(false);
 
-      await breakGlass.approve(sa, req.id, { hours: 4 });
+      await approveByCode(breakGlass, contents, as(b), req.id);
       const ready = await breakGlass.verdictFor(as(b), 'device', subject);
-      expect(ready.claimable?.id).toBe(req.id);
+      expect(ready.grant?.id).toBe(req.id);
       expect(ready.canReveal).toBe(true);
       expect(ready.canRequest).toBe(false);
 
@@ -505,10 +528,11 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       expect(mail.rows.map((r) => r.payload.state)).toEqual(['expired']);
     });
 
-    it('người duyệt bấm Duyệt phiếu đã hết hạn chờ → 409 nói rõ', async () => {
+    it('người xin nhập mã phiếu đã hết hạn chờ → 409 nói rõ', async () => {
       const old = await aged(OVER);
+      const code = await mailedCode(contents, old.id);
       await runSweep('break-glass-pending-expire');
-      await expect(breakGlass.approve(sa, old.id, { hours: 1 })).rejects.toMatchObject({
+      await expect(breakGlass.submitCode(as(old.session), old.id, code)).rejects.toMatchObject({
         status: 409,
         response: {
           code: 'BREAK_GLASS_PENDING_EXPIRED',
@@ -518,9 +542,10 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       expect(await stateOf(old.id)).toBe('expired');
     });
 
-    it('quá hạn theo đồng hồ mà lượt quét chưa chạy: Duyệt cũng bị chặn (AD-6)', async () => {
+    it('quá hạn theo đồng hồ mà lượt quét chưa chạy: nhập mã cũng bị chặn (AD-6)', async () => {
       const old = await aged(OVER);
-      await expect(breakGlass.approve(sa, old.id, { hours: 1 })).rejects.toMatchObject({
+      const code = await mailedCode(contents, old.id);
+      await expect(breakGlass.submitCode(as(old.session), old.id, code)).rejects.toMatchObject({
         status: 409,
         response: { code: 'BREAK_GLASS_PENDING_EXPIRED' },
       });
@@ -537,11 +562,12 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
   });
 
   describe('người duyệt gặp phiếu đã rút', () => {
-    it('người xin TỰ rút: Duyệt / Từ chối nhận 409 "đã rút", không phải lỗi chung', async () => {
+    it('người xin TỰ rút: nhập mã / Từ chối nhận 409 "đã rút", không phải lỗi chung', async () => {
       const a = await login();
       const p1 = await ask(a);
+      const code = await mailedCode(contents, p1.id);
       await breakGlass.cancel(member, p1.id);
-      await expect(breakGlass.approve(sa, p1.id, { hours: 1 })).rejects.toMatchObject({
+      await expect(breakGlass.submitCode(as(a), p1.id, code)).rejects.toMatchObject({
         status: 409,
         response: {
           code: 'BREAK_GLASS_WITHDRAWN',
@@ -596,7 +622,7 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       expect(audit.rows[0].detail.withdrawnRequests).toBe(2);
 
       // Người duyệt mở đúng phiếu đó: 409 nói rõ vì sao.
-      await expect(breakGlass.approve(sa, p1.id, { hours: 1 })).rejects.toMatchObject({
+      await expect(breakGlass.deny(sa, p1.id)).rejects.toMatchObject({
         status: 409,
         response: {
           code: 'BREAK_GLASS_WITHDRAWN',
@@ -609,11 +635,12 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       const off = await freshMember();
       const s = await login(off.id);
       const unclaimed = await ask(s, randomUUID(), off.email);
-      await breakGlass.approve(sa, unclaimed.id, { hours: 4 });
-      const claimedSubject = randomUUID();
-      const claimed = await ask(s, claimedSubject, off.email);
-      await breakGlass.approve(sa, claimed.id, { hours: 4 });
-      await breakGlass.assertCanReveal(as(s, off.email), 'device', claimedSubject);
+      await approvals.transition(unclaimed.id, {
+        to: 'approved',
+        actor: sa,
+        expiresAt: new Date(Date.now() + 4 * 3_600_000),
+      });
+      const claimed = await held(s, randomUUID(), off.email);
 
       await accounts.setStatus({ id: randomUUID(), email: sa }, off.id, 'disabled', 'Nghi lộ');
 

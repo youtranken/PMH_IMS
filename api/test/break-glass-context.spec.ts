@@ -14,6 +14,8 @@ import type { UsersApiService } from '../src/modules/users/users.api';
 import type { AuthApiService } from '../src/modules/auth/auth.api';
 import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { approveByCode, breakGlassCodes } from './break-glass-codes';
+import type { MailContentRegistry } from '../src/common/mail-content.registry';
 import { noSweep } from './sweep-stub';
 
 /**
@@ -21,8 +23,8 @@ import { noSweep } from './sweep-stub';
  * và VAI, không một danh tính nào khác:
  *
  *   - người duyệt thấy vai người xin và "lần thứ N trong X ngày" (X = `breakglass.recent_window_days`);
- *   - người xin thấy "đã báo N người duyệt" (không phải danh sách ai) và số giây quyền còn lại do
- *     SERVER tính (AD-6) — client không tự trừ giờ theo đồng hồ máy.
+ *   - người xin thấy người duyệt mình đã chọn (Q-30) và số giây quyền còn lại do SERVER tính
+ *     (AD-6) — client không tự trừ giờ theo đồng hồ máy.
  *
  * Đếm trên Postgres thật vì cửa sổ ngày là một câu `created_at >= …` trong SQL.
  */
@@ -34,6 +36,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
   let scratch: ScratchDb;
   let approvals: ApprovalsService;
   let breakGlass: BreakGlassService;
+  let contents: MailContentRegistry;
   const APPROVERS = [
     { email: 'sa@qa.test', fullName: 'SA', role: 'sa' },
     { email: 'admin1@qa.test', fullName: 'Admin 1', role: 'admin' },
@@ -49,6 +52,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     const config = {
       getNumber: (name: string) =>
         Promise.resolve(name === 'breakGlassRecentWindowDays' ? WINDOW_DAYS : 24),
+      getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),
     } as unknown as SystemConfigService;
     const owners = {
       describe: () =>
@@ -65,13 +69,17 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     const access = {
       tierFor: () => Promise.resolve('needs_approval'),
     } as unknown as AccessListService;
+    const approvalsApi = new ApprovalsApiService(approvals);
+    const outbox = new OutboxService(scratch.db, config, noSweep);
+    const built = breakGlassCodes({ db: scratch.db, outbox, approvals: approvalsApi, kinds, users, config });
+    contents = built.contents;
     breakGlass = new BreakGlassService(
       scratch.db,
       kinds,
-      new ApprovalsApiService(approvals),
+      approvalsApi,
       access,
       config,
-      new OutboxService(scratch.db, config, noSweep),
+      outbox,
       owners,
       vault,
       users,
@@ -80,6 +88,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
         aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
       } as unknown as AuthApiService,
       { register: () => undefined } as unknown as SweepService,
+      built.codes,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);
@@ -92,18 +101,14 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
   const SESSION = randomUUID();
   const as = (email: string) => ({ email, sessionId: SESSION });
 
-  function request(requester: string, subjectId = randomUUID(), hours = 4) {
-    return scratch.db.transaction((tx) =>
-      approvals.createWithin(tx, {
-        kind: 'break_glass',
-        requester,
-        subjectType: 'device',
-        subjectId,
-        reason: 'Sự cố lúc 2 giờ sáng',
-        payload: { hours },
-        requesterSessionId: SESSION,
-      }),
-    );
+  function request(requester: string, subjectId = randomUUID(), hours = 4, approver = 'sa@qa.test') {
+    return breakGlass.request(as(requester), {
+      ownerType: 'device',
+      ownerId: subjectId,
+      reason: 'Sự cố lúc 2 giờ sáng',
+      hours,
+      approver,
+    });
   }
 
   async function backdate(id: string, days: number) {
@@ -134,19 +139,20 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     expect(view.recentCount).toBeNull();
   });
 
-  it('phiếu đang treo: báo số người duyệt được, KHÔNG tính chính người xin', async () => {
+  it('phiếu đang treo: nói đúng người duyệt đã chọn (Q-30); Admin tự xin không chọn được chính mình', async () => {
     const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
     const subject = randomUUID();
-    await request(member, subject);
+    await request(member, subject, 4, 'admin2@qa.test');
     const verdict = await breakGlass.verdictFor(as(member), 'device', subject);
     expect(verdict.pending).not.toBeNull();
-    expect(verdict.notifiedApprovers).toBe(3);
+    expect(verdict.pendingCode?.approver).toBe('admin2@qa.test');
 
-    // Admin tự xin: hai người còn lại mới là người duyệt được (bốn mắt).
-    const own = randomUUID();
-    await request('admin1@qa.test', own);
-    const adminVerdict = await breakGlass.verdictFor(as('admin1@qa.test'), 'device', own);
-    expect(adminVerdict.notifiedApprovers).toBe(2);
+    // Bốn mắt: danh sách chọn của Admin không có chính họ.
+    const choices = await breakGlass.approverChoices('admin1@qa.test');
+    expect(choices.map((c) => c.email).sort()).toEqual(['admin2@qa.test', 'sa@qa.test']);
+    await expect(request('admin1@qa.test', randomUUID(), 4, 'admin1@qa.test')).rejects.toMatchObject({
+      response: { code: 'BREAK_GLASS_APPROVER_INVALID' },
+    });
   });
 
   it('quyền đang chạy: số giây còn lại do server tính; không có quyền thì null', async () => {
@@ -156,9 +162,9 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     const before = await breakGlass.verdictFor(as(member), 'device', subject);
     expect(before.grantSecondsLeft).toBeNull();
 
-    await breakGlass.approve('sa@qa.test', row.id, { hours: 2 });
+    await approveByCode(breakGlass, contents, as(member), row.id);
     const after = await breakGlass.verdictFor(as(member), 'device', subject);
-    expect(after.notifiedApprovers).toBeNull();
+    expect(after.pendingCode).toBeNull();
     expect(after.grantSecondsLeft).toBeGreaterThan(2 * 3600 - 60);
     expect(after.grantSecondsLeft).toBeLessThanOrEqual(2 * 3600);
   });
@@ -210,7 +216,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     it('người duyệt thấy từng bước: ai duyệt, ai thu hồi, lúc nào', async () => {
       const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
       const row = await request(member);
-      await breakGlass.approve('sa@qa.test', row.id, { hours: 2 });
+      await approveByCode(breakGlass, contents, as(member), row.id);
       await breakGlass.revoke('admin1@qa.test', row.id, 'Xong việc');
 
       const view = await breakGlass.detail('admin2@qa.test', true, row.id);
@@ -225,7 +231,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     it('người xin tự đọc phiếu của mình: không nhận dòng thời gian (tên người quyết khác)', async () => {
       const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
       const row = await request(member);
-      await breakGlass.approve('sa@qa.test', row.id, { hours: 2 });
+      await approveByCode(breakGlass, contents, as(member), row.id);
       await breakGlass.revoke('admin1@qa.test', row.id);
 
       const view = await breakGlass.detail(member, false, row.id);

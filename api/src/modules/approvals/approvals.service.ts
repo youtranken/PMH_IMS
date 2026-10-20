@@ -411,7 +411,12 @@ export class ApprovalsService {
   async claimWithin(
     tx: Tx,
     id: string,
-    input: { actor: string; sessionId: string; now?: Date },
+    /**
+     * `history: false` khi lượt gắn đi cùng lượt duyệt trong một transaction (duyệt bằng mã, Q-30):
+     * hai dòng lịch sử cùng `created_at` thì dòng thời gian xếp lẫn thứ tự, và dòng duyệt đã ghi
+     * người nhập mã.
+     */
+    input: { actor: string; sessionId: string; now?: Date; history?: boolean },
   ): Promise<ApprovalRecord | null> {
     const now = input.now ?? new Date();
     const before = await this.requireOne(id, tx);
@@ -437,6 +442,7 @@ export class ApprovalsService {
       objectId: id,
       detail: { expiresAt: before.expiresAt?.toISOString() ?? null },
     });
+    if (input.history === false) return toRecord(rows[0]);
     // `to_state` để trống: state không đổi, dòng này chỉ ghi "đã bắt đầu dùng ở một phiên".
     await tx.insert(approvalHistoryTable).values({
       approvalId: id,

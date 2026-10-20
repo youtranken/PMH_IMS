@@ -3,7 +3,11 @@ import {
   E2E_MEMBER,
   E2E_SA,
   NEW_PASSWORD,
+  approveBreakGlassByCode,
+  fillOtp,
   firstLogin,
+  mailedApprovalCode,
+  requestBreakGlass,
   loginWithTotp,
   logout,
   resetAccessList,
@@ -17,14 +21,14 @@ import {
 } from './helpers';
 
 /**
- * Q-15 — yêu cầu mở két đang chờ KHÔNG gắn phiên; quyền gắn với phiên đã XEM nó lần đầu.
+ * Q-15 + Q-30 — yêu cầu mở két đang chờ KHÔNG gắn phiên; quyền gắn với phiên đã NHẬP MÃ duyệt.
  *
  * Đòn cần chặn: người trực được duyệt 4 giờ, xem trên máy trực rồi đăng xuất đi về; ai đó đăng
  * nhập tài khoản đó ở máy khác (hoặc chính họ ở nhà) và mở két bằng quyền còn giờ. Quyền xem
  * mật khẩu không được sống lâu hơn phiên đang ngồi trước máy.
  *
- * Đồng thời việc CHỜ duyệt không bắt người xin canh trang: phiên idle chết sau 30 phút, người
- * duyệt có thể quyết sau nhiều giờ. Chờ quá `breakglass.pending_expire_hours` (8) thì phiếu tự
+ * Đồng thời việc CHỜ duyệt không bắt người xin canh trang: người xin đăng xuất, đăng nhập lại
+ * ở máy khác rồi nhập mã vẫn được. Chờ quá `breakglass.pending_expire_hours` (8) thì phiếu tự
  * hết hạn.
  */
 
@@ -83,21 +87,8 @@ async function setUp(page: Page, stamp: string): Promise<Kit> {
   return { deviceId, secretId, value };
 }
 
-async function ask(memberPage: Page, deviceId: string, reason: string): Promise<string> {
-  const res = await memberPage.request.post('/api/v1/vault/break-glass', {
-    headers: await writeHeaders(memberPage),
-    data: { ownerType: 'device', ownerId: deviceId, reason, hours: 4 },
-  });
-  expect(res.status()).toBe(201);
-  return ((await res.json()) as { id: string }).id;
-}
-
-async function approve(saPage: Page, id: string) {
-  const res = await saPage.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
-    headers: await writeHeaders(saPage),
-    data: { hours: 4 },
-  });
-  expect(res.status()).toBe(201);
+function ask(memberPage: Page, deviceId: string, reason: string): Promise<string> {
+  return requestBreakGlass(memberPage, { ownerId: deviceId, reason });
 }
 
 /** Mã lỗi của một lượt mở két; `OK` khi mở được. */
@@ -117,8 +108,8 @@ function claimed(id: string): boolean {
   return sql(`SELECT claimed_session_id IS NOT NULL FROM approval WHERE id = '${id}'`) === 't';
 }
 
-test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên xem lần đầu (Q-15)', () => {
-  test('đường hạnh phúc: A xin rồi đăng xuất → vẫn chờ → duyệt → phiên B bấm Xem, mở được', async ({
+test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên nhập mã (Q-15, Q-30)', () => {
+  test('đường hạnh phúc: A xin rồi đăng xuất → vẫn chờ → phiên B nhập mã, bấm Xem, mở được', async ({
     page,
     browser,
   }) => {
@@ -134,9 +125,12 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await pageA.goto(`/devices/${kit.deviceId}?tab=vault`);
     await pageA.getByRole('button', { name: 'Xin mở két' }).click();
     const form = pageA.getByRole('dialog');
-    await expect(form.getByText(/bấm "Xem" lần đầu/)).toBeVisible();
+    await expect(form.getByText(/phiên đăng nhập bạn nhập mã duyệt/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill('E2E switch tầng 3 mất kết nối');
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    // Q-30: chọn đúng một người duyệt — chỉ người đó nhận thư mang mã.
+    await form.getByRole('button', { name: /Người duyệt/ }).click();
+    await pageA.getByRole('option', { name: E2E_SA.email }).click();
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
     // Khung chờ nói cứ đóng trang — không còn câu "giữ trang này mở".
     await expect(pageA.getByText(/Bạn có thể đóng trang/)).toBeVisible();
@@ -145,35 +139,34 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
       `SELECT id FROM approval WHERE requester = '${E2E_MEMBER.email}' AND state = 'pending' ORDER BY created_at DESC LIMIT 1`,
     );
 
-    // Người xin đăng xuất trong lúc chờ: phiếu KHÔNG bị rút, người duyệt duyệt bình thường.
+    // Người xin đăng xuất trong lúc chờ: phiếu KHÔNG bị rút.
     await logout(pageA);
     await ctxA.close();
     expect(stateOf(id)).toBe('pending');
-    await approve(page, id);
-    expect(claimed(id)).toBe(false);
 
-    // Phiên mới (máy khác): khung chỉ đường "bấm Xem, nhập mã 6 số", không có nút riêng.
+    // Phiên mới (máy khác): khung chờ nói mã đã gửi tới ai; người xin nhập mã người duyệt đọc cho.
     const ctxB = await browser.newContext({ ignoreHTTPSErrors: true });
     const pageB = await ctxB.newPage();
     await loginWithTotp(pageB, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
     await stepUpViaApi(pageB, memberTotp);
     await pageB.goto(`/devices/${kit.deviceId}?tab=vault`);
-    await expect(pageB.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
-    await expect(pageB.getByText(/tính từ lúc duyệt/)).toBeVisible();
-    await expect(pageB.getByRole('button', { name: /Nhận quyền/ })).toHaveCount(0);
+    await expect(pageB.getByText(/Mã duyệt đã gửi tới/)).toBeVisible();
+    await fillOtp(pageB, await mailedApprovalCode(id), 'Mã duyệt do người duyệt đọc cho bạn');
+    await expect(pageB.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    expect(stateOf(id)).toBe('approved');
+    expect(claimed(id)).toBe(true);
 
     // Đã nhập mã cho két ngay sau đăng nhập (`stepUpViaApi`) = còn ân hạn: bấm Xem là thấy giá trị.
     await pageB.getByRole('button', { name: 'Xem' }).click();
     await expect(pageB.getByTestId('secret-value')).toHaveText(kit.value);
-    expect(claimed(id)).toBe(true);
     await expect(pageB.getByText(/Bạn được xem tới/)).toBeVisible();
 
-    // Nhật ký: có dòng "xem lần đầu" của chính người xin.
+    // Nhật ký: người duyệt là người nhận mã, kèm ai nhập mã.
     expect(
       sql(
-        `SELECT actor FROM approval_history WHERE approval_id = '${id}' AND detail->>'event' = 'claimed'`,
+        `SELECT actor || '|' || (detail->>'via') || '|' || (detail->>'enteredBy') FROM approval_history WHERE approval_id = '${id}' AND to_state = 'approved'`,
       ),
-    ).toBe(E2E_MEMBER.email);
+    ).toBe(`${E2E_SA.email}|code|${E2E_MEMBER.email}`);
     await ctxB.close();
   });
 
@@ -191,11 +184,10 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     const memberTotp = await firstLogin(pageB, E2E_MEMBER);
     await stepUpViaApi(pageB, memberTotp);
     const id = await ask(pageB, kit.deviceId, 'E2E cổng uplink chập chờn');
-    await approve(page, id);
-
-    // Lần xem đầu ở B gắn quyền vào B.
-    expect(await revealCode(pageB, kit.secretId)).toBe('OK');
+    // Nhập mã ở B gắn quyền vào B.
+    await approveBreakGlassByCode(pageB, id);
     expect(claimed(id)).toBe(true);
+    expect(await revealCode(pageB, kit.secretId)).toBe('OK');
 
     // Cùng người, phiên thứ hai (máy khác): bị từ chối rõ ràng, và màn hình nói vì sao.
     const ctxC = await browser.newContext({ ignoreHTTPSErrors: true });
@@ -238,7 +230,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     const memberPage = await ctx.newPage();
     await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await ask(memberPage, kit.deviceId, 'E2E đổi cấu hình VLAN');
-    await approve(page, id);
+    await approveBreakGlassByCode(memberPage, id);
     expect(await revealCode(memberPage, kit.secretId)).toBe('OK');
 
     await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
@@ -281,7 +273,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     expect(early.status()).toBe(400);
     expect(stateOf(id)).toBe('pending');
 
-    await approve(page, id);
+    await approveBreakGlassByCode(memberPage, id);
 
     // Dựng lại đòn: biết id phiếu (ảnh chụp màn hình, URL) mà cắt quyền của người đang xử sự cố.
     const stolen = await page.request.post(`/api/v1/vault/break-glass/${id}/release`, {
@@ -294,7 +286,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await ctx.close();
   });
 
-  test(`đường hỏng: chờ quá 8 giờ không ai duyệt → tự hết hạn; bấm Duyệt nhận 409 rõ ràng`, async ({
+  test(`đường hỏng: chờ quá 8 giờ không ai duyệt → tự hết hạn; nhập mã nhận 409 rõ ràng`, async ({
     page,
     browser,
   }) => {
@@ -310,11 +302,12 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(memberPage.getByText(/trong 8 giờ thì yêu cầu tự hết hạn/)).toBeVisible();
 
-    // Lùi mốc gửi quá hạn chờ: Duyệt bị chặn NGAY theo đồng hồ, không chờ lượt quét.
+    // Lùi mốc gửi quá hạn chờ: mã đúng cũng bị chặn NGAY theo đồng hồ, không chờ lượt quét.
+    const code = await mailedApprovalCode(id);
     sql(`UPDATE approval SET created_at = now() - interval '9 hours' WHERE id = '${id}'`);
-    const late = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
-      headers: await writeHeaders(page),
-      data: { hours: 4 },
+    const late = await memberPage.request.post(`/api/v1/vault/break-glass/${id}/code`, {
+      headers: await writeHeaders(memberPage),
+      data: { code },
     });
     expect(late.status()).toBe(409);
     expect(await late.json()).toMatchObject({ code: 'BREAK_GLASS_PENDING_EXPIRED' });
@@ -331,7 +324,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await ctx.close();
   });
 
-  test('vô hiệu hóa tài khoản người xin → yêu cầu đang chờ tự rút; bấm Duyệt nhận 409 nói rõ', async ({
+  test('vô hiệu hóa tài khoản người xin → yêu cầu đang chờ tự rút; bấm Từ chối nhận 409 nói rõ', async ({
     page,
     browser,
   }) => {
@@ -359,9 +352,9 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
       ),
     ).toBe(`${E2E_SA.email}|account-disabled`);
 
-    const late = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
+    const late = await page.request.post(`/api/v1/vault/break-glass/${id}/deny`, {
       headers: await writeHeaders(page),
-      data: { hours: 4 },
+      data: { note: 'E2E không cần nữa' },
     });
     expect(late.status()).toBe(409);
     const body = (await late.json()) as { code: string; message: string };

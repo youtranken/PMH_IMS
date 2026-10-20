@@ -78,10 +78,21 @@ function mockApi(verdict: AccessVerdict, rows: SecretMeta[]) {
     if (method === 'GET' && url.includes('/vault/secrets')) {
       return Promise.resolve(jsonResponse(200, rows));
     }
+    if (method === 'GET' && url.endsWith('/vault/break-glass/approvers')) {
+      return Promise.resolve(jsonResponse(200, APPROVERS));
+    }
     return new Promise<Response>(() => {});
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
+}
+
+/** Danh sách chọn người duyệt server dựng (Q-30). */
+const APPROVERS = [{ email: 'sa@pmh.com.vn', name: 'Cao Thuận' }];
+
+async function pickApprover(dialog: HTMLElement) {
+  await userEvent.click(within(dialog).getByRole('button', { name: /Người duyệt/ }));
+  await userEvent.click(await screen.findByRole('option', { name: 'Cao Thuận · sa@pmh.com.vn' }));
 }
 
 function renderPanel(me: Me = ME) {
@@ -176,6 +187,7 @@ describe('VaultPanel — hộp Xin quyền xem khóa lại khi đang gửi', () 
       screen.getByLabelText(/Lý do/),
       'switch tầng 3 mất kết nối',
     );
+    await pickApprover(screen.getByRole('dialog'));
     await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu' }));
 
     await screen.findByRole('button', { name: 'Đang xử lý…' });
@@ -291,6 +303,9 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
       if (method === 'GET' && url.includes('/vault/secrets')) {
         return Promise.resolve(jsonResponse(200, [SECRET]));
       }
+      if (method === 'GET' && url.endsWith('/vault/break-glass/approvers')) {
+        return Promise.resolve(jsonResponse(200, APPROVERS));
+      }
       if (method === 'POST' && url.endsWith('/vault/break-glass')) {
         return Promise.resolve(
           jsonResponse(201, { id: 'p1', state: 'pending', payload: { hours: grantedHours } }),
@@ -312,14 +327,18 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     const hoursBox = within(dialog).getByLabelText(/Xin trong bao lâu/);
     await userEvent.clear(hoursBox);
     await userEvent.type(hoursBox, hours);
+    await pickApprover(dialog);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
   }
 
   it('gửi 4 giờ, được 4 giờ → báo "Đã gửi", không cảnh báo vượt trần', async () => {
-    mockFlow(NEEDS_APPROVAL, 4);
+    const calls = mockFlow(NEEDS_APPROVAL, 4);
     renderPanel({ ...ME, role: 'member' });
     await send('4');
-    expect(await screen.findByText(/Đã gửi yêu cầu. Quản trị/)).toBeInTheDocument();
+    expect(await screen.findByText(/Đã gửi yêu cầu. Người duyệt sẽ nhận thư có mã/)).toBeInTheDocument();
+    // Q-30: người duyệt đã chọn đi cùng yêu cầu — chỉ người đó nhận mã.
+    const sent = calls.find((c) => c.method === 'POST' && c.url.endsWith('/vault/break-glass'));
+    expect(JSON.parse(sent!.body!)).toMatchObject({ hours: 4, approver: 'sa@pmh.com.vn' });
     expect(screen.queryByText(/vượt mức tối đa/)).not.toBeInTheDocument();
   });
 
@@ -395,6 +414,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
     expect(within(dialog).getByText('Đã gõ 25 ký tự · tối thiểu 5.')).toBeInTheDocument();
     await userEvent.click(within(group).getByRole('button', { name: '2 giờ' }));
+    await pickApprover(dialog);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
     const sent = calls.find((c) => c.method === 'POST' && c.url.endsWith('/vault/break-glass'));
     expect(JSON.parse(sent!.body!)).toMatchObject({ hours: 2 });
@@ -603,12 +623,12 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     expect(before).toBeGreaterThanOrEqual(1);
   });
 
-  it('hộp xin nói trước: lần xem đầu gắn quyền vào phiên, đăng xuất hay hết phiên là hết', async () => {
+  it('hộp xin nói trước: quyền gắn vào phiên nhập mã duyệt, đăng xuất hay hết phiên là hết', async () => {
     mockRelease(NEEDS_APPROVAL);
     renderPanel({ ...ME, role: 'member' });
     await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/bấm "Xem" lần đầu/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/phiên đăng nhập bạn nhập mã duyệt/)).toBeInTheDocument();
     expect(within(dialog).getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
   });
 });
