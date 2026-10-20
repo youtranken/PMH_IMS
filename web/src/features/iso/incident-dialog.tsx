@@ -5,6 +5,7 @@ import { errorMessage } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { canSee } from '@/lib/features';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
@@ -533,7 +534,8 @@ export function IncidentDialogHost({ me, target, onClose }: { me: Me; target: In
   const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
-  if (!target) return null;
+  // Q-31: nhóm quyền ẩn 0206 thì ô ✗ của lưới không mở được phiếu (API cũng trả 403).
+  if (!target || !canSee(me, 'iso_0206')) return null;
   return (
     <IncidentDialog
       me={me}

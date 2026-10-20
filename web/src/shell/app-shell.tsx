@@ -10,6 +10,7 @@ import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { usePendingDiagramReviews } from '@/shell/use-pending-diagram-reviews';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
+import { canSee } from '@/lib/features';
 import { useFailedMailCount } from '@/shell/use-failed-mail-count';
 import { useIsoTodo } from '@/shell/use-iso-todo';
 import { NavIcon } from '@/ui/nav-icon';
@@ -63,9 +64,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
   const pendingApprovals = usePendingApprovalCount(me);
   const diagramReviews = usePendingDiagramReviews(me).rows.length;
-  const overdue = useOverdueExpiryCount();
+  const overdue = useOverdueExpiryCount(canSee(me, 'expiry'));
   const failedMail = useFailedMailCount(me);
-  const isoTodo = useIsoTodo();
+  const isoTodo = useIsoTodo(canSee(me, 'iso'));
   const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
+import { canSee } from "@/lib/features";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -367,6 +368,9 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   const panelOf = (key: string) =>
     (panels.data ?? []).find((panel) => panel.key === key);
+  /** IP và NAT thuộc mảng Mạng (Q-31); trang này đã thuộc Tài sản nên các khu khác luôn có. */
+  const seesNetwork = canSee(me, "network");
+  const hiddenPanel = (key: string) => (key === "ipam" || key === "nat") && !seesNetwork;
 
   /** Khu quan hệ vẽ được: có panel VÀ panel có dòng. `tone` của item chính là cảnh báo. */
   const relationFromPanel = (
@@ -481,6 +485,8 @@ export function DeviceDetail({ me }: { me: Me }) {
    * ngược lại trong đầu, mỗi lần.
    */
   const looksAbsent = (key: string): boolean => {
+    // Khu bị nhóm quyền ẩn (Q-31) không phải "chưa gắn": API không trả panel đó cho người này.
+    if (hiddenPanel(key)) return false;
     const panel = panelOf(key);
     // Chưa đọc được sổ khu mở rộng → chưa biết, `isUnknown` của bản đồ đã lo phần nói năng.
     if (!panels.data) return false;
@@ -617,9 +623,13 @@ export function DeviceDetail({ me }: { me: Me }) {
   /* Hàng "Đang giữ" (chỉ trên điện thoại, thay bản đồ quan hệ): đếm từ đúng nguồn của bản đồ,
      bấm là tới khu/tab đó — cả bộ con số trong một dòng thay cho một danh sách nút cao. */
   const held = heldSummary<HeldKey>([
-    { key: "ipam", count: panels.data ? (panelOf("ipam")?.items.length ?? 0) : undefined },
+    ...(seesNetwork
+      ? [{ key: "ipam" as const, count: panels.data ? (panelOf("ipam")?.items.length ?? 0) : undefined }]
+      : []),
     { key: "ports", count: ports.data ? portRowCount : undefined },
-    { key: "nat", count: panels.data ? (panelOf("nat")?.items.length ?? 0) : undefined },
+    ...(seesNetwork
+      ? [{ key: "nat" as const, count: panels.data ? (panelOf("nat")?.items.length ?? 0) : undefined }]
+      : []),
     { key: "isp", count: panels.data ? (panelOf("isp")?.items.length ?? 0) : undefined },
     { key: "software", count: panels.data ? (panelOf("software")?.items.length ?? 0) : undefined },
     { key: "vault", count: counts.secrets },
@@ -750,7 +760,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             blankText: t("devices.noUserYet"),
             note: item.department,
           },
-          {
+          ...(seesNetwork ? [{
             key: "ip",
             label: t("devices.managementIp"),
             /* Nút chép đứng ngay sau IP: chép là việc của chính con số, không phải một việc riêng. */
@@ -778,7 +788,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 {t("devices.assignIp")}
               </button>
             ) : null,
-          },
+          }] : []),
           {
             key: "warranty",
             label: t("devices.warranty"),
@@ -936,7 +946,7 @@ export function DeviceDetail({ me }: { me: Me }) {
               rackUnits={item.rackUSize ?? null}
             />
 
-            <DeviceOnDiagrams deviceId={item.id} />
+            {seesNetwork ? <DeviceOnDiagrams deviceId={item.id} /> : null}
 
             {/*
               KHU MỞ RỘNG HỎNG PHẢI NÓI RA, KHÔNG ĐƯỢC BIẾN MẤT.

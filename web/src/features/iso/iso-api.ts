@@ -42,15 +42,17 @@ export function useOwners() {
   });
 }
 
-export function useJobs(status: 'live' | 'stopped' | 'all' = 'all') {
+export function useJobs(status: 'live' | 'stopped' | 'all' = 'all', enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [...ISO_KEY, 'jobs', status],
     queryFn: () => apiFetch<Job[]>(`/api/v1/iso/catalog/jobs?status=${status}`),
   });
 }
 
-export function useDivisions() {
+export function useDivisions(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [...ISO_KEY, 'divisions'],
     queryFn: () => apiFetch<Division[]>('/api/v1/iso/catalog/divisions'),
   });

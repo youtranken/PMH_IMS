@@ -29,7 +29,8 @@ import { useToast } from '@/ui/toast';
 import { PATHS } from '@/lib/routes';
 import { AccountForm } from './account-form';
 import { AccountDetailDialog } from './account-detail-dialog';
-import { AccountStatusDialog, RoleDialog } from './account-dialogs';
+import { AccountStatusDialog, FeatureGroupDialog, RoleDialog } from './account-dialogs';
+import { useFeatureGroups } from '@/ui/use-feature-groups';
 
 interface AccountRow {
   id: string;
@@ -39,6 +40,8 @@ interface AccountRow {
   employeeCode: string | null;
   birthDate: string | null;
   role: Me['role'];
+  /** Nhóm quyền (Q-31); `null` = đủ quyền. */
+  featureGroupId?: string | null;
   status: 'active' | 'locked' | 'disabled';
   totpEnrolledAt: string | null;
   totpLoginRequired: boolean;
@@ -243,6 +246,10 @@ export function AccountsScreen({ me }: { me: Me }) {
     null,
   );
   const [roleFor, setRoleFor] = useState<AccountRow | null>(null);
+  const [groupFor, setGroupFor] = useState<AccountRow | null>(null);
+  const featureGroups = useFeatureGroups();
+  const groupName = (id: string | null | undefined) =>
+    id ? (featureGroups.data?.find((group) => group.id === id)?.name ?? null) : null;
   const [detailFor, setDetailFor] = useState<AccountRow | null>(null);
   /* Mọi lệnh ghi ở màn này đòi step-up (`@RequiresStepUp`): hết ân hạn thì hỏi mã rồi chạy lại. */
   const stepUp = useStepUpRetry(me.csrfToken);
@@ -293,6 +300,10 @@ export function AccountsScreen({ me }: { me: Me }) {
       refreshMe: false,
       body: (input) => (input.reason ? { status: input.status, reason: input.reason } : { status: input.status }),
     },
+  );
+  const setFeatureGroup = useApiMutation<{ id: string; featureGroupId: string | null }, unknown>(
+    (input) => `/api/v1/accounts/${input.id}/feature-group`,
+    { method: 'PUT', csrfToken, refreshMe: false, body: (input) => ({ featureGroupId: input.featureGroupId }) },
   );
   const setRole = useApiMutation<{ id: string; role: Me['role'] }, unknown>(
     (input) => `/api/v1/accounts/${input.id}/role`,
@@ -466,6 +477,10 @@ export function AccountsScreen({ me }: { me: Me }) {
           label: t('accounts.changeRole'),
           onSelect: () => setRoleFor(account),
         },
+        // Nhóm quyền chỉ cho Thành viên (Q-31).
+        ...(account.role === 'member'
+          ? [{ key: 'feature-group', label: t('featureGroups.change'), onSelect: () => setGroupFor(account) }]
+          : []),
       );
     }
     /* Bật/tắt cưỡng chế 2 lớp (NFR-01). TẮT là hạ rào (warn); bật lại không lấy gì của ai. */
@@ -600,9 +615,14 @@ export function AccountsScreen({ me }: { me: Me }) {
         accessorKey: 'role',
         header: t('accounts.role'),
         cell: ({ row }) => (
-          <span className={`badge plain ${ROLE_TONE[row.original.role]}`}>
-            {roleLabel(row.original.role, t)}
-          </span>
+          <>
+            <span className={`badge plain ${ROLE_TONE[row.original.role]}`}>
+              {roleLabel(row.original.role, t)}
+            </span>
+            {row.original.role === 'member' && groupName(row.original.featureGroupId) ? (
+              <span className="cell-sub">{groupName(row.original.featureGroupId)}</span>
+            ) : null}
+          </>
         ),
       },
       {
@@ -880,6 +900,19 @@ export function AccountsScreen({ me }: { me: Me }) {
               }),
             });
             setRoleFor(null);
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {groupFor ? (
+        <FeatureGroupDialog
+          account={groupFor}
+          onClose={() => setGroupFor(null)}
+          onSubmit={async (featureGroupId) => {
+            await setFeatureGroup.mutateAsync({ id: groupFor.id, featureGroupId });
+            toast({ message: t('featureGroups.changed', { name: groupFor.fullName }) });
+            setGroupFor(null);
             void refresh();
           }}
         />

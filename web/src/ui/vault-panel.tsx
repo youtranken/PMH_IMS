@@ -23,6 +23,7 @@ import { VaultRevealPopup, type RevealedSecret } from '@/ui/vault-reveal-popup';
 import { hourSteps } from '@/ui/grant-hours';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { canSee } from '@/lib/features';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -226,6 +227,8 @@ export function VaultPanel({
 
   const queryKey = secretsKey(ownerType, ownerId);
   const { verdict, secrets, allowed, isAdmin } = useOwnerSecrets(ownerType, ownerId, me);
+  // Nhóm quyền ẩn "Xin mở két" (Q-31): không bày lối xin; API cũng trả 403.
+  const seesBreakGlass = canSee(me, 'break_glass');
 
   /*
    * Đếm lùi quyền đang chạy TỪ con số server đưa (mốc = lúc nhận phản hồi), không tự trừ theo
@@ -489,7 +492,7 @@ export function VaultPanel({
             </button>
           </div>
         </div>
-      ) : !isAdmin && verdict.data?.canRequest ? (
+      ) : !isAdmin && seesBreakGlass && verdict.data?.canRequest ? (
         /* MỘT lối xin cho cả két: quyền cấp theo HỒ SƠ, không theo ngăn — nút ở từng dòng làm
            người ta tưởng phải xin từng ngăn, hoặc xin ngăn A thì chỉ xem được A. */
         <div className="alert warn" role="status">
@@ -621,7 +624,7 @@ export function VaultPanel({
                         >
                           {opening === secret.id ? t('common.loading') : t('vault.reveal')}
                         </button>
-                      ) : verdict.data?.canRequest ? (
+                      ) : seesBreakGlass && verdict.data?.canRequest ? (
                         // Nút xin nằm MỘT chỗ ở đầu khung — dòng chỉ nói trạng thái.
                         <span className="badge warn">{t('vault.needsApproval')}</span>
                       ) : verdict.data?.pending ? (

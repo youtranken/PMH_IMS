@@ -67,6 +67,9 @@ import { LiveRegion } from '@/ui/live-region';
  * khiển, thiết bị, phần mềm, IP) vẫn tải sẵn.
  */
 const AccountsScreen = lazy(() => import('@/features/admin/accounts-screen').then((m) => ({ default: m.AccountsScreen })));
+const FeatureGroupsScreen = lazy(() =>
+  import('@/features/admin/feature-groups-screen').then((m) => ({ default: m.FeatureGroupsScreen })),
+);
 const AuditLogScreen = lazy(() => import('@/features/admin/audit-log-screen').then((m) => ({ default: m.AuditLogScreen })));
 const AccessMatrixScreen = lazy(() => import('@/features/vault/access-matrix-screen').then((m) => ({ default: m.AccessMatrixScreen })));
 const SettingsScreen = lazy(() => import('@/features/admin/settings-screen').then((m) => ({ default: m.SettingsScreen })));
@@ -252,6 +255,11 @@ function AppRoutes() {
           <Route path={PATHS.adminAccounts} element={<AccountsScreen me={me} />} />
         ) : (
           <Route path={PATHS.adminAccounts} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminAccounts]} />} />
+        )}
+        {canSeeRoute(PATHS.adminFeatureGroups, me.role) ? (
+          <Route path={PATHS.adminFeatureGroups} element={<FeatureGroupsScreen me={me} />} />
+        ) : (
+          <Route path={PATHS.adminFeatureGroups} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminFeatureGroups]} />} />
         )}
         {canSeeRoute(PATHS.adminCatalog, me.role) ? (
           <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />
