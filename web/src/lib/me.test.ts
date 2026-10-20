@@ -16,6 +16,7 @@ const base: Me = {
   email: 'it01@pmh.com.vn',
   fullName: 'IT Nhân viên 01',
   role: 'member',
+  features: null,
   mustChangePassword: false,
   totpPending: false,
   totpEnrolled: true,

@@ -12,6 +12,7 @@ describe('auditActionModule — mã hành động thuộc module nào', () => {
     ['security.probe.alerted', 'auth'],
     ['account.role.changed', 'account'],
     ['accounts.exported', 'account'],
+    ['feature_group.updated', 'account'],
     ['vault.secret.revealed', 'vault'],
     ['break_glass.approved', 'breakGlass'],
     ['catalog.site.created', 'catalog'],

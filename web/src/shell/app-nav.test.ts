@@ -60,3 +60,37 @@ describe('Nhóm Tài sản (Q-22)', () => {
     }
   });
 });
+
+/** Q-31: menu ẩn theo nhóm quyền; mục chung một mảng biến theo nhau, nhóm rỗng biến khỏi menu. */
+describe('Menu theo nhóm quyền (Q-31)', () => {
+  const keysOf = (features: string[] | null, role: Me['role'] = 'member') =>
+    visibleGroups({ role, features } as Me).flatMap((group) => group.items.map((item) => item.key));
+
+  it('nhóm chỉ có Mạng: đúng ba mục mạng', () => {
+    expect(keysOf(['network'])).toEqual(['nav.ipam', 'nav.nat', 'nav.diagrams']);
+  });
+
+  it('Tổng quan không kèm Tài sản thì không có Sắp hết hạn', () => {
+    expect(keysOf(['overview'])).toEqual(['nav.dashboard']);
+    expect(keysOf(['overview', 'assets', 'expiry'])).toContain('nav.expiry');
+  });
+
+  it('chỉ phiếu 0206: có Sự cố + Kỳ phiếu, không có Danh mục phiếu (không có gì của 0206 ở đó)', () => {
+    expect(keysOf(['iso_0206', 'iso'])).toEqual(['nav.isoIncidents', 'nav.isoPeriods']);
+  });
+
+  it('Xin mở két chỉ hiện khi có ô tick', () => {
+    expect(keysOf(['network'])).not.toContain('nav.approvals');
+    expect(keysOf(['network', 'break_glass'])).toContain('nav.approvals');
+  });
+
+  it('nhóm không có mảng nào của một nhóm menu thì nhóm menu đó biến mất', () => {
+    const labels = visibleGroups({ role: 'member', features: ['network'] } as Me).map((group) => group.labelKey);
+    expect(labels).toEqual(['nav.groupNetwork']);
+  });
+
+  it('SA không bị nhóm quyền giới hạn và thấy mục Nhóm quyền', () => {
+    expect(keysOf(null, 'sa')).toContain('nav.featureGroups');
+    expect(keysOf(null, 'admin')).not.toContain('nav.featureGroups');
+  });
+});

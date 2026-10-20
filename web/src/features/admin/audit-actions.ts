@@ -26,6 +26,10 @@ export const ACTION_KEY: Record<string, string> = {
   'account.mfa.reset': 'audit.actions.accountMfaReset',
   'account.totp_login_required.changed': 'audit.actions.accountTotpRequiredChanged',
   'account.role.changed': 'audit.actions.accountRoleChanged',
+  'account.feature_group.changed': 'audit.actions.accountFeatureGroupChanged',
+  'feature_group.created': 'audit.actions.featureGroupCreated',
+  'feature_group.updated': 'audit.actions.featureGroupUpdated',
+  'feature_group.deleted': 'audit.actions.featureGroupDeleted',
   'accounts.exported': 'audit.actions.accountsExported',
   'audit.exported': 'audit.actions.auditExported',
   'auth.login.ok': 'audit.actions.authLoginOk',
@@ -331,6 +335,7 @@ const MODULE_OF_PREFIX: Record<string, AuditModule> = {
   security: 'auth',
   account: 'account',
   accounts: 'account',
+  feature_group: 'account',
   vault: 'vault',
   break_glass: 'breakGlass',
   catalog: 'catalog',
@@ -389,6 +394,7 @@ export function auditActionModule(code: string): AuditModule {
 /** Loại đối tượng (`object_type`) → nhãn tiếng Việt. */
 export const OBJECT_TYPE_KEY: Record<string, string> = {
   user: 'audit.objectType.user',
+  feature_group: 'audit.objectType.featureGroup',
   session: 'audit.objectType.session',
   device: 'audit.objectType.device',
   software: 'audit.objectType.software',

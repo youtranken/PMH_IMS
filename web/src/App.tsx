@@ -29,7 +29,9 @@ import { LEGACY_ROUTES, PATHS, ROUTE_ROLES, canSeeRoute } from '@/lib/routes';
 import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS } from '@/lib/software-screens';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
-import { Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
+import { FeatureHidden, Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
+import { canSee, canSeePath } from '@/lib/features';
+import { visibleGroups } from '@/shell/app-nav';
 import { ToastProvider } from '@/ui/toast';
 import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
@@ -220,6 +222,21 @@ function AppRoutes() {
         <Route path={TOTP_ENROLL_PATH} element={<TotpEnroll />} />
         <Route path={CHANGE_PASSWORD_PATH} element={<ChangePassword />} />
       </Routes>
+    );
+  }
+
+  /*
+   * Nhóm quyền (Q-31) gác TRƯỚC khi dựng màn: dựng rồi mới từ chối thì màn đã kịp gọi API của
+   * mảng bị ẩn. Không có Tổng quan thì `/` (đích sau đăng nhập) sang mục đầu tiên còn hiện.
+   */
+  if (location.pathname === PATHS.dashboard && !canSee(me, 'overview')) {
+    return <Navigate to={visibleGroups(me)[0]?.items[0]?.to ?? PATHS.profile} replace />;
+  }
+  if (!canSeePath(me, location.pathname)) {
+    return (
+      <AppShell me={me}>
+        <FeatureHidden />
+      </AppShell>
     );
   }
 

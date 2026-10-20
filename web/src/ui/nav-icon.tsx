@@ -163,6 +163,17 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M16 3.5a4 4 0 0 1 0 7M22 21v-2a4 4 0 0 0-3-3.85" />
     </>
   ),
+  'nav.featureGroups': (
+    <>
+      {/* Lưới ô tick — bảng nhóm quyền. */}
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <path d="m4.5 6.5 1.5 1.5 3-3" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <path d="m15.5 17.5 1.5 1.5 3-3" />
+    </>
+  ),
   'nav.catalog': (
     <>
       {/* Tags (nhãn phân loại) — hợp "Danh mục" (Loại/Hãng/Cấu hình) hơn hình hộp cũ. */}

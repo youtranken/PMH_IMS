@@ -10,6 +10,7 @@ const ME: Me = {
   email: 'it@pmh.com.vn',
   fullName: 'Nguyễn Văn A',
   role: 'admin',
+  features: null,
   mustChangePassword: false,
   totpPending: false,
   totpEnrolled: true,
