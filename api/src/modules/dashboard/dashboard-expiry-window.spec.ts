@@ -58,7 +58,7 @@ function buildService(): DashboardService {
   const users = { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService;
   const ipam = { listSubnets: empty } as unknown as IpamApiService;
   const vault = { listOwners: empty } as unknown as VaultApiService;
-  const disposal = { list: empty } as unknown as DisposalApiService;
+  const disposal = { changedSince: empty } as unknown as DisposalApiService;
   const config = { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService;
 
   const iso = { recentIncidents: empty } as unknown as IsoFormsApiService;

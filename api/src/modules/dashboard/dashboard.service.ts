@@ -325,7 +325,9 @@ export class DashboardService {
    */
   private async disposedBlock(now: Date, maxItems: number): Promise<Dashboard['disposed']> {
     try {
-      const recent = pickRecent(await this.disposal.list(), WEEK_DAYS, now, (row) => row.disposedAt);
+      // Dư một ngày so với cửa sổ: `pickRecent` đếm theo ngày lịch, đây chỉ là lọc thô phía kho.
+      const since = new Date(now.getTime() - (WEEK_DAYS + 1) * 86_400_000);
+      const recent = pickRecent(await this.disposal.changedSince(since), WEEK_DAYS, now, (row) => row.disposedAt);
 
       return {
         available: true,

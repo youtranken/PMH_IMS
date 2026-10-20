@@ -33,7 +33,7 @@ describe('Khối break-glass của trang chủ', () => {
       { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
       { listSubnets: empty } as unknown as IpamApiService,
       { listOwners: empty } as unknown as VaultApiService,
-      { list: empty } as unknown as DisposalApiService,
+      { changedSince: empty } as unknown as DisposalApiService,
       { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
       { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,
@@ -87,7 +87,7 @@ describe('Dòng break-glass của trang chủ', () => {
       } as unknown as ApprovalKindRegistry,
       { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
       { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
-      { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
+      { changedSince: () => Promise.resolve([]) } as unknown as DisposalApiService,
       { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
       {
         namesByEmails: () =>
@@ -132,7 +132,7 @@ describe('Khối hạn và khối dải mạng mang thêm số để web phân l
       { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
       { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
       { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
-      { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
+      { changedSince: () => Promise.resolve([]) } as unknown as DisposalApiService,
       { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 90) } as unknown as SystemConfigService,
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
       { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,

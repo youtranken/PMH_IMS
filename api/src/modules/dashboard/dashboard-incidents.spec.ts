@@ -22,7 +22,7 @@ function buildService(iso: Partial<IsoFormsApiService>, maxItems = 2): Dashboard
     { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
     { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
     { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
-    { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
+    { changedSince: () => Promise.resolve([]) } as unknown as DisposalApiService,
     {
       getNumber: (name: string) =>
         Promise.resolve({ dashboardMaxItems: maxItems, dashboardSubnetFullPercent: 80, dashboardSecretStaleDays: 180 }[name]),

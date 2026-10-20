@@ -48,12 +48,41 @@ export class DisposalService {
   ) {}
 
   /**
-   * Toàn bộ kho kèm NGÀY VÀO KHO đã tra lịch sử của module chủ (`disposedAt`). Khối "Vừa thanh lý"
-   * của trang chủ cắt theo ngày đó: theo `updatedAt` thì máy thanh lý từ lâu, hôm qua có người sửa
-   * ghi chú, thành "vừa thanh lý".
+   * Hồ sơ trong kho có `updatedAt` từ `since` trở đi, kèm NGÀY VÀO KHO đã tra lịch sử module chủ —
+   * khối "Vừa thanh lý" của trang chủ cắt theo ngày vào kho (theo `updatedAt` thì máy thanh lý từ
+   * lâu, hôm qua có người sửa ghi chú, thành "vừa thanh lý").
+   *
+   * Lọc theo `updatedAt` TRƯỚC khi tra lịch sử: mọi lượt chuyển sang ngừng dùng ở cả bốn module chủ
+   * đều ghi `updatedAt`, nên ngày vào kho không bao giờ muộn hơn nó — hồ sơ lọc bỏ không thể vừa
+   * thanh lý. Trang chủ mở mỗi sáng, tra lịch sử cả kho mỗi lượt là phí lớn dần theo kho.
    */
-  async list(): Promise<DisposalItem[]> {
-    return (await this.everything()).items;
+  async changedSince(since: Date): Promise<DisposalItem[]> {
+    const [devices, software, accounts, ispLines] = await Promise.all([
+      this.devices.listRetired(),
+      this.software.listRetired(),
+      this.accounts.listDisabled(),
+      this.software.listTerminatedIsp(),
+    ]);
+    const items = merge(devices, software, accounts, ispLines).filter(
+      (item) => item.updatedAt !== null && item.updatedAt.getTime() >= since.getTime(),
+    );
+    const idsOf = (kind: DisposalKind) => items.filter((item) => item.kind === kind).map((item) => item.id);
+    return withEvents(items, await this.eventsOf(idsOf('device'), idsOf('software'), idsOf('service_account'), idsOf('isp')));
+  }
+
+  private async eventsOf(
+    device: string[],
+    software: string[],
+    account: string[],
+    isp: string[],
+  ): Promise<Record<DisposalKind, Map<string, StatusEvent>>> {
+    const [deviceEvents, softwareEvents, accountEvents, ispEvents] = await Promise.all([
+      this.devices.retirementEvents(device),
+      this.software.retirementEvents(software),
+      this.accounts.disableEvents(account),
+      this.software.ispTerminationEvents(isp),
+    ]);
+    return { device: deviceEvents, software: softwareEvents, service_account: accountEvents, isp: ispEvents };
   }
 
   /**
@@ -106,26 +135,8 @@ export class DisposalService {
       .map(([kind]) => kind);
 
     const idsOf = (page: { items: { id: string }[] }) => page.items.map((row) => row.id);
-    const [deviceEvents, softwareEvents, accountEvents, ispEvents] = await Promise.all([
-      this.devices.retirementEvents(idsOf(devicePage)),
-      this.software.retirementEvents(idsOf(softwarePage)),
-      this.accounts.disableEvents(idsOf(accountPage)),
-      this.software.ispTerminationEvents(idsOf(ispPage)),
-    ]);
-    const events: Record<DisposalKind, Map<string, StatusEvent>> = {
-      device: deviceEvents,
-      software: softwareEvents,
-      service_account: accountEvents,
-      isp: ispEvents,
-    };
-    const items = merge(devicePage.items, softwarePage.items, accountPage.items, ispPage.items).map(
-      (item) => {
-        const event = events[item.kind].get(item.id);
-        return event
-          ? { ...item, disposedAt: event.at, disposedBy: event.by, auto: event.auto, reason: event.reason }
-          : item;
-      },
-    );
+    const events = await this.eventsOf(idsOf(devicePage), idsOf(softwarePage), idsOf(accountPage), idsOf(ispPage));
+    const items = withEvents(merge(devicePage.items, softwarePage.items, accountPage.items, ispPage.items), events);
 
     const emails = [
       ...new Set(
@@ -143,6 +154,14 @@ export class DisposalService {
       truncated,
     };
   }
+}
+
+/** Gắn ngày / người / lý do vào kho từ lịch sử module chủ; hồ sơ không có dòng lịch sử giữ nguyên. */
+function withEvents(items: DisposalItem[], events: Record<DisposalKind, Map<string, StatusEvent>>): DisposalItem[] {
+  return items.map((item) => {
+    const event = events[item.kind].get(item.id);
+    return event ? { ...item, disposedAt: event.at, disposedBy: event.by, auto: event.auto, reason: event.reason } : item;
+  });
 }
 
 /** Chưa đọc lịch sử (hoặc lịch sử không có dòng nào): ngày vào kho lùi về `updatedAt`. */

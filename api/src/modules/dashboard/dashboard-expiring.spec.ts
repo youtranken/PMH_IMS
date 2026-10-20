@@ -46,7 +46,7 @@ function buildService(
     { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
     { listSubnets: empty } as unknown as IpamApiService,
     { listOwners: empty } as unknown as VaultApiService,
-    { list: empty } as unknown as DisposalApiService,
+    { changedSince: empty } as unknown as DisposalApiService,
     { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
     { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
     { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,

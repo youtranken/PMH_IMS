@@ -68,7 +68,7 @@ function buildService(maxItems: number, pageLimits: number[]): DashboardService 
     { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
     { listSubnets: () => Promise.resolve(subnets(12)) } as unknown as IpamApiService,
     { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
-    { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
+    { changedSince: () => Promise.resolve([]) } as unknown as DisposalApiService,
     { getNumber: (name: string) => Promise.resolve(numbers[name]) } as unknown as SystemConfigService,
     { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
     { recentIncidents: () => Promise.resolve([]) } as unknown as IsoFormsApiService,

@@ -23,10 +23,14 @@ import type { SystemConfigService } from '../config-sys/system-config.service';
 const NOW = new Date('2026-10-19T03:00:00Z');
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000);
 
+const asked: string[][] = [];
+
 function buildService(): DashboardService {
   const retired = [
     // Thanh lý từ 2024, hôm qua sửa ghi chú → updatedAt mới, ngày vào kho cũ.
     { id: 'd-old', code: 'E2E-OLD', name: 'Máy cũ', deviceTypeName: 'PC', status: 'retired', updatedAt: daysAgo(1) },
+    // Thanh lý từ lâu, không ai sửa gì từ đó: không được tốn lượt tra lịch sử.
+    { id: 'd-ancient', code: 'E2E-ANCIENT', name: 'Máy rất cũ', deviceTypeName: 'PC', status: 'retired', updatedAt: new Date('2023-01-01T00:00:00Z') },
     // Thanh lý thật trong tuần.
     { id: 'd-new', code: 'E2E-NEW', name: 'Máy mới bỏ', deviceTypeName: 'PC', status: 'retired', updatedAt: daysAgo(2) },
   ];
@@ -40,7 +44,10 @@ function buildService(): DashboardService {
   const devices = {
     listRetired: () => Promise.resolve(retired),
     retiredPage: page(retired),
-    retirementEvents: () => Promise.resolve(events),
+    retirementEvents: (ids: string[]) => {
+      asked.push(ids);
+      return Promise.resolve(events);
+    },
   } as unknown as DevicesApiService;
   const software = {
     listRetired: none,
@@ -84,5 +91,7 @@ describe('Trang chủ — khối "Vừa thanh lý" theo ngày vào kho', () => {
     const board = await buildService().build({ email: 'sep@pmh.com.vn', role: 'admin' });
     expect(board.disposed.items.map((i) => i.code)).toEqual(['E2E-NEW']);
     expect(board.disposed.total).toBe(1);
+    // Mở trang chủ không được tra lịch sử của CẢ kho: chỉ hồ sơ đổi gần đây mới có thể "vừa thanh lý".
+    expect(asked.flat()).not.toContain('d-ancient');
   });
 });

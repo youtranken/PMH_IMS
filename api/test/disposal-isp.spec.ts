@@ -59,13 +59,16 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
   it('kho gộp đường truyền thanh lý thành một hàng loại `isp`', async () => {
     const emptyPage = () => Promise.resolve({ items: [], total: 0 });
     const noEvents = () => Promise.resolve(new Map());
-    const devices = { retiredPage: emptyPage, retirementEvents: noEvents } as unknown as DevicesApiService;
-    const accounts = { disabledPage: emptyPage, disableEvents: noEvents } as unknown as ServiceAccountsApiService;
+    const none = () => Promise.resolve([]);
+    const devices = { listRetired: none, retiredPage: emptyPage, retirementEvents: noEvents } as unknown as DevicesApiService;
+    const accounts = { listDisabled: none, disabledPage: emptyPage, disableEvents: noEvents } as unknown as ServiceAccountsApiService;
     // Phần mềm đã bỏ đi qua `software.list` — bảng đó không phải thứ bài này hỏi. Đường truyền đi
     // qua cửa THẬT của software.api, kể cả lịch sử thanh lý.
     const software = {
+      listRetired: none,
       retiredPage: emptyPage,
       retirementEvents: noEvents,
+      listTerminatedIsp: () => api.listTerminatedIsp(),
       terminatedIspPage: () => api.terminatedIspPage(),
       ispTerminationEvents: (ids: string[]) => api.ispTerminationEvents(ids),
     } as unknown as SoftwareApiService;
@@ -77,7 +80,7 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
       {} as SystemConfigService,
     );
 
-    const items = await disposal.list();
+    const items = await disposal.changedSince(new Date(0));
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
       kind: 'isp',
