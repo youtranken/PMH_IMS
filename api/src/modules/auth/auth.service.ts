@@ -122,51 +122,6 @@ export class AuthService {
       });
     }
 
-    /*
-     * Tài khoản vô hiệu / khoá tay: kiểm mật khẩu TRƯỚC. Sai thì cùng câu chung như email không có
-     * thật — người lạ không biết được email này có thật và đang bị khoá. Chỉ người đúng mật khẩu
-     * (chính chủ) mới nghe câu riêng để biết phải gặp SA.
-     */
-    if (user.status !== 'active' && !(await this.passwords.verify(user.passwordHash, password))) {
-      await this.auditFailure(user, user.status === 'disabled' ? 'disabled' : 'locked-by-sa');
-      throw new UnauthorizedException({
-        code: 'LOGIN_FAILED',
-        message: 'Email hoặc mật khẩu không đúng.',
-      });
-    }
-
-    if (user.status === 'disabled') {
-      await this.auditFailure(user, 'disabled');
-      throw new UnauthorizedException({
-        code: 'ACCOUNT_DISABLED',
-        message: 'Tài khoản đã bị vô hiệu hóa. Liên hệ SA.',
-      });
-    }
-
-    /*
-     * SA KHÓA TAY — kiểm ở đây, tách hẳn khỏi khóa tự động bên dưới.
-     *
-     * `users.status` có ba giá trị (`active`/`locked`/`disabled`), màn Tài khoản đặt được cả
-     * ba. Chỉ kiểm `disabled` thì `locked` rơi thẳng qua: SA bấm "Khóa tài khoản" vì nghi bị
-     * chiếm hoặc vì nhân viên vừa nghỉ, màn hiện "Khóa", nhật ký ghi một dòng — và người kia
-     * vẫn đăng nhập bình thường. Không có gì trên hệ thống mâu thuẫn với niềm tin rằng đã khóa
-     * xong.
-     *
-     * Nặng thêm: đi tiếp thì bộ đếm sai bị XÓA và nhật ký ghi một lần đăng nhập THÀNH CÔNG
-     * cho tài khoản đang bị khóa.
-     *
-     * Mã lỗi RIÊNG với `ACCOUNT_DISABLED`: khóa là tạm và mở lại được, vô hiệu hóa là dứt
-     * điểm. Gộp một mã thì người trực không biết nên bảo người dùng chờ hay bảo họ gặp SA.
-     * KHÔNG kèm `retryAfterSeconds` như khóa tự động: khóa này không tự hết, chỉ SA mở.
-     */
-    if (user.status === 'locked') {
-      await this.auditFailure(user, 'locked-by-sa');
-      throw new UnauthorizedException({
-        code: 'ACCOUNT_LOCKED',
-        message: 'Tài khoản đang bị khóa. Liên hệ SA để mở lại.',
-      });
-    }
-
     const now = new Date();
     /*
      * Hai tầng chặn:
@@ -207,6 +162,44 @@ export class AuthService {
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
         message: 'Email hoặc mật khẩu không đúng.',
+      });
+    }
+
+    /*
+     * Vô hiệu / khoá tay: báo SAU khi mật khẩu đúng và SAU cả hai tầng chặn ở trên. Báo trước thì
+     * người lạ biết email có thật và đang bị khoá; báo sau mà bỏ qua bộ đếm sai thì câu trả lời đổi
+     * từ "sai mật khẩu" sang "bị khoá" thành máy dò mật khẩu không giới hạn. Đi qua đúng đường của
+     * tài khoản đang dùng thì đoán trên tài khoản khoá không dễ hơn đoán trên tài khoản thường.
+     */
+    if (user.status === 'disabled') {
+      await this.auditFailure(user, 'disabled');
+      throw new UnauthorizedException({
+        code: 'ACCOUNT_DISABLED',
+        message: 'Tài khoản đã bị vô hiệu hóa. Liên hệ SA.',
+      });
+    }
+
+    /*
+     * SA KHÓA TAY — kiểm ở đây, tách hẳn khỏi khóa tự động bên dưới.
+     *
+     * `users.status` có ba giá trị (`active`/`locked`/`disabled`), màn Tài khoản đặt được cả
+     * ba. Chỉ kiểm `disabled` thì `locked` rơi thẳng qua: SA bấm "Khóa tài khoản" vì nghi bị
+     * chiếm hoặc vì nhân viên vừa nghỉ, màn hiện "Khóa", nhật ký ghi một dòng — và người kia
+     * vẫn đăng nhập bình thường. Không có gì trên hệ thống mâu thuẫn với niềm tin rằng đã khóa
+     * xong.
+     *
+     * Nặng thêm: đi tiếp thì bộ đếm sai bị XÓA và nhật ký ghi một lần đăng nhập THÀNH CÔNG
+     * cho tài khoản đang bị khóa.
+     *
+     * Mã lỗi RIÊNG với `ACCOUNT_DISABLED`: khóa là tạm và mở lại được, vô hiệu hóa là dứt
+     * điểm. Gộp một mã thì người trực không biết nên bảo người dùng chờ hay bảo họ gặp SA.
+     * KHÔNG kèm `retryAfterSeconds` như khóa tự động: khóa này không tự hết, chỉ SA mở.
+     */
+    if (user.status === 'locked') {
+      await this.auditFailure(user, 'locked-by-sa');
+      throw new UnauthorizedException({
+        code: 'ACCOUNT_LOCKED',
+        message: 'Tài khoản đang bị khóa. Liên hệ SA để mở lại.',
       });
     }
 

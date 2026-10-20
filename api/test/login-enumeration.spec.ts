@@ -33,13 +33,17 @@ const noopSweep = { register: () => undefined } as unknown as SweepService;
 const ctx: LoginContext = { ip: '198.51.100.77', userAgent: 'jest' };
 
 async function outcome(p: Promise<unknown>): Promise<string> {
+  return (await response(p)).code;
+}
+
+async function response(p: Promise<unknown>): Promise<{ code: string; retryAfterSeconds?: number }> {
   try {
     await p;
-    return 'ok';
+    return { code: 'ok' };
   } catch (error) {
-    const body = (error as { getResponse?: () => { code?: string } }).getResponse?.();
+    const body = (error as { getResponse?: () => { code?: string; retryAfterSeconds?: number } }).getResponse?.();
     if (!body?.code) throw error;
-    return body.code;
+    return { code: body.code, retryAfterSeconds: body.retryAfterSeconds };
   }
 }
 
@@ -102,5 +106,25 @@ describe('Đăng nhập không lộ email có thật', () => {
   ])('tài khoản %s + SAI mật khẩu → câu chung "Email hoặc mật khẩu không đúng"; ĐÚNG mật khẩu → câu riêng', async (_label, email, code) => {
     expect(await outcome(auth.login(email, 'sai-mat-khau', ctx))).toBe('LOGIN_FAILED');
     expect(await outcome(auth.login(email, PASSWORD, ctx))).toBe(code);
+  }, TEST_TIMEOUT);
+
+  it('tài khoản bị SA khoá: kẻ dò đổi IP liên tục vẫn bị chặn chậm dần, không có máy dò mật khẩu', async () => {
+    /*
+     * Câu "khoá bởi SA" chỉ tới tay người đúng mật khẩu. Nếu tài khoản khoá không đi qua bộ đếm sai
+     * thì kẻ dò đoán vô hạn: câu trả lời đổi từ LOGIN_FAILED sang ACCOUNT_LOCKED là biết mật khẩu
+     * đúng. Phải bị chậm dần y như tài khoản đang dùng.
+     */
+    const threshold = await new SystemConfigService(scratch.db).getNumber('loginMaxFailedAttempts');
+    const email = 'e2e-enum-locked2@qa.test';
+    await scratch.pool.query(
+      `INSERT INTO users (email, full_name, role, password_hash, status, must_change_password)
+       VALUES ($1, 'E2E enum', 'member', $2, 'locked', false)`,
+      [email, await passwords.hash(PASSWORD)],
+    );
+    for (let i = 0; i < threshold; i += 1) {
+      await outcome(auth.login(email, `sai-${i}`, { ip: `203.0.113.${i + 1}`, userAgent: 'jest' }));
+    }
+    const right = await response(auth.login(email, PASSWORD, { ip: '203.0.113.250', userAgent: 'jest' }));
+    expect(right.retryAfterSeconds).toBeGreaterThan(0);
   }, TEST_TIMEOUT);
 });
