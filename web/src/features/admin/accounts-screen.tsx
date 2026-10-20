@@ -677,6 +677,8 @@ export function AccountsScreen({ me }: { me: Me }) {
       setTotpRequired.isPending,
       confirmThenRun,
       doResetPassword,
+      // Tên nhóm quyền dưới vai (Q-31) đọc từ danh sách nhóm.
+      featureGroups.data,
     ],
   );
 
