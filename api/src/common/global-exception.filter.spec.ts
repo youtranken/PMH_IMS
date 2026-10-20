@@ -68,6 +68,22 @@ describe('GlobalExceptionFilter — nhánh biên', () => {
     expect(body.message).not.toMatch(/insert|bí mật/);
   });
 
+  it('chờ khoá quá lock_timeout (55P03) → 409 CONFLICT_RETRY: người khác đang giữ dữ liệu, thử lại được', () => {
+    const { host, response } = mockHost();
+    filter.catch(pgFailure('55P03'), host);
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect((response.json.mock.calls[0][0] as { code: string }).code).toBe('CONFLICT_RETRY');
+  });
+
+  it('câu lệnh quá statement_timeout (57014) → 503 DB_TIMEOUT có câu tiếng Việt, không phải 500 chung', () => {
+    const { host, response } = mockHost();
+    filter.catch(pgFailure('57014'), host);
+    expect(response.status).toHaveBeenCalledWith(503);
+    const body = response.json.mock.calls[0][0] as { code: string; message: string };
+    expect(body.code).toBe('DB_TIMEOUT');
+    expect(body.message).not.toMatch(/insert|bí mật/);
+  });
+
   it('mã pg khác (vi phạm khoá ngoại) vẫn là 500 chung chung', () => {
     const { host, response } = mockHost();
     filter.catch(pgFailure('23503'), host);
