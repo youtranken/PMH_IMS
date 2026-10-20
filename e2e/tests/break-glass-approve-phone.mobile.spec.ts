@@ -228,7 +228,7 @@ test.describe('Phía người xin, 390px', () => {
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: cần đổi VLAN`);
-    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ' }).click();
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     await pickApprover(page);
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
 
@@ -340,11 +340,11 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await page.goto(`/devices/${deviceId}?tab=vault`);
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
-    await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: switch tầng 3 mất kết nối`);
-    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ' }).click();
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     await pickApprover(page);
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
+    await expect(page.getByText(/(Đã gửi|Đang gửi) mã cho/)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     const approvalId = (

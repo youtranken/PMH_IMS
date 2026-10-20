@@ -306,7 +306,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`switch tour E2E ${stamp} mất kết nối`);
-    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ' }).click();
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     // Q-30: chọn người duyệt — chỉ người đó nhận thư mang mã.
     await form.getByRole('button', { name: /Người duyệt/ }).click();
     await page.getByRole('option', { name: E2E_SA.email }).click();

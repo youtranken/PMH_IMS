@@ -126,7 +126,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await pageA.getByRole('button', { name: 'Xin mở két' }).click();
     const form = pageA.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('E2E switch tầng 3 mất kết nối');
-    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ' }).click();
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     // Q-30: chọn đúng một người duyệt — chỉ người đó nhận thư mang mã.
     await form.getByRole('button', { name: /Người duyệt/ }).click();
     await pageA.getByRole('option', { name: E2E_SA.email }).click();
@@ -315,7 +315,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
         `SELECT actor || '|' || (detail->>'note') FROM approval_history WHERE approval_id = '${id}' AND to_state = 'expired'`,
       ),
     ).toBe('system|Quá 8 giờ không ai duyệt.');
-    await memberPage.reload();
+    await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(memberPage.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
     await ctx.close();
   });

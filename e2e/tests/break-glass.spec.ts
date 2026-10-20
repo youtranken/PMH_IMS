@@ -128,7 +128,7 @@ test.describe('Break-glass', () => {
     await member.getByRole('button', { name: 'Xin mở két' }).click();
     const form = member.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('switch tầng 3 mất kết nối');
-    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ' }).click();
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     await form.getByRole('button', { name: /Người duyệt/ }).click();
     await member.getByRole('option', { name: E2E_SA.email }).click();
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
