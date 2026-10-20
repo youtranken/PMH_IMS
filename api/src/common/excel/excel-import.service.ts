@@ -90,7 +90,7 @@ function tooLarge(): BadRequestException {
  * Đo dung lượng giải nén THẬT của từng mục trong zip, có trần, trước khi đưa cho ExcelJS. Không tin số
  * khai trong mục lục: khai gian số nhỏ thì thư viện zip chỉ phát hiện lệch SAU khi đã giải nén hết vào
  * RAM. `maxOutputLength` dừng giải nén ngay khi vượt phần trần còn lại, nên bộ nhớ dùng ở đây không quá
- * trần. Không tìm thấy mục lục hay mục hỏng thì để ExcelJS báo "không đọc được" như cũ.
+ * trần.
  */
 function assertUnzippedSizeWithin(buffer: Buffer): void {
   const END = 0x06054b50;
@@ -104,18 +104,30 @@ function assertUnzippedSizeWithin(buffer: Buffer): void {
       break;
     }
   }
+  // Không có mục lục thì cũng không phải zip: để ExcelJS báo "không đọc được" như cũ.
   if (end < 0) return;
-  const count = buffer.readUInt16LE(end + 10);
-  if (count > MAX_ZIP_ENTRIES) throw tooLarge();
-  let at = buffer.readUInt32LE(end + 16);
+  const directoryAt = buffer.readUInt32LE(end + 16);
+  // ZIP64 (offset / số mục bão hoà): file xlsx thật không bao giờ cần tới, coi là quá trần.
+  if (directoryAt === 0xffffffff || buffer.readUInt16LE(end + 10) === 0xffff) throw tooLarge();
+  if (directoryAt > end) throw unreadable();
+  /*
+   * Duyệt mục lục theo CHỮ KÝ tới tận EOCD, không theo số mục khai trong EOCD: thư viện zip đọc
+   * mọi mục còn khớp chữ ký, nên khai "1 mục" là giấu được mục bomb phía sau. Gặp chỗ không đọc
+   * được thì TỪ CHỐI (không "để ExcelJS lo"): file lạ ở đây là file cố tình.
+   */
+  let at = directoryAt;
   let total = 0;
-  for (let i = 0; i < count; i += 1) {
-    if (at + 46 > buffer.length || buffer.readUInt32LE(at) !== ENTRY) return;
+  let entries = 0;
+  while (at < end) {
+    if (at + 46 > end || buffer.readUInt32LE(at) !== ENTRY) throw unreadable();
+    entries += 1;
+    if (entries > MAX_ZIP_ENTRIES) throw tooLarge();
     const method = buffer.readUInt16LE(at + 10);
     const packedSize = buffer.readUInt32LE(at + 20);
     const local = buffer.readUInt32LE(at + 42);
     at += 46 + buffer.readUInt16LE(at + 28) + buffer.readUInt16LE(at + 30) + buffer.readUInt16LE(at + 32);
-    if (local + 30 > buffer.length || buffer.readUInt32LE(local) !== LOCAL) return;
+    if (packedSize === 0xffffffff || local === 0xffffffff) throw tooLarge();
+    if (local + 30 > buffer.length || buffer.readUInt32LE(local) !== LOCAL) throw unreadable();
     const dataStart = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
     const packed = buffer.subarray(dataStart, dataStart + packedSize);
     let size: number;
@@ -126,14 +138,18 @@ function assertUnzippedSizeWithin(buffer: Buffer): void {
         size = inflateRawSync(packed, { maxOutputLength: MAX_UNZIPPED_BYTES - total + 1 }).length;
       } catch (error) {
         if (error instanceof RangeError || (error as { code?: string }).code === 'ERR_BUFFER_TOO_LARGE') throw tooLarge();
-        return;
+        throw unreadable();
       }
     } else {
-      return;
+      throw unreadable();
     }
     total += size;
     if (total > MAX_UNZIPPED_BYTES) throw tooLarge();
   }
+}
+
+function unreadable(): BadRequestException {
+  return new BadRequestException({ code: 'EXCEL_UNREADABLE', message: EXCEL_UNREADABLE_MESSAGE });
 }
 
 function tooManyRows(sheetName: string): BadRequestException {

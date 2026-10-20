@@ -185,6 +185,17 @@ describe('ExcelImportService.read — zip-bomb', () => {
     expect(body.code).toBe('EXCEL_TOO_LARGE');
   }, 120_000);
 
+  it('EOCD khai GIAN số mục (1) để giấu mục bomb phía sau vẫn bị chặn: duyệt mục lục tới hết, không tin số khai', async () => {
+    const filler = 'a'.repeat(30_000);
+    const rows = Array.from({ length: Math.ceil((110 * 1024 * 1024) / filler.length) }, (_v, i) => `<row r="${i + 2}">${cell(`A${i + 2}`, filler)}</row>`).join('');
+    const bomb = handmadeXlsx(`<row r="1">${cell('A1', 'Mã thiết bị *')}</row>${rows}`);
+    const end = bomb.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    bomb.writeUInt16LE(1, end + 8);
+    bomb.writeUInt16LE(1, end + 10);
+    const body = await errorOf(new ExcelImportService().read(bomb));
+    expect(body.code).toBe('EXCEL_TOO_LARGE');
+  }, 120_000);
+
   it('không phải zip (rác) vẫn là EXCEL_UNREADABLE như cũ', async () => {
     const body = await errorOf(new ExcelImportService().read(Buffer.from('không phải excel')));
     expect(body.code).toBe('EXCEL_UNREADABLE');
