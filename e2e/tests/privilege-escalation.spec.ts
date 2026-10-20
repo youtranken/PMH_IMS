@@ -2,10 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { expect, test, request as pwRequest } from '@playwright/test';
 import {
   APP_ORIGIN,
+  E2E_MEMBER,
   E2E_SA,
   expireStepUp,
   firstLogin,
   freshTotpCode,
+  resetAccessList,
+  resetApprovals,
   resetSecrets,
   resetUsers,
   sql,
@@ -46,6 +49,8 @@ import {
 test.beforeEach(() => {
   resetUsers();
   resetSecrets();
+  resetApprovals();
+  resetAccessList();
 });
 
 /**
@@ -215,97 +220,77 @@ test.describe('Bắt đổi mật khẩu tạm là hàng rào của SERVER, khô
   });
 });
 
-test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
+test.describe('Break-glass — nguyên tắc bốn mắt (FR-023, Q-30)', () => {
   /**
-   * `POST /vault/break-glass` mở cho cả `member`, `admin` và `sa` ("ai cũng XIN được, kể cả
-   * Admin"), còn `approve` mở cho `sa`/`admin`. `approve()` phải so `approver` với
-   * `request.requester` — như `cancel()` ngay bên dưới, và vì đúng lý do ấy.
-   *
-   * Thiếu phép so đó thì tác động quyền hạn chế: Admin vốn đã đi thẳng qua ma trận nên grant không cho thêm gì.
-   * Thứ mất đi là ĐỘ TIN CẬY CỦA SỔ: nhật ký FR-025 in ra một grant "đã được duyệt" nhìn hợp
-   * lệ hoàn toàn, `decided_by` là chính người xin — và đó là thứ auditor đọc.
-   *
-   * ===== VÌ SAO GIEO PHIẾU BẰNG SQL =====
-   *
-   * Dựng một phiếu chờ qua API đòi cả một chuỗi cấp quyền không liên quan: `request()` gọi
-   * `tierFor()`, mà `tierFor` trả `denied` khi chủ thể chưa thuộc nhóm nào trong ma trận. Cả
-   * chuỗi đó là bối cảnh, không phải thứ đang kiểm.
-   *
-   * Và đây KHÁC với kiểu "gieo SQL rồi kiểm chính cái mình vừa gieo": thứ đang kiểm là
-   * `approve()`, và bài này gọi ĐÚNG endpoint duyệt thật, qua đúng guard thật. Chỉ khâu tạo
-   * phiếu là dựng sẵn.
+   * Q-30: bốn mắt nằm ở lúc CHỌN người duyệt. Danh sách chọn do server dựng (SA/Admin đang hoạt
+   * động trừ chính người xin), và API đối chiếu lại email gửi lên — không tin chữ gõ vào. Thiếu
+   * phép đối chiếu đó thì người xin tự gửi thư mang mã cho chính mình (hoặc một hộp thư ngoài) và
+   * tự duyệt: nhật ký FR-025 in ra một grant nhìn hợp lệ mà không ai thật sự duyệt.
    */
-  test('người xin không tự duyệt cho chính mình được', async ({ page }) => {
-    const secret = await firstLogin(page, E2E_SA);
-    await stepUpViaApi(page, secret);
+  test('người xin không chọn được chính mình hay một email ngoài danh sách làm người duyệt', async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(150_000);
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
-
     const catalog = (await (
       await page.request.get('/api/v1/catalog', { headers })
     ).json()) as { deviceTypes: { id: string; name: string }[] };
+    const typeId = catalog.deviceTypes[0].id;
     const device = await page.request.post('/api/v1/devices', {
       headers,
-      data: {
-        code: `BG-E2E-4M-${stamp}`,
-        name: 'May xin break-glass',
-        deviceTypeId: catalog.deviceTypes[0].id,
-      },
+      data: { code: `BG-E2E-4M-${stamp}`, name: 'May xin break-glass', deviceTypeId: typeId },
     });
     expect(device.status()).toBe(201);
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
-
-    // Phiếu CHỜ, người xin chính là tài khoản đang đăng nhập.
-    const requestId = seedPendingBreakGlass(E2E_SA.email, deviceId);
-    expect(requestId, 'gieo được phiếu thì mới có gì để duyệt').toMatch(/[0-9a-f-]{36}/);
-
-    // `approve` nay đòi step-up; gõ mã trước để lỗi trả về là lỗi BỐN MẮT, không phải thiếu mã.
-    expireStepUp(E2E_SA.email);
-    await page.request.post('/api/v1/auth/step-up', {
+    const access = await page.request.post('/api/v1/vault/access', {
       headers,
-      data: { token: await freshTotpCode(secret), scope: 'vault' },
+      data: { memberEmail: E2E_MEMBER.email, scopeType: 'device_type', scopeRef: typeId, tier: 'needs_approval' },
     });
+    expect(access.status()).toBeLessThan(300);
 
-    const selfApprove = await page.request.post(
-      `/api/v1/vault/break-glass/${requestId}/approve`,
-      { headers, data: { hours: 2 } },
-    );
-    expect(
-      selfApprove.status(),
-      'tự duyệt cho chính mình = nhật ký in ra một grant hợp lệ mà không ai thật sự duyệt',
-    ).toBe(403);
-    expect(((await selfApprove.json()) as { code?: string }).code).toBe(
-      'CANNOT_APPROVE_OWN_REQUEST',
-    );
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const member = await ctx.newPage();
+    await stepUpViaApi(member, await firstLogin(member, E2E_MEMBER));
+    const memberHeaders = await writeHeaders(member);
 
-    // Chặn mà vẫn chuyển trạng thái thì vô nghĩa — phiếu phải nằm nguyên ở `pending`.
-    expect(sql(`SELECT state FROM approval WHERE id = '${requestId}'`)).toBe('pending');
+    const choices = (await (await member.request.get('/api/v1/vault/break-glass/approvers')).json()) as {
+      email: string;
+    }[];
+    expect(choices.map((c) => c.email)).toContain(E2E_SA.email);
+    expect(choices.map((c) => c.email)).not.toContain(E2E_MEMBER.email);
+
+    for (const approver of [E2E_MEMBER.email, 'nguoi-ngoai-e2e@gmail.com']) {
+      const res = await member.request.post('/api/v1/vault/break-glass', {
+        headers: memberHeaders,
+        data: { ownerType: 'device', ownerId: deviceId, reason: 'tu duyet thu E2E', hours: 2, approver },
+      });
+      expect(res.status(), `chọn ${approver} phải bị từ chối`).toBe(400);
+      expect(((await res.json()) as { code?: string }).code).toBe('BREAK_GLASS_APPROVER_INVALID');
+    }
+    expect(sql(`SELECT count(*) FROM approval WHERE subject_id = '${deviceId}'`)).toBe('0');
+    await ctx.close();
   });
 
   /**
-   * VẾ ĐỐI CHỨNG: người KHÁC duyệt thì phải chạy. Không có nó thì một bản "approve luôn ném"
-   * cũng xanh, và break-glass — đường cứu hộ lúc 2 giờ sáng — chết lặng.
+   * Q-30: IMS không còn cửa Duyệt. Dựng lại đòn cũ: SA đã qua mã 2 lớp gọi thẳng endpoint duyệt
+   * cũ — phải không có cửa nào, và phiếu vẫn chờ mã.
    */
-  test('người khác duyệt thì phiếu sang `approved`', async ({ page }) => {
+  test('không còn cửa Duyệt: SA đã qua mã 2 lớp gọi thẳng /approve → 404, phiếu vẫn chờ', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, secret);
     const headers = await writeHeaders(page);
     const stamp = uniqueStamp();
-
     const catalog = (await (
       await page.request.get('/api/v1/catalog', { headers })
     ).json()) as { deviceTypes: { id: string; name: string }[] };
     const device = await page.request.post('/api/v1/devices', {
       headers,
-      data: {
-        code: `BG-E2E-OK-${stamp}`,
-        name: 'May xin break-glass 2',
-        deviceTypeId: catalog.deviceTypes[0].id,
-      },
+      data: { code: `BG-E2E-OK-${stamp}`, name: 'May xin break-glass 2', deviceTypeId: catalog.deviceTypes[0].id },
     });
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
-
-    // Người xin là NGƯỜI KHÁC — đúng một chữ khác so với bài trên.
     const requestId = seedPendingBreakGlass('nguoi-khac-e2e@pmh.com.vn', deviceId);
 
     expireStepUp(E2E_SA.email);
@@ -313,13 +298,11 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
       headers,
       data: { token: await freshTotpCode(secret), scope: 'vault' },
     });
-
-    const approved = await page.request.post(
-      `/api/v1/vault/break-glass/${requestId}/approve`,
-      { headers, data: { hours: 2 } },
-    );
-    expect(approved.status(), 'bốn mắt chặn người XIN, không chặn người duyệt').toBeLessThan(300);
-    expect(sql(`SELECT state FROM approval WHERE id = '${requestId}'`)).toBe('approved');
-    expect(sql(`SELECT decided_by FROM approval WHERE id = '${requestId}'`)).toBe(E2E_SA.email);
+    const approved = await page.request.post(`/api/v1/vault/break-glass/${requestId}/approve`, {
+      headers,
+      data: { hours: 2 },
+    });
+    expect(approved.status()).toBe(404);
+    expect(sql(`SELECT state FROM approval WHERE id = '${requestId}'`)).toBe('pending');
   });
 });

@@ -5,6 +5,8 @@ import {
   E2E_SA,
   firstLogin,
   horizontalOverflow,
+  mailedApprovalCode,
+  fillOtp,
   resetAccessList,
   resetApprovals,
   resetDevices,
@@ -32,11 +34,12 @@ async function csrfOf(page: Page): Promise<string> {
  * UX-DR2 cho màn duyệt (AC 6.3 ghi rõ: "trang duyệt của Admin pass 390px").
  *
  * Lý do rất cụ thể: yêu cầu break-glass đến lúc 2 giờ sáng, người duyệt đang ở nhà và chỉ có
- * cái điện thoại. Duyệt không được trên điện thoại thì cả cơ chế này vô dụng đúng vào lúc cần
- * nhất — người trực sẽ đi tìm đường vòng, và đường vòng thì không có audit.
+ * cái điện thoại. Q-30: người duyệt đồng ý bằng cách đọc mã trong thư; trên điện thoại họ vẫn phải
+ * đọc đủ lý do ở màn duyệt, và người xin phải nhập được mã ở 390px — không thì người trực đi
+ * tìm đường vòng, và đường vòng thì không có audit.
  */
 test.describe('Duyệt break-glass ở 390px', () => {
-  test('Admin đọc được lý do và duyệt được trên điện thoại', async ({ page, browser }) => {
+  test('Admin đọc được lý do trên điện thoại; người xin nhập mã ở 390px', async ({ page, browser }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -69,26 +72,26 @@ test.describe('Duyệt break-glass ở 390px', () => {
     const longReason =
       'Switch tầng 3 mất kết nối từ 1h45 sáng, khách sạn báo mạng phòng họp chết, cần vào ' +
       'cấu hình VLAN để khôi phục trước giờ làm việc';
-    await member.request.post('/api/v1/vault/break-glass', {
+    const asked = await member.request.post('/api/v1/vault/break-glass', {
       headers: { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN },
-      data: { ownerType: 'device', ownerId: deviceId, reason: longReason, hours: 4 },
+      data: { ownerType: 'device', ownerId: deviceId, reason: longReason, hours: 4, approver: E2E_SA.email },
     });
+    const approvalId = ((await asked.json()) as { id: string }).id;
 
     await page.goto('/approvals');
 
     // Lý do là thứ người duyệt ĐỌC để quyết — phải đọc được đủ, không bị cắt.
     await expect(page.getByText(longReason)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Duyệt', exact: true })).toBeVisible();
+    await expect(page.getByText(/Chờ người xin nhập mã đã gửi tới/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-    // Và bấm duyệt được thật, không chỉ nhìn thấy nút.
-    await page.getByRole('button', { name: 'Duyệt', exact: true }).first().click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' })).toBeVisible();
-    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-
-    await dialog.getByRole('button', { name: /^Duyệt \d+ giờ$/ }).click();
-    await expect(page.getByText('Đã duyệt')).toBeVisible();
+    // Người xin nhập mã ở 390px — được duyệt thật, không chỉ nhìn thấy ô.
+    await member.setViewportSize({ width: 390, height: 844 });
+    await member.goto(`/devices/${deviceId}?tab=vault`);
+    await fillOtp(member, await mailedApprovalCode(approvalId), 'Mã duyệt do người duyệt đọc cho bạn');
+    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    expect(await horizontalOverflow(member)).toBeLessThanOrEqual(1);
     await memberCtx.close();
   });
 });

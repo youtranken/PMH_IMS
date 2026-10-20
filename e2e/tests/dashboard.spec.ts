@@ -135,6 +135,9 @@ test.describe('Bảng điều khiển', () => {
   });
 
   test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page, browser }) => {
+    // Bốn lượt mã 2 lớp (SA, Member, SA đăng nhập lại + step-up): chống dùng lại mã bắt mỗi
+    // lượt chờ chu kỳ 30 giây mới, nên trần 60 giây mặc định đỏ tùy giờ chạy.
+    test.setTimeout(150_000);
     const saTotp = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, saTotp);
     const stamp = Date.now().toString().slice(-5);
@@ -170,6 +173,7 @@ test.describe('Bảng điều khiển', () => {
         ownerId: deviceId,
         reason: 'switch tầng 3 mất kết nối lúc 2 giờ sáng',
         hours: 4,
+        approver: E2E_SA.email,
       },
     });
 
