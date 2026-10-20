@@ -82,14 +82,14 @@ test.describe('Duyệt break-glass ở 390px', () => {
 
     // Lý do là thứ người duyệt ĐỌC để quyết — phải đọc được đủ, không bị cắt.
     await expect(page.getByText(longReason)).toBeVisible();
-    await expect(page.getByText(/Chờ người xin nhập mã đã gửi tới/)).toBeVisible();
+    await expect(page.getByText(/Mã đã gửi cho/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Duyệt', exact: true })).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     // Người xin nhập mã ở 390px — được duyệt thật, không chỉ nhìn thấy ô.
     await member.setViewportSize({ width: 390, height: 844 });
     await member.goto(`/devices/${deviceId}?tab=vault`);
-    await fillOtp(member, await mailedApprovalCode(approvalId), 'Mã duyệt do người duyệt đọc cho bạn');
+    await fillOtp(member, await mailedApprovalCode(approvalId), 'Mã duyệt');
     await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
     expect(await horizontalOverflow(member)).toBeLessThanOrEqual(1);
     await memberCtx.close();

@@ -125,16 +125,14 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await pageA.goto(`/devices/${kit.deviceId}?tab=vault`);
     await pageA.getByRole('button', { name: 'Xin mở két' }).click();
     const form = pageA.getByRole('dialog');
-    await expect(form.getByText(/phiên đăng nhập bạn nhập mã duyệt/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill('E2E switch tầng 3 mất kết nối');
-    await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     // Q-30: chọn đúng một người duyệt — chỉ người đó nhận thư mang mã.
     await form.getByRole('button', { name: /Người duyệt/ }).click();
     await pageA.getByRole('option', { name: E2E_SA.email }).click();
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
-    // Khung chờ nói cứ đóng trang — không còn câu "giữ trang này mở".
-    await expect(pageA.getByText(/Bạn có thể đóng trang/)).toBeVisible();
-    await expect(pageA.getByText(/Giữ trang này mở/)).toHaveCount(0);
+    // Khung chờ một dòng: mã gửi cho ai (Q-30 gọn chữ).
+    await expect(pageA.getByText(/(Đã gửi|Đang gửi) mã cho/)).toBeVisible();
     const id = sql(
       `SELECT id FROM approval WHERE requester = '${E2E_MEMBER.email}' AND state = 'pending' ORDER BY created_at DESC LIMIT 1`,
     );
@@ -150,8 +148,8 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await loginWithTotp(pageB, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
     await stepUpViaApi(pageB, memberTotp);
     await pageB.goto(`/devices/${kit.deviceId}?tab=vault`);
-    await expect(pageB.getByText(/Mã duyệt đã gửi tới/)).toBeVisible();
-    await fillOtp(pageB, await mailedApprovalCode(id), 'Mã duyệt do người duyệt đọc cho bạn');
+    await expect(pageB.getByText(/Đã gửi mã cho/)).toBeVisible();
+    await fillOtp(pageB, await mailedApprovalCode(id), 'Mã duyệt');
     await expect(pageB.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
     expect(stateOf(id)).toBe('approved');
     expect(claimed(id)).toBe(true);
@@ -159,7 +157,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     // Đã nhập mã cho két ngay sau đăng nhập (`stepUpViaApi`) = còn ân hạn: bấm Xem là thấy giá trị.
     await pageB.getByRole('button', { name: 'Xem' }).click();
     await expect(pageB.getByTestId('secret-value')).toHaveText(kit.value);
-    await expect(pageB.getByText(/Bạn được xem tới/)).toBeVisible();
+    await expect(pageB.getByText(/Đang mở két · còn/)).toBeVisible();
 
     // Nhật ký: người duyệt là người nhận mã, kèm ai nhập mã.
     expect(
@@ -234,8 +232,8 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     expect(await revealCode(memberPage, kit.secretId)).toBe('OK');
 
     await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
-    await expect(memberPage.getByText(/Bạn được xem tới/)).toBeVisible();
-    await expect(memberPage.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
+    // Một dòng đếm lùi; câu "hết khi đăng xuất" (Q-15) nằm ở title của dòng đó.
+    await expect(memberPage.getByText(/Đang mở két · còn/)).toHaveAttribute('title', /đăng xuất hay hết phiên/);
     await memberPage.getByRole('button', { name: 'Trả quyền' }).click();
     const confirm = memberPage.getByRole('dialog');
     await confirm.getByRole('button', { name: 'Trả quyền' }).click();
@@ -299,8 +297,6 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     const memberPage = await ctx.newPage();
     await stepUpViaApi(memberPage, await firstLogin(memberPage, E2E_MEMBER));
     const id = await ask(memberPage, kit.deviceId, 'E2E chờ quá hạn');
-    await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
-    await expect(memberPage.getByText(/trong 8 giờ thì yêu cầu tự hết hạn/)).toBeVisible();
 
     // Lùi mốc gửi quá hạn chờ: mã đúng cũng bị chặn NGAY theo đồng hồ, không chờ lượt quét.
     const code = await mailedApprovalCode(id);
@@ -319,7 +315,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
         `SELECT actor || '|' || (detail->>'note') FROM approval_history WHERE approval_id = '${id}' AND to_state = 'expired'`,
       ),
     ).toBe('system|Quá 8 giờ không ai duyệt.');
-    await memberPage.reload();
+    await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(memberPage.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
     await ctx.close();
   });

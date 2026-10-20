@@ -149,9 +149,9 @@ test.describe('Duyệt break-glass bằng mã, 390px (Q-30)', () => {
     await member.setViewportSize({ width: 390, height: 844 });
     await clearMailbox();
     await member.goto(`/devices/${deviceId}?tab=vault`);
-    await expect(member.getByText(/Mã duyệt đã gửi tới .* \(còn hiệu lực \d+ phút\)/)).toBeVisible();
+    await expect(member.getByText(/Đã gửi mã cho .* · còn \d+:\d{2}/)).toBeVisible();
     expect(await horizontalOverflow(member)).toBeLessThanOrEqual(1);
-    await fillOtp(member, mailed, 'Mã duyệt do người duyệt đọc cho bạn');
+    await fillOtp(member, mailed, 'Mã duyệt');
     await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
 
     // Người xin nhận thư kết quả, có nút mở thẳng két của hồ sơ.
@@ -228,7 +228,7 @@ test.describe('Phía người xin, 390px', () => {
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: cần đổi VLAN`);
-    await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     await pickApprover(page);
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
 
@@ -236,11 +236,12 @@ test.describe('Phía người xin, 390px', () => {
     await expect(page.getByText('Đã gửi yêu cầu. Người duyệt sẽ nhận thư có mã.')).toBeVisible();
     await expect(page.getByText(/vượt mức tối đa/)).toHaveCount(0);
 
-    await expect(page.getByText(/đang chờ mã duyệt/)).toBeVisible();
+    await expect(page.getByText(/(Đã gửi|Đang gửi) mã cho/)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     // Phiếu của chính mình trên trang chi tiết: không duyệt được, chỉ rút.
-    await page.getByRole('link', { name: 'Xem yêu cầu' }).click();
+    const mine = (await (await page.request.get('/api/v1/vault/break-glass/mine')).json()) as { items: { id: string }[] };
+    await page.goto(`/approvals/${mine.items[0].id}`);
     await expect(page.getByText('Cần người khác duyệt')).toBeVisible();
     await expect(page.getByRole('button', { name: /^Duyệt/ })).toHaveCount(0);
 
@@ -339,13 +340,11 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await page.goto(`/devices/${deviceId}?tab=vault`);
     await page.getByRole('button', { name: 'Xin mở két' }).click();
     const form = page.getByRole('dialog');
-    await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
     await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: switch tầng 3 mất kết nối`);
-    await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('group', { name: 'Mở trong' }).getByRole('button', { name: '4 giờ', exact: true }).click();
     await pickApprover(page);
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
-    await expect(page.getByText(/Bạn có thể đóng trang/)).toBeVisible();
-    await expect(page.getByText(/Giữ trang này mở/)).toHaveCount(0);
+    await expect(page.getByText(/(Đã gửi|Đang gửi) mã cho/)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     const approvalId = (
@@ -355,12 +354,11 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     ).items.find((r) => r.subjectId === deviceId && r.state === 'pending')!.id;
     // Thư vừa đi thì khung đổi từ "đang gửi" sang "mã đã gửi tới …" trong vài giây, không phải F5.
     const mailed = await mailedApprovalCode(approvalId);
-    await expect(page.getByText(/Mã duyệt đã gửi tới/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Gửi lại mã (còn 3 lần)' })).toBeInViewport();
-    await fillOtp(page, mailed, 'Mã duyệt do người duyệt đọc cho bạn');
+    await expect(page.getByText(/Đã gửi mã cho/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gửi lại mã (3)' })).toBeInViewport();
+    await fillOtp(page, mailed, 'Mã duyệt');
 
-    await expect(page.getByText(/Bạn được xem tới .* \(còn 3 giờ 5\d phút\)/)).toBeVisible();
-    await expect(page.getByText(/gắn với phiên đăng nhập này/)).toBeVisible();
+    await expect(page.getByText(/^Đang mở két · còn 3:5\d$/)).toHaveAttribute('title', /gắn với phiên đăng nhập này/);
     const release = page.getByRole('button', { name: 'Trả quyền' });
     await expect(release).toBeInViewport();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

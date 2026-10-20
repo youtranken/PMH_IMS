@@ -75,7 +75,7 @@ describe('DecisionDialog', () => {
     expect(within(dialog).getByText(/e2e-member@pmh\.com\.vn/)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: ROW.subjectLabel! })).toBeInTheDocument();
     expect(within(dialog).getByText(ROW.reason)).toBeInTheDocument();
-    expect(within(dialog).getByText('Xin 4 giờ')).toBeInTheDocument();
+    expect(within(dialog).getByText('Mở trong 4 giờ')).toBeInTheDocument();
     // Tóm tắt là MÔ TẢ của hộp — trình đọc màn hình đọc nó ngay khi hộp mở.
     expect(dialog).toHaveAccessibleDescription(/Sự cố mất kết nối tầng 3/);
     // Q-30: không còn đường Duyệt trong IMS.
@@ -226,22 +226,33 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
   };
   const WITH_CODE: AccessVerdict = { ...PENDING, pendingCode: CODE };
 
-  it('phiếu đang chờ (Q-30): nói mã đã gửi tới AI và còn bao lâu', async () => {
+  it('phiếu đang chờ (Q-30, gọn chữ): một dòng mã gửi cho ai + đồng hồ; chưa sai thì không nói số lượt', async () => {
     renderMemberPanel(WITH_CODE);
-    expect(await screen.findByText(/Mã duyệt đã gửi tới Cao Thuận \(còn hiệu lực 9 phút\)/)).toBeInTheDocument();
-    expect(screen.getByText('Còn 5 lần nhập. Sai hết thì yêu cầu bị hủy.')).toBeInTheDocument();
+    expect(await screen.findByText('Đã gửi mã cho Cao Thuận · còn 9:00')).toBeInTheDocument();
+    expect(screen.queryByText(/lần nhập/)).not.toBeInTheDocument();
+    // Ba nút cùng một hàng; không còn câu "có thể đóng trang" hay link "Xem yêu cầu".
+    for (const name of ['Xác nhận', 'Gửi lại mã (3)', 'Rút yêu cầu']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/có thể đóng trang/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Xem yêu cầu' })).not.toBeInTheDocument();
+  });
+
+  it('đã sai một lần: hiện "còn N lần nhập"', async () => {
+    renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, attemptsLeft: 4 } });
+    expect(await screen.findByText('Còn 4 lần nhập.')).toBeInTheDocument();
   });
 
   it('thư chưa đi → nói đang gửi, không đếm lùi một mã chưa có', async () => {
     renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, codeSecondsLeft: null } });
-    expect(await screen.findByText('Thư mang mã đang được gửi tới Cao Thuận…')).toBeInTheDocument();
+    expect(await screen.findByText('Đang gửi mã cho Cao Thuận…')).toBeInTheDocument();
   });
 
   it('gõ đủ 6 số → gửi đúng mã lên /code của đúng phiếu', async () => {
     const fetchMock = renderMemberPanel(WITH_CODE, (url, init) =>
       init?.method === 'POST' && url.endsWith('/r1/code') ? Promise.resolve(jsonResponse(200, { id: 'r1' })) : null,
     );
-    await screen.findByText(/Mã duyệt đã gửi tới/);
+    await screen.findByText(/Đã gửi mã cho/);
     await userEvent.type(screen.getAllByRole('textbox')[0], '012345');
     const post = await vi.waitFor(() => {
       const call = fetchMock.mock.calls.find(([u, i]) => String(u).endsWith('/r1/code') && i?.method === 'POST');
@@ -258,7 +269,7 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
         ? Promise.resolve(jsonResponse(400, { code: 'BREAK_GLASS_CODE_WRONG', message: 'Mã không đúng. Còn 4 lần nhập.' }))
         : null,
     );
-    await screen.findByText(/Mã duyệt đã gửi tới/);
+    await screen.findByText(/Đã gửi mã cho/);
     await userEvent.type(screen.getAllByRole('textbox')[0], '999999');
     expect(await screen.findByText('Mã không đúng. Còn 4 lần nhập.')).toBeInTheDocument();
     expect(screen.getAllByRole('textbox')[0]).toHaveValue('');
@@ -268,7 +279,7 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
     const fetchMock = renderMemberPanel(WITH_CODE, (url, init) =>
       init?.method === 'POST' && url.endsWith('/r1/resend-code') ? Promise.resolve(jsonResponse(200, { resendsLeft: 2 })) : null,
     );
-    await userEvent.click(await screen.findByRole('button', { name: 'Gửi lại mã (còn 3 lần)' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Gửi lại mã (3)' }));
     await vi.waitFor(() =>
       expect(fetchMock.mock.calls.some(([u, i]) => String(u).endsWith('/r1/resend-code') && i?.method === 'POST')).toBe(true),
     );
@@ -291,10 +302,10 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
 
   it('hết lượt gửi lại → nút tắt, nói rõ', async () => {
     renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, resendsLeft: 0 } });
-    expect(await screen.findByRole('button', { name: 'Đã hết lượt gửi lại' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Gửi lại mã (0)' })).toBeDisabled();
   });
 
-  it('đã được duyệt: "được xem tới … (còn 3 giờ 52 phút)" đếm từ số giây server đưa', async () => {
+  it('đã được duyệt: một dòng "Đang mở két · còn 3:52" đếm từ số giây server đưa', async () => {
     renderMemberPanel({
       ...NEEDS_APPROVAL,
       canReveal: true,
@@ -302,12 +313,12 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
       grant: { id: 'g1', expiresAt: '2026-09-28T06:00:00.000Z' },
       grantSecondsLeft: 3 * 3600 + 52 * 60,
     });
-    expect(await screen.findByText(/\(còn 3 giờ 52 phút\)/)).toBeInTheDocument();
+    expect(await screen.findByText('Đang mở két · còn 3:52')).toBeInTheDocument();
   });
 });
 
 describe('Hộp xin quyền xem (vault-panel)', () => {
-  it('lý do ngắn + số giờ gõ chữ → hai lỗi tiếng Việt dưới hai ô, không gửi', async () => {
+  it('hộp xin chỉ ba ô (Q-30 gọn chữ); lý do ngắn + chưa chọn người duyệt → lỗi dưới ô, không gửi', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if ((init?.method ?? 'GET') !== 'GET') return new Promise<Response>(() => {});
@@ -326,14 +337,15 @@ describe('Hộp xin quyền xem (vault-panel)', () => {
     );
 
     await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
+    const dialog = screen.getByRole('dialog');
+    // Không còn ô gõ số giờ, không còn đoạn giải thích: chỉ Lý do là ô chữ.
+    expect(within(dialog).getAllByRole('textbox')).toHaveLength(1);
+    expect(within(dialog).getByRole('group', { name: 'Mở trong' })).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Chọn một SA\/Quản trị để duyệt/)).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/Lý do/), 'gấp');
-    const hours = screen.getByLabelText(/Xin trong bao lâu/);
-    await userEvent.clear(hours);
-    await userEvent.type(hours, 'hai');
     await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu' }));
 
     expect(screen.getByText('Ghi rõ lý do — người duyệt cần biết để quyết.')).toBeInTheDocument();
-    expect(screen.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeInTheDocument();
     expect(screen.getByText('Chọn người duyệt — chỉ người này nhận thư có mã.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
