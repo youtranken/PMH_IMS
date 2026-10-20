@@ -84,6 +84,7 @@ export class AccountsService {
       birthDate?: string;
       role: UserRole;
       totpLoginRequired?: boolean;
+      featureGroupId?: string;
     },
   ): Promise<{ user: UserRecord; temporaryPassword: string }> {
     const existing = await this.users.findCredentialsByEmail(input.email);
@@ -116,6 +117,7 @@ export class AccountsService {
       birthDate?: string;
       role: UserRole;
       totpLoginRequired?: boolean;
+      featureGroupId?: string;
     },
     passwordHash: string,
     tempExpiresAt: Date,
@@ -134,13 +136,15 @@ export class AccountsService {
           passwordHash,
           totpLoginRequired: input.totpLoginRequired ?? true,
           tempPasswordExpiresAt: tempExpiresAt,
+          // Người mới chưa phụ trách phiếu nào, nên chỉ cần FK + CHECK chỉ-Member của DB (Q-31).
+          featureGroupId: input.featureGroupId ?? null,
         });
         await this.audit.appendWithin(tx, {
           actor: actor.email,
           action: "account.created",
           objectType: "user",
           objectId: created.id,
-          detail: { email: created.email, role: created.role },
+          detail: { email: created.email, role: created.role, featureGroupId: created.featureGroupId },
         });
         await this.outbox.enqueueWithin(tx, "account.created", {
           userId: created.id,
@@ -165,6 +169,13 @@ export class AccountsService {
           },
           "users_employee_code_uq",
         );
+      }
+      const constraint = pgConstraint(error);
+      if (constraint === "users_feature_group_id_fkey" || constraint === "users_feature_group_member_check") {
+        throw new BadRequestException({
+          code: "FEATURE_GROUP_INVALID",
+          message: "Nhóm quyền chỉ gán cho Thành viên, và nhóm phải còn. Tải lại rồi chọn lại.",
+        });
       }
       // Không phải khóa mã nhân viên → hoặc trùng email, hoặc không phải 23505 (đi qua nguyên vẹn).
       throw conflictOnUnique(error, {

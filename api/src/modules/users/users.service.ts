@@ -53,6 +53,17 @@ export class UsersService {
     return rows[0]?.features ?? [];
   }
 
+  /** `id → ô tick của nhóm` theo mẻ; `null` = đủ quyền (SA/Admin, Member chưa gán nhóm). */
+  async featureTicksByIds(ids: readonly string[]): Promise<Map<string, string[] | null>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: usersTable.id, features: featureGroupTable.features })
+      .from(usersTable)
+      .leftJoin(featureGroupTable, eq(featureGroupTable.id, usersTable.featureGroupId))
+      .where(inArray(usersTable.id, [...ids]));
+    return new Map(rows.map((row) => [row.id, row.features ?? null]));
+  }
+
   /**
    * Danh sách có tìm kiếm PHÍA SERVER: lọc phía client chỉ lọc đúng trang đang xem,
    * nên gõ tên nằm ở trang 3 sẽ ra bảng rỗng trong khi tổng số vẫn báo 137 dòng.
@@ -163,6 +174,7 @@ export class UsersService {
       passwordHash: string;
       totpLoginRequired: boolean;
       tempPasswordExpiresAt: Date;
+      featureGroupId?: string | null;
     },
   ): Promise<UserRecord> {
     const rows = await tx
@@ -227,7 +239,16 @@ export class UsersService {
   async setRoleWithin(tx: Tx, userId: string, role: UserRole): Promise<void> {
     await tx
       .update(usersTable)
-      .set({ role, updatedAt: new Date() })
+      // Nhóm quyền chỉ cho Member (Q-31, CHECK `users_feature_group_member_check`): rời vai Member
+      // thì bỏ nhóm trong cùng câu, không thì câu UPDATE bị DB từ chối.
+      .set(role === 'member' ? { role, updatedAt: new Date() } : { role, featureGroupId: null, updatedAt: new Date() })
+      .where(eq(usersTable.id, userId));
+  }
+
+  async setFeatureGroupWithin(tx: Tx, userId: string, groupId: string | null): Promise<void> {
+    await tx
+      .update(usersTable)
+      .set({ featureGroupId: groupId, updatedAt: new Date() })
       .where(eq(usersTable.id, userId));
   }
 

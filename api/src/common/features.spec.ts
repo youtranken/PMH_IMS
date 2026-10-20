@@ -1,4 +1,4 @@
-import { effectiveFeatures, FEATURE_TICKS, hasFeature, isFeatureTick } from './features';
+import { effectiveFeatures, FEATURE_TICKS, hasFeature, holdingConflicts, isFeatureTick } from './features';
 
 describe('Nhóm quyền của Thành viên (Q-31)', () => {
   it('đúng 7 ô tick, đúng thứ tự trên màn', () => {
@@ -57,5 +57,24 @@ describe('Nhóm quyền của Thành viên (Q-31)', () => {
     ] as const)('%j cần một trong %j → %p', (features, required, expected) => {
       expect(hasFeature(features as readonly string[] | null, required)).toBe(expected);
     });
+  });
+});
+
+describe('holdingConflicts — người phụ trách phải thấy phiếu (Q-31)', () => {
+  const holdings = [
+    { userId: 'an', feature: 'iso_0203' as const, label: '0203' },
+    { userId: 'an', feature: 'iso_0208' as const, label: '0208' },
+    { userId: 'binh', feature: 'iso_0208' as const, label: '0208' },
+  ];
+
+  it.each([
+    ['ai cũng đủ quyền', { an: null, binh: null }, []],
+    ['An mất 0203', { an: ['iso_0208'], binh: null }, ['an:iso_0203']],
+    ['cả hai mất 0208', { an: ['iso_0203'], binh: ['network'] }, ['an:iso_0208', 'binh:iso_0208']],
+    // Người không có trong bảng tra (không bị đổi lần này) thì không xét.
+    ['chỉ xét người được hỏi', { binh: ['assets'] }, ['binh:iso_0208']],
+  ] as const)('%s', (_name, ticks, expected) => {
+    const lookup = new Map(Object.entries(ticks) as [string, readonly string[] | null][]);
+    expect(holdingConflicts(holdings, lookup).map((h) => `${h.userId}:${h.feature}`)).toEqual(expected);
   });
 });

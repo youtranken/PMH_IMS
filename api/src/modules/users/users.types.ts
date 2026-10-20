@@ -34,6 +34,14 @@ export interface UserCredentials extends UserRecord {
   totpLastTimestep: number | null;
 }
 
+/** Nhóm quyền của Thành viên (Q-31) như màn Nhóm quyền cần. */
+export interface FeatureGroup {
+  id: string;
+  name: string;
+  features: string[];
+  memberCount: number;
+}
+
 /** Một người trong danh bạ tối thiểu — màn gán quyền cần biết ai là ai, không cần hơn. */
 export interface UserDirectoryEntry {
   id: string;

@@ -41,6 +41,11 @@ export class UsersApiService {
     return this.users.directory();
   }
 
+  /** Q-31: `id → ô tick của nhóm quyền`; `null` = đủ quyền. Id không có tài khoản thì vắng khỏi map. */
+  featureTicksByIds(ids: readonly string[]): Promise<Map<string, string[] | null>> {
+    return this.users.featureTicksByIds(ids);
+  }
+
   /** Người nhận email theo vai — dùng cho outbox/digest và cảnh báo bảo mật. */
   recipientsByRole(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {
     return this.users.listRecipients(roles);

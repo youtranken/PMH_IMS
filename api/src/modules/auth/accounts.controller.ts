@@ -3,10 +3,12 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -18,8 +20,10 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Validate,
+  ValidateIf,
 } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
@@ -33,6 +37,7 @@ import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { USER_SORT_DEFAULT, USER_SORT_KEYS, type UserListFilters } from '../users/users.api';
 import { ACCOUNT_STATUS_ACTION, AccountsService } from './accounts.service';
+import { FeatureGroupsAdminService } from './feature-groups-admin.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
@@ -73,6 +78,11 @@ class CreateUserDto extends ContactDto {
 
   @IsBoolean()
   totpLoginRequired: boolean = true;
+
+  /** Q-31: chỉ Member; bỏ trống = đủ quyền. */
+  @IsOptional()
+  @IsUUID(undefined, { message: 'Nhóm quyền không hợp lệ.' })
+  featureGroupId?: string;
 }
 
 class ProfileDto extends ContactDto {
@@ -91,6 +101,13 @@ export class StatusDto {
   @Length(0, 500, { message: 'Lý do tối đa 500 ký tự.' })
   @NoSecretText()
   reason?: string;
+}
+
+class FeatureGroupDto {
+  /** `null` = "Đủ quyền". */
+  @ValidateIf((_dto, value) => value !== null)
+  @IsUUID(undefined, { message: 'Nhóm quyền không hợp lệ.' })
+  featureGroupId!: string | null;
 }
 
 class RoleDto {
@@ -183,6 +200,7 @@ class KillAllSessionsDto {
 export class AccountsController {
   constructor(
     private readonly accounts: AccountsService,
+    private readonly featureGroups: FeatureGroupsAdminService,
     private readonly excel: ExcelExportService,
     private readonly config: SystemConfigService,
   ) {}
@@ -285,6 +303,15 @@ export class AccountsController {
   async setRole(@Param('id') id: string, @Body() dto: RoleDto, @Req() req: AuthedRequest) {
     await this.accounts.setRole(actor(req), id, dto.role);
     return { role: dto.role };
+  }
+
+  @Roles('sa')
+  // Không đòi mã 6 số (Q-31): nhóm chỉ thu hẹp quyền của Member, không bao giờ cho thêm.
+  @Put(':id/feature-group')
+  @Audited('account.feature_group.changed', 'user', { writtenByService: true })
+  @HttpCode(204)
+  async setFeatureGroup(@Param('id', ParseUUIDPipe) id: string, @Body() dto: FeatureGroupDto, @Req() req: AuthedRequest) {
+    await this.featureGroups.assign(actor(req), id, dto.featureGroupId);
   }
 
   @Roles('sa')

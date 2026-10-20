@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
 import { OwnerExistsRegistry } from '../src/common/owner-exists.registry';
+import { FeatureHolderRegistry } from '../src/common/feature-holders.registry';
 import { ApprovalsApiService } from '../src/modules/approvals/approvals.api';
 import { ApprovalsService } from '../src/modules/approvals/approvals.service';
 import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
@@ -357,7 +358,7 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
 
     it('FR-027 ②: iso-forms.api trả phiếu theo Detection Time trong N ngày, mới nhất lên đầu', async () => {
       await incidents.create(people.other, { ...incident({ kind: 'server', detectedAt: '2026-10-01T01:00:00.000Z', resolvedAt: '2026-10-01T02:00:00.000Z', reportedOn: '2026-10-01' }), cells: [] });
-      const recent = await new IsoFormsApiService(incidents).recentIncidents(7, new Date('2026-11-10T05:00:00Z'));
+      const recent = await new IsoFormsApiService(incidents, access, new FeatureHolderRegistry()).recentIncidents(7, new Date('2026-11-10T05:00:00Z'));
       expect(recent.length).toBeGreaterThan(0);
       const since = new Date('2026-11-03T05:00:00Z').getTime();
       expect(recent.every((r) => r.detectedAt.getTime() >= since)).toBe(true);

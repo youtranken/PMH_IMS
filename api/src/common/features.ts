@@ -51,3 +51,26 @@ export function hasFeature(
 ): boolean {
   return features === null || required.some((feature) => features.includes(feature));
 }
+
+/** Một người đang giữ việc của một mảng — hiện chỉ có người phụ trách phiếu ISO 0203 / 0208. */
+export interface FeatureHolding {
+  userId: string;
+  feature: FeatureTick;
+  /** Tên việc cho câu báo lỗi, vd "phụ trách phiếu 0208". */
+  label: string;
+}
+
+/**
+ * Q-31: người phụ trách phải thấy phiếu mình phụ trách. Trả những việc mà nhóm MỚI của người giữ
+ * không có ô tick. `ticksByUser` chỉ chứa người đang bị đổi; `null` = đủ quyền.
+ */
+export function holdingConflicts(
+  holdings: readonly FeatureHolding[],
+  ticksByUser: ReadonlyMap<string, readonly string[] | null>,
+): FeatureHolding[] {
+  return holdings.filter((holding) => {
+    if (!ticksByUser.has(holding.userId)) return false;
+    const ticks = ticksByUser.get(holding.userId) ?? null;
+    return ticks !== null && !ticks.includes(holding.feature);
+  });
+}

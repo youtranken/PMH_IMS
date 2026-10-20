@@ -149,6 +149,8 @@ export const FIELD_LABEL: Record<string, string> = {
   rackUStart: 'U bắt đầu',
   rackUSize: 'Số U',
   totpLoginRequired: 'Bắt buộc 2 lớp mỗi lần đăng nhập',
+  featureGroupId: 'Nhóm quyền',
+  features: 'Các mục được thấy',
   uploadedBy: 'Người tải lên',
   usable: 'Chỉ IP dùng được',
   usableOnly: 'Chỉ IP dùng được',
