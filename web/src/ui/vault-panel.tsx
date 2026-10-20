@@ -85,6 +85,12 @@ export interface PendingCode {
  */
 const PENDING_REFETCH_MS = 15_000;
 
+/**
+ * Thư mang mã chưa đi (Q-30): worker gửi trong vài giây, mà người xin đang cầm điện thoại chờ
+ * người duyệt đọc mã — 15 giây mới đổi sang "mã đã gửi tới …" thì họ tưởng hệ thống treo.
+ */
+const CODE_SENDING_REFETCH_MS = 3_000;
+
 export interface SecretMeta {
   id: string;
   ownerType: SecretOwnerType;
@@ -141,7 +147,13 @@ export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me:
       apiFetch<AccessVerdict>(
         `/api/v1/vault/secrets/verdict?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
       ),
-    refetchInterval: (query) => (query.state.data?.pending ? PENDING_REFETCH_MS : false),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data?.pending) return false;
+      return data.pendingCode && data.pendingCode.codeSecondsLeft === null
+        ? CODE_SENDING_REFETCH_MS
+        : PENDING_REFETCH_MS;
+    },
   });
 
   const tier = verdict.data?.tier;
