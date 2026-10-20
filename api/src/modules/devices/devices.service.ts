@@ -896,7 +896,9 @@ export class DevicesService {
    */
   async requireRowsWithin(tx: Tx, ids: string[], lock: 'update' | 'share'): Promise<Map<string, typeof deviceTable.$inferSelect>> {
     const out = new Map<string, typeof deviceTable.$inferSelect>();
-    const unique = [...new Set(ids)];
+    // Sắp TRƯỚC khi chia lô: sắp trong từng lô thì thứ tự giữa các lô vẫn theo file, và hai lượt
+    // import xếp khác thứ tự giữ chéo lô của nhau.
+    const unique = [...new Set(ids)].sort();
     for (let i = 0; i < unique.length; i += BULK_CHUNK) {
       const rows = await tx
         .select()
