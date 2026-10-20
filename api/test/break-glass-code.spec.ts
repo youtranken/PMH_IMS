@@ -28,7 +28,15 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  */
 
 const TEST_TIMEOUT = 120_000;
-const KEY = Buffer.alloc(32, 9);
+
+/** Chùm master key giả, đổi được giữa bài: phiên bản hiện hành + những phiên bản còn trong chùm. */
+const keyring = { current: 1, present: new Set([1]) };
+const crypto = {
+  get currentKeyVersion() {
+    return keyring.current;
+  },
+  deriveKeyAt: (_info: string, version: number) => (keyring.present.has(version) ? Buffer.alloc(32, version) : null),
+};
 const noopSweep = { register: () => undefined } as unknown as SweepService;
 
 describe('Break-glass · duyệt bằng mã (Q-30)', () => {
@@ -41,6 +49,8 @@ describe('Break-glass · duyệt bằng mã (Q-30)', () => {
   const intruder = 'e2e-q30-other@qa.test';
   const sa = 'sa-q30@qa.test';
   const admin = 'admin-q30@qa.test';
+  /** SA/Admin bị vô hiệu hoá / hạ vai giữa bài — biến mất khỏi `recipientsByRole` như thật. */
+  const disabled = new Set<string>();
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_bg_code');
@@ -57,18 +67,20 @@ describe('Break-glass · duyệt bằng mã (Q-30)', () => {
     const users = {
       namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e.toLowerCase(), `Tên ${e}`]))),
       recipientsByRole: () =>
-        Promise.resolve([
-          { email: sa, fullName: 'SA Q30' },
-          { email: admin, fullName: 'Admin Q30' },
-          { email: member, fullName: 'Chính người xin (là admin)' },
-        ]),
+        Promise.resolve(
+          [
+            { email: sa, fullName: 'SA Q30' },
+            { email: admin, fullName: 'Admin Q30' },
+            { email: member, fullName: 'Chính người xin (là admin)' },
+          ].filter((r) => !disabled.has(r.email)),
+        ),
       roleByEmail: () => Promise.resolve('member'),
     } as unknown as UsersApiService;
     const outbox = new OutboxService(scratch.db, config, noopSweep);
     contents = new MailContentRegistry();
     const codes = new BreakGlassCodeService(
       scratch.db,
-      { deriveKey: () => KEY } as unknown as EnvelopeCryptoService,
+      crypto as unknown as EnvelopeCryptoService,
       new AuditWriterService(scratch.db),
       outbox,
       approvalsApi,
@@ -406,6 +418,78 @@ describe('Break-glass · duyệt bằng mã (Q-30)', () => {
       expect(verdict.pending?.id).toBe(req.id);
       expect(verdict.pendingCode).toMatchObject({ approver: admin, approverName: `Tên ${admin}`, resendsLeft: 3, attemptsLeft: 5 });
       expect(verdict.pendingCode!.codeSecondsLeft).toBeGreaterThan(590);
+    });
+  });
+
+  describe('các đường mã ĐÚNG không được bị đếm là sai, người duyệt mất quyền thì mã chết', () => {
+    afterEach(() => {
+      disabled.clear();
+      keyring.current = 1;
+      keyring.present = new Set([1]);
+    });
+
+    it('người duyệt bị vô hiệu hoá / hạ vai sau lúc chọn: mã đã gửi không duyệt được, không gửi thêm mã', async () => {
+      const s = await login();
+      const subject = randomUUID();
+      const req = await ask(s, admin, subject);
+      const code = await codeOf(req.id);
+      disabled.add(admin);
+      await expect(breakGlass.submitCode(as(s), req.id, code)).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'BREAK_GLASS_APPROVER_GONE' },
+      });
+      expect((await approvalRow(req.id)).state).toBe('pending');
+      await expect(breakGlass.resendCode(as(s), req.id)).rejects.toMatchObject({ response: { code: 'BREAK_GLASS_APPROVER_GONE' } });
+      await expect(mail(req.id, 1)).resolves.toBeNull();
+      const verdict = await breakGlass.verdictFor(as(s), 'device', subject);
+      expect(verdict.pendingCode?.approverActive).toBe(false);
+    });
+
+    it('worker dựng lại thư CÙNG lượt (lần trước lỗi sau khi SMTP đã nhận): mã của thư trước vẫn duyệt được', async () => {
+      const s = await login();
+      const req = await ask(s);
+      const first = await codeOf(req.id, 1);
+      const second = await codeOf(req.id, 1);
+      expect(second).not.toBe(first);
+      await breakGlass.submitCode(as(s), req.id, first);
+      expect((await approvalRow(req.id)).state).toBe('approved');
+      expect((await codeRow(req.id)).failed_attempts).toBe(0);
+    });
+
+    it('xoay master key giữa lúc mã còn sống: chìa cũ còn trong chùm thì mã đúng vẫn đúng', async () => {
+      const s = await login();
+      const req = await ask(s);
+      const code = await codeOf(req.id);
+      keyring.current = 2;
+      keyring.present = new Set([1, 2]);
+      await breakGlass.submitCode(as(s), req.id, code);
+      expect((await approvalRow(req.id)).state).toBe('approved');
+    });
+
+    it('chìa đã băm mã bị gỡ khỏi chùm: mã coi như hết hạn, KHÔNG trừ lượt nhập', async () => {
+      const s = await login();
+      const req = await ask(s);
+      const code = await codeOf(req.id);
+      keyring.current = 2;
+      keyring.present = new Set([2]);
+      await expect(breakGlass.submitCode(as(s), req.id, code)).rejects.toMatchObject({
+        response: { code: 'BREAK_GLASS_CODE_EXPIRED' },
+      });
+      expect((await codeRow(req.id)).failed_attempts).toBe(0);
+    });
+
+    it('người duyệt mở phiếu bị hủy vì sai mã 5 lần: được báo đúng lý do, không phải "người xin đã rút"', async () => {
+      const s = await login();
+      const req = await ask(s);
+      const code = await codeOf(req.id);
+      for (let i = 0; i < 5; i++) {
+        await breakGlass.submitCode(as(s), req.id, wrongOf(code)).catch(() => undefined);
+      }
+      expect((await approvalRow(req.id)).state).toBe('cancelled');
+      await expect(breakGlass.deny(sa, req.id, 'Không cần')).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'BREAK_GLASS_WITHDRAWN', message: expect.stringMatching(/sai mã duyệt 5 lần/) },
+      });
     });
   });
 });

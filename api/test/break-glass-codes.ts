@@ -25,7 +25,7 @@ export function breakGlassCodes(deps: {
   const contents = new MailContentRegistry();
   const codes = new BreakGlassCodeService(
     deps.db,
-    { deriveKey: () => Buffer.alloc(32, 3) } as unknown as EnvelopeCryptoService,
+    { currentKeyVersion: 1, deriveKeyAt: () => Buffer.alloc(32, 3) } as unknown as EnvelopeCryptoService,
     new AuditWriterService(deps.db),
     deps.outbox,
     deps.approvals,

@@ -2974,7 +2974,9 @@ export default {
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ mã duyệt.',
     /* Q-30: người xin nhập mã người duyệt đọc cho. Hạn mã 10 phút cố định. */
     pendingCodeSending: 'Thư mang mã đang được gửi tới {{name}}…',
-    pendingCodeTo: 'Mã duyệt đã gửi tới {{name}} (còn hiệu lực {{left}}). Gọi họ để lấy mã 6 số.',
+    pendingCodeTo: 'Mã duyệt đã gửi tới {{name}} (còn hiệu lực {{left}}). Gọi họ để lấy mã 6 số; họ chưa nhận được thư thì bấm "Gửi lại mã".',
+    pendingLegacy: 'Yêu cầu này gửi trước khi đổi sang duyệt bằng mã nên không nhập mã được. Rút yêu cầu rồi gửi lại.',
+    pendingApproverGone: 'Người duyệt {{name}} không còn là SA/Quản trị đang hoạt động nên mã không dùng được nữa. Rút yêu cầu rồi gửi lại, chọn người duyệt khác.',
     pendingCodeExpired: 'Mã đã hết hạn (10 phút). Bấm "Gửi lại mã", hoặc rút yêu cầu và gửi lại.',
     codeLabel: 'Mã duyệt do người duyệt đọc cho bạn',
     codeAttemptsLeft: 'Còn {{count}} lần nhập. Sai hết thì yêu cầu bị hủy.',

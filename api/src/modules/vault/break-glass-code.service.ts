@@ -77,9 +77,18 @@ export class BreakGlassCodeService implements OnModuleInit {
     this.contents.register(`approval:${BREAK_GLASS_KIND}`, () => Promise.resolve(null));
   }
 
-  /** Khoá HMAC đọc lại mỗi lần: xoay master key thì mã đang sống mất hiệu lực, không giữ khoá cũ. */
-  private key(): Buffer {
-    return this.crypto.deriveKey(CODE_KEY_INFO);
+  /**
+   * Khoá HMAC theo ĐÚNG phiên bản master key đã băm mã: xoay chìa giữa lúc mã còn sống thì vẫn so
+   * được; chìa đã gỡ thì `null` (mã coi như hết hạn, không trừ lượt nhập).
+   */
+  private key(version: number): Buffer | null {
+    return this.crypto.deriveKeyAt(CODE_KEY_INFO, version);
+  }
+
+  /** Người duyệt đã chọn còn là SA/Admin đang hoạt động không — vai / trạng thái đổi được sau lúc chọn. */
+  async approverActive(approver: string): Promise<boolean> {
+    const me = approver.toLowerCase();
+    return (await this.users.recipientsByRole(['sa', 'admin'])).some((r) => r.email.toLowerCase() === me);
   }
 
   /** Mở hàng mã cho yêu cầu vừa tạo + đẩy thư lượt 1, cùng transaction với yêu cầu (AD-5). */
@@ -103,7 +112,7 @@ export class BreakGlassCodeService implements OnModuleInit {
     const sendNo = row.sendNo + 1;
     await tx
       .update(breakGlassCodeTable)
-      .set({ sendNo, codeHash: null, codeExpiresAt: null, updatedAt: new Date() })
+      .set({ sendNo, codeHash: null, prevCodeHash: null, codeExpiresAt: null, updatedAt: new Date() })
       .where(eq(breakGlassCodeTable.approvalId, approvalId));
     await this.outbox.enqueueWithin(tx, 'break_glass.code', { approvalId, sendNo });
     await this.audit.appendWithin(tx, {
@@ -122,11 +131,12 @@ export class BreakGlassCodeService implements OnModuleInit {
    */
   async attemptWithin(tx: Tx, approvalId: string, typed: string, actor: string): Promise<CodeAttempt> {
     const row = await this.lockWithin(tx, approvalId);
-    const judged = judgeCode(this.key(), approvalId, typed, row, new Date());
+    const key = this.key(row.codeKeyVersion ?? this.crypto.currentKeyVersion);
+    const judged = judgeCode(key, approvalId, typed, row, new Date());
     if (judged.verdict === 'ok') {
       await tx
         .update(breakGlassCodeTable)
-        .set({ codeHash: null, codeExpiresAt: null, updatedAt: new Date() })
+        .set({ codeHash: null, prevCodeHash: null, codeExpiresAt: null, updatedAt: new Date() })
         .where(eq(breakGlassCodeTable.approvalId, approvalId));
     } else if (judged.failedAttempts !== row.failedAttempts) {
       await tx
@@ -178,8 +188,12 @@ export class BreakGlassCodeService implements OnModuleInit {
   /**
    * Dựng thư mang mã (chạy trong worker). Lượt gửi đã bị thay, yêu cầu không còn chờ → `null`.
    *
-   * Sinh mã và ghi hash TRƯỚC khi thư đi: gửi lỗi thì lượt thử lại sinh mã mới thay mã cũ, nên
-   * không bao giờ có một mã đang sống mà không ai nhận được.
+   * Sinh mã và ghi hash TRƯỚC khi thư đi: gửi lỗi thì lượt thử lại sinh mã mới, nên không bao giờ
+   * có một mã đang sống mà không ai nhận được. Mã của lần dựng trước CÙNG lượt vẫn giữ ở
+   * `prev_code_hash`: lần gửi trước có thể đã tới hộp thư (SMTP nhận rồi mới lỗi), và người duyệt
+   * đọc mã đó thì không được bị đếm là sai.
+   *
+   * Người duyệt đã bị vô hiệu hoá / hạ vai sau lúc chọn thì không gửi mã cho họ nữa.
    */
   private async codeMail(payload: Record<string, unknown>): Promise<MailContent | null> {
     const approvalId = typeof payload.approvalId === 'string' ? payload.approvalId : null;
@@ -190,12 +204,27 @@ export class BreakGlassCodeService implements OnModuleInit {
       throw error;
     });
     if (!request || request.kind !== BREAK_GLASS_KIND || request.state !== 'pending') return null;
+    const [current] = await this.db
+      .select({ approver: breakGlassCodeTable.approver })
+      .from(breakGlassCodeTable)
+      .where(eq(breakGlassCodeTable.approvalId, approvalId));
+    if (!current || !(await this.approverActive(current.approver))) return null;
 
     const code = generateCode();
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
+    const version = this.crypto.currentKeyVersion;
+    const key = this.key(version);
+    if (!key) return null;
     const updated = await this.db
       .update(breakGlassCodeTable)
-      .set({ codeHash: codeHash(this.key(), approvalId, code), codeExpiresAt: expiresAt, updatedAt: new Date() })
+      .set({
+        codeHash: codeHash(key, approvalId, code),
+        // Mã cũ băm bằng chìa khác thì không so lại được bằng chìa mới — bỏ, đừng giữ một hash chết.
+        prevCodeHash: sql`CASE WHEN ${breakGlassCodeTable.codeKeyVersion} = ${version} THEN ${breakGlassCodeTable.codeHash} END`,
+        codeKeyVersion: version,
+        codeExpiresAt: expiresAt,
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(breakGlassCodeTable.approvalId, approvalId),

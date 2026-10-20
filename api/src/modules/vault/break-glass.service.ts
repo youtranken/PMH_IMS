@@ -120,6 +120,13 @@ export interface BreakGlassRequestInput {
   approver: string;
 }
 
+/** Mã của phiếu đang treo như người xin cần thấy (Q-30). */
+export type PendingCode = CodeStatus & {
+  approverName: string;
+  /** Người duyệt đã chọn còn là SA/Admin đang hoạt động — không thì phải rút và gửi lại. */
+  approverActive: boolean;
+};
+
 /** Một người duyệt người xin chọn được (Q-30). */
 export interface ApproverChoice {
   email: string;
@@ -196,7 +203,7 @@ export interface AccessVerdict {
    * Phiếu đang treo (Q-30): người duyệt đã chọn, còn mấy lần gửi lại, mấy lượt nhập, mã còn bao
    * lâu. `null` khi không có phiếu treo, hoặc phiếu gửi trước khi có duyệt bằng mã.
    */
-  pendingCode: (CodeStatus & { approverName: string }) | null;
+  pendingCode: PendingCode | null;
   /**
    * Đã được duyệt nhưng CHƯA xem lần nào — chưa gắn phiên (Q-15). Lần bấm Xem đầu tiên (qua mã
    * 6 số) gắn grant này vào phiên đang xem. `null` khi không có.
@@ -788,6 +795,7 @@ export class BreakGlassService implements OnModuleInit {
         message: 'Phiên đăng nhập này đã kết thúc. Đăng nhập lại rồi nhập mã.',
       });
     if (!viewer.sessionId || !(await this.auth.isSessionAlive(viewer.sessionId))) throw required();
+    await this.assertApproverActive(id);
 
     const outcome = await this.db.transaction(async (tx) => {
       const attempt = await this.codes.attemptWithin(tx, id, typed, viewer.email);
@@ -850,7 +858,21 @@ export class BreakGlassService implements OnModuleInit {
   /** "Gửi lại mã" (Q-30): tối đa 3 lần cho một yêu cầu; mã mới huỷ mã cũ. */
   async resendCode(viewer: BreakGlassViewer, id: string): Promise<CodeStatus> {
     await this.requireOwnPending(viewer, id);
+    await this.assertApproverActive(id);
     return this.db.transaction((tx) => this.codes.resendWithin(tx, id, viewer.email));
+  }
+
+  /**
+   * Người duyệt đã chọn phải còn là SA/Admin đang hoạt động LÚC dùng mã, không chỉ lúc chọn: tài
+   * khoản bị vô hiệu hoá (nghi lộ) hay hạ vai thì mã đã gửi không được thành một grant mang tên họ.
+   */
+  private async assertApproverActive(id: string): Promise<void> {
+    const status = (await this.codes.statusOf([id])).get(id);
+    if (!status || (await this.codes.approverActive(status.approver))) return;
+    throw new ConflictException({
+      code: 'BREAK_GLASS_APPROVER_GONE',
+      message: `${status.approver} không còn là SA/Quản trị đang hoạt động. Rút yêu cầu và gửi lại, chọn người duyệt khác.`,
+    });
   }
 
   /**
@@ -878,11 +900,14 @@ export class BreakGlassService implements OnModuleInit {
     return request;
   }
 
-  private async pendingCodeOf(approvalId: string): Promise<(CodeStatus & { approverName: string }) | null> {
+  private async pendingCodeOf(approvalId: string): Promise<PendingCode | null> {
     const status = (await this.codes.statusOf([approvalId])).get(approvalId);
     if (!status) return null;
-    const names = await this.users.namesByEmails([status.approver]);
-    return { ...status, approverName: names.get(status.approver.toLowerCase()) ?? status.approver };
+    const [names, approverActive] = await Promise.all([
+      this.users.namesByEmails([status.approver]),
+      this.codes.approverActive(status.approver),
+    ]);
+    return { ...status, approverName: names.get(status.approver.toLowerCase()) ?? status.approver, approverActive };
   }
 
   async deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
@@ -909,12 +934,15 @@ export class BreakGlassService implements OnModuleInit {
       if (by('expired') !== 'pending-timeout') return;
       throw pendingExpired(await this.pendingExpireHours());
     }
+    const cancelledBy = by('cancelled');
     throw new ConflictException({
       code: 'BREAK_GLASS_WITHDRAWN',
       message:
-        by('cancelled') === 'account-disabled'
+        cancelledBy === 'account-disabled'
           ? 'Yêu cầu này đã được rút: tài khoản của người xin đã bị vô hiệu hóa. Không cần duyệt nữa.'
-          : 'Người xin đã rút yêu cầu này. Không cần duyệt nữa.',
+          : cancelledBy === 'code-failed'
+            ? 'Yêu cầu này đã bị hệ thống hủy vì nhập sai mã duyệt 5 lần. Nên hỏi lại người xin — có thể có người dò mã.'
+            : 'Người xin đã rút yêu cầu này. Không cần duyệt nữa.',
     });
   }
 

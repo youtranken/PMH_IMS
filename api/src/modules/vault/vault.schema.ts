@@ -63,7 +63,7 @@ export const accessListTable = pgTable('access_list', {
 });
 
 /**
- * Bảng `break_glass_code` — migration 0074_break_glass_code.sql. Chủ: `vault` (Q-30).
+ * Bảng `break_glass_code` — migration 0074_break_glass_code.sql + 0075. Chủ: `vault` (Q-30).
  *
  * Mã duyệt mở két chỉ có HMAC ở đây: đọc được bảng (backup, quyền DB) cũng không ra mã đang sống.
  */
@@ -72,6 +72,10 @@ export const breakGlassCodeTable = pgTable('break_glass_code', {
   approver: text('approver').notNull(),
   sendNo: integer('send_no').notNull().default(1),
   codeHash: text('code_hash'),
+  /** HMAC mã của thư trước CÙNG lượt gửi (worker dựng lại thư) — 0075. */
+  prevCodeHash: text('prev_code_hash'),
+  /** Phiên bản master key đã dẫn khoá HMAC — 0075. */
+  codeKeyVersion: integer('code_key_version'),
   codeExpiresAt: timestamp('code_expires_at', { withTimezone: true }),
   failedAttempts: integer('failed_attempts').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

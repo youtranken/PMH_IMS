@@ -156,8 +156,9 @@ export class MailConsumer {
       return this.buildRegisteredMail(`approval:${request.kind}`, { approvalId, reminder: isReminder });
     }
 
-    /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
-       gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
+    /* Bốn mắt (FR-023): người xin không nhận thư "cần bạn duyệt" cho chính phiếu của mình.
+       Mẫu chung này chỉ còn cho loại yêu cầu chưa tự lo thư — mở két gửi thư mang mã riêng
+       (Q-30) và đã đăng ký `approval:break_glass` vào sổ ở trên. */
     const requester = request.requester.toLowerCase();
     const approvers = (await this.users.recipientsByRole(['sa', 'admin'])).filter(
       (a) => a.email.toLowerCase() !== requester,

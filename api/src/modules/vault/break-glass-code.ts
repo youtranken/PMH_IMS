@@ -43,6 +43,11 @@ export type CodeVerdict = 'ok' | 'wrong' | 'locked' | 'not_sent' | 'expired';
 
 export interface CodeState {
   codeHash: string | null;
+  /**
+   * Mã của thư trước CÙNG lượt gửi: worker dựng lại thư khi lần gửi trước lỗi giữa chừng (SMTP
+   * đã nhận nhưng không kịp đánh dấu xong), nên người duyệt có thể đang cầm mã của thư trước.
+   */
+  prevCodeHash?: string | null;
   codeExpiresAt: Date | null;
   failedAttempts: number;
 }
@@ -53,9 +58,11 @@ export interface CodeState {
  *
  * Thứ tự kiểm có chủ ý: đã khoá thì không so nữa (mã đúng sau 5 lần sai cũng không nhận); mã hết
  * hạn hay chưa gửi thì không so và không tính lượt, để không ai dùng màn này dò mã của lượt cũ.
+ * `key` null = khoá đã băm mã không còn trong chùm (master key xoay rồi gỡ): coi như hết hạn,
+ * không trừ lượt — mã đúng không được bị đếm là sai.
  */
 export function judgeCode(
-  key: Buffer,
+  key: Buffer | null,
   approvalId: string,
   typed: string,
   state: CodeState,
@@ -64,8 +71,9 @@ export function judgeCode(
   const failed = state.failedAttempts;
   if (failed >= CODE_MAX_FAILED) return { verdict: 'locked', failedAttempts: failed };
   if (!state.codeHash || !state.codeExpiresAt) return { verdict: 'not_sent', failedAttempts: failed };
-  if (state.codeExpiresAt.getTime() <= now.getTime()) return { verdict: 'expired', failedAttempts: failed };
-  if (codeMatches(key, approvalId, typed, state.codeHash)) return { verdict: 'ok', failedAttempts: failed };
+  if (!key || state.codeExpiresAt.getTime() <= now.getTime()) return { verdict: 'expired', failedAttempts: failed };
+  const hashes = [state.codeHash, state.prevCodeHash].filter((h): h is string => !!h);
+  if (hashes.some((h) => codeMatches(key, approvalId, typed, h))) return { verdict: 'ok', failedAttempts: failed };
   const next = failed + 1;
   return { verdict: next >= CODE_MAX_FAILED ? 'locked' : 'wrong', failedAttempts: next };
 }

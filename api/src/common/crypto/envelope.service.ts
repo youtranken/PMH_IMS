@@ -36,6 +36,15 @@ export class EnvelopeCryptoService {
     return Buffer.from(hkdfSync('sha256', master, 'ims-derive-v1', info, 32));
   }
 
+  /**
+   * `deriveKey` nhưng theo ĐÚNG phiên bản master key đã dùng — cho HMAC phải so lại về sau (mã
+   * duyệt mở két, Q-30). `null` khi chìa đó đã gỡ khỏi chùm: nơi gọi coi như dữ liệu đã hết hạn.
+   */
+  deriveKeyAt(info: string, version: number): Buffer | null {
+    if (!this.keyring.versions.includes(version)) return null;
+    return Buffer.from(hkdfSync('sha256', this.keyring.get(version), 'ims-derive-v1', info, 32));
+  }
+
   /** Mã hóa bằng master key hiện hành. */
   seal(plaintext: string | Buffer, context: SealContext): SealedValue {
     const keyVersion = this.keyring.currentVersion;

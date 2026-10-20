@@ -216,7 +216,14 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
     pending: { id: 'r1', createdAt: '2026-09-28T02:00:00.000Z' },
   };
 
-  const CODE = { approver: 'sa@pmh.com.vn', approverName: 'Cao Thuận', resendsLeft: 3, attemptsLeft: 5, codeSecondsLeft: 540 };
+  const CODE = {
+    approver: 'sa@pmh.com.vn',
+    approverName: 'Cao Thuận',
+    approverActive: true,
+    resendsLeft: 3,
+    attemptsLeft: 5,
+    codeSecondsLeft: 540,
+  };
   const WITH_CODE: AccessVerdict = { ...PENDING, pendingCode: CODE };
 
   it('phiếu đang chờ (Q-30): nói mã đã gửi tới AI và còn bao lâu', async () => {
@@ -266,6 +273,20 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
       expect(fetchMock.mock.calls.some(([u, i]) => String(u).endsWith('/r1/resend-code') && i?.method === 'POST')).toBe(true),
     );
     expect(await screen.findByText('Đã gửi mã mới tới Cao Thuận. Mã cũ không còn dùng được.')).toBeInTheDocument();
+  });
+
+  it('phiếu gửi trước khi có duyệt bằng mã: nói rõ phải rút rồi gửi lại, không để chờ mã không bao giờ tới', async () => {
+    renderMemberPanel({ ...PENDING, pendingCode: null });
+    expect(await screen.findByText(/gửi trước khi đổi sang duyệt bằng mã/)).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /Mã duyệt/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rút yêu cầu' })).toBeInTheDocument();
+  });
+
+  it('người duyệt đã mất quyền duyệt: nói ai, bảo rút và chọn người khác; không còn ô nhập mã', async () => {
+    renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, approverActive: false } });
+    expect(await screen.findByText(/Cao Thuận không còn là SA\/Quản trị đang hoạt động/)).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /Mã duyệt/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Gửi lại mã/ })).not.toBeInTheDocument();
   });
 
   it('hết lượt gửi lại → nút tắt, nói rõ', async () => {

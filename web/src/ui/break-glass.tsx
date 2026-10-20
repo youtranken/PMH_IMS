@@ -149,8 +149,8 @@ export function BreakGlassSubject({
 export function useBreakGlassActions(csrfToken: string) {
   const stepUp = useStepUpRetry(csrfToken);
   const queryClient = useQueryClient();
-  const post = (id: string, action: string, body: Record<string, unknown> = {}) =>
-    apiFetch<BreakGlassRow>(`/api/v1/vault/break-glass/${id}/${action}`, {
+  const post = <T = BreakGlassRow,>(id: string, action: string, body: Record<string, unknown> = {}) =>
+    apiFetch<T>(`/api/v1/vault/break-glass/${id}/${action}`, {
       method: 'POST',
       csrfToken,
       body: JSON.stringify(body),
@@ -159,12 +159,7 @@ export function useBreakGlassActions(csrfToken: string) {
   return {
     /** Người xin nhập mã duyệt (Q-30) — đúng mã là được duyệt, quyền gắn phiên này. */
     submitCode: (id: string, code: string) => post(id, 'code', { code }),
-    resendCode: (id: string) =>
-      apiFetch<{ resendsLeft: number }>(`/api/v1/vault/break-glass/${id}/resend-code`, {
-        method: 'POST',
-        csrfToken,
-        body: JSON.stringify({}),
-      }),
+    resendCode: (id: string) => post<{ resendsLeft: number }>(id, 'resend-code'),
     deny: (id: string, note: string) => post(id, 'deny', { note }),
     revoke: (id: string, note?: string, purpose?: string) =>
       stepUp.run(() => post(id, 'revoke', note ? { note } : {}), purpose),

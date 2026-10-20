@@ -74,6 +74,8 @@ export interface AccessVerdict {
 export interface PendingCode {
   approver: string;
   approverName: string;
+  /** Người duyệt đã chọn còn là SA/Admin đang hoạt động; không thì mã không dùng được nữa. */
+  approverActive: boolean;
   resendsLeft: number;
   attemptsLeft: number;
   codeSecondsLeft: number | null;
@@ -150,7 +152,7 @@ export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me:
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data?.pending) return false;
-      return data.pendingCode && data.pendingCode.codeSecondsLeft === null
+      return data.pendingCode?.approverActive && data.pendingCode.codeSecondsLeft === null
         ? CODE_SENDING_REFETCH_MS
         : PENDING_REFETCH_MS;
     },
@@ -422,7 +424,13 @@ export function VaultPanel({
               ? ` ${t('vault.pendingExpiresIn', { hours: verdict.data.pendingExpireHours })}`
               : null}
           </p>
-          {verdict.data.pendingCode ? (
+          {/* Không có ô nhập mã thì phải nói vì sao — không thì người xin ngồi chờ một mã không
+              bao giờ tới (phiếu gửi trước Q-30, hoặc người duyệt vừa mất quyền duyệt). */}
+          {!verdict.data.pendingCode ? (
+            <p>{t('vault.pendingLegacy')}</p>
+          ) : !verdict.data.pendingCode.approverActive ? (
+            <p>{t('vault.pendingApproverGone', { name: verdict.data.pendingCode.approverName })}</p>
+          ) : (
             <PendingCodeBox
               approvalId={verdict.data.pending.id}
               code={verdict.data.pendingCode}
@@ -430,7 +438,7 @@ export function VaultPanel({
               csrfToken={me.csrfToken}
               onChanged={() => void refetchVerdict()}
             />
-          ) : null}
+          )}
           <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
             <Link to={PATHS.approval(verdict.data.pending.id)}>{t('vault.pendingDetail')}</Link>
             <button

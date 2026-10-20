@@ -90,6 +90,17 @@ describe('judgeCode — phán một lượt nhập', () => {
     expect(judgeCode(KEY, ID, '000000', expired, NOW)).toEqual({ verdict: 'expired', failedAttempts: 0 });
   });
 
+  it('worker gửi lại CÙNG lượt (thư trước có thể đã tới tay người duyệt): mã của thư trước vẫn đúng', () => {
+    const retried = { ...live, codeHash: codeHash(KEY, ID, '654321'), prevCodeHash: codeHash(KEY, ID, '123456') };
+    expect(judgeCode(KEY, ID, '123456', retried, NOW).verdict).toBe('ok');
+    expect(judgeCode(KEY, ID, '654321', retried, NOW).verdict).toBe('ok');
+    expect(judgeCode(KEY, ID, '111111', retried, NOW).verdict).toBe('wrong');
+  });
+
+  it('khoá của mã không còn (master key đã xoay và gỡ): coi như hết hạn, KHÔNG trừ lượt', () => {
+    expect(judgeCode(null, ID, '123456', live, NOW)).toEqual({ verdict: 'expired', failedAttempts: 0 });
+  });
+
   it('lượt sai trả số lượt sai mới để nơi gọi ghi xuống', () => {
     expect(judgeCode(KEY, ID, '000000', { ...live, failedAttempts: 2 }, NOW)).toEqual({
       verdict: 'wrong',
