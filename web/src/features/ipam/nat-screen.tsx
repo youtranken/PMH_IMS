@@ -277,18 +277,18 @@ export function NatScreen({ me }: { me: Me }) {
     const { voided } = natParts(rule);
     return (
       <>
-        {voided ? (
-          <span className="badge muted" title={rule.voidReason ?? undefined}>
-            {t('nat.voidedBadge', {
-              date: formatDate(rule.voidedAt),
-              by: rule.voidedBy ?? '—',
-              reason: rule.voidReason ?? '—',
-            })}
-          </span>
-        ) : rule.enabled ? (
-          <span className="badge ok">{t('nat.bucketOpen')}</span>
-        ) : (
-          <span className="badge danger">{t('nat.disabled')}</span>
+        {voided ? (
+          <span className="badge muted" title={rule.voidReason ?? undefined}>
+            {t('nat.voidedBadge', {
+              date: formatDate(rule.voidedAt),
+              by: rule.voidedBy ?? '—',
+              reason: rule.voidReason ?? '—',
+            })}
+          </span>
+        ) : rule.enabled ? (
+          <span className="badge ok">{t('nat.bucketOpen')}</span>
+        ) : (
+          <span className="badge danger">{t('nat.disabled')}</span>
         )}
       </>
     );
@@ -296,51 +296,51 @@ export function NatScreen({ me }: { me: Me }) {
   const natActions = (rule: NatRow) => {
     const { voided, ports } = natParts(rule);
     return (
-      <RowActions
-          // Rule đã gỡ chỉ còn để TRA: sửa, bật/tắt hay gỡ tiếp đều bị API từ chối.
-          primary={
-            voided
-              ? undefined
-              : {
-                  label: t('common.edit'),
-                  ariaLabel: t('common.editOf', { subject: ports }),
-                  onClick: () => setEditing({ rule }),
-                }
-          }
-          label={t('common.actionsOf', { subject: ports })}
-          items={[
-            {
-              key: 'history',
-              label: t('nat.history'),
-              onSelect: () => setHistoryOf(rule),
-            },
-            {
-              key: 'copy-link',
-              label: t('nat.copyLink'),
-              onSelect: () => void copyLink(rule.id),
-            },
-            ...(voided
-              ? []
-              : [
-                  {
-                    key: 'toggle',
-                    label: t(rule.enabled ? 'nat.disableRule' : 'nat.enableRule'),
-                    onSelect: () => void toggleRule(rule),
-                    warn: rule.enabled,
-                    ok: !rule.enabled,
-                  },
-                ]),
-            ...(canHide && !voided
-              ? [
-                  {
-                    key: 'remove',
-                    label: t('nat.remove'),
-                    onSelect: () => setHiding(rule),
-                    danger: true,
-                  },
-                ]
-              : []),
-          ]}
+      <RowActions
+          // Rule đã gỡ chỉ còn để TRA: sửa, bật/tắt hay gỡ tiếp đều bị API từ chối.
+          primary={
+            voided
+              ? undefined
+              : {
+                  label: t('common.edit'),
+                  ariaLabel: t('common.editOf', { subject: ports }),
+                  onClick: () => setEditing({ rule }),
+                }
+          }
+          label={t('common.actionsOf', { subject: ports })}
+          items={[
+            {
+              key: 'history',
+              label: t('nat.history'),
+              onSelect: () => setHistoryOf(rule),
+            },
+            {
+              key: 'copy-link',
+              label: t('nat.copyLink'),
+              onSelect: () => void copyLink(rule.id),
+            },
+            ...(voided
+              ? []
+              : [
+                  {
+                    key: 'toggle',
+                    label: t(rule.enabled ? 'nat.disableRule' : 'nat.enableRule'),
+                    onSelect: () => void toggleRule(rule),
+                    warn: rule.enabled,
+                    ok: !rule.enabled,
+                  },
+                ]),
+            ...(canHide && !voided
+              ? [
+                  {
+                    key: 'remove',
+                    label: t('nat.remove'),
+                    onSelect: () => setHiding(rule),
+                    danger: true,
+                  },
+                ]
+              : []),
+          ]}
         />
     );
   };
@@ -352,7 +352,7 @@ export function NatScreen({ me }: { me: Me }) {
       meta: { className: 'col-router' },
       cell: ({ row: { original: rule } }) => (
         <>
-          <Link className="mono nowrap" to={PATHS.device(rule.deviceId)}>{orDash(rule.deviceCode)}</Link>
+          <Link className="mono nowrap" to={PATHS.device(rule.deviceId)}>{orDash(rule.deviceCode)}</Link>
           <span className="cell-sub">{orDash(rule.siteCode)}</span>
         </>
       ),
@@ -366,43 +366,43 @@ export function NatScreen({ me }: { me: Me }) {
         const { voided, sensitive, ports, wan, service } = natParts(rule);
         return (
           <>
-            <span className="nat-flow">
-              {/* WAN của router đứng trước cổng ngoài: "đi vào từ đâu" là nửa đầu
-                  của câu. Nhiều đường thì hiện đủ, ngăn bằng "/". */}
-              {wan ? (
-                <span className="muted mono" title={t('nat.wanTitle')}>
-                  {t('nat.wanPrefix', { wan: wan.join(' / ') })}
-                </span>
-              ) : null}
-              <span className={voided ? 'mono strike' : 'mono'}>{ports}</span>
-              <span className="nat-arrow" aria-hidden="true">→</span>
-              <span className={voided ? 'mono strike' : 'mono'}>
-                {rule.internalIp}:{rule.internalPort}
-              </span>
-              {service ? <span className="muted">({service})</span> : null}
-              {sensitive !== null ? (
-                <span
-                  className="badge warn"
-                  title={t('nat.sensitiveTitle', { port: sensitive })}
-                >
-                  {t('nat.sensitive')}
-                </span>
-              ) : null}
-            </span>
-            {/* MÁY ĐÍCH ngay trên bảng: "dẫn tới 172.16.10.5" mà không nói đó là máy
-                nào thì người đọc sổ vẫn phải sang màn IP tra tiếp. Chủ IP trùng
-                "Mở cho ai" thì không lặp lại. */}
-            {rule.internalDeviceId ? (
-              <span className="cell-sub">
-                <Link className="mono" to={PATHS.device(rule.internalDeviceId)}>
-                  {rule.internalDeviceCode}
-                </Link>
-                {rule.internalOwner && rule.internalOwner !== rule.usedBy
-                  ? ` · ${rule.internalOwner}`
-                  : ''}
-              </span>
-            ) : rule.internalOwner && rule.internalOwner !== rule.usedBy ? (
-              <span className="cell-sub">{rule.internalOwner}</span>
+            <span className="nat-flow">
+              {/* WAN của router đứng trước cổng ngoài: "đi vào từ đâu" là nửa đầu
+                  của câu. Nhiều đường thì hiện đủ, ngăn bằng "/". */}
+              {wan ? (
+                <span className="muted mono" title={t('nat.wanTitle')}>
+                  {t('nat.wanPrefix', { wan: wan.join(' / ') })}
+                </span>
+              ) : null}
+              <span className={voided ? 'mono strike' : 'mono'}>{ports}</span>
+              <span className="nat-arrow" aria-hidden="true">→</span>
+              <span className={voided ? 'mono strike' : 'mono'}>
+                {rule.internalIp}:{rule.internalPort}
+              </span>
+              {service ? <span className="muted">({service})</span> : null}
+              {sensitive !== null ? (
+                <span
+                  className="badge warn"
+                  title={t('nat.sensitiveTitle', { port: sensitive })}
+                >
+                  {t('nat.sensitive')}
+                </span>
+              ) : null}
+            </span>
+            {/* MÁY ĐÍCH ngay trên bảng: "dẫn tới 172.16.10.5" mà không nói đó là máy
+                nào thì người đọc sổ vẫn phải sang màn IP tra tiếp. Chủ IP trùng
+                "Mở cho ai" thì không lặp lại. */}
+            {rule.internalDeviceId ? (
+              <span className="cell-sub">
+                <Link className="mono" to={PATHS.device(rule.internalDeviceId)}>
+                  {rule.internalDeviceCode}
+                </Link>
+                {rule.internalOwner && rule.internalOwner !== rule.usedBy
+                  ? ` · ${rule.internalOwner}`
+                  : ''}
+              </span>
+            ) : rule.internalOwner && rule.internalOwner !== rule.usedBy ? (
+              <span className="cell-sub">{rule.internalOwner}</span>
             ) : null}
           </>
         );
@@ -416,15 +416,15 @@ export function NatScreen({ me }: { me: Me }) {
       meta: { className: 'col-reason' },
       cell: ({ row: { original: rule } }) => (
         <>
-          <span className="cell-clamp-2" title={rule.reason}>
-            {rule.reason}
-          </span>
-          {rule.note ? <CellNote text={rule.note} className="cell-sub" /> : null}
-          <span className="cell-sub" title={rule.createdBy}>
-            {t('nat.openedBy', {
-              date: formatDate(rule.createdAt),
-              by: rule.createdBy.split('@')[0],
-            })}
+          <span className="cell-clamp-2" title={rule.reason}>
+            {rule.reason}
+          </span>
+          {rule.note ? <CellNote text={rule.note} className="cell-sub" /> : null}
+          <span className="cell-sub" title={rule.createdBy}>
+            {t('nat.openedBy', {
+              date: formatDate(rule.createdAt),
+              by: rule.createdBy.split('@')[0],
+            })}
           </span>
         </>
       ),
