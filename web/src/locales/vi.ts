@@ -2989,7 +2989,6 @@ export default {
     requestReasonPlaceholder: 'Việc gì · ở đâu · vì sao cần mật khẩu (vd switch tầng 3 mất kết nối)',
     requestReasonRequired: 'Ghi rõ lý do — người duyệt cần biết để quyết.',
     requestHours: 'Mở trong',
-    requestHoursInvalid: 'Số giờ phải là số nguyên lớn hơn 0, vd 4.',
     requestSend: 'Gửi yêu cầu',
     requestSent: 'Đã gửi yêu cầu. Người duyệt sẽ nhận thư có mã.',
     requestHoursClamped: 'Đã gửi yêu cầu. Số giờ xin vượt mức tối đa nên chỉ còn {{hours}} giờ khi được duyệt.',

@@ -1305,13 +1305,12 @@ function BreakGlassDialog({
     queryKey: ['vault', 'break-glass', 'approvers'],
     queryFn: () => apiFetch<{ email: string; name: string }[]>('/api/v1/vault/break-glass/approvers'),
   });
-  /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
+  /* Chỉ đặt từ các nấc của `hourSteps` nên luôn là số nguyên dương — không cần nhánh kiểm. */
   const askedHours = Number(hours.trim());
   const check = useFormErrors({
     reason:
       (reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired')) ||
       secretTextRule(t, reason),
-    hours: (!Number.isInteger(askedHours) || askedHours <= 0) && t('vault.requestHoursInvalid'),
     approver: !approver && t('vault.requestApproverRequired'),
   });
 
@@ -1399,7 +1398,7 @@ function BreakGlassDialog({
           />
         </Field>
         {/* Chỉ chọn nấc, không ô gõ số (Q-30 gọn chữ): nấc lớn nhất là trần server đưa. */}
-        <Field label={t('vault.requestHours')} required error={check.error('hours')}>
+        <Field label={t('vault.requestHours')} required>
           <div className="segmented fill" role="group" aria-label={t('vault.requestHours')}>
             {hourSteps(maxGrantHours).map((h) => (
               <button
