@@ -246,7 +246,7 @@ describe('Sửa bản trình bày — thiết bị dự kiến và ảnh tự do
     const user = userEvent.setup();
     await pickMenuItem(user, /^Thao tác với/, 'Thiết bị dự kiến');
     await user.click(screen.getByRole('button', { name: 'Chèn vào bản vẽ' }));
-    expect(await screen.findByText('Nhập tên thiết bị.')).toBeInTheDocument();
+    expect(await screen.findByText('Chưa nhập.')).toBeInTheDocument();
     await user.type(screen.getByLabelText(/Tên thiết bị/), 'AP tầng 3');
     await user.type(screen.getByLabelText('Giá dự kiến'), '3500000');
     await user.type(screen.getByLabelText('Nhà cung cấp'), 'NCC E2E');

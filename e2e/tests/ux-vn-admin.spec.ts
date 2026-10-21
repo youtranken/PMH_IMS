@@ -130,7 +130,7 @@ test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
     const dialog = page.getByRole('dialog');
     // Đường hỏng: bỏ trống lý do thì không gửi.
     await dialog.getByRole('button', { name: 'Khóa' }).click();
-    await expect(dialog.getByText('Bắt buộc — chưa nhập ô này.')).toBeVisible();
+    await expect(dialog.getByText('Chưa nhập.')).toBeVisible();
     await dialog.getByRole('button', { name: 'Nghi bị chiếm tài khoản' }).click();
     await dialog.getByRole('button', { name: 'Khóa' }).click();
     await expect(page.getByRole('row', { name: new RegExp(user.fullName) }).getByText('Đang khóa')).toBeVisible();

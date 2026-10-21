@@ -186,7 +186,7 @@ test.describe('Q-22 · Hợp đồng bảo trì', () => {
     await dialog.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('Thiếu mã');
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true })).toHaveAccessibleDescription(
-      'Bắt buộc — chưa nhập ô này.',
+      'Chưa nhập.',
     );
     await expect(dialog).toBeVisible();
   });

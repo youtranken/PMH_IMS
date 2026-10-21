@@ -467,11 +467,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       add.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }),
       'Lưu hồ sơ trống phải nói rõ thiếu gì, ngay dưới ô Mã',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    ).toHaveAccessibleDescription('Chưa nhập.');
     await expect(
       add.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }),
       'và dưới ô Tên',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    ).toHaveAccessibleDescription('Chưa nhập.');
     // Kỳ hạn đang là Thuê bao mà chưa có ngày hết hạn: báo ngay tại ô (SW-028), nên là BA ô.
     await expect(
       add.getByText('Nhập ngày hết hạn để hệ thống nhắc gia hạn.'),

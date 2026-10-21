@@ -44,7 +44,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
     await expect(form, 'Lưu hỏng thì hộp phải ở lại').toBeVisible();
     await expect(form.getByText('Còn 2 ô cần sửa trước khi lưu.')).toBeVisible();
     const cidr = form.getByRole('textbox', { name: 'Dải', exact: true });
-    await expect(cidr).toHaveAccessibleDescription(/^Bắt buộc — chưa nhập ô này\./);
+    await expect(cidr).toHaveAccessibleDescription(/^Chưa nhập\./);
     await expect(cidr).toBeFocused();
 
     // Sửa được ô nào thì lỗi của ô đó tắt ngay, không đợi bấm Lưu lần nữa.

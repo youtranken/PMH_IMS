@@ -441,7 +441,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(
       dialog.getByRole('alert'),
       'quên chọn site mà hộp im lặng thì người dùng bấm Lưu mãi không hiểu vì sao không xong',
-    ).toHaveText('Chọn site cho tủ này.');
+    ).toHaveText('Chưa chọn.');
     await expect(
       dialog,
       'hộp phải Ở LẠI cùng những gì vừa gõ — đóng đi là bắt gõ lại từ đầu',

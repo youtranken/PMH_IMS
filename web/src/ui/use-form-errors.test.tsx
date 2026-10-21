@@ -145,8 +145,8 @@ describe('secretTextRule — ô chữ tự do ngoài két (Q-19)', () => {
 describe('reasonRule', () => {
   const t = i18n.t.bind(i18n) as TFunction;
   it.each([
-    ['', 'Bắt buộc'],
-    ['  ', 'Bắt buộc'],
+    ['', 'Chưa nhập'],
+    ['  ', 'Chưa nhập'],
     ['ab', `ít nhất ${REASON_MIN} ký tự`],
     ['Pmh@Guest2026 nhé', 'mật khẩu'],
   ])('%j → lỗi chứa "%s"', (value, expected) => {

@@ -28,7 +28,7 @@ test.describe('Đăng nhập', () => {
     await expect(password).toBeFocused();
     await expect(page.getByLabel('Email')).toHaveValue(E2E_MEMBER.email);
     // Lỗi của server không kéo theo câu "bắt buộc" cho ô vừa bị xoá có chủ đích.
-    await expect(page.getByText('Bắt buộc — chưa nhập ô này.')).toHaveCount(0);
+    await expect(page.getByText('Chưa nhập.')).toHaveCount(0);
   });
 
   test('nút hiện/ẩn mật khẩu; đăng xuất xong màn đăng nhập nói "Bạn đã đăng xuất." (AUTH-004/028)', async ({

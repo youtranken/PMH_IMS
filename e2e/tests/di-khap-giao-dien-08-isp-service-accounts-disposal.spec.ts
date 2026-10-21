@@ -413,7 +413,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       dialog.getByRole('button', { name: 'Nhà mạng', exact: true }),
       'Thiếu nhà mạng phải nói ra ngay dưới ô Nhà mạng, không phải im lặng',
-    ).toHaveAccessibleDescription(/Bắt buộc — chưa chọn ô này\./);
+    ).toHaveAccessibleDescription(/Chưa chọn\./);
     await expect(dialog, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
@@ -1233,7 +1233,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       disableDialog.getByRole('textbox', { name: 'Lý do ngừng dùng' }),
       'Câu lỗi tiếng Việt dưới ô lý do, không phải bong bóng trình duyệt',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    ).toHaveAccessibleDescription('Chưa nhập.');
     // Gõ quá ngắn: `minLength` của trình duyệt không còn chặn (form `noValidate`) — hook phải nói.
     await disableDialog.getByRole('textbox', { name: 'Lý do ngừng dùng' }).fill('ab');
     await expect(

@@ -110,7 +110,7 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     // Câu lỗi nằm DƯỚI ô Nhà mạng và nối vào chính ô đó, không phải một khối chung đầu form.
     const picker = screen.getByRole('button', { name: 'Nhà mạng' });
     await waitFor(() => expect(picker).toHaveAttribute('aria-invalid', 'true'));
-    expect(picker).toHaveAccessibleDescription(/chưa chọn ô này/);
+    expect(picker).toHaveAccessibleDescription(/Chưa chọn\./);
     expect(calls.some((c) => c.url === '/api/v1/isp-lines')).toBe(false);
   });
 

@@ -219,7 +219,7 @@ describe('Màn Tài khoản', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Khóa' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(screen.getByRole('button', { name: 'Khóa' }));
-    expect(await screen.findByText('Bắt buộc — chưa nhập ô này.')).toBeInTheDocument();
+    expect(await screen.findByText('Chưa nhập.')).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).includes('/status')),
     ).toBe(false);

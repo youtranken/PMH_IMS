@@ -749,7 +749,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeVisible();
     const codeField = dialog.getByRole('textbox', { name: 'Mã thiết bị' });
     await expect(codeField, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Mã').toHaveAccessibleDescription(
-      'Bắt buộc — chưa nhập ô này.',
+      'Chưa nhập.',
     );
     await expect(codeField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
@@ -760,7 +760,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(
       dialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
       'Thiếu LOẠI thiết bị thì chính ô Loại phải nói ra, bằng tiếng Việt',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa chọn ô này.');
+    ).toHaveAccessibleDescription('Chưa chọn.');
     await expect(dialog.getByText(/ô cần sửa trước khi lưu/), 'Còn một lỗi thì không cần tóm tắt').toHaveCount(0);
     await expect(dialog, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
 

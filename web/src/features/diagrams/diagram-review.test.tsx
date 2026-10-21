@@ -114,7 +114,7 @@ describe('Gửi duyệt (Thành viên) và tự kiểm', () => {
     expect(screen.queryByRole('button', { name: 'Phát hành' })).toBeNull();
     const dialog = await screen.findByRole('dialog', { name: 'Gửi bản vẽ "Tầng 3 E2E" cho Quản trị duyệt' });
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
-    expect(within(dialog).getByText('Không được để trống.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Chưa nhập.')).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/Lý do/), 'Vẽ xong tầng 3');
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
     expect(await screen.findByText('Đã gửi duyệt. Quản trị sẽ nhận email.')).toBeInTheDocument();
