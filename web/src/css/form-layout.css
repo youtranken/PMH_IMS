@@ -573,6 +573,7 @@ textarea.mono {
 /* Nhãn của một nhóm điều khiển không phải ô nhập (dải nút chọn một): cùng dáng nhãn ô. */
 .field-label {
   display: block;
+  padding: 0;
   margin-bottom: var(--space-2);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
