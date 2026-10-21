@@ -248,13 +248,6 @@ export function DigestRulesPanel({
         <EmptyState
           title={t('digest.empty')}
           hint={t('digest.emptyHint')}
-          action={
-            canEdit ? (
-              <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
-                {t('digest.add')}
-              </button>
-            ) : undefined
-          }
         />
       ) : narrow ? (
         /* ≤600px: thẻ "tên + lịch gửi + người nhận" thay bảng gập 7 dòng nhãn (TB-05). */
@@ -561,7 +554,7 @@ function RuleForm({
           <SchedulePicker value={schedule} onChange={setSchedule} />
         </Field>
 
-        <Field label={t('digest.active')}>
+        <Field label={t('digest.stateLabel')}>
           {/* Công tắc chứ không phải ô tick: đây là trạng thái Chạy / Tạm ngưng của cả luật,
               và chữ bên cạnh đổi theo để không phải đoán "tick là đang chạy hay đang dừng". */}
           <label className="row" style={{ gap: 'var(--space-3)' }}>

@@ -2605,6 +2605,8 @@ export default {
     recipientsSuggest: 'Gợi ý người nhận',
     recipientAdd: 'Thêm {{email}}',
     schedule: 'Kỳ gửi',
+    /* Nhãn ô của công tắc Chạy / Tạm ngưng — chữ cạnh công tắc đã nói đang chạy hay không. */
+    stateLabel: 'Trạng thái',
     active: 'Đang chạy',
     activeHint: 'Tắt để tạm ngưng, giữ nguyên cấu hình.',
     paused: 'Đang tạm ngưng',
