@@ -134,7 +134,8 @@ describe('LoginScreen — phản hồi theo từng kiểu hỏng', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     renderLogin();
     await submitWith('a@pmh.com.vn', 'dung-mat-khau');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Đăng nhập không thành công.');
+    // FM-07: nói đúng nguyên nhân (mất mạng), không phải "Đăng nhập không thành công." chung chung.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.');
     expect(screen.getByLabelText('Mật khẩu')).toHaveValue('dung-mat-khau');
   });
 

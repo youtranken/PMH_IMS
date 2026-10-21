@@ -347,6 +347,9 @@ export default {
     error: 'Có lỗi xảy ra',
     /* Câu dự phòng của `errorMessage()` khi API không gửi `message`. */
     errorFallback: 'Có lỗi xảy ra.',
+    errorNetwork: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
+    errorServer: 'Máy chủ IMS đang lỗi. Thử lại sau ít phút.',
+    errorForbidden: 'Bạn không có quyền làm việc này.',
     export: 'Xuất Excel',
     exportCurrent: 'Xuất bảng đang xem',
     exportAll: 'Xuất tất cả',
