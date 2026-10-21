@@ -257,3 +257,13 @@ describe('Tabs — nhóm có nhãn', () => {
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Site', 'Tủ mạng', 'Nhà cung cấp']);
   });
 });
+
+/** AX-02: thanh tab làm công tắc chế độ / điều hướng (không có TabPanel) thì không trỏ aria-controls. */
+describe('Tabs — panel={false}', () => {
+  it('tab đang chọn không mang aria-controls', () => {
+    renderWithI18n(
+      <Tabs ariaLabel="Chế độ" value="view" onChange={() => undefined} panel={false} items={[{ key: 'view', label: 'Xem' }, { key: 'edit', label: 'Sửa' }]} />,
+    );
+    expect(screen.getByRole('tab', { name: 'Xem' })).not.toHaveAttribute('aria-controls');
+  });
+});

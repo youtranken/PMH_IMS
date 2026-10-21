@@ -65,11 +65,17 @@ export function Tabs({
   onChange,
   ariaLabel,
   wrap = false,
+  panel = true,
 }: {
   items: TabItem[];
   value: string;
   onChange: (key: string) => void;
   ariaLabel: string;
+  /**
+   * `false` khi thanh tab chỉ là công tắc chế độ / điều hướng, không có `TabPanel` đi kèm (màn
+   * sơ đồ Xem | Sửa): `aria-controls` trỏ vào id không tồn tại thì axe báo lỗi (AX-02).
+   */
+  panel?: boolean;
   /**
    * Tab xuống dòng thay vì cuộn ngang: khung hẹp (panel bên phải của /diagrams) mà tên dài thì
    * cuộn ngang giấu mất tab đầu sau một mép mờ, và chuột không có cách nào cuộn ngang.
@@ -191,7 +197,7 @@ export function Tabs({
            * đủ panel nghĩa là mọi tab đều chạy truy vấn của nó ngay khi mở trang — đắt hơn hẳn,
            * và `TabPanel` hiện được dùng ở 8 chỗ gọi trên 7 màn (`expiry-screen` gọi hai lần).
            */
-          aria-controls={item.key === value ? `tabpanel-${item.key}` : undefined}
+          aria-controls={panel && item.key === value ? `tabpanel-${item.key}` : undefined}
           // Chỉ tab đang chọn nằm trong luồng Tab; các tab khác đi bằng phím mũi tên.
           tabIndex={item.key === value ? 0 : -1}
           className={`tab${item.key === value ? ' active' : ''}`}

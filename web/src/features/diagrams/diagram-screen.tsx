@@ -321,6 +321,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const tabs = narrow || shelved ? null : (
     <Tabs
       ariaLabel={t('diagrams.screen.tabsLabel')}
+      panel={false}
       value={mode}
       onChange={(key) => void switchMode(key === 'edit' ? 'edit' : 'view')}
       items={[

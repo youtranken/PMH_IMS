@@ -80,7 +80,10 @@ describe('DataTable `groupBy` — một dòng tiêu đề mỗi nhóm', () => {
       'Ngày 2026-09-29',
       'Ngày 2026-09-28',
     ]);
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    // Danh sách lồng: 2 nhóm, trong đó 3 thẻ — tiêu đề nhóm không bị đếm là một thẻ.
+    const [outer] = screen.getAllByRole('list');
+    expect(outer.querySelectorAll(':scope > li')).toHaveLength(2);
+    expect(outer.querySelectorAll('ul > li.list-card')).toHaveLength(3);
   });
 });
 

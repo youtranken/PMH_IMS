@@ -560,25 +560,38 @@ export function MobileCardList<T>({
   onRowClick?: (row: T) => void;
   groupBy?: TableGroupBy<T>;
 }) {
-  const starts = groupBy ? groupStarts(rows, groupBy.key) : null;
+  const item = (row: T, index: number) => (
+    <MobileCardItem
+      key={rowKey(row, index)}
+      row={row}
+      card={card}
+      className={rowClassName?.(row)}
+      onRowClick={onRowClick}
+    />
+  );
+  if (!groupBy) return <ul className="list-cards">{rows.map(item)}</ul>;
+  /*
+   * Có nhóm thì danh sách LỒNG: mỗi nhóm một <li> chứa tiêu đề + <ul> thẻ của nó. Tiêu đề nhóm
+   * không phải một thẻ — đặt nó làm <li> anh em thì trình đọc màn hình đếm sai số mục, còn gắn
+   * `role="presentation"` lên <li> thì <ul> chứa con không hợp lệ (axe `list`).
+   */
+  const starts = groupStarts(rows, groupBy.key);
+  const groups: { first: number; rows: { row: T; index: number }[] }[] = [];
+  rows.forEach((row, index) => {
+    if (starts[index] || groups.length === 0) groups.push({ first: index, rows: [] });
+    groups[groups.length - 1].rows.push({ row, index });
+  });
   return (
     <ul className="list-cards">
-      {rows.map((row, index) => (
-        <Fragment key={rowKey(row, index)}>
-          {groupBy && starts?.[index] ? (
-            <li className="list-cards-group" role="presentation">
-              <span role="heading" aria-level={3}>
-                {groupBy.label(groupBy.key(row), row)}
-              </span>
-            </li>
-          ) : null}
-          <MobileCardItem
-            row={row}
-            card={card}
-            className={rowClassName?.(row)}
-            onRowClick={onRowClick}
-          />
-        </Fragment>
+      {groups.map((group) => (
+        <li key={rowKey(rows[group.first], group.first)} className="list-cards-section">
+          <div className="list-cards-group">
+            <span role="heading" aria-level={3}>
+              {groupBy.label(groupBy.key(rows[group.first]), rows[group.first])}
+            </span>
+          </div>
+          <ul className="list-cards-sub">{group.rows.map(({ row, index }) => item(row, index))}</ul>
+        </li>
       ))}
     </ul>
   );

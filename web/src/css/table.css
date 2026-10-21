@@ -723,6 +723,13 @@ table.table .col-sticky-end::after {
   background: var(--surface);
   overflow: hidden;
 }
+/* Danh sách có nhóm là danh sách lồng (nhóm → thẻ): lớp lồng không thêm lề hay chấm. */
+.list-cards-section,
+.list-cards-sub {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 /* Tiêu đề nhóm (`groupBy` của `DataTable`/`MobileCardList`): "Hôm nay", "Tháng 10/2026". */
 .list-cards-group {
   padding: var(--space-2) var(--space-6);

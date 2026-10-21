@@ -28,22 +28,25 @@ const isBlank = (value: ReactNode) => value === null || value === undefined || v
 /** Dải 4 ô ngay dưới đầu trang — thấy ở mọi tab, 2 × 2 trên điện thoại. */
 export function FactStrip({ facts, label }: { facts: Fact[]; label: string }) {
   const { t } = useTranslation();
+  // Tên nhóm ở lớp bọc: `role` đặt thẳng lên <dl> đè ngữ nghĩa danh sách định nghĩa (AX-01).
   return (
-    <dl className="fact-strip" role="group" aria-label={label}>
-      {facts.map((fact) => {
-        const blank = isBlank(fact.value);
-        return (
-          <div className="fact" key={fact.key} data-fact={fact.key}>
-            <dt>{fact.label}</dt>
-            <dd className="fact-v" data-blank={blank ? 'true' : undefined}>
-              {blank ? (fact.blankText ?? t('detail.notDeclared')) : fact.value}
-            </dd>
-            {fact.note ? <dd className="fact-note">{fact.note}</dd> : null}
-            {fact.action ? <dd className="fact-action">{fact.action}</dd> : null}
-          </div>
-        );
-      })}
-    </dl>
+    <div role="group" aria-label={label}>
+      <dl className="fact-strip">
+        {facts.map((fact) => {
+          const blank = isBlank(fact.value);
+          return (
+            <div className="fact" key={fact.key} data-fact={fact.key}>
+              <dt>{fact.label}</dt>
+              <dd className="fact-v" data-blank={blank ? 'true' : undefined}>
+                {blank ? (fact.blankText ?? t('detail.notDeclared')) : fact.value}
+              </dd>
+              {fact.note ? <dd className="fact-note">{fact.note}</dd> : null}
+              {fact.action ? <dd className="fact-action">{fact.action}</dd> : null}
+            </div>
+          );
+        })}
+      </dl>
+    </div>
   );
 }
 
@@ -61,16 +64,18 @@ export interface SpecItem {
 export function SpecList({ items, label }: { items: SpecItem[]; label: string }) {
   const { t } = useTranslation();
   return (
-    <dl className="spec-list" role="group" aria-label={label}>
-      {items.map((item) => {
-        const blank = item.present === undefined ? isBlank(item.value) : !item.present;
-        return (
-          <div className="spec-row" key={item.label}>
-            <dt>{item.label}</dt>
-            <dd data-blank={blank ? 'true' : undefined}>{blank ? t('detail.notDeclared') : item.value}</dd>
-          </div>
-        );
-      })}
-    </dl>
+    <div role="group" aria-label={label}>
+      <dl className="spec-list">
+        {items.map((item) => {
+          const blank = item.present === undefined ? isBlank(item.value) : !item.present;
+          return (
+            <div className="spec-row" key={item.label}>
+              <dt>{item.label}</dt>
+              <dd data-blank={blank ? 'true' : undefined}>{blank ? t('detail.notDeclared') : item.value}</dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
   );
 }

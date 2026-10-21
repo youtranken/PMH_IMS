@@ -7,7 +7,7 @@ import { PATHS } from '@/lib/routes';
 import { useConfirm } from '@/ui/confirm-provider';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
-import { Tabs } from '@/ui/tabs';
+import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useAntivirusGrid, useBackupGrid, useIsoWrite, usePeriodDetail } from './iso-api';
 import { PeriodStateBadge, PeriodSteps } from './iso-parts';
@@ -56,7 +56,9 @@ export function ReviewScreen({ me }: { me: Me }) {
           onChange={(key) => navigate(PATHS.isoReview(key, month), { replace: true })}
         />
       </div>
-      <ReviewBody key={`${form}-${month}`} me={me} form={form} month={month} year={year} mon={mon} />
+      <TabPanel tabKey={form}>
+        <ReviewBody key={`${form}-${month}`} me={me} form={form} month={month} year={year} mon={mon} />
+      </TabPanel>
     </>
   );
 }
