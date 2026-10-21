@@ -54,7 +54,8 @@ test.describe('Xóa hồ sơ IP nhập nhầm ở 390px', () => {
     const { subnetId, address } = await seedRecord(page);
     await page.goto(`/ip-addresses/${subnetId}`);
 
-    const row = page.getByRole('row').filter({ hasText: address });
+    // ≤600px mỗi IP là một THẺ (PW-B01), không phải dòng bảng.
+    const row = page.getByRole('listitem').filter({ hasText: address });
     await expect(row).toContainText(OWNER);
 
     await rowAction(page, address, 'Xóa');
@@ -83,7 +84,8 @@ test.describe('Xóa hồ sơ IP nhập nhầm ở 390px', () => {
     await firstLogin(page, E2E_SA);
     const { subnetId, address } = await seedRecord(page);
     await page.goto(`/ip-addresses/${subnetId}`);
-    const row = page.getByRole('row').filter({ hasText: address });
+    // ≤600px mỗi IP là một THẺ (PW-B01), không phải dòng bảng.
+    const row = page.getByRole('listitem').filter({ hasText: address });
 
     await rowAction(page, address, 'Xóa');
     const dialog = page.getByRole('dialog', { name: `Xóa hồ sơ IP nhập nhầm — ${address}` });
