@@ -129,6 +129,8 @@ export function SubnetPane({
   const [expandedRuns, setExpandedRuns] = useState<ReadonlySet<string>>(() => new Set());
   const appliedFocus = useRef<string | null>(null);
   const highlightRow = useRef<HTMLTableRowElement | null>(null);
+  /** Danh sách THẺ (≤600px): không gắn ref từng thẻ được, nên tìm thẻ đang tô sáng trong khung. */
+  const cardList = useRef<HTMLDivElement | null>(null);
   const scrolledTo = useRef<string | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
   /** Hồ sơ IP nhập nhầm đang chờ XÓA (kèm lý do) — khác `moving` vốn là bước vòng đời. */
@@ -284,9 +286,12 @@ export function SubnetPane({
   // Cuộn tới dòng được tô sáng một lần — trên điện thoại nó thường nằm dưới mép màn hình.
   useEffect(() => {
     if (!highlight || scrolledTo.current === highlight) return;
-    if (!highlightRow.current) return;
+    const target = narrow
+      ? cardList.current?.querySelector<HTMLElement>(".list-card.row-highlight")
+      : highlightRow.current;
+    if (!target) return;
     scrolledTo.current = highlight;
-    highlightRow.current.scrollIntoView?.({ block: "center" });
+    target.scrollIntoView?.({ block: "center" });
   });
 
   /** Chỗ trống nhỏ nhất (bỏ qua gateway) cho nút "Cấp IP trống kế tiếp". */
@@ -584,6 +589,7 @@ export function SubnetPane({
       ) : (
         <>
           {narrow ? (
+            <div ref={cardList}>
             <MobileCardList
               rows={rows}
               rowKey={(slot) => (slot.kind === "run" ? `run-${slot.address}` : slot.kind === "free" ? slot.address : slot.id)}
@@ -596,6 +602,7 @@ export function SubnetPane({
                     : ""
               }
             />
+            </div>
           ) : (
           <div className="table-wrap">
             <table className="table table-stack ip-table">

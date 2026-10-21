@@ -1005,6 +1005,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
         'Số dòng',
+        // UX-E36: ô tìm đang có chữ → nút xóa lọc có đếm.
+        'Xóa lọc (1)',
       ]),
     );
   });

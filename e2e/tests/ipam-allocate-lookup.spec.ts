@@ -320,9 +320,9 @@ test.describe('390px — màn đọc trên điện thoại', () => {
     await expect(lookup).toBeVisible();
     await lookup.fill(`${f.net}.9`);
     await lookup.press('Enter');
-    // Ở 390px bảng gập thành thẻ: tên dòng mở đầu bằng nhãn "Địa chỉ", nên không neo `^` được.
+    // ≤600px mỗi IP là một THẺ (PW-B01): dòng 2 có link mã máy.
     const row = page
-      .getByRole('row')
+      .getByRole('listitem')
       .filter({ has: page.getByText(`${f.net}.9`, { exact: true }) });
     await expect(row.getByRole('link', { name: f.deviceCode })).toBeInViewport();
     expect(await horizontalOverflow(page)).toBe(0);
