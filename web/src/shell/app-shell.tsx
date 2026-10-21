@@ -69,6 +69,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const overdue = useOverdueExpiryCount(canSee(me, 'expiry'));
   const failedMail = useFailedMailCount(me);
   const isoTodo = useIsoTodo(canSee(me, 'iso'));
+  const anyBadge =
+    pendingApprovals > 0 || diagramReviews > 0 || overdue > 0 || failedMail > 0 || isoTodo.periods > 0 || isoTodo.unlinked > 0;
   const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
@@ -316,8 +318,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 onClick={() => setDrawerOpen((open) => !open)}
               >
                 {/* Menu đóng trên điện thoại thì badge nằm khuất — chấm cam trên nút mở là tín
-                    hiệu duy nhất người duyệt thấy khi mở app. */}
-                {pendingApprovals > 0 ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
+                    hiệu duy nhất người dùng thấy khi mở app; có badge NÀO thì có chấm (UX-E40). */}
+                {anyBadge ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"

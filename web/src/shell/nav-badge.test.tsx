@@ -86,6 +86,22 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     await vi.waitFor(() => expect(toggle).toHaveAccessibleDescription('3 Yêu cầu chờ duyệt'));
   });
 
+  // UX-E40: chấm báo khi menu có BẤT KỲ badge nào — trễ hạn cũng là việc phải làm, menu đóng thì khuất.
+  it('điện thoại: không có phiếu chờ mà có hồ sơ quá hạn → nút mở menu vẫn mang chấm', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/break-glass/pending/count')) return Promise.resolve(jsonResponse(200, { count: 0 }));
+        if (url.includes('/expiry/overdue/count')) return Promise.resolve(jsonResponse(200, { count: 4 }));
+        return new Promise<Response>(() => {});
+      }),
+    );
+    renderShell(ADMIN, true);
+    const toggle = screen.getByRole('button', { name: 'Mở menu' });
+    await vi.waitFor(() => expect(toggle.querySelector('.nav-toggle-dot')).not.toBeNull());
+  });
+
   it('Member không duyệt → không hỏi số', () => {
     const fetchMock = mockCount(5);
     renderShell({ ...ADMIN, role: 'member' });
