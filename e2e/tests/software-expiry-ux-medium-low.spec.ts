@@ -156,7 +156,7 @@ test.describe('Danh sách phần mềm', () => {
     await page.goto('/domains');
     await searchAndWaitForFilter(page, code);
     await rowAction(page, code, 'Gia hạn');
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await expect(dialog).toBeVisible();
     // Dòng "Hạn hiện tại: dd/mm/yyyy" — câu gợi ý của ô Hạn mới (SW-048) cũng nhắc chữ này.
     await expect(dialog.getByText(/^Hạn hiện tại: \d{2}\/\d{2}\/\d{4}/)).toBeVisible();

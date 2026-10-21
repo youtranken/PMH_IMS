@@ -716,7 +716,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp VÔ HIỆU HÓA DẢI ----- */
     await rowAction(page, cidr, 'Ngừng dùng');
-    const hide = page.getByRole('dialog', { name: `Ngừng dùng dải ${cidr}` });
+    const hide = page.getByRole('dialog', { name: `Ngừng dùng dải — ${cidr}` });
     await expect(hide).toBeVisible();
     await expect(
       hide.getByText('Dải vẫn ở danh sách', { exact: false }),
@@ -1143,7 +1143,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp GỠ: vẫn hỏi lý do, không phải một câu có/không ----- */
     await rowAction(page, 'UDP 9000-9010', 'Gỡ');
-    const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT UDP 9000-9010' });
+    const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT — UDP 9000-9010' });
     await expect(remove).toBeVisible();
     await expect(
       remove.getByText('vẫn xem lại được', { exact: false }),

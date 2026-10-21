@@ -901,7 +901,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('button', { name: `Thao tác với ${fullName}` })).toBeVisible();
     await rowAction(page, fullName, 'Sửa');
 
-    const editDialog = page.getByRole('dialog', { name: `Sửa hồ sơ: ${fullName}` });
+    const editDialog = page.getByRole('dialog', { name: `Sửa hồ sơ — ${fullName}` });
     await expect(editDialog).toBeVisible();
 
     expect(

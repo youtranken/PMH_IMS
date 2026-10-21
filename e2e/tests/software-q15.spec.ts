@@ -34,7 +34,7 @@ async function createSoftware(page: Page, data: Record<string, unknown>): Promis
 }
 
 async function renewWithTerms(page: Page, code: string) {
-  const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+  const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
   return dialog;
@@ -272,7 +272,7 @@ test.describe('SW-043 · Tên miền dùng chứng chỉ SSL, theo từng kỳ g
     await expect(sites.getByText(mail, { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     const box = dialog.getByRole('textbox', { name: 'Tên miền của kỳ mới', exact: true });
     await expect(box).toHaveValue(`${shop}\n${mail}`);
     // Năm nay bỏ mail, thêm portal.
@@ -309,7 +309,7 @@ test.describe('SW-043 · Tên miền dùng chứng chỉ SSL, theo từng kỳ g
     await page.goto(`/domains/${id}`);
     await expect(page.getByText('Chưa ghi tên miền nào.')).toBeVisible();
     await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await dialog
       .getByRole('textbox', { name: 'Tên miền của kỳ mới', exact: true })
       .fill('a-e2e.pmh.vn b-e2e.pmh.vn');

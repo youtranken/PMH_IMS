@@ -189,7 +189,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(page).toHaveURL(/\/iso\/backup\?month=2021-02/);
     const linked = page.getByRole('button', { name: new RegExp(`^${name} ngày 2: Lỗi, đã có 0206-2021-\\d{3}`) });
     await linked.click();
-    await expect(page.getByRole('dialog', { name: /^Sửa phiếu 0206-2021-\d{3}$/ })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: /^Sửa phiếu — 0206-2021-\d{3}$/ })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click();
     await expect(linked).toBeVisible();
   });

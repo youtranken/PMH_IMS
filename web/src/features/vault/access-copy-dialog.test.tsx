@@ -72,7 +72,7 @@ describe('Quyền két — "Chép quyền từ…" (ADM-040)', () => {
   it('chép đúng nhóm + tầng của đồng nghiệp, bỏ qua nhóm người nhận đã có', async () => {
     const posts = renderAt('/admin/vault-access?user=u-an');
     await userEvent.click(await screen.findByRole('button', { name: 'Chép quyền từ…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Chép quyền két cho Nguyễn An' });
+    const dialog = await screen.findByRole('dialog', { name: 'Chép quyền két — Nguyễn An' });
 
     // Lê Chi chưa có quyền nào → không có mặt trong ô chọn.
     await userEvent.click(within(dialog).getByRole('button', { name: 'Đồng nghiệp' }));

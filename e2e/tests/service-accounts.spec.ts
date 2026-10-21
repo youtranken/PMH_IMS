@@ -587,7 +587,7 @@ test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('Tài khoản dịch vụ');
     await row.getByRole('button', { name: 'Gia hạn' }).click();
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
     const renewed = page.waitForResponse((r) => r.url().endsWith('/expiry/renew'));
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();

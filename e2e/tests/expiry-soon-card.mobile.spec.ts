@@ -65,5 +65,5 @@ test('Sắp hết hạn ở 390px: thẻ 2 dòng, bốn ô số chia 2 × 2, sá
 
   // Gia hạn ngay trên thẻ vẫn mở đúng hộp của mục đó.
   await card.getByRole('button', { name: 'Gia hạn' }).click();
-  await expect(page.getByRole('dialog', { name: new RegExp(`Gia hạn ${code}`) })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: new RegExp(`Gia hạn — ${code}`) })).toBeVisible();
 });

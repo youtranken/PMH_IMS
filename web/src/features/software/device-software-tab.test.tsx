@@ -67,7 +67,7 @@ describe('Tab Phần mềm của thiết bị', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Gán phần mềm vào máy này' }));
 
-    const pick = screen.getByRole('dialog', { name: 'Gán phần mềm vào PC-01' });
+    const pick = screen.getByRole('dialog', { name: 'Gán phần mềm — PC-01' });
     await user.type(within(pick).getByRole('combobox', { name: 'Tìm license' }), 'Office');
     await user.click(await screen.findByRole('option', { name: /LIC-OFFICE-01/ }));
     // Chỉ tìm license còn dùng — hồ sơ đã thanh lý không gán được.
