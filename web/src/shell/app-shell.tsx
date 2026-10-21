@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { usePendingDiagramReviews } from '@/shell/use-pending-diagram-reviews';
+import { isAnyDialogOpen } from '@/ui/dialog';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { canSee } from '@/lib/features';
 import { useFailedMailCount } from '@/shell/use-failed-mail-count';
@@ -94,6 +95,22 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [pathname, drawerOpen]);
+
+  /* "/" vào ô tìm đầu tiên của màn (UX-E40), như các ứng dụng quen thuộc. Đang gõ trong một ô,
+     đang có hộp thoại, hay kèm phím bổ trợ thì "/" là chữ thường — không cướp. */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || isAnyDialogOpen()) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const box = document.querySelector<HTMLInputElement>('#noi-dung input[type="search"]');
+      if (!box) return;
+      event.preventDefault();
+      box.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Esc là đường thoát mà người dùng bàn phím luôn thử trước.
   useEffect(() => {

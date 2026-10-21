@@ -166,6 +166,27 @@ describe('AppShell — topbar', () => {
    * Tên màn đã là `<h1>` của chính trang (PageHeader) — topbar nhắc lại lần nữa thì người dùng
    * đọc cùng một chữ hai lần ngay đầu màn (Q-18).
    */
+  // UX-E40: "/" vào ô tìm của màn như các ứng dụng quen thuộc; đang gõ trong ô khác thì "/" là chữ.
+  it('phím "/" đưa tiêu điểm vào ô tìm đầu tiên của màn; đang ở ô nhập thì không cướp', async () => {
+    renderWithI18n(
+      <ToastProvider>
+        <MemoryRouter>
+          <AppShell me={ME}>
+            <input aria-label="Ghi chú" />
+            <input type="search" aria-label="Tìm thiết bị" />
+          </AppShell>
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await user.keyboard('/');
+    expect(screen.getByRole('searchbox', { name: 'Tìm thiết bị' })).toHaveFocus();
+    expect(screen.getByRole('searchbox', { name: 'Tìm thiết bị' })).toHaveValue('');
+    await user.click(screen.getByRole('textbox', { name: 'Ghi chú' }));
+    await user.keyboard('a/b');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('a/b');
+  });
+
   it('topbar KHÔNG lặp tên màn; chỉ có tên NHÓM làm ngữ cảnh; có ô tìm kèm phím tắt', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
     renderShell('/devices');
