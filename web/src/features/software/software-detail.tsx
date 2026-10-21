@@ -223,10 +223,9 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
   /* Thông tin = thứ CHƯA nói ở đầu trang (Q-27 bổ sung: một thông tin nói một lần). Mã, tên là
-     tiêu đề; nhà cung cấp, hạn, ghế, hợp đồng ở dải 4 ô. Ngày bắt đầu đã nằm trong khoảng ngày của
-     ô Hết hạn, và loại không có ghế / tên miền thì dải 4 ô có hẳn ô "Bắt đầu" — chỉ còn license
-     hay SSL / tên miền KHÔNG có ngày hết hạn mới cần dòng riêng ở đây. */
-  const stripShowsStart = Boolean(item.endDate) || (!supportsSeats(item.kind) && !supportsWebsites(item.kind));
+     tiêu đề; nhà cung cấp, hạn, ghế / tên miền, hợp đồng ở dải 4 ô. Ngày bắt đầu nằm trong khoảng
+     ngày của ô Hết hạn — hồ sơ KHÔNG có ngày hết hạn mới cần dòng riêng ở đây. */
+  const stripShowsStart = Boolean(item.endDate);
   const startItem = stripShowsStart
     ? []
     : [{ label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null }];
@@ -240,13 +239,14 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         { label: t("software.note"), value: item.perSeat ? t("software.notePerSeat") : item.note },
       ]
     : [
-        { label: t("software.kind"), value: t(KIND_KEY[item.kind]) },
+        // Không "Loại hồ sơ" (PW-A10): tên màn và mắt xích loại ở đầu trang đã nói.
         ...startItem,
         { label: t("software.note"), value: item.note },
       ];
   const specBlank = specItems.filter((entry) => !entry.value).length;
   const showBatches = supportsSeats(item.kind) && siblings.length > 1;
-  const showWebsites = supportsWebsites(item.kind);
+  // Một tên miền thì ô Tên miền ở dải 4 ô đã ghi đúng tên đó — thẻ cột phải chỉ lặp lại (PW-A11).
+  const showWebsites = supportsWebsites(item.kind) && (item.websites ?? []).length > 1;
   const hasRail = showBatches || showWebsites;
 
   return (
@@ -376,7 +376,8 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   value: (item.websites ?? []).length > 0 ? t("software.siteCount", { count: (item.websites ?? []).length }) : null,
                   note: item.websites?.[0],
                 }
-              : { key: "start", label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
+              : /* Hợp đồng / dịch vụ: ô Bắt đầu chỉ lặp ngày đầu của khoảng hạn (PW-A10). */
+                { key: "contract", label: t("software.contract"), value: item.contract },
           supportsSeats(item.kind)
             ? {
                 key: "contract",
@@ -385,11 +386,14 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 })
                   : item.contract,
               }
-            : {
-                key: "files",
-                label: t("software.tabAttachments"),
-                value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
-              },
+            : supportsWebsites(item.kind)
+              ? /* Ô Giấy tờ trùng tab Giấy tờ (PW-A11) — tên miền / SSL dùng ô này cho số hợp đồng. */
+                { key: "contract", label: t("software.contract"), value: item.contract }
+              : {
+                  key: "files",
+                  label: t("software.tabAttachments"),
+                  value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
+                },
         ]}
       />
       <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />

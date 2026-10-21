@@ -2219,7 +2219,7 @@ export default {
     infoTitle: 'Thông tin',
     fillBlanks: 'Bổ sung {{count}} ô còn thiếu',
     termRange: '{{from}} → {{to}}',
-    siteCount: '{{count}} Tên',
+    siteCount: '{{count}} Tên miền',
     fileCount: '{{count}} Giấy tờ',
     notePerSeat: 'Riêng từng ghế — xem ở Sửa hồ sơ',
     tabHistory: 'Lịch sử',

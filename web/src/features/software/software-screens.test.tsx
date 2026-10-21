@@ -160,6 +160,7 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
             <Routes>
               <Route path={`${PATHS.software}/:id`} element={<SoftwareDetail me={ME} screen="software" />} />
               <Route path={`${PATHS.domains}/:id`} element={<SoftwareDetail me={ME} screen="domains" />} />
+              <Route path={`${PATHS.maintenance}/:id`} element={<SoftwareDetail me={ME} screen="maintenance" />} />
             </Routes>
             <Where />
           </ConfirmProvider>
@@ -185,6 +186,29 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
       'href',
       `${PATHS.domains}?kind=ssl`,
     );
+  });
+
+  // PW-A11: ô "1 Tên" khó hiểu; một tên miền thì thẻ cột phải lặp lại đúng tên đó; ô Giấy tờ trùng tab.
+  it('SSL một tên miền: ô "1 Tên miền", không thẻ Tên miền ở cột phải, ô 4 là Số hợp đồng', async () => {
+    mockFetch([], row({ id: 's9', code: 'SSL-E2E-09', websites: ['pmh.com.vn'], contract: 'HD-01' }));
+    renderDetail('/domains/s9');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(strip).toHaveTextContent('1 Tên miền');
+    expect(strip).toHaveTextContent('Số hợp đồng / PO');
+    expect(strip).toHaveTextContent('HD-01');
+    expect(strip).not.toHaveTextContent('Giấy tờ');
+    expect(screen.queryByRole('heading', { name: 'Tên miền' })).toBeNull();
+  });
+
+  // PW-A10: hợp đồng bảo trì — ô Bắt đầu lặp ngày đầu của khoảng hạn; "Loại hồ sơ" lặp tên màn.
+  it('hợp đồng bảo trì: ô 3 là Số hợp đồng, không ô Bắt đầu; tab Hồ sơ không có Loại hồ sơ', async () => {
+    mockFetch([], row({ id: 'm1', code: 'HD-E2E-01', kind: 'maintenance', startDate: '2026-01-01', contract: 'HD-77' }));
+    renderDetail('/maintenance/m1');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(strip).toHaveTextContent('Số hợp đồng / PO');
+    expect(strip).toHaveTextContent('HD-77');
+    expect(within(strip).queryByText('Bắt đầu')).toBeNull();
+    expect(screen.queryByText('Loại hồ sơ')).toBeNull();
   });
 
   // PW-A21: SSL / tên miền / hợp đồng không có ghế → chip "Ghế" ở tab Lịch sử là lọc ra rỗng.
