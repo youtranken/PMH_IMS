@@ -361,12 +361,20 @@ export function SubnetPane({
       ),
     actions: (slot) =>
       slot.kind === "run" || slot.kind === "free" ? assignButton(slot.address, null) : recordActions(slot),
+    // Thẻ không có link phủ (không href / onRowClick), nên link mã máy trong dòng 2 bấm được.
     subtitle: (slot) =>
-      slot.kind === "run"
-        ? t("ipam.freeRunCount", { count: slot.count })
-        : slot.kind === "free"
-          ? null
-          : [slot.deviceCode, slot.usedBy].filter(Boolean).join(" · ") || null,
+      slot.kind === "run" ? (
+        t("ipam.freeRunCount", { count: slot.count })
+      ) : slot.kind === "free" ? null : slot.deviceId ? (
+        <>
+          <Link className="mono" to={PATHS.device(slot.deviceId)}>
+            {slot.deviceCode}
+          </Link>
+          {slot.usedBy ? ` · ${slot.usedBy}` : null}
+        </>
+      ) : (
+        slot.usedBy || null
+      ),
     meta: (slot) =>
       slot.kind === "run" || slot.kind === "free"
         ? null

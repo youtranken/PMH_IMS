@@ -328,7 +328,8 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const pdf = join(tmpdir(), `ky-E2E-${uniqueStamp()}.pdf`);
     writeFileSync(pdf, '%PDF-1.4\n%%EOF\n');
     await card.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
-    await expect(card.getByText('Hiện hành')).toBeVisible();
+    // exact: câu tóm tắt "Đã có bản ký hiện hành" cũng chứa chữ này khi kịp làm mới.
+    await expect(card.getByText('Hiện hành', { exact: true })).toBeVisible();
     await expect(card.getByText('Hoàn tất').first()).toBeVisible();
 
     await card.getByRole('button', { name: 'Xin mở lại…' }).click();

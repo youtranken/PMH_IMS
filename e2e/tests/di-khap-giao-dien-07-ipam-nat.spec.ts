@@ -270,7 +270,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 6 nút "Cấp IP", 2 nút lật trang — cộng nút "Tra" của ô tra
+     * phần bảng là con số biết trước: 6 nút "Cấp IP" (một trang nên không có nút lật trang, TB-15) — cộng nút "Tra" của ô tra
      * IP/máy cấp trang, và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp"
      * (NET-007). 3 lựa chọn lọc (dải đang dùng không có chip hồ sơ tắt, Q-15) và cặp "Danh sách
      * | Bản đồ" (NET-006) là radio, đếm riêng ngay dưới.
@@ -287,8 +287,6 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Giấy tờ (0)', 1],
         ['Cấp IP trống kế tiếp', 1],
         ['Cấp IP', 6],
-        ['Trang trước', 1],
-        ['Trang sau', 1],
       ],
       'Màn Địa chỉ IP, dải đang chọn còn trống hoàn toàn',
     );

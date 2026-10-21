@@ -930,6 +930,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sửa hồ sơ',
         `Thao tác với ${activeCode}`,
         'Cất mật khẩu/khóa',
+        // UX-E26: dòng "Tạo … · sửa lần cuối …" dưới dải 4 ô.
+        lastEditButton(),
       ]),
     );
     await page.getByRole('button', { name: `Thao tác với ${activeCode}` }).click();
