@@ -108,7 +108,8 @@ test.describe('Trang chi tiết thiết bị', () => {
     const url = new URL(page.url());
     expect(url.searchParams.get('objectType')).toBe('device');
     expect(url.searchParams.get('objectId')).toBe(deviceId);
-    await expect(page.getByRole('searchbox', { name: 'Mã đối tượng' })).toHaveValue(deviceId);
+    // Lọc theo đối tượng hiện là chip (UX-E08), không còn ô gõ mã.
+    await expect(page.getByRole('button', { name: /^Đối tượng: / })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('khu mở rộng chưa có module nào đăng ký → API trả rỗng, trang không hiện khối trống', async ({

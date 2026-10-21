@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import { AuditLogScreen, detailLines } from './audit-log-screen';
 
@@ -52,24 +52,40 @@ function renderAt(entry: string) {
 describe('Màn Nhật ký', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('hiện dòng nhật ký: giờ VN, tên + email, nhãn + mã hành động, đối tượng, IP', async () => {
+  /* PW-C10 / UX-E08: đã có nhóm ngày thì dòng chỉ hiện giờ; email, mã hành động, UUID là chữ kỹ
+     thuật — nằm ở title và hộp chi tiết, không in trên mọi dòng. */
+  it('hiện dòng nhật ký: GIỜ (ngày ở tiêu đề nhóm), tên, nhãn, đối tượng, IP; mã kỹ thuật ở title', async () => {
     stubFetch();
     renderAt('/admin/audit-log');
 
-    expect(await screen.findByText('Lê Minh')).toBeInTheDocument();
-    expect(screen.getByText('le.minh@pmh.com.vn')).toBeInTheDocument();
-    // Nhãn tiếng Việt trước, mã kỹ thuật ở dòng phụ.
-    expect(screen.getByText('Đăng nhập')).toBeInTheDocument();
-    expect(screen.getByText('auth.login.ok', { selector: 'span' })).toBeInTheDocument();
-    // Mã đối tượng rút 8 ký tự; bản đủ ở tooltip (và nút chép).
-    expect(screen.getByText(`${ROW.objectId.slice(0, 8)}…`)).toHaveAttribute('title', ROW.objectId);
+    const actor = await screen.findByText('Lê Minh');
+    expect(actor).toHaveAttribute('title', 'le.minh@pmh.com.vn');
+    expect(screen.queryByText('le.minh@pmh.com.vn')).toBeNull();
+    expect(screen.getByText('Đăng nhập')).toHaveAttribute('title', 'auth.login.ok');
+    expect(screen.queryByText('auth.login.ok')).toBeNull();
+    expect(screen.queryByText(`${ROW.objectId.slice(0, 8)}…`)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sao chép mã đối tượng' })).toBeNull();
     expect(screen.getByText('10.0.0.8')).toBeInTheDocument();
-    // 01:30 UTC = 08:30 giờ Việt Nam.
-    expect(
-      screen.getByText((text) => text.includes('20/09/2026') && text.includes('08:30'), {
-        selector: 'button',
-      }),
-    ).toBeInTheDocument();
+    // 01:30 UTC = 08:30 giờ Việt Nam; ngày đầy đủ ở title.
+    const time = screen.getByText('08:30', { selector: 'button' });
+    expect(time).toHaveAttribute('title', '20/09/2026 08:30');
+  });
+
+  it('hộp chi tiết: mã hành động, UUID + nút chép, và hai lối "Mọi việc của người này / trên đối tượng này"', async () => {
+    stubFetch();
+    renderAt('/admin/audit-log');
+    await userEvent.click(await screen.findByText('08:30', { selector: 'button' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('auth.login.ok')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Sao chép mã đối tượng' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Mọi việc của người này' })).toHaveAttribute(
+      'href',
+      '/admin/audit-log?q=le.minh%40pmh.com.vn',
+    );
+    expect(within(dialog).getByRole('link', { name: 'Mọi việc trên đối tượng này' })).toHaveAttribute(
+      'href',
+      `/admin/audit-log?objectId=${ROW.objectId}`,
+    );
   });
 
   it('mã đối tượng không phải UUID (khoá cấu hình) hiện đủ — cắt là không biết thiết đặt nào đổi', async () => {
@@ -79,7 +95,7 @@ describe('Màn Nhật ký', () => {
     expect(screen.queryByText('login.r…')).toBeNull();
   });
 
-  it('đối tượng có nhãn: "Loại · nhãn" là link tới hồ sơ, UUID còn trong tooltip + nút chép', async () => {
+  it('đối tượng có nhãn: "Loại · nhãn" là link tới hồ sơ, UUID trong tooltip', async () => {
     const withLabel = {
       ...ROW,
       action: 'vault.secret.revealed',
@@ -102,7 +118,6 @@ describe('Màn Nhật ký', () => {
     const link = await screen.findByRole('link', { name: /PC-KT-01/ });
     expect(link).toHaveAttribute('href', '/devices/abc');
     expect(link).toHaveAttribute('title', ROW.objectId);
-    expect(screen.getByRole('button', { name: 'Sao chép mã đối tượng' })).toBeInTheDocument();
     // Xem két tô màu cảnh báo — nhãn nằm trong huy hiệu `warn`.
     expect(screen.getByText('Xem mật khẩu trong két')).toHaveClass('badge', 'warn');
   });
@@ -120,23 +135,19 @@ describe('Màn Nhật ký', () => {
     expect(listCalls(fetchMock).at(-1)?.searchParams.get('actor')).toBe('le.minh@pmh.com.vn');
   });
 
-  it('lọc mã đối tượng ghi lên URL và gửi đi, trang về 1', async () => {
+  // UX-E08: không còn ô gõ mã đối tượng — lọc theo đối tượng đến từ link ("Mọi việc trên đối tượng này").
+  it('URL có objectId: gửi API, hiện chip "Đối tượng: …"; bấm chip là bỏ lọc', async () => {
     const fetchMock = stubFetch();
-    renderAt('/admin/audit-log?page=3');
+    renderAt('/admin/audit-log?objectId=DM-0001');
     await screen.findByText('Lê Minh');
-
-    const input = screen.getByRole('searchbox', { name: 'Mã đối tượng' });
-    await userEvent.type(input, 'DM-0001{Enter}');
-
+    expect(screen.queryByRole('searchbox', { name: 'Mã đối tượng' })).toBeNull();
+    expect(listCalls(fetchMock).at(-1)?.searchParams.get('objectId')).toBe('DM-0001');
+    const chip = screen.getByRole('button', { name: 'Đối tượng: DM-0001' });
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(chip);
     await waitFor(() => {
       const search = new URLSearchParams(screen.getByLabelText('địa chỉ').textContent ?? '');
-      expect(search.get('objectId')).toBe('DM-0001');
-      expect(search.get('page')).toBeNull();
-    });
-    await waitFor(() => {
-      const last = listCalls(fetchMock).at(-1);
-      expect(last?.searchParams.get('objectId')).toBe('DM-0001');
-      expect(last?.searchParams.get('page')).toBe('1');
+      expect(search.get('objectId')).toBeNull();
     });
   });
 

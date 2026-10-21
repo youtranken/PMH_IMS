@@ -59,7 +59,8 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
     // Vừa đăng nhập xong nên hôm nay chắc chắn có sự kiện.
     await expect(page.getByRole('rowheader', { name: 'Hôm nay' })).toBeVisible();
     await expect(page.getByText(/^Đang xem \d{2}\/\d{2}\/\d{4} \d{2}:\d{2} → /)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Tới ngày…' })).toBeVisible();
+    // Chân bảng một dòng (PW-C10): không còn ô "Tới ngày…" thứ hai.
+    await expect(page.getByRole('button', { name: 'Tới ngày…' })).toHaveCount(0);
 
     // Ô Hành động chia nhóm theo module; chọn một mã vẫn lọc như cũ.
     await page.getByRole('button', { name: 'Hành động', exact: true }).click();

@@ -3503,8 +3503,6 @@ export default {
     allActions: 'Tất cả hành động',
     from: 'Từ ngày',
     to: 'Đến ngày',
-    objectId: 'Mã đối tượng',
-    objectIdPlaceholder: 'Lọc theo mã đối tượng…',
     time: 'Thời điểm',
     actor: 'Người thao tác',
     object: 'Đối tượng',
@@ -3525,6 +3523,9 @@ export default {
     emptyFiltered: 'Không có dòng nào khớp bộ lọc.',
     emptyFilteredHint: 'Thử nới khoảng ngày hoặc bỏ bớt điều kiện lọc.',
     copyObjectId: 'Sao chép mã đối tượng',
+    objectChip: 'Đối tượng: {{id}}',
+    byActorLink: 'Mọi việc của người này',
+    onObjectLink: 'Mọi việc trên đối tượng này',
     openObject: 'Mở hồ sơ {{name}}',
     objectTypeFilter: 'Loại đối tượng',
     allObjectTypes: 'Tất cả loại đối tượng',
@@ -3534,7 +3535,6 @@ export default {
     datePresets: 'Chọn nhanh khoảng ngày',
     today: 'Hôm nay',
     yesterday: 'Hôm qua',
-    goToDate: 'Tới ngày…',
     viewing: 'Đang xem {{from}} → {{to}}',
     /* Nhóm của ô chọn "Hành động" — `auditActionModule` ở `features/admin/audit-actions.ts`. */
     module: {

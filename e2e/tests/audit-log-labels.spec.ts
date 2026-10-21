@@ -43,9 +43,11 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
     await expect(row).toBeVisible();
     const link = row.getByRole('link', { name: new RegExp(email.replace(/[.+]/g, '\\$&')) });
     await expect(link).toBeVisible();
-    // UUID không mất: vẫn ở tooltip và có nút chép.
+    // UUID không mất: ở tooltip; nút chép nằm trong hộp chi tiết, không in trên mọi dòng (UX-E08).
     await expect(link).toHaveAttribute('title', userId);
-    await expect(row.getByRole('button', { name: 'Sao chép mã đối tượng' })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Sao chép mã đối tượng' })).toHaveCount(0);
+    // Đang lọc theo đối tượng từ URL: chip nói đang lọc, không có ô gõ mã.
+    await expect(page.getByRole('button', { name: /^Đối tượng: / })).toHaveAttribute('aria-pressed', 'true');
 
     await link.click();
     await expect(page).toHaveURL(/\/admin\/accounts\?q=/);
