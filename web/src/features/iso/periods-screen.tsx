@@ -18,6 +18,9 @@ import { PeriodStateBadge, PeriodSteps } from './iso-parts';
 import { monthKey, monthLabel, pad2 } from './iso-rules';
 import { ReasonDialog } from '@/ui/reason-dialog';
 import { ISO_FORM_TYPES, type IsoFormType, type MonthOverview, type PeriodDetail } from './iso-types';
+import { MobileCardList } from '@/ui/data-table';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 const FORM_NAME: Record<IsoFormType, string> = { '0203': '0203 · Backup', '0208': '0208 · Antivirus' };
 
@@ -110,10 +113,34 @@ function YearTable({
   const { t } = useTranslation();
   // Tháng chưa tới không có gì để xem hay làm — ẩn, không vẽ thành hàng "—" mờ.
   const usable = months.filter((m) => m.access !== 'before_start' && m.access !== 'future');
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
   if (usable.length === 0) return <p className="alert info">{t('iso.periods.paperYear', { year })}</p>;
   return (
     <section aria-labelledby="iso-year">
       <h2 id="iso-year">{t('iso.periods.yearTitle', { year })}</h2>
+      {narrow ? (
+        /* ≤600px: một thẻ một tháng, chạm để xem chi tiết kỳ (TB-05) — bảng gập thẻ nhãn–giá trị
+           thì 12 tháng là trang dài, và nút "Tháng n" lọt thỏm giữa thẻ. */
+        <MobileCardList
+          rows={usable}
+          rowKey={(m) => String(m.month)}
+          onRowClick={(m) => onSelect(monthKey(year, m.month))}
+          rowCurrent={(m) => selected === monthKey(year, m.month)}
+          card={{
+            title: (m) => t('iso.periods.monthN', { month: pad2(m.month) }),
+            subtitle: (m) => (
+              <span className="row" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {m.forms.map((f) => (
+                  <span key={f.formType}>
+                    {f.formType} <PeriodStateBadge state={f.display} />
+                  </span>
+                ))}
+              </span>
+            ),
+            meta: (m) => `0206 · ${t('iso.periods.incidentCount', { count: m.incidents, signed: m.incidentsSigned })}`,
+          }}
+        />
+      ) : (
       <div className="table-wrap">
         <table className="table table-stack">
           <thead>
@@ -147,6 +174,7 @@ function YearTable({
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }
