@@ -591,3 +591,22 @@ describe('T-07: mục bỏ lọc viết "Tất cả …"', () => {
     expect(bad).toEqual([]);
   });
 });
+
+/**
+ * Q-30: thư mang mã chỉ gửi cho đúng người duyệt mà người xin chọn, và không còn thư nhắc.
+ * Câu nào ở luồng mở két còn hứa "gửi email cho Quản trị" hay "mail nhắc" là nói sai với
+ * người đọc — Super Admin chỉnh tham số tin là có thư đi, nhưng không có.
+ */
+describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
+  it('approvals / access / vault không nhắc thư cho Quản trị hay thư nhắc', () => {
+    const bad = leaves()
+      .filter(([key]) => /^(approvals|access|vault)\./.test(key))
+      .filter(([, text]) => /gửi email cho Quản trị|chờ Quản trị duyệt|mốc nhắc|mail nhắc người duyệt/i.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+
+  it('tham số "Nhắc duyệt sau" nói rõ mở két không gửi mail (thư nhắc chỉ còn cho bản vẽ / TK dịch vụ)', () => {
+    expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két[^.]*không gửi mail/);
+  });
+});
