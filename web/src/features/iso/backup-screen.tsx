@@ -5,6 +5,8 @@ import { errorMessage } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -110,6 +112,7 @@ export function BackupScreen({ me }: { me: Me }) {
 
 function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; ownerNotice: React.ReactNode }) {
   const { t } = useTranslation();
+  const phone = useMediaQuery(BREAKPOINTS.cards);
   const toast = useToast();
   const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -254,6 +257,9 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
           <p className="muted">
             {t('iso.backup.noJobs')} <Link to={PATHS.isoCatalog}>{t('iso.backup.jobsLink')}</Link>
           </p>
+        ) : phone ? (
+          /* Điện thoại: cột cố định chiếm hết bề ngang, không còn ô ngày nào để bấm (PW-B18). */
+          <p className="alert info">{t('iso.gridDesktopOnly')}</p>
         ) : (
           <div
             className="sheet-scroll"

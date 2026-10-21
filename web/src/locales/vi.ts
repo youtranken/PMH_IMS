@@ -4343,6 +4343,7 @@ export default {
     nextMonth: 'Tháng sau',
     steps: 'Các bước của kỳ',
     grid: 'Lưới tháng',
+    gridDesktopOnly: 'Đánh lưới trên máy tính — màn hẹp không đủ chỗ cho các cột ngày.',
     todoSection: 'Việc cần xử lý',
     cellAria: '{{name}} ngày {{day}}: {{state}}',
     cellState: {

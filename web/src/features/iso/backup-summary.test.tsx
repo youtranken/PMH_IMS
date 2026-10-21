@@ -40,4 +40,24 @@ describe('Lưới 0203 — khối việc cần làm', () => {
     await userEvent.click(tile);
     await waitFor(() => expect(document.activeElement).toHaveAttribute('data-state', 'missed'));
   });
+
+  // PW-B18: ở ≤600px cột cố định chiếm hết bề ngang — không thấy ô ngày nào. Tóm tắt + một câu.
+  it('điện thoại: không bày lưới, nói "Đánh lưới trên máy tính", vẫn giữ ô số', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(jsonResponse(200, String(input).startsWith('/api/v1/iso/backup/') ? GRID : [])),
+    ));
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/iso/backup?month=2026-10']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <BackupScreen me={SA} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText(/Đánh lưới trên máy tính/)).toBeInTheDocument();
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByRole('button', { name: /ô bỏ sót ở ngày đã qua/ })).toBeInTheDocument();
+  });
 });

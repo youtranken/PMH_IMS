@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/api-client';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { useConfirm } from '@/ui/confirm-provider';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -95,6 +97,7 @@ export function AntivirusScreen({ me }: { me: Me }) {
 
 function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid; ownerNotice: React.ReactNode }) {
   const { t } = useTranslation();
+  const phone = useMediaQuery(BREAKPOINTS.cards);
   const toast = useToast();
   const askConfirm = useConfirm();
   const [editing, setEditing] = useState<AvIssue | 'new' | null>(null);
@@ -220,7 +223,11 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
             {t('iso.av.summary', { issues: data.issues.length, divisions: groups.length, missed: data.summary.missedDays.length })}
           </span>
         </div>
-        {/* Lưới rộng hơn màn: vùng cuộn phải vào được bằng bàn phím (AX-07). */}
+        {/* Lưới rộng hơn màn: vùng cuộn phải vào được bằng bàn phím (AX-07). Điện thoại: cột cố định
+            chiếm hết bề ngang, không còn ô ngày nào để bấm — chỉ nói làm ở máy tính (PW-B18). */}
+        {phone ? (
+          <p className="alert info">{t('iso.gridDesktopOnly')}</p>
+        ) : (
         <div className="sheet-scroll" tabIndex={0} role="region" aria-label={t('iso.field.tab0208')}>
           <table className="sheet-grid">
             <thead>
@@ -388,6 +395,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
             </tbody>
           </table>
         </div>
+        )}
       </section>
 
       <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
