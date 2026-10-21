@@ -125,6 +125,7 @@ export function DeviceForm({
   device,
   cloneFrom,
   presetDeviceTypeId,
+  presetSiteId,
   csrfToken,
   onClose,
   onSaved,
@@ -139,6 +140,8 @@ export function DeviceForm({
    * Bỏ qua khi có `device` hoặc `cloneFrom`.
    */
   presetDeviceTypeId?: string;
+  /** Thêm mới khi danh sách đang lọc theo một site (FM-06): điền sẵn ô Site. Bỏ qua khi sửa / nhân bản. */
+  presetSiteId?: string;
   csrfToken: string;
   onClose: () => void;
   /** `keepOpen`: người dùng chọn "Lưu và nhân bản" — form đã tự làm trống, đừng đóng. */
@@ -158,8 +161,8 @@ export function DeviceForm({
   const [form, setForm] = useState<FormState>(() =>
     !device && cloneFrom
       ? cloneState(cloneFrom)
-      : !device && presetDeviceTypeId
-        ? { ...initialState(null), deviceTypeId: presetDeviceTypeId }
+      : !device
+        ? { ...initialState(null), deviceTypeId: presetDeviceTypeId ?? '', siteId: presetSiteId ?? '' }
         : initialState(device),
   );
   // Ảnh chụp lúc mở form: khối gập nào đã có giá trị thì mở sẵn (sửa, nhân bản).

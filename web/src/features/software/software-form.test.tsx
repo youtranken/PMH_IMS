@@ -1,3 +1,4 @@
+import { formatDate, todayIso } from '@/lib/format';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
@@ -58,6 +59,13 @@ describe('Form hồ sơ phần mềm', () => {
     expect(screen.getByRole('dialog', { name: 'Thêm phần mềm' })).toBeInTheDocument();
   });
 
+  // FM-06: ô Bắt đầu trống thì các nút +1 / +2 / +3 năm xám — hồ sơ mới mặc định hôm nay.
+  it('thêm mới: ô Bắt đầu mặc định hôm nay', () => {
+    mockFetch();
+    render(null);
+    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toHaveTextContent(formatDate(todayIso()));
+  });
+
   it('câu giải thích kỳ hạn nằm sau nút (i), không in thẳng dưới ô', async () => {
     mockFetch();
     render(null);
@@ -68,7 +76,8 @@ describe('Form hồ sơ phần mềm', () => {
 
   it('+1 năm tính từ ngày bắt đầu (29/02 lùi về 28/02); chưa có ngày bắt đầu thì tắt', async () => {
     mockFetch();
-    const { unmount } = render(null);
+    // Hồ sơ mới đã có Bắt đầu = hôm nay (FM-06); "chưa có ngày bắt đầu" là hồ sơ cũ để trống ô đó.
+    const { unmount } = render({ ...ROW, startDate: null });
     expect(screen.getByRole('button', { name: '+1 năm' })).toBeDisabled();
     unmount();
 

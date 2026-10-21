@@ -565,6 +565,7 @@ export function DevicesScreen({ me }: { me: Me }) {
       {creating ? (
         <DeviceForm
           device={null}
+          presetSiteId={filters.siteId || undefined}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
           onSaved={(result, options) => {

@@ -1,3 +1,4 @@
+import { todayIso } from '@/lib/format';
 import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -80,7 +81,8 @@ function initialState(row: SoftwareRow | null, firstKind: SoftwareKind, batchFro
     licenseModel: row?.licenseModel ?? 'subscription',
     vendorId: row?.vendorId ?? '',
     seatTotal: row?.seatTotal != null ? String(row.seatTotal) : '',
-    startDate: row?.startDate ?? '',
+    // Hồ sơ mới: hôm nay (FM-06) — ô trống thì các nút +1 / +2 / +3 năm không có mốc để cộng.
+    startDate: row ? (row.startDate ?? '') : todayIso(),
     endDate: row?.endDate ?? '',
     note: row?.note ?? '',
     status: row?.status ?? 'active',
