@@ -158,15 +158,16 @@ describe('Bảng điều khiển', () => {
     expect(within(block).queryByText(/^vpn/)).toBeNull();
   });
 
-  it('khối LỖI có tông cảnh báo + Thử lại; khối yên (Sự cố, 0 phiếu) là tin tốt — không cùng kiểu', async () => {
+  // UX-E05: tin tốt đã nằm ở ô số 0 — khối yên không lặp lại lần hai; khối LỖI vẫn hiện, có Thử lại.
+  it('khối LỖI có tông cảnh báo + Thử lại; khối yên (Sự cố, 0 phiếu) không hiện; không câu "không có việc gì gấp"', async () => {
     mockApi({ ...BOARD, disposed: { available: false, items: [], total: 0 } });
     renderBoard();
     const errorBlock = (await screen.findByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).closest('section')!;
     expect(errorBlock).toHaveClass('tone-error');
     expect(within(errorBlock).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
-    const incidents = screen.getByRole('heading', { name: 'Sự cố · 7 ngày' }).closest('section')!;
-    expect(incidents).toHaveClass('tone-good');
-    expect(incidents).toHaveTextContent('7 ngày qua không có sự cố nào.');
+    expect(screen.queryByRole('heading', { name: 'Sự cố · 7 ngày' })).toBeNull();
+    expect(screen.queryByText('7 ngày qua không có sự cố nào.')).toBeNull();
+    expect(screen.queryByText('Không có việc gì gấp.')).toBeNull();
   });
 
   it('FR-027 ②: phiếu 0206 tuần qua hiện số phiếu dẫn tới phiếu, mô tả và mức độ', async () => {

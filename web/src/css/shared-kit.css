@@ -1141,12 +1141,6 @@ html[data-motion='off'] .kpi:hover { transform: none; }
     font-size: var(--fs-xl);
   }
 }
-.dash-calm {
-  margin: calc(var(--space-6) * -1) 0 var(--space-6);
-  padding-top: var(--space-2);
-  font-size: var(--fs-xs);
-  color: var(--ink-3);
-}
 
 /*
  * Khối ĐANG CÓ VIỆC — HAI LÀN CỐ ĐỊNH, không phải lưới theo hàng.
@@ -1222,8 +1216,6 @@ html[data-motion='off'] .kpi:hover { transform: none; }
 .dash-card.slim.tone-error { background: var(--warn-soft); border-color: var(--border-warn); }
 .dash-card.slim.tone-error .dash-tone-ic { background: var(--warn); color: var(--on-accent); }
 .dash-card.slim.tone-error p { color: var(--warn); }
-.dash-card.slim.tone-good .dash-tone-ic { background: var(--ok-soft); color: var(--ok); }
-.dash-card.slim.tone-good p { color: var(--ok); }
 .dash-card.slim.tone-info .dash-tone-ic { background: var(--muted-soft); color: var(--ink-2); }
 .dash-card.slim.tone-info p { color: var(--ink-2); }
 

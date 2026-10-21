@@ -4709,7 +4709,6 @@ export default {
     kpiStale: 'Két lâu chưa đổi',
     kpiBreakGlass: 'Yêu cầu mở két · 7 ngày',
     kpiDisposed: 'Vừa thanh lý · 7 ngày',
-    kpiCalm: 'Không có việc gì gấp.',
     itemsCount: '{{count}} Mục',
     showMore: 'Xem thêm {{count}}',
     expiring: 'Tổng hợp hết hạn cần xử lý',
@@ -4718,14 +4717,12 @@ export default {
     expiringEmpty: 'Không có gì sắp hết hạn.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
     incidents: 'Sự cố · 7 ngày',
-    incidentsEmpty: '7 ngày qua không có sự cố nào.',
     seeAllIncidents: 'Xem danh sách sự cố 0206',
     incidentSeverity_low: 'Thấp',
     incidentSeverity_medium: 'Trung bình',
     incidentSeverity_high: 'Cao',
     /* Cùng tên với trang chi tiết phiếu ("Yêu cầu mở két"), không dùng chữ kỹ thuật "break-glass". */
     breakGlass: 'Yêu cầu mở két · 7 ngày',
-    breakGlassEmpty: '7 ngày qua không ai xin mở két.',
     seeAllBreakGlass: 'Xem nhật ký đầy đủ',
     by: 'quyết bởi {{who}}',
     validUntil: 'hiệu lực đến {{time}}',
@@ -4736,21 +4733,17 @@ export default {
 
     subnetLoad: 'Dải mạng sắp đầy',
     subnetLoadAt: 'Dải mạng ≥ {{percent}}%',
-    subnetLoadEmpty: 'Chưa dải nào chạm ngưỡng. Còn chỗ để cấp IP.',
     seeAllSubnets: 'Xem toàn bộ dải mạng',
     subnetUsage: 'đã cấp {{used}}/{{total}} · còn {{free}}',
     subnetUsageAria: 'Mức sử dụng dải {{name}}',
     subnetThreshold: 'Ngưỡng cảnh báo {{percent}}%',
 
     staleSecrets: 'Két lâu chưa đổi',
-    // Q-15: cùng hạn đổi (`dashboard.secret_stale_days`) với cột "Đổi lần cuối" ở két.
-    staleSecretsEmpty: 'Không có ngăn nào quá hạn đổi mật khẩu.',
     seeAllVault: 'Xem toàn bộ két sắt',
     secretCount: '{{count}} Ngăn',
     staleSince: 'Đổi lần cuối {{date}} · {{days}} ngày trước',
 
     disposed: 'Kho thanh lý · 7 ngày',
-    disposedEmpty: '7 ngày qua không thanh lý gì.',
     seeAllDisposed: 'Xem toàn bộ kho thanh lý',
     /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */
     needsYou: 'Cần bạn duyệt ({{count}})',

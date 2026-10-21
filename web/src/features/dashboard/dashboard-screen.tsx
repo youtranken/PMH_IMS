@@ -193,15 +193,16 @@ export function DashboardScreen({ me }: { me: Me }) {
    *
    * Khối đang có việc (`total > 0`) mới được chiếm chỗ: làn chính (2 phần) cho khối hạn — danh
    * sách dài nhất; làn phụ (1 phần) xếp chồng các khối nhỏ theo độ ưu tiên (số nhỏ đứng trên).
-   * Khối đang YÊN, khối lỗi và khối chưa có thì gom xuống dải mỏng ở chân trang, mỗi khối một
-   * dòng — lỗi đứng ĐẦU dải để không lẫn vào tin tốt.
+   * Khối LỖI gom xuống dải mỏng ở chân trang, mỗi khối một dòng, có Thử lại. Khối đang YÊN thì
+   * không hiện (UX-E05) — ô số 0 ở hàng KPI đã nói tin tốt.
    */
   const main: ReactNode[] = [];
   const side: { rank: number; node: ReactNode }[] = [];
   const quiet: { rank: number; node: ReactNode }[] = [];
   const place = (block: Block<unknown>, node: ReactNode, lane: 'main' | number) => {
     if (!block.available) quiet.push({ rank: 0, node });
-    else if (block.total === 0) quiet.push({ rank: 1, node });
+    // Mảng yên không thành khối (UX-E05): ô số 0 ở hàng KPI đã nói tin tốt đó.
+    else if (block.total === 0) return;
     else if (lane === 'main') main.push(node);
     else side.push({ rank: lane, node });
   };
@@ -216,7 +217,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.expiring.available}
       moreTo={PATHS.expiry}
       moreLabel={t('dashboard.seeAllExpiring')}
-      emptyText={t('dashboard.expiringEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -240,7 +240,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.subnetLoad.available}
       moreTo={PATHS.ipAddresses}
       moreLabel={t('dashboard.seeAllSubnets')}
-      emptyText={t('dashboard.subnetLoadEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -291,7 +290,6 @@ export function DashboardScreen({ me }: { me: Me }) {
         available
         moreTo={PATHS.approvals}
         moreLabel={t('dashboard.seeAllBreakGlass')}
-        emptyText={t('dashboard.breakGlassEmpty')}
         unavailableText={t('dashboard.blockError')}
         onRetry={retry}
       >
@@ -318,7 +316,6 @@ export function DashboardScreen({ me }: { me: Me }) {
         available
         moreTo={PATHS.vault}
         moreLabel={t('dashboard.seeAllVault')}
-        emptyText={t('dashboard.staleSecretsEmpty')}
         unavailableText={t('dashboard.blockError')}
         onRetry={retry}
       >
@@ -359,7 +356,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.disposed.available}
       moreTo={PATHS.disposal}
       moreLabel={t('dashboard.seeAllDisposed')}
-      emptyText={t('dashboard.disposedEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -400,7 +396,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.incidents.available}
       moreTo={PATHS.isoIncidents}
       moreLabel={t('dashboard.seeAllIncidents')}
-      emptyText={t('dashboard.incidentsEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -805,20 +800,13 @@ function BoardKpis({ board }: { board: Dashboard }) {
           <KpiTile key={tile.key} value={tile.total} label={tile.label} tone={tile.tone} to={tile.to} />
         ))}
       </KpiStrip>
-      {tiles.every((tile) => tile.total === 0) ? (
-        <p className="dash-calm">{t('dashboard.kpiCalm')}</p>
-      ) : null}
     </>
   );
 }
 
 /**
- * Một khối có BA trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
- *  - không tải được → tông cảnh báo, có Thử lại (đứng đầu dải yên);
- *  - có phần này, không có gì → tin tốt, dấu ✓;
- *  - có dữ liệu.
- *
- * Gộp lỗi với tin tốt thành cùng một dải xám là cách nhanh nhất để sếp yên tâm nhầm.
+ * Một khối có HAI dạng: không tải được → dải mỏng tông cảnh báo, có Thử lại; có dữ liệu → thẻ.
+ * Khối không có gì thì nơi gọi đã bỏ (UX-E05) — lỗi tải không bao giờ được trông như "không có gì".
  */
 function BlockCard({
   title,
@@ -826,7 +814,6 @@ function BlockCard({
   available,
   moreTo,
   moreLabel,
-  emptyText,
   unavailableText,
   onRetry,
   children,
@@ -836,23 +823,20 @@ function BlockCard({
   available: boolean;
   moreTo?: string;
   moreLabel?: string;
-  emptyText: string;
   unavailableText: string;
   onRetry?: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const tone = !available ? 'error' : total === 0 ? 'good' : null;
-
-  if (tone) {
+  if (!available) {
     return (
-      <section className={`card dash-card slim tone-${tone}`}>
+      <section className="card dash-card slim tone-error">
         <span className="dash-tone-ic" aria-hidden="true">
-          <ToneIcon tone={tone} />
+          <ToneIcon tone="error" />
         </span>
         <h2 className="dash-slim-title">{title}</h2>
-        <p>{tone === 'good' ? emptyText : unavailableText}</p>
-        {tone === 'error' && onRetry ? (
+        <p>{unavailableText}</p>
+        {onRetry ? (
           <button type="button" className="sm" onClick={onRetry}>
             {t('app.retry')}
           </button>
