@@ -176,7 +176,7 @@ describe('Màn Thiết bị — thẻ điện thoại', () => {
 describe('Màn Thiết bị — hạn đổi mật khẩu két', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('máy có két quá hạn đổi: dòng phụ "Quá 5 ngày — cần đổi"; hỏi due theo ownerType=device', async () => {
+  it('máy có két quá hạn đổi: chip "Két · quá 5 ngày" cạnh mã (TB-18); hỏi due theo ownerType=device', async () => {
     const urls: string[] = [];
     vi.stubGlobal(
       'fetch',
@@ -202,7 +202,7 @@ describe('Màn Thiết bị — hạn đổi mật khẩu két', () => {
         </ToastProvider>
       </MemoryRouter>,
     );
-    expect(await screen.findByText('Quá 5 ngày — cần đổi')).toBeInTheDocument();
+    expect(await screen.findByText('Két · quá 5 ngày')).toHaveAttribute('title', expect.stringContaining('Quá 5 ngày — cần đổi'));
     expect(urls.some((u) => u === '/api/v1/vault/owners/due?ownerType=device')).toBe(true);
   });
 });

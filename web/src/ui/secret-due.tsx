@@ -24,16 +24,26 @@ export function secretDueInfo(dueInDays: number): SecretDueInfo {
  * danh sách tài khoản dịch vụ — một bản để hai nơi nói cùng một câu.
  */
 /**
- * Dòng phụ dưới mã hồ sơ ở danh sách (K-03): "Két đổi lần cuối dd/mm/yyyy · còn n ngày". Hồ sơ
- * không có két (không có trong bảng hạn) thì không vẽ gì — danh sách không thành rừng dấu gạch.
+ * Chip nhỏ cạnh mã hồ sơ ở danh sách (K-03, TB-18): "Két" — tới / quá hạn đổi thì tô cảnh báo và
+ * nói số ngày. Đủ câu "Két đổi lần cuối dd/mm/yyyy · còn n ngày" ở `title`. Không phải dòng phụ:
+ * dòng phụ làm dòng có két cao hơn dòng khác. Hồ sơ không có két thì không vẽ gì.
  */
 export function SecretDueSub({ entry }: { entry: { valueChangedAt: string; dueInDays: number } | undefined }) {
   const { t } = useTranslation();
   if (!entry) return null;
+  const info = secretDueInfo(entry.dueInDays);
+  const title = `${t('vault.dueSubLabel')} ${formatDate(entry.valueChangedAt)} · ${t(info.key, { count: info.count })}`;
   return (
-    <span className="cell-sub">
-      {t('vault.dueSubLabel')} <SecretDue changedAt={entry.valueChangedAt} dueInDays={entry.dueInDays} />
-    </span>
+    <>
+      {' '}
+      <span className={`badge plain ${info.tone === 'warn' ? 'warn' : 'muted'}`} title={title}>
+        {info.key === 'vault.dueOver'
+          ? t('vault.dueChipOver', { count: info.count })
+          : info.key === 'vault.dueToday'
+            ? t('vault.dueChipToday')
+            : t('vault.dueChip')}
+      </span>
+    </>
   );
 }
 

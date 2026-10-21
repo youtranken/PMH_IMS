@@ -2891,6 +2891,9 @@ export default {
        ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
     changedCol: 'Đổi lần cuối',
     dueSubLabel: 'Két đổi lần cuối',
+    dueChip: 'Két',
+    dueChipOver: 'Két · quá {{count}} ngày',
+    dueChipToday: 'Két · đổi hôm nay',
     changedBy: 'Người đổi: {{who}}',
     dueLeft: 'còn {{count}} ngày',
     dueToday: 'Đến hạn đổi hôm nay — cần đổi',

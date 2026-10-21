@@ -10,7 +10,6 @@ import type { Me } from '@/lib/me';
 import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExpiryBadge } from '@/ui/expiry-badge';
-import { LocationText } from '@/ui/location-text';
 import { FilterBar } from '@/ui/filter-bar';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -252,7 +251,18 @@ export function DevicesScreen({ me }: { me: Me }) {
       {
         id: 'location',
         header: t('devices.locationCol'),
-        cell: ({ row }) => <LocationText device={row.original} />,
+        /* Chữ thường, một dòng, cắt "…" và đủ chữ ở `title` (TB-18): mono gãy thành hai dòng làm
+           dòng này cao hơn dòng khác. Trang chi tiết vẫn `LocationText`. */
+        cell: ({ row }) => {
+          const label = row.original.siteCode
+            ? [locationLabel(row.original), rackUnitLabel(row.original.rackUStart, row.original.rackUSize)].filter(Boolean).join(' · ')
+            : locationLabel(row.original);
+          return (
+            <span className="cell-clip" title={label}>
+              {label}
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'status',
