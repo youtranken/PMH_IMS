@@ -1123,6 +1123,7 @@ export default {
       viewingDraft: '{{version}} · chưa phát hành',
       viewingOlder: '{{version}} · bản cũ',
       viewOfficial: 'Xem bản chính thức {{version}}',
+      viewDraft: 'Xem {{version}}',
       neverSaved: 'Chưa lưu lần nào.',
       leaveTitle: 'Bản vẽ chưa lưu',
       leaveMessage: 'Rời màn bây giờ thì mất những gì vừa vẽ mà chưa lưu.',

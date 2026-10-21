@@ -80,6 +80,7 @@ import { deviceDropXml, dragFrameState, wantsDropFallback } from './stock-drag';
 import { useCableBridge } from './use-cable-bridge';
 import { useFrameBridge } from './use-frame-bridge';
 import { useRackFit } from './use-rack-fit';
+import { viewVersionOf } from './diagram-view-version';
 
 type Mode = 'view' | 'edit';
 
@@ -141,12 +142,13 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const shelved = Boolean(node.data?.archivedAt);
   const editRequested = params.get('mode') === 'edit';
   const mode: Mode = editRequested && !narrow && !shelved ? 'edit' : 'view';
-  const versionId = mode === 'view' ? params.get('version') : null;
+  const explicitVersion = mode === 'view' ? params.get('version') : null;
   /* `?compare=<phiên bản trước>` = so sánh tô màu với bản đang xem; `?at=YYYY-MM-DD` = bản chính
      thức hiệu lực ngày đó (thanh trượt thời gian) — không kèm `version` nghĩa là ngày đó chưa có. */
   const compareFrom = mode === 'view' ? params.get('compare') : null;
   const atDay = mode === 'view' ? params.get('at') : null;
-  const noOfficialAt = Boolean(atDay) && !versionId;
+  const noOfficialAt = Boolean(atDay) && !explicitVersion;
+  const versionId = viewVersionOf({ mode, explicit: explicitVersion, atDay, official: node.data?.officialVersionId });
   const ask = useConfirm();
   const queryClient = useQueryClient();
   const stepUp = useStepUpRetry(me.csrfToken);
@@ -490,6 +492,8 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
      */
     const officialSeq = content.data.diagram.officialSeq ?? null;
     const officialId = content.data.diagram.officialVersionId ?? null;
+    const latest = content.data.diagram.latestVersion;
+    const latestDraft = latest && officialSeq && latest.seq > officialSeq ? latest : null;
     if (content.data.diagram.kind !== 'presentation') {
       const standing = diagramVersionStanding(version.seq, officialSeq);
       const label = diagramVersionLabel(t, version.seq, officialSeq);
@@ -501,6 +505,13 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
           {standing !== 'official' && officialId && officialSeq ? (
             <button type="button" className="btn sm" onClick={() => setParams({ version: officialId })}>
               {t('diagrams.screen.viewOfficial', { version: diagramVersionLabel(t, officialSeq, officialSeq, 'short') })}
+            </button>
+          ) : null}
+          {/* Tab Xem mặc định mở bản chính thức; nháp mới hơn (người sửa, người duyệt cần xem) mở
+              bằng nút này — không để người trực đọc nhầm nháp khi bấm "Mở bản chính thức". */}
+          {standing === 'official' && latestDraft ? (
+            <button type="button" className="btn sm" onClick={() => setParams({ version: latestDraft.id })}>
+              {t('diagrams.screen.viewDraft', { version: diagramVersionLabel(t, latestDraft.seq, officialSeq) })}
             </button>
           ) : null}
           {status}

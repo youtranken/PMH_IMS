@@ -383,7 +383,11 @@ describe('Lưu trùng bản mới nhất của người khác (Q-23 05/10)', () 
 describe('Thanh trình xem nói đang xem bản nào', () => {
   const saved = (id: string, seq: number) => ({ id, seq, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null });
 
-  it('bản nháp mới hơn bản chính thức: "Nháp #2 · chưa phát hành" + nút xem bản chính thức', async () => {
+  /*
+   * UX-E35: nút "Mở bản chính thức" (Q-23) và mọi lối mở không kèm `?version` phải ra bản CHÍNH
+   * THỨC — người trực không được đọc nhầm nháp chưa duyệt. Nháp mới hơn mở bằng "Xem Nháp #2".
+   */
+  it('nháp mới hơn bản chính thức: mặc định mở bản chính thức, có nút "Xem Nháp #2"', async () => {
     const node = { ...ROOT, status: 'official_draft' as const, officialSeq: 1, officialVersionId: 'v1', latestVersion: { id: 'v2', seq: 2, savedAt: '2026-10-03T01:00:00Z', savedBy: 'a' } };
     const fetchMock = routeFetch({
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
@@ -393,10 +397,11 @@ describe('Thanh trình xem nói đang xem bản nào', () => {
     });
     renderScreen('/diagrams/d1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
-    expect(screen.getByText('Nháp #2 · chưa phát hành')).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Xem bản chính thức v1' }));
     expect(await screen.findByText('Chính thức v1')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('versionId=v1'))).toBe(true);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Xem Nháp #2' }));
+    expect(await screen.findByText('Nháp #2 · chưa phát hành')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xem bản chính thức v1' })).toBeInTheDocument();
   });
 
   it('chưa phát hành lần nào: chỉ "Nháp #n · chưa phát hành", không có nút xem bản chính thức', async () => {
