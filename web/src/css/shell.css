@@ -31,7 +31,8 @@
 }
 .nav-badge.warn {
   background: var(--warm);
-  color: var(--ink);
+  /* Chữ tối cố định: --ink ở giao diện tối là chữ SÁNG, trên cam chỉ ~1,4:1. */
+  color: var(--on-brand);
 }
 .nav-badge.danger {
   background: var(--danger-soft);

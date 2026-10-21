@@ -25,6 +25,8 @@ const PENDING_APPROVALS_ID = 'nav-pending-approvals';
 const DIAGRAM_REVIEWS_ID = 'nav-diagram-reviews';
 /** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
 const OVERDUE_ID = 'nav-overdue';
+/** Badge menu rộng tối đa 4 ký tự: số thật nằm ở câu mô tả (`aria-describedby`) và `title`. */
+const badgeText = (count: number) => (count > 999 ? '999+' : String(count));
 const FAILED_MAIL_ID = 'nav-failed-mail';
 const ISO_TODO_ID = 'nav-iso-todo';
 const ISO_PERIODS_ID = 'nav-iso-periods';
@@ -233,37 +235,38 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn
                        là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {pendingApprovals}
+                      {badgeText(pendingApprovals)}
                     </span>
                   ) : null}
                   {item.badge === 'overdue' && overdue > 0 ? (
-                    /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
-                    <span className="nav-badge" aria-hidden="true">
-                      {overdue}
+                    /* Đỏ, không cam: số này là việc ĐÃ trễ hạn (cam dành cho việc chờ một người
+                       quyết). Xám trung tính trước đây làm nó trông như số "sắp hết hạn". */
+                    <span className="nav-badge danger" aria-hidden="true" title={t('expiry.navBadge', { count: overdue })}>
+                      {badgeText(overdue)}
                     </span>
                   ) : null}
                   {item.badge === 'diagramReviews' && diagramReviews > 0 ? (
                     /* Cam như badge duyệt mở két: một bản vẽ đang chờ chính người này quyết. */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {diagramReviews}
+                      {badgeText(diagramReviews)}
                     </span>
                   ) : null}
                   {item.badge === 'isoTodo' && isoTodo.periods > 0 ? (
                     /* Cam: kỳ phiếu đang chờ chính người này (duyệt, tải bản ký). */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {isoTodo.periods}
+                      {badgeText(isoTodo.periods)}
                     </span>
                   ) : null}
                   {item.badge === 'isoUnlinked' && isoTodo.unlinked > 0 ? (
                     /* Cam: ô ✗ của phiếu người này ghi được còn chưa có 0206 — lập ở mục này. */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {isoTodo.unlinked}
+                      {badgeText(isoTodo.unlinked)}
                     </span>
                   ) : null}
                   {item.badge === 'failedMail' && failedMail > 0 ? (
                     /* Đỏ: thư không tới người nhận là một sự cố đang diễn ra, không phải việc chờ. */
                     <span className="nav-badge danger" aria-hidden="true">
-                      {failedMail}
+                      {badgeText(failedMail)}
                     </span>
                   ) : null}
                 </NavLink>

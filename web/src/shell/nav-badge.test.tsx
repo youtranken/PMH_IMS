@@ -120,8 +120,19 @@ describe('Badge "đã quá hạn" trên mục Sắp hết hạn', () => {
     const link = within(nav).getByRole('link', { name: 'Sắp hết hạn' });
     const badge = await within(link).findByText('4');
     expect(badge).toHaveClass('nav-badge');
-    expect(badge).not.toHaveClass('warn');
+    // Đỏ: số này là việc ĐÃ trễ, không phải "sắp" — xám trung tính làm nó trông như số đếm thường.
+    expect(badge).toHaveClass('danger');
+    expect(badge).toHaveAttribute('title', '4 Mục đã quá hạn');
     expect(link).toHaveAccessibleDescription('4 Mục đã quá hạn');
+  });
+
+  it('quá 999 mục → badge rút gọn "999+", câu đầy đủ vẫn nói đúng số', async () => {
+    mockOverdue(6470);
+    renderShell({ ...ADMIN, role: 'member' });
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    const link = within(nav).getByRole('link', { name: 'Sắp hết hạn' });
+    expect(await within(link).findByText('999+')).toHaveClass('danger');
+    expect(link).toHaveAccessibleDescription('6470 Mục đã quá hạn');
   });
 
   it('không có gì quá hạn → không vẽ badge', async () => {
