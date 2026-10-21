@@ -290,7 +290,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Loại thiết bị',
         'Phòng ban',
         'Trạng thái',
-        'Xóa lọc (1)',
+        'Xóa bộ lọc (1)',
         'Xóa bộ lọc',
       ]);
 

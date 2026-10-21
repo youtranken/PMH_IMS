@@ -216,11 +216,11 @@ describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
 
 /* Q-27: bảng phần mềm có chip "Xóa lọc (n)" như bảng thiết bị — cùng thanh lọc dùng chung. */
 describe('Bốn màn phần mềm — chip Xóa lọc', () => {
-  it('có bộ lọc đang bật thì hiện "Xóa lọc (1)"; bấm thì bỏ lọc khỏi địa chỉ', async () => {
+  it('có bộ lọc đang bật thì hiện "Xóa bộ lọc (1)"; bấm thì bỏ lọc khỏi địa chỉ', async () => {
     mockFetch();
     renderList('software', `${PATHS.software}?status=all`);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Xóa lọc (1)' }));
+    await user.click(await screen.findByRole('button', { name: 'Xóa bộ lọc (1)' }));
     expect(screen.getByLabelText('địa chỉ')).not.toHaveTextContent('status=all');
   });
 

@@ -206,7 +206,7 @@ describe('Dải "Cần làm" và ô tìm', () => {
     const sv = within(map).getByRole('button', { name: /^Phòng server E2E/ }).closest('li');
     expect(kt).not.toHaveAttribute('data-dim');
     expect(sv).toHaveAttribute('data-dim', 'true');
-    await user.click(screen.getByRole('button', { name: 'Bỏ lọc' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa bộ lọc' }));
     expect(location).not.toContain('todo=');
   });
 

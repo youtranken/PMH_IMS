@@ -183,7 +183,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Q-22: màn Phần mềm chỉ giữ license nên không còn ô lọc Loại.
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa lọc (1) · Xóa bộ lọc',
+      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc (1) · Xóa bộ lọc',
     ).toHaveCount(7);
     await expect(main.getByRole('button', { name: 'Loại hồ sơ', exact: true })).toHaveCount(0);
     for (const name of [
@@ -193,7 +193,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Nhà cung cấp',
       'Kỳ hạn',
       // Chip gỡ lọc của thanh lọc (Q-27, như bảng thiết bị) — ô tìm đang có chữ là một bộ lọc.
-      'Xóa lọc (1)',
+      'Xóa bộ lọc (1)',
       'Xóa bộ lọc',
     ]) {
       await expect(

@@ -276,7 +276,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Thao tác với ${codeA}`,
         'Số dòng',
         // UX-E36: ô tìm đang có chữ → nút xóa lọc có đếm.
-        'Xóa lọc (1)',
+        'Xóa bộ lọc (1)',
       ]),
     );
 
@@ -904,7 +904,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Thao tác với ${activeCode}`,
         'Số dòng',
         // UX-E36: ô tìm + lọc trạng thái đang bật → nút xóa lọc có đếm.
-        'Xóa lọc (2)',
+        'Xóa bộ lọc (2)',
       ]),
     );
 
@@ -1006,7 +1006,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Trạng thái',
         'Số dòng',
         // UX-E36: ô tìm đang có chữ → nút xóa lọc có đếm.
-        'Xóa lọc (1)',
+        'Xóa bộ lọc (1)',
       ]),
     );
   });
