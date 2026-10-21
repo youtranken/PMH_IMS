@@ -83,7 +83,7 @@
 }
 .modal {
   background: var(--surface);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-lg);
   max-width: 560px;
   width: 100%;
@@ -136,7 +136,7 @@
     height: auto;
     max-height: 90vh;
     max-height: 90dvh;
-    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
   }
   .dialog-viewport .sheet-title {
     min-width: 0;
@@ -144,10 +144,12 @@
     text-wrap: balance;
     overflow-wrap: break-word;
   }
+  /* Chân hộp một hàng (FM-01/LY-17): 2–3 nút rộng hết màn xếp dọc ăn ~20% màn điện thoại. Hủy và
+     nút phụ co theo chữ, nút chính giãn hết phần còn lại; hết chỗ thì tự xuống hàng. */
   .dialog-viewport .sheet-footer {
     position: sticky;
     bottom: 0;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: stretch;
     gap: var(--space-3);
     padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
@@ -156,13 +158,13 @@
     display: none;
   }
   .dialog-viewport .sheet-footer > button {
-    width: 100%;
+    flex: 1 1 auto;
     min-height: 44px;
   }
   .dialog-viewport .sheet-footer > button.primary,
   .dialog-viewport .sheet-footer > button.danger {
     order: 1;
-    min-height: 48px;
+    flex: 2 1 auto;
   }
   /* Câu lý do nút xám: hàng riêng, TRÊN các nút, đọc trước khi bấm. */
   .dialog-viewport .sheet-footer > .disabled-reason {

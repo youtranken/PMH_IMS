@@ -18,7 +18,7 @@
 .nav-badge {
   flex: none;
   font-size: var(--fs-2xs);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   min-width: 20px;
   height: 18px;
   padding: 0 var(--space-2);
@@ -215,7 +215,7 @@
   display: grid;
   place-items: center;
   font-size: var(--fs-2xs);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   background: var(--sidebar-chip-strong);
   color: var(--sidebar-ink-2);
 }

@@ -11,6 +11,16 @@ textarea {
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
     background 0.15s var(--ease);
 }
+/* Ô một dòng cao đúng --h-ctl như nút đứng cạnh (DS-02); chữ theo --fs-input (16px ở màn cảm ứng). */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+select {
+  min-height: var(--h-ctl);
+  padding-block: 0;
+  font-size: var(--fs-input);
+}
+textarea {
+  font-size: var(--fs-input);
+}
 input::placeholder {
   color: var(--ink-3);
 }
@@ -26,7 +36,7 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: var(--focus);
   box-shadow: var(--ring);
 }
 input:disabled {
@@ -42,6 +52,9 @@ input:disabled {
 input[type='checkbox'],
 input[type='radio'] {
   accent-color: var(--primary);
+  /* 13px mặc định của trình duyệt quá nhỏ để chạm (FM-13). */
+  width: 16px;
+  height: 16px;
 }
 select {
   cursor: pointer;
@@ -53,9 +66,23 @@ select {
   background-position: right 0.62rem center;
 }
 label {
+  /* Nhãn ô không được nhỏ hơn chữ phụ bên dưới (DS-11). */
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+/* 56 chỗ dùng `muted small` mà lớp `.small` chưa từng có luật — gợi ý hiện to bằng chữ thường. */
+.small {
   font-size: var(--fs-xs);
-  color: var(--ink-2);
-  font-weight: 500;
+}
+/* Tiêu đề giãn dòng chặt (DS-18): 1.5 của chữ thường làm h1 22px cao 33px. */
+:where(h1, h2, h3, h4) {
+  line-height: 1.25;
+}
+/* Link nằm trong đoạn văn / khung báo phải khác chữ thường bằng hơn một màu (AX-05, WCAG 1.4.1). */
+:where(p, .alert) a:not([class*='btn']) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* --- Chevron dùng chung (ui/chevron.tsx) ------------------------------------
@@ -95,12 +122,18 @@ button {
   background: var(--surface);
   border: 1px solid var(--field-border);
   border-radius: var(--r);
-  padding: 0.48rem var(--space-6);
+  padding: 0 var(--space-6);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
     transform 0.08s var(--ease), opacity var(--dur-fast);
   white-space: nowrap;
+}
+/* Nút "thật" (có lớp `btn` / biến thể, hoặc không lớp) cao đúng --h-ctl như ô nhập đứng cạnh
+   (DS-02). `:where()` = độ ưu tiên 0: nút icon tự khai kích thước (⋮, xóa ngày, (i)…) vẫn thắng —
+   `min-height` chung đặt thẳng lên `button` thì đè luôn `height` nhỏ của chúng. */
+:where(button.btn, button:not([class]), button.primary, button.ghost, button.danger, button.danger-ghost, button.warm, button.caution) {
+  min-height: var(--h-ctl);
 }
 /* `:where()` giữ độ ưu tiên ở (0,0,1), ngang `button` ở trên: chỉ nút KHÔNG tự khai nền mới ăn
    nền hover chung. Bản `button:hover:not(:disabled)` là (0,2,1), thắng cả luật `.x:hover` của
@@ -114,9 +147,11 @@ button:where(:hover:not(:disabled)) {
 button:where(:active:not(:disabled)) {
   transform: translateY(1px);
 }
-button:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
+/* Focus vẽ bằng OUTLINE màu đặc (DS-03/04): box-shadow của `button.primary` (cùng độ ưu tiên,
+   đứng sau) đè mất vòng cũ, nên nút chính không bao giờ thấy focus khi đi bằng bàn phím. */
+:where(button, a, summary, [role='tab'], [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 /* Ẩn thị giác nhưng vẫn để screen-reader đọc (nghĩa cột, nhãn ngữ cảnh). */
 .sr-only {
@@ -234,26 +269,28 @@ button.ghost {
   background: transparent;
   border-color: transparent;
   color: var(--ink-2);
-  padding: 0.42rem var(--space-4);
+  padding: 0 var(--space-4);
 }
 button.ghost:hover:not(:disabled) {
   background: var(--muted-soft);
   color: var(--ink);
 }
 button.sm {
-  padding: 0.28rem var(--space-4);
-  font-size: var(--fs-xs);
+  min-height: var(--h-ctl-sm);
+  padding: 0 var(--space-4);
+  font-size: var(--fs-sm);
 }
 a.linkbtn {
   display: inline-flex;
   align-items: center;
   font-weight: var(--fw-semibold);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--field-border);
   border-radius: var(--r);
-  padding: 0.48rem var(--space-6);
+  min-height: var(--h-ctl);
+  padding: 0 var(--space-6);
   text-decoration: none;
   transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
@@ -544,7 +581,7 @@ html[data-motion='off'] .nav-item:hover { transform: none; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-sm);
+  /* Thẻ phẳng, chỉ viền (DS-23): bóng đổ để dành cho thứ NỔI lên (menu, hộp thoại). */
   /* Không có padding thì chữ nằm sát viền — đây là lý do các thẻ trên Bảng điều khiển
      trông "chưa xong". Thẻ nào cần sát mép (bảng tràn viền) tự đè bằng padding: 0. */
   padding: var(--space-8);

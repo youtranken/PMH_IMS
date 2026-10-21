@@ -482,6 +482,12 @@ input[list]::-webkit-calendar-picker-indicator {
   white-space: nowrap;
   overflow: hidden;
 }
+/* Màn cảm ứng: dòng chọn đủ 44px (FM-12) — danh sách 89 tủ mà dòng 35px thì chạm nhầm dòng kế. */
+@media (pointer: coarse) {
+  .fsel-option {
+    min-height: 44px;
+  }
+}
 /* `.fsel-option` là flex, mà `text-overflow` không cắt chữ của chính hộp flex: chữ phải nằm
    trong một khối riêng co được (`min-width: 0`) thì mới ra "…". Chữ đầy đủ ở `title`. */
 .fsel-opt-label {

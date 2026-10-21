@@ -110,7 +110,10 @@
   --info: #1d5f9e;
   --info-soft: #e6f0fa;
 
-  --ring: 0 0 0 3px rgba(14, 159, 110, 0.22);
+  /* Focus màu ĐẶC (DS-03/04): vòng mờ 22% chỉ ~1,25:1 trên nền trắng, dưới 3:1 của WCAG 1.4.11.
+     Nút vẽ bằng outline (base.css) — box-shadow của nút chính không đè được. */
+  --focus: #0a7d54;
+  --ring: 0 0 0 1px var(--focus);
 
   /* Thang z-index (thấp→cao). Không có thang thì nhiều lớp cùng một z tranh nhau, thứ tự
      hiển thị do DOM quyết định. Popup nổi (dropdown/popover) < modal là chủ ý:
@@ -126,39 +129,52 @@
   --z-palette: 85;
   --z-toast: 90;
 
-  --r-sm: 8px;
-  --r: 10px;
-  --r-lg: 14px;
+  /* Bo góc 4 / 6 / 8 / 12 (DS-22): công cụ doanh nghiệp, không bo tròn kiểu ứng dụng cá nhân.
+     Nhỏ = nhãn, ô tick, mục segmented · thường = control, menu, alert · lớn = thẻ, khung bảng ·
+     rất lớn = hộp thoại, ngăn kéo. */
+  --r-sm: 4px;
+  --r: 6px;
+  --r-lg: 8px;
+  --r-xl: 12px;
   --radius-pill: 999px;
 
   /* Thang cách (rem, root 14px) + cỡ chữ + độ đậm. Mọi khoảng cách đi theo các bậc này, không
      viết giá trị lẻ. Font-weight CHỈ 3 bậc chuẩn. */
-  --space-1: 0.25rem;
-  --space-2: 0.4rem;
-  --space-3: 0.5rem;
-  --space-4: 0.6rem;
-  --space-5: 0.75rem;
-  --space-6: 0.85rem;
-  --space-7: 1rem;
-  --space-8: 1.1rem;
-  --space-9: 1.25rem;
-  --space-10: 1.5rem;
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 7px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 18px;
+  --space-10: 21px;
   /* Ba nấc trên. Dừng ở 1.5rem (root 14px → 21px) thì KHÔNG có khoảng nào để tách KHU với
      KHU, mọi thứ trôi thành một khối. Dùng: 11 = tách hai khối trong một khu, 12 = tách khu
      với khu (và khe giữa hai cột), 13 = đệm đáy trang. */
-  --space-11: 2.25rem;
-  --space-12: 3rem;
-  --space-13: 4.25rem;
-  --fs-2xs: 0.72rem;
-  --fs-xs: 0.8rem;
-  --fs-sm: 0.88rem;
-  --fs-md: 1rem;
-  --fs-lg: 1.1rem;
-  --fs-xl: 1.3rem;
-  --fs-2xl: 1.5rem;
+  --space-11: 32px;
+  --space-12: 42px;
+  --space-13: 60px;
+  /* Thang chữ sàn 12px (DS-01): gốc 14px nhân .72/.8 ra 10,08/11,2px — 432 chuỗi và 363 nút
+     nhỏ hơn 12px. Viết px để hết số lẻ; khoảng cách cũng làm tròn px (lệch ≤1px so với trước). */
+  --fs-2xs: 12px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-mono: 13px;
+  /* Chữ trong ô nhập: 16px ở màn cảm ứng để iOS không tự phóng to khi chạm (DS-05). */
+  --fs-input: 14px;
+  /* Chiều cao control (DS-02): ô nhập, ô chọn, ô ngày, nút cùng hàng thì cùng cao. Màn cảm ứng /
+     hẹp lên 44px — vùng chạm tối thiểu. */
+  --h-ctl-sm: 28px;
+  --h-ctl: 36px;
   /* Mã hồ sơ ở đầu trang chi tiết. Phải lớn hơn tiêu đề trang DANH SÁCH (--fs-2xl) — nhỏ hơn
      thì đi từ danh sách vào chi tiết tiêu đề NHỎ LẠI, tức cấp bậc ngược. */
-  --fs-3xl: 1.95rem;
+  --fs-3xl: 28px;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
@@ -328,7 +344,7 @@ html[data-theme='dark'] {
   --sidebar-border: #243028;
   --sidebar-active-bg: rgba(251, 191, 36, 0.16);
   --sidebar-active-ink: #ffe1b3;
-  --ring: 0 0 0 3px rgba(52, 211, 153, 0.3);
+  --focus: #6ee7b7;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   /* Nền tối: bóng ĐEN đậm hơn, không lấy `--ink` (sáng) — sáng thì thành quầng loé chứ không phải bóng. */
   --scroll-edge: rgba(0, 0, 0, 0.55);
@@ -469,3 +485,12 @@ a:hover {
   }
 }
 
+
+/* Màn cảm ứng hoặc hẹp: control 44px (vùng chạm), chữ ô nhập 16px (iOS không tự phóng to). */
+@media (pointer: coarse), (max-width: 900px) {
+  :root {
+    --h-ctl: 44px;
+    --h-ctl-sm: 40px;
+    --fs-input: 16px;
+  }
+}

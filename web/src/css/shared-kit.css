@@ -83,13 +83,13 @@ body:has(.auth) .toast-stack {
 }
 .pager-info { margin-right: auto; }
 .pager-page { font-variant-numeric: tabular-nums; }
-/* Nút ‹ › là chevron dùng chung, ô bấm vuông CAO BẰNG ô "Số dòng" bên cạnh (38px): thấp hơn thì
-   cả hàng lệch đáy và mũi tên trông như chữ phụ. Mũi tên màu chữ phụ đậm, không nhạt như nhãn. */
+/* Cả hàng phân trang cao đúng --h-ctl (DS-15): trước có 4 chiều cao (‹ › 33, ô Số dòng 37, ô Tới
+   trang 24). Mũi tên màu chữ phụ đậm, không nhạt như nhãn. */
 .pager-nav {
   display: inline-grid;
   place-items: center;
-  width: 2.375rem;
-  height: 2.375rem;
+  width: var(--h-ctl);
+  height: var(--h-ctl);
   padding: 0;
   font-size: var(--fs-md);
   color: var(--ink-2);
@@ -101,7 +101,7 @@ body:has(.auth) .toast-stack {
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
-.pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
+.pager-size select { font-size: var(--fs-sm); padding: 0 1.6rem 0 var(--space-3); }
 /* Nhãn "Số dòng" thẳng tâm ô chọn: luật `label` chung (khối, có lề dưới) đẩy nó lên cao ~6px. */
 .pager-size > label { margin: 0; line-height: 1.2; }
 /* Màn cảm ứng: ‹ › và ô "Số dòng" đủ 44px, cách nhau ≥8px — đi hiện trường bấm bằng ngón cái. */
@@ -121,8 +121,8 @@ body:has(.auth) .toast-stack {
   list-style: none;
 }
 .pager-num {
-  min-width: 2.375rem;
-  height: 2.375rem;
+  min-width: var(--h-ctl);
+  height: var(--h-ctl);
   padding: 0 var(--space-3);
   justify-content: center;
   font-variant-numeric: tabular-nums;
@@ -140,7 +140,7 @@ body:has(.auth) .toast-stack {
   gap: var(--space-3);
   color: var(--ink-2);
 }
-.pager-jump .inp { width: 4.5rem; padding: 2px var(--space-3); font-size: var(--fs-sm); }
+.pager-jump .inp { width: 4.5rem; padding: 0 var(--space-3); font-size: var(--fs-sm); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }

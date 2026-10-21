@@ -53,7 +53,17 @@ describe('CSS bảng — nền trạng thái dòng thắng sọc dòng chẵn', 
   const rules = backgroundRules();
   const zebra = rules.find((r) => /tr:nth-child\(even\)\s*>?\s*td$/.test(r.selector) && r.selector.startsWith('table.table'));
 
-  it.each(['row-danger', 'overdue', 'due-today'])('.%s', (state) => {
+  /*
+   * Chỉ "tới hạn hôm nay" (ít dòng) còn tô nền cả hàng. Quá hạn (`row-danger`, `overdue`) chỉ có
+   * vạch trái + huy hiệu (TB-11): 6.470 dòng quá hạn mà tô nền thì cả trang thành một mảng đỏ.
+   */
+  it.each(['row-danger', 'overdue'])('.%s: vạch trái, không tô nền cả hàng', (state) => {
+    expect(rules.find((r) => new RegExp(`tr\\.${state} td$`).test(r.selector))).toBeUndefined();
+    const all = stripComments(ORDER.map((f) => readFileSync(join(CSS_DIR, f), 'utf8')).join('\n'));
+    expect(all).toMatch(new RegExp(`tr\\.${state} td:first-child\\s*\\{[^}]*inset 3px 0 0 var\\(--danger\\)`));
+  });
+
+  it.each(['due-today'])('.%s', (state) => {
     expect(zebra).toBeDefined();
     const rule = rules.find((r) => new RegExp(`tr\\.${state} td$`).test(r.selector));
     expect(rule, `không thấy luật nền cho .${state}`).toBeDefined();
