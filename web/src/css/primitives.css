@@ -312,12 +312,6 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
-.subnet-usage {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  font-size: var(--fs-sm);
-}
 /* Điện thoại: ô chọn dải + thẻ của dải đang chọn thay cho dãy thẻ cuộn ngang. */
 .subnet-picker {
   display: flex;

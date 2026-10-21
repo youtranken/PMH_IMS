@@ -107,3 +107,29 @@ describe('SubnetCard — màu trạng thái và thao tác', () => {
     expect(item).not.toHaveClass('danger');
   });
 });
+
+/* PW-B07: thẻ nói mức dùng ba lần ("61%", "Còn 99 IP trống", "155/254 đang dùng"). Thanh đo đã nói
+   tỉ lệ — chỉ còn một chữ "còn 99", số đã dùng / tổng ở title. */
+describe('SubnetCard — mức dùng nói một lần', () => {
+  it('chỉ "còn 99" cạnh thanh, không % và không "155/254 đang dùng"', () => {
+    renderWithI18n(
+      <MemoryRouter>
+        <SubnetCard
+          subnet={{ ...base, voidedAt: null, voidedBy: null, voidReason: null, used: 155, free: 99, percent: 61 }}
+          active={false}
+          canEdit={false}
+          fullPercent={80}
+          onEdit={noop}
+          onHide={noop}
+          onRestore={noop}
+          onDelete={noop}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('còn 99')).toBeInTheDocument();
+    expect(screen.queryByText(/61%/)).toBeNull();
+    expect(screen.queryByText('155/254 đang dùng')).toBeNull();
+    expect(screen.queryByText('Còn 99 IP trống')).toBeNull();
+    expect(screen.getByRole('meter')).toHaveAttribute('title', '155/254 đang dùng');
+  });
+});

@@ -3064,7 +3064,7 @@ export default {
     description: 'Mô tả',
     freeRunCount: '{{count}} IP trống',
     freeRunExpand: 'Hiện từng IP',
-    usageFree: 'Còn {{free}} IP trống',
+    usageFreeShort: 'còn {{free}}',
     usageUsed: '{{used}}/{{total}} đang dùng',
     usageOf: 'Mức sử dụng dải {{cidr}}',
     gateway: 'Gateway',

@@ -54,9 +54,9 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const card = page.getByRole('link', { name: new RegExp(`LAN thử E2E ${stamp}`) });
     await expect(card).toBeVisible();
     // /29 = 8 địa chỉ, trừ địa chỉ mạng và quảng bá còn 6.
-    // "Còn bao nhiêu chỗ trống" là dòng chính, có đơn vị; số đã dùng lùi xuống dòng phụ.
-    await expect(card.getByText('Còn 6 IP trống')).toBeVisible();
-    await expect(card.getByText('0/6 đang dùng')).toBeVisible();
+    // "Còn bao nhiêu chỗ" là chữ duy nhất cạnh thanh mức dùng; số đã dùng / tổng ở title (PW-B07).
+    await expect(card.getByText('còn 6', { exact: true })).toBeVisible();
+    await expect(card.getByRole('meter')).toHaveAttribute('title', '0/6 đang dùng');
 
     await card.click();
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
@@ -70,8 +70,8 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await ipForm.getByRole('button', { name: 'Cấp IP', exact: true }).click();
 
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
-    await expect(card.getByText('Còn 5 IP trống')).toBeVisible();
-    await expect(card.getByText('1/6 đang dùng')).toBeVisible();
+    await expect(card.getByText('còn 5', { exact: true })).toBeVisible();
+    await expect(card.getByRole('meter')).toHaveAttribute('title', '1/6 đang dùng');
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
   });
 

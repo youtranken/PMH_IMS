@@ -7,7 +7,7 @@ import { foldSearch } from '@/lib/search-fold';
 import { Select } from '@/ui/select';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { apiFetch } from '@/lib/api-client';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatCount } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -487,20 +487,17 @@ export function SubnetCard({
         ) : null}
         {/* Ngưỡng tô màu = ngưỡng "sắp đầy" của bảng điều khiển (vàng), đỏ từ 90% như mọi
             thanh đo khác — không để hai màn nói hai câu về cùng một dải. */}
+        {/* Mức dùng nói MỘT lần (PW-B07): thanh đo nói tỉ lệ, chữ cạnh nó trả lời câu hỏi thật
+            khi cắm máy — "còn bao nhiêu chỗ"; số đã dùng / tổng ở title. */}
         <UsageBar
           percent={subnet.percent}
           ariaLabel={t('ipam.usageOf', { cidr: subnet.cidr })}
           warnAt={fullPercent}
           dangerAt={Math.max(fullPercent, 90)}
+          label={t('ipam.usageFreeShort', { free: formatCount(subnet.free) })}
+          showPercent={false}
+          title={t('ipam.usageUsed', { used: subnet.used, total: subnet.total })}
         />
-        {/* "Còn bao nhiêu chỗ" là câu hỏi thật khi cắm máy — nó đứng dòng chính, con số
-            đã dùng lùi xuống dòng phụ; ba con số liền nhau không đơn vị thì không ai đọc ra. */}
-        <span className="subnet-usage">
-          <b>{t('ipam.usageFree', { free: subnet.free })}</b>
-          <span className="sub">
-            {t('ipam.usageUsed', { used: subnet.used, total: subnet.total })}
-          </span>
-        </span>
         {/* Vì sao dải này đang tắt, từ bao giờ, và ai tắt — câu đầu tiên người mở màn sẽ hỏi
             khi thấy một dòng gạch ngang. Nói ngay trên thẻ, cùng câu với trang chi tiết. */}
         {disabled ? (
