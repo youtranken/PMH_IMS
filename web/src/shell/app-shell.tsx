@@ -15,7 +15,6 @@ import { useFailedMailCount } from '@/shell/use-failed-mail-count';
 import { useIsoTodo } from '@/shell/use-iso-todo';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette, paletteShortcut } from '@/ui/command-palette';
-import { ThemeSwitch } from '@/ui/switches';
 import { useFocusTrap } from '@/ui/focus-trap';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { AccountMenu } from '@/shell/account-menu';
@@ -349,7 +348,6 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 <kbd aria-hidden="true">{shortcut}</kbd>
               </button>
             )}
-            <ThemeSwitch />
             {/* Câu đọc số đếm của badge menu (đích `aria-describedby`) nằm TRONG landmark: để
                 ngoài mọi landmark thì axe báo `region` ở mọi màn (AX-03). */}
             {pendingApprovals > 0 ? (

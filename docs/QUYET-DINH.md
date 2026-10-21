@@ -1367,6 +1367,10 @@ Chủ dự án duyệt mockup bố cục ngày 21/10/2026 và cho làm toàn b�
   UX-E07). Màn Duyệt chỉ còn yêu cầu mở két; mục "Sơ đồ mạng" trên menu vẫn mang số bản vẽ chờ
   và nay dẫn thẳng tới khối đó. Ở tab "Chờ duyệt" của màn Duyệt, thẻ không đeo lại huy hiệu
   "Chờ duyệt"; huy hiệu "Chờ lâu" giữ nguyên.
+- **Giao diện đổi ở một nơi trên thanh công cụ: menu tài khoản** (đổi một phần Q-20, UX-E18).
+  Topbar bỏ nút sáng/tối; menu tài khoản chỉ còn "Hồ sơ của tôi · Giao diện · Đăng xuất" (bỏ hai
+  mục "Đổi mật khẩu", "Xác thực 2 lớp" cùng dẫn vào Hồ sơ). Hồ sơ vẫn có thẻ Giao diện. Nút tài
+  khoản mang một mũi tên lên, cùng màu ở mọi giao diện (PW-C26).
 
 ### Q-09 · Tài liệu
 

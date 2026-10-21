@@ -96,6 +96,13 @@
   cursor: pointer;
   text-align: left;
 }
+/* Mũi tên của nút tài khoản: màu token sidebar — giống nhau ở mọi giao diện (PW-C26). */
+.sb-caret {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--sidebar-label);
+}
 .sb-foot .sb-userbtn:hover:not(:disabled),
 .sb-foot .sb-userbtn[aria-expanded='true'] {
   background: var(--sidebar-chip);

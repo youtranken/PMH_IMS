@@ -9,6 +9,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  switchTheme,
 } from './helpers';
 
 /**
@@ -39,11 +40,7 @@ async function createDevice(page: Page, data: Record<string, unknown>): Promise<
 }
 
 async function useTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  const button = page.getByRole('button', {
-    name: theme === 'dark' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng',
-  });
-  if ((await button.count()) > 0) await button.click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await switchTheme(page, theme);
 }
 
 test.describe('DEV-005 · danh sách thiết bị là thẻ gọn trên điện thoại', () => {

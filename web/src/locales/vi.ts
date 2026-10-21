@@ -120,12 +120,6 @@ export default {
     selectRow: 'Chọn dòng',
     scrollHint: 'Kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
   },
-  theme: {
-    dark: 'Chế độ tối',
-    light: 'Chế độ sáng',
-    switchToDark: 'Chuyển sang chế độ tối',
-    switchToLight: 'Chuyển sang chế độ sáng',
-  },
   importPreview: {
     item: 'Mục',
     row: 'Dòng',
@@ -554,8 +548,6 @@ export default {
     motionHint: 'Máy báo "giảm chuyển động" (thường gặp khi điều khiển từ xa) mà bạn vẫn muốn xem hiệu ứng thì chọn Luôn bật.',
     accountMenu: 'Menu tài khoản của {{name}}',
     menuProfile: 'Hồ sơ của tôi',
-    menuChangePassword: 'Đổi mật khẩu',
-    menuTotp: 'Xác thực 2 lớp',
     menuAppearance: 'Giao diện',
   },
   nav: {

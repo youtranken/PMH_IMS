@@ -13,6 +13,7 @@ import {
   uniqueStamp,
   writeHeaders,
   stepUpViaApi,
+  switchTheme,
 } from './helpers';
 
 /**
@@ -145,11 +146,7 @@ function overlaps(
 }
 
 async function useTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  const button = page.getByRole('button', {
-    name: theme === 'dark' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng',
-  });
-  if ((await button.count()) > 0) await button.click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await switchTheme(page, theme);
 }
 
 async function addPort(page: Page, deviceId: string, portLabel: string, extra = {}): Promise<void> {

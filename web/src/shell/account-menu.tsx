@@ -6,6 +6,7 @@ import { useApiMutation } from '@/lib/api';
 import { afterLogout } from '@/lib/after-logout';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { Chevron } from '@/ui/chevron';
 import { ThemeChoice } from '@/ui/theme-choice';
 import { useToast } from '@/ui/toast';
 
@@ -112,24 +113,7 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
         <button type="button" role="menuitem" tabIndex={-1} className="sb-act" onClick={() => go(PATHS.profile)}>
           {t('profile.menuProfile')}
         </button>
-        <button
-          type="button"
-          role="menuitem"
-          tabIndex={-1}
-          className="sb-act"
-          onClick={() => go(`${PATHS.profile}?open=password`)}
-        >
-          {t('profile.menuChangePassword')}
-        </button>
-        <button
-          type="button"
-          role="menuitem"
-          tabIndex={-1}
-          className="sb-act"
-          onClick={() => go(`${PATHS.profile}#xac-thuc-2-lop`)}
-        >
-          {t('profile.menuTotp')}
-        </button>
+        {/* Đổi mật khẩu, 2 lớp nằm trong Hồ sơ — thêm hai lối vào cùng một trang chỉ làm menu dài (UX-E18). */}
         {/* Một hàng ba nút biểu tượng như nút ở topbar, không phải ba dòng chữ có dấu ✓ (Q-20). */}
         <div className="sb-theme">
           <span className="sb-act-label" aria-hidden="true">
@@ -183,6 +167,8 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
             <b title={me.fullName}>{me.fullName}</b>
             <span>{roleLabel}</span>
           </span>
+          {/* Đăng xuất chỉ nằm trong menu này: mũi tên lên cho thấy nút mở menu (PW-C26). */}
+          <Chevron direction="up" className="sb-caret" />
         </button>
       </div>
     </>

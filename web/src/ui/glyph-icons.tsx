@@ -142,8 +142,8 @@ export function KebabIcon({ className }: { className?: string }) {
 }
 
 /*
- * Ba biểu tượng giao diện sáng / tối / theo hệ thống — MỘT bộ cho nút ở topbar (`ThemeSwitch`),
- * menu tài khoản và màn Hồ sơ (`ThemeChoice`): người dùng nhận ra cùng một lựa chọn ở cả ba chỗ.
+ * Ba biểu tượng giao diện sáng / tối / theo hệ thống — MỘT bộ cho menu tài khoản và màn Hồ sơ
+ * (`ThemeChoice`): người dùng nhận ra cùng một lựa chọn ở cả hai chỗ.
  * Nét 2 thay vì 2,4: hình nhiều chi tiết, nét dày thì tia mặt trời dính vào nhau ở cỡ 16px.
  */
 export function SunIcon({ className }: { className?: string }) {

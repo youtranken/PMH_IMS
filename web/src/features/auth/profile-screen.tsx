@@ -27,8 +27,8 @@ const SESSIONS_KEY = ['auth', 'my-sessions'] as const;
  * Hồ sơ của tôi (Q-14): người dùng tự đổi mật khẩu, tự bật / cài lại 2 lớp, xem và đóng các
  * phiên KHÁC của chính mình, chọn giao diện. Màn ĐỌC — chạy được ở 390px (một cột thẻ).
  *
- * Vào từ menu tài khoản; `?open=password` mở thẳng hộp đổi mật khẩu, `#xac-thuc-2-lop` cuộn tới
- * thẻ 2 lớp — hai mục tương ứng trong menu dẫn tới đây chứ không dựng màn riêng.
+ * Vào từ menu tài khoản ("Hồ sơ của tôi"); `?open=password` mở thẳng hộp đổi mật khẩu,
+ * `#xac-thuc-2-lop` cuộn tới thẻ 2 lớp — link từ nơi khác dẫn tới đây chứ không dựng màn riêng.
  */
 export function ProfileScreen({ me }: { me: Me }) {
   const { t } = useTranslation();

@@ -296,19 +296,22 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
 
     const topbar = page.getByRole('banner');
+    // Giao diện đổi ở menu tài khoản (UX-E18): topbar không còn nút đổi.
+    await expect(topbar.getByRole('button', { name: /chế độ (tối|sáng)/ })).toHaveCount(0);
+    const pick = async (name: 'Sáng' | 'Tối') => {
+      await page.getByRole('button', { name: /^Menu tài khoản của / }).click();
+      await page.getByRole('menu').getByRole('menuitemradio', { name }).click();
+      if (await page.getByRole('menu').isVisible()) await page.keyboard.press('Escape');
+    };
     const themeOf = () => page.evaluate(() => document.documentElement.dataset.theme ?? '');
 
     expect(await themeOf(), 'Người chưa chọn giao diện phải thấy giao diện sáng').toBe('light');
 
-    await topbar.getByRole('button', { name: 'Chuyển sang chế độ tối' }).click();
+    await pick('Tối');
     expect(
       await themeOf(),
-      'Bấm nút đổi giao diện phải đặt data-theme="dark" trên <html>',
+      'Chọn Tối phải đặt data-theme="dark" trên <html>',
     ).toBe('dark');
-    await expect(
-      topbar.getByRole('button', { name: 'Chuyển sang chế độ sáng' }),
-      'Đang tối thì nhãn nút phải mời quay về sáng, không được đứng im',
-    ).toBeVisible();
 
     // Đổi màn: theme phải theo người dùng, không theo từng trang.
     await page
@@ -323,11 +326,11 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
     expect(
       await themeOf(),
-      'Nạp lại trang mà mất theme = toggleTheme không ghi localStorage',
+      'Nạp lại trang mà mất theme = lựa chọn không được ghi localStorage',
     ).toBe('dark');
 
-    await page.getByRole('banner').getByRole('button', { name: 'Chuyển sang chế độ sáng' }).click();
-    expect(await themeOf(), 'Bấm lần nữa phải quay về sáng').toBe('light');
+    await pick('Sáng');
+    expect(await themeOf(), 'Chọn Sáng phải quay về sáng').toBe('light');
   });
 
   /*
