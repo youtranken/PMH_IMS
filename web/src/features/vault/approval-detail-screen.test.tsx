@@ -86,6 +86,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** Ô giá trị của một dòng trong thẻ yêu cầu (UX-E16: một thẻ `dl` thay bốn khung). */
+function fact(label: string): HTMLElement {
+  return screen.getByText(label, { selector: 'dt' }).nextElementSibling as HTMLElement;
+}
+async function findFact(label: string): Promise<HTMLElement> {
+  return (await screen.findByText(label, { selector: 'dt' })).nextElementSibling as HTMLElement;
+}
+
 describe('Trang chi tiết phiếu break-glass', () => {
   // Link trong thư trỏ tới phiếu đã bị dọn / gõ sai id: phải có đường về danh sách phiếu, và
   // nói "không còn" chứ không phải một khối lỗi chung chung.
@@ -106,7 +114,7 @@ describe('Trang chi tiết phiếu break-glass', () => {
     const subject = await screen.findByRole('link', { name: ROW.subjectLabel });
     expect(subject).toHaveAttribute('href', '/devices/d1');
     expect(screen.getByText('Switch tầng 3 mất kết nối')).toBeInTheDocument();
-    const duration = screen.getByRole('region', { name: 'Mở trong' });
+    const duration = fact('Mở trong');
     expect(within(duration).getByText('4 giờ')).toBeInTheDocument();
     expect(screen.getByText('Người duyệt: admin@pmh.com.vn')).toBeInTheDocument();
     // Đầu trang là DetailHeader dùng chung: breadcrumb quay về danh sách duyệt.
@@ -167,10 +175,20 @@ describe('Ngữ cảnh để quyết nhanh (VLT-FLOW)', () => {
     expect(ago.getAttribute('title')).toMatch(/20\/09\/2026/);
   });
 
+  // UX-E16: người duyệt mở từ thư trên điện thoại phải cuộn qua bốn khung mới tới "Từ chối".
+  it('người xin, đối tượng, lý do, thời hạn là bốn dòng của MỘT thẻ', async () => {
+    mockApi(ROW);
+    renderDetail();
+    const card = await screen.findByRole('group', { name: 'Yêu cầu mở két' });
+    expect(within(card).getAllByRole('term').map((dt) => dt.textContent)).toEqual(['Người xin', 'Đối tượng', 'Lý do', 'Mở trong']);
+    expect(screen.queryByRole('region', { name: 'Người xin' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Lý do' })).toBeNull();
+  });
+
   it('người duyệt thấy vai người xin và "lần thứ N trong X ngày" — chỉ con số', async () => {
     mockApi({ ...ROW, requesterRole: 'member', recentCount: 3, recentWindowDays: 30 });
     renderDetail();
-    const block = await screen.findByRole('region', { name: 'Người xin' });
+    const block = await findFact('Người xin');
     expect(within(block).getByText('Thành viên')).toBeInTheDocument();
     expect(within(block).getByText('Lần xin thứ 3 trong 30 ngày qua')).toBeInTheDocument();
   });
@@ -183,7 +201,7 @@ describe('Ngữ cảnh để quyết nhanh (VLT-FLOW)', () => {
 
     mockApi({ ...ROW, requesterRole: null, recentCount: null, recentWindowDays: null });
     renderDetail();
-    await screen.findByRole('region', { name: 'Người xin' });
+    await findFact('Người xin');
     expect(screen.queryByText(/Lần xin/)).toBeNull();
   });
 

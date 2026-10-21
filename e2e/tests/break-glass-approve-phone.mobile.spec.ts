@@ -299,7 +299,8 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     // Giờ tuyệt đối vẫn đọc được khi rê chuột / trình đọc màn hình.
     await expect(ago).toHaveAttribute('title', /\d{2}\/\d{2}\/\d{4}/);
 
-    const person = page.getByRole('region', { name: 'Người xin' });
+    // Thẻ yêu cầu là một `dl` bốn dòng (UX-E16): dòng "Người xin" là ô ngay sau nhãn của nó.
+    const person = page.getByRole('group', { name: 'Yêu cầu mở két' }).getByText('Người xin', { exact: true }).locator('xpath=following-sibling::dd[1]');
     await expect(person.getByText('Thành viên', { exact: true })).toBeVisible();
     await expect(person.getByText(/^Lần xin (đầu tiên|thứ \d+) trong \d+ ngày qua$/)).toBeVisible();
     // Chỉ con số — khối này không dẫn tới các lần xin khác.

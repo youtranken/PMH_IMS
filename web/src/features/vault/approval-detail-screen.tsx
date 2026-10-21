@@ -17,6 +17,7 @@ import {
 } from '@/ui/break-glass';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import { useConfirm } from '@/ui/confirm-provider';
+import { SpecList } from '@/ui/detail-facts';
 import { DetailHeader } from '@/ui/detail-header';
 import { DetailLoadFailed, Loading } from '@/ui/load-state';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
@@ -139,41 +140,50 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
         actions={<BreakGlassStateBadge row={row} />}
       />
 
-      <section className="card" aria-label={t('approvals.requesterBlock')}>
-        <p className="approval-detail-label">{t('approvals.requesterBlock')}</p>
-        <strong>{row.requesterName}</strong>
-        {row.requesterName !== row.requester ? (
-          <span className="muted"> · {row.requester}</span>
-        ) : null}
-        {row.requesterRole ? (
-          <span className="badge plain">{t(ROLE_LABEL[row.requesterRole] ?? row.requesterRole)}</span>
-        ) : null}
-        {/* Chỉ con số: người duyệt nhận ra người xin quá thường mà không phải mở nhật ký. */}
-        {typeof row.recentCount === 'number' && row.recentWindowDays ? (
-          <p className="muted">
-            {row.recentCount <= 1
-              ? t('approvals.recentFirst', { days: row.recentWindowDays })
-              : t('approvals.recentNth', { count: row.recentCount, days: row.recentWindowDays })}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="card" aria-label={t('approvals.subject')}>
-        <p className="approval-detail-label">{t('approvals.subject')}</p>
-        <BreakGlassSubject row={row} />
-      </section>
-
-      <section className="card" aria-label={t('approvals.reasonBlock')}>
-        <p className="approval-detail-label">{t('approvals.reasonBlock')}</p>
-        <blockquote className="approval-reason">{row.reason}</blockquote>
-      </section>
-
-      <section className="card" aria-label={t('approvals.durationBlock')}>
-        <p className="approval-detail-label">{t('approvals.durationBlock')}</p>
-        <p>{asked !== undefined ? t('approvals.hours', { hours: asked }) : t('approvals.hoursUnknown')}</p>
-        {row.approver ? (
-          <p className="muted">{t('approvals.chosenApprover', { approver: row.approver })}</p>
-        ) : null}
+      {/* Một thẻ bốn dòng, không bốn khung: người duyệt mở từ thư trên điện thoại thấy ngay
+          "Từ chối" mà không phải cuộn (UX-E16). */}
+      <section className="card">
+        <SpecList
+          label={t('approvals.detailTitle')}
+          items={[
+            {
+              label: t('approvals.requesterBlock'),
+              present: true,
+              value: (
+                <>
+                  <strong>{row.requesterName}</strong>
+                  {row.requesterName !== row.requester ? <span className="muted"> · {row.requester}</span> : null}
+                  {row.requesterRole ? (
+                    <>
+                      {' '}
+                      <span className="badge plain">{t(ROLE_LABEL[row.requesterRole] ?? row.requesterRole)}</span>
+                    </>
+                  ) : null}
+                  {/* Chỉ con số: người duyệt nhận ra người xin quá thường mà không phải mở nhật ký. */}
+                  {typeof row.recentCount === 'number' && row.recentWindowDays ? (
+                    <span className="cell-sub">
+                      {row.recentCount <= 1
+                        ? t('approvals.recentFirst', { days: row.recentWindowDays })
+                        : t('approvals.recentNth', { count: row.recentCount, days: row.recentWindowDays })}
+                    </span>
+                  ) : null}
+                </>
+              ),
+            },
+            { label: t('approvals.subject'), present: true, value: <BreakGlassSubject row={row} /> },
+            { label: t('approvals.reasonBlock'), value: <span className="approval-reason">{row.reason}</span>, present: Boolean(row.reason) },
+            {
+              label: t('approvals.durationBlock'),
+              present: true,
+              value: (
+                <>
+                  {asked !== undefined ? t('approvals.hours', { hours: asked }) : t('approvals.hoursUnknown')}
+                  {row.approver ? <span className="cell-sub">{t('approvals.chosenApprover', { approver: row.approver })}</span> : null}
+                </>
+              ),
+            },
+          ]}
+        />
       </section>
 
       {row.timeline && row.timeline.length > 0 ? (

@@ -1443,6 +1443,7 @@ html[data-motion='off'] .kpi:hover { transform: none; }
   color: var(--ink-3);
 }
 .approval-detail .approval-reason {
+  display: block;
   margin: 0;
   font-size: var(--fs-md);
 }
