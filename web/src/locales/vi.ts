@@ -223,6 +223,7 @@ export default {
   deviceTypeFilter: {
     label: 'Lọc theo loại thiết bị',
     all: 'Tất cả loại',
+    more: 'Mọi loại…',
     notRouter: 'Máy này không thuộc loại Router — vẫn lưu được, nhưng kiểm lại cho chắc.',
   },
   // Tìm nhanh ⌘K (ui/command-palette.tsx).
@@ -3225,7 +3226,7 @@ export default {
     serviceSearchOf: 'Lọc dịch vụ cho {{field}}',
     serviceAdd: 'Thêm cổng dịch vụ',
     serviceEmpty: 'Chưa có cổng dịch vụ nào khớp. Bấm "Thêm cổng dịch vụ" để khai mới.',
-    routerHint: 'Thiết bị mang luật này (router, firewall, core…). Mặc định chỉ hiện loại Router — bấm chip để thêm loại khác.',
+    routerHint: 'Thiết bị mang luật này (router, firewall, core…). Mặc định chỉ hiện loại có cờ Router/Firewall ở Danh mục — bấm "Mọi loại…" để chọn loại khác.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị.',
     routerNoTypeLink: 'Đánh dấu ở Danh mục → Loại thiết bị',
