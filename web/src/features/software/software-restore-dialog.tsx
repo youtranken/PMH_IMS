@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import { addYearsIso } from '@/lib/add-years';
 import { formatDate } from '@/lib/format';
+import { NoteField } from '@/ui/note-field';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
@@ -179,15 +180,7 @@ export function RestoreDialog({
           </Field>
         )}
 
-        <Field label={t('software.restoreNote')} htmlFor="restore-note" hint={t('software.noteHint')}>
-          <textarea
-            id="restore-note"
-            className="inp"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
+        <NoteField id="restore-note" label={t('software.restoreNote')} value={note} onChange={setNote} />
 
         {hasSeats ? (
           <Field label={t('software.restoreDevices')} error={check.error('devices')}>

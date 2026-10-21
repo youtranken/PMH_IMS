@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import type { DeviceRow } from '@/lib/device-types';
 import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
+import { NoteField } from '@/ui/note-field';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
@@ -555,14 +556,7 @@ export function AssignDialog({
             </Field>
           )}
 
-          <Field label={t('license.note')} htmlFor="assign-note" span={2} error={check.error('note')}>
-            <input
-              id="assign-note"
-              className="inp"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </Field>
+          <NoteField id="assign-note" value={note} onChange={setNote} span={2} error={check.error('note')} />
 
 
           </>

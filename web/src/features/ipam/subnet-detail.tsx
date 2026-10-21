@@ -7,6 +7,7 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
 import { maskOfCidr } from "@/lib/ipv4";
 import type { Me } from "@/lib/me";
+import { NoteField } from "@/ui/note-field";
 import { AttachmentPanel, useOwnerAttachments } from "@/ui/attachment-panel";
 import { CellNote } from "@/ui/cell-note";
 import { CopyButton } from "@/ui/copy-button";
@@ -1087,15 +1088,7 @@ export function IpForm({
           />
         </Field>
 
-        <Field label={t("ipam.note")} hint={t("ipam.noteHint")} htmlFor="ip-note" span={2} error={check.error("note")}>
-          <textarea
-            id="ip-note"
-            className="inp"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
+        <NoteField id="ip-note" value={note} onChange={setNote} span={2} error={check.error("note")} />
 
         {error ? (
           <p className="alert error span-2" role="alert">

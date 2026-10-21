@@ -5,6 +5,7 @@ import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { deviceModelParts, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { freeRuns, rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
+import { NoteField } from '@/ui/note-field';
 import { RackElevation } from '@/ui/rack-elevation';
 import { useCabinetOccupants } from '@/ui/use-cabinet-occupants';
 import { useIsNarrow } from '@/ui/use-narrow';
@@ -818,20 +819,7 @@ export function DeviceForm({
           forceOpen={Boolean(check.error('note'))}
         >
           <FormSection columns={1}>
-            <Field
-              label={t('devices.note')}
-              hint={t('devices.noteHint')}
-              htmlFor="device-note"
-              error={check.error('note')}
-            >
-              <textarea
-                id="device-note"
-                className="inp"
-                rows={2}
-                value={form.note}
-                onChange={(e) => set('note', e.target.value)}
-              />
-            </Field>
+            <NoteField id="device-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
           </FormSection>
         </FoldSection>
 

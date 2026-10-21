@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { NoteField } from '@/ui/note-field';
 import { CellNote } from '@/ui/cell-note';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -1255,21 +1256,7 @@ function NatForm({
 
           {/* Ghi chú kỹ thuật (số phiếu yêu cầu, giới hạn IP nguồn trên router…) — API đã nhận
               và dữ liệu import đã có, form không có ô thì không ai sửa được nó. */}
-          <Field
-            label={t('nat.note')}
-            tip={t('nat.noteHint')}
-            htmlFor="nat-note"
-            span={2}
-            error={check.error('note')}
-          >
-            <textarea
-              id="nat-note"
-              className="inp"
-              rows={2}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </Field>
+          <NoteField id="nat-note" value={note} onChange={setNote} span={2} tip={t('nat.noteHint')} error={check.error('note')} />
         </FormSection>
 
         {/*

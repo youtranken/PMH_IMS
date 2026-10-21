@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 import { maskOfCidr } from '@/lib/ipv4';
+import { NoteField } from '@/ui/note-field';
 import { CopyButton } from '@/ui/copy-button';
 import { DataItemIfSet } from '@/ui/detail-header';
 import { DeviceCombobox } from '@/ui/device-combobox';
@@ -300,15 +301,7 @@ export function AssignIpDialog({
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />
         </Field>
 
-        <Field label={t('ipam.note')} hint={t('ipam.noteHint')} htmlFor="ip-assign-note" span={2} error={check.error('note')}>
-          <textarea
-            id="ip-assign-note"
-            className="inp"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
+        <NoteField id="ip-assign-note" value={note} onChange={setNote} span={2} error={check.error('note')} />
 
         <Field
           label={t('ipam.reason')}

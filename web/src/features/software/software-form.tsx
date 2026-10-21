@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
+import { NoteField } from '@/ui/note-field';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
@@ -630,21 +631,13 @@ export function SoftwareForm({
                 />
               </Field>
             ) : null}
-            <Field
-              label={t('software.note')}
-              hint={t('software.noteHint')}
-              htmlFor="sw-note"
+            <NoteField
+              id="sw-note"
+              value={form.note}
+              onChange={(v) => set('note', v)}
               span={hasDomains ? 2 : 3}
               error={check.error('note')}
-            >
-              <textarea
-                id="sw-note"
-                className="inp"
-                rows={3}
-                value={form.note}
-                onChange={(e) => set('note', e.target.value)}
-              />
-            </Field>
+            />
           </FormSection>
         )}
 

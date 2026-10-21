@@ -5,6 +5,7 @@ import { useMe } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { NoteField } from '@/ui/note-field';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import {
@@ -452,14 +453,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} hint={t('isp.noteHint')} htmlFor="isp-note" error={check.error('note')}>
-            <input
-              id="isp-note"
-              className="inp"
-              value={form.note}
-              onChange={(e) => set('note', e.target.value)}
-            />
-          </Field>
+          <NoteField id="isp-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
         {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id.

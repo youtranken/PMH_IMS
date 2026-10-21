@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { noteContainsSecret } from '@/lib/note-secret';
+import { NoteField } from '@/ui/note-field';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
@@ -473,20 +474,7 @@ export function ServiceAccountForm({
         {/* Khu chỉ có ĐÚNG một ô, nên tiêu đề khu và nhãn ô nói y hệt nhau, hai dòng chồng
             nhau cách nhau 8px. Bỏ tiêu đề khu — nhãn ô mới là thứ ô nhập cần. */}
         <FormSection columns={1}>
-          <Field
-            label={t('serviceAccounts.note')}
-            hint={t('serviceAccounts.noteHint')}
-            htmlFor="sa-note"
-            error={check.error('note')}
-          >
-            <textarea
-              id="sa-note"
-              className="inp"
-              rows={3}
-              value={form.note}
-              onChange={(e) => set('note', e.target.value)}
-            />
-          </Field>
+          <NoteField id="sa-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
         {row ? (

@@ -370,6 +370,9 @@ export default {
        "Xác nhận" (`app.confirmTitle`) khiến hộp mở ra từ dòng thứ sáu trong một bảng không còn
        gì nói cho người đọc biết họ đang đụng vào hàng nào. */
     titleOf: '{{action}} — {{subject}}',
+    note: 'Ghi chú',
+    /* Một câu cho mọi ô Ghi chú (FM-18) — ghi chú lưu chữ thường, không mã hóa. */
+    noteHint: 'Không ghi mật khẩu — cất vào Két sắt.',
     yes: 'Có',
     no: 'Không',
     copy: 'Sao chép',
@@ -1909,7 +1912,6 @@ export default {
     importHint:
       'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải có ' +
       'sẵn trong Danh mục.',
-    noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
     retiredLockedShort: 'Đã thanh lý — đổi trạng thái rồi mới sửa được.',
@@ -2221,7 +2223,6 @@ export default {
     notePerSeat: 'Riêng từng ghế — xem ở Sửa hồ sơ',
     tabHistory: 'Lịch sử',
     renew: 'Gia hạn',
-    noteHint: 'Đừng ghi key hay mật khẩu ở đây — cất vào Két sắt.',
     /* Cột gộp trạng thái Q-03 + số ngày (`software-standing.ts`). */
     standing: 'Tình trạng',
     overdueDays: 'quá {{count}} ngày',
@@ -2413,7 +2414,6 @@ export default {
     contractNo: 'Số hợp đồng',
     startDate: 'Bắt đầu',
     note: 'Ghi chú',
-    noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu PPPoE, modem cất ở tab Két sắt.',
     status: 'Trạng thái',
     /* Ba chữ của Q-04 (trạng thái cuối viết "Đã thanh lý" — Q-14); `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
     statusActive: 'Đang dùng',
@@ -3112,8 +3112,6 @@ export default {
     usedByPlaceholder: 'Phòng ban hoặc tên người',
     usedByHint: 'vd "Chị Lan — Kế toán" hoặc "Phòng IT".',
     assignedAt: 'Ngày cấp',
-    note: 'Ghi chú',
-    noteHint: 'Không ghi mật khẩu ở đây — ghi chú không được mã hóa.',
     /* Nút trên dòng, tiêu đề hộp và nút gửi cùng một chữ: ô trống và hồ sơ đã thu hồi mở CÙNG
        một hộp, nên hai chữ khác nhau là nói với người dùng rằng đó là hai việc khác nhau. */
     assign: 'Cấp IP',
@@ -3316,8 +3314,7 @@ export default {
     toggled: 'Đã đổi trạng thái luật.',
     emptySearch: 'Không có luật nào khớp bộ lọc.',
     emptySearchHint: 'Nới bộ lọc hoặc xóa ô tìm.',
-    note: 'Ghi chú',
-    noteHint: 'Chi tiết kỹ thuật, số phiếu yêu cầu, giới hạn IP nguồn… Không ghi mật khẩu.',
+    noteHint: 'Chi tiết kỹ thuật, số phiếu yêu cầu, giới hạn IP nguồn…',
     ipNotInBook: 'IP {{ip}} chưa có trong sổ IP (hoặc đang trống) nên luật không gắn được về máy nào. Nên cấp IP ở màn Địa chỉ IP trước.',
     ipInBook: 'Trong sổ IP: {{owner}}',
     wanPrefix: 'WAN {{wan}} :',
@@ -3357,7 +3354,6 @@ export default {
       'Tài khoản cấp có thời hạn (VPN cho đối tác, tài khoản dùng thử…). Gần tới hạn hệ thống nhắc như các hạn khác; quá hạn chỉ nhắc, không tự ngừng dùng. Để trống nếu không có hạn.',
     allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng.',
     note: 'Ghi chú',
-    noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu cất ở tab Két sắt.',
     status: 'Trạng thái',
     statusActive: 'Đang dùng',
     /* Cùng chữ với `accounts.statusDisabled` và `disposal.statusDisabled` — ba màn, một trạng thái. */
