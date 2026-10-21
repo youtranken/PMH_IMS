@@ -35,6 +35,7 @@ import { useTickQueue } from './use-tick-queue';
 import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
 import type { AntivirusGrid, AvIssue, IncidentCell, TickResult } from './iso-types';
 import { CodeInput } from '@/ui/code-input';
+import { InfoTip } from '@/ui/info-tip';
 
 /**
  * Lưới 0208 — Theo dõi antivirus. Dòng issue (một máy × một ngày phát hiện) gom theo bộ phận, chỉ bộ
@@ -192,7 +193,6 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                   : t('iso.av.todayPending')}
             </strong>
           </p>
-          <p className="muted small">{t('iso.av.recordHint')}</p>
           <div className="chip-row">
             {data.summary.missedDays.length > 1 ? (
               <button type="button" className="btn sm" disabled={markingAll || markClear.isPending} onClick={() => void markAllPast()}>
@@ -208,7 +208,14 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
 
       <section aria-labelledby="iso-av-grid">
         <div className="sheet-toolbar">
-          <h2 id="iso-av-grid">{t('iso.grid')}</h2>
+          {/* Cách ghi + ghi chú phiếu vào (i) (TX-14). */}
+          <div className="page-header-title">
+            <h2 id="iso-av-grid">{t('iso.grid')}</h2>
+            <InfoTip subject={t('iso.grid')}>
+              <p>{t('iso.av.recordHint')}</p>
+              <p>{t('iso.av.note')}</p>
+            </InfoTip>
+          </div>
           <span className="muted small">
             {t('iso.av.summary', { issues: data.issues.length, divisions: groups.length, missed: data.summary.missedDays.length })}
           </span>
@@ -380,7 +387,6 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
             </tbody>
           </table>
         </div>
-        <p className="muted small">{t('iso.av.note')}</p>
       </section>
 
       <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />

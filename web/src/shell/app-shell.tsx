@@ -206,7 +206,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                   key={item.key}
                   to={item.to}
                   /* Thu gọn thì chữ chỉ còn cho trình đọc màn hình; người dùng chuột cần tooltip. */
-                  title={compact ? t(me.role === 'member' && item.memberKey ? item.memberKey : item.key) : undefined}
+                  title={compact ? t(me.role === 'member' && item.memberKey ? item.memberKey : (item.shortKey ?? item.key)) : undefined}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                   end={item.to === '/'}
                   aria-describedby={
@@ -229,7 +229,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 >
                   <NavIcon navKey={item.key} />
                   <span className="lbl">
-                    {t(me.role === 'member' && item.memberKey ? item.memberKey : item.key)}
+                    {t(me.role === 'member' && item.memberKey ? item.memberKey : (item.shortKey ?? item.key))}
                   </span>
                   {item.badge === 'approvals' && pendingApprovals > 0 ? (
                     /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn

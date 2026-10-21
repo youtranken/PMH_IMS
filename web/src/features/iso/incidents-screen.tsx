@@ -111,7 +111,8 @@ export function IncidentsScreen({ me }: { me: Me }) {
           row.original.signedCurrent ? (
             <span className="badge ok">{t('iso.incidents.signedYes')}</span>
           ) : (
-            <span className="badge muted">{row.original.locked ? t('iso.incidents.signedNo') : t('iso.incidents.notLocked')}</span>
+            // Cột Bản ký nói về BẢN KÝ — trạng thái khóa của kỳ không lẫn vào đây (PW-B28).
+            <span className="badge muted">{t('iso.incidents.signedNo')}</span>
           ),
       },
       {

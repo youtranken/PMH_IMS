@@ -25,6 +25,7 @@ import {
 import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
 import { useTickQueue } from './use-tick-queue';
 import type { BackupGrid, IncidentCell, TickCell, TickResult } from './iso-types';
+import { InfoTip } from '@/ui/info-tip';
 
 /** Khoá viết thẳng (không ghép chuỗi) để bài "khoá dịch chết" đọc được. */
 const STATE_KEY: Record<BackupCellState, string> = {
@@ -231,10 +232,17 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
 
       <section aria-labelledby="iso-backup-grid">
         <div className="sheet-toolbar">
-          <h2 id="iso-backup-grid">{t('iso.grid')}</h2>
+          {/* Cách đánh ô + ghi chú phiếu vào (i) (TX-14): hai đoạn 200+ ký tự luôn hiện chiếm 5–6
+              dòng ở 390px trước khi tới lưới. */}
+          <div className="page-header-title">
+            <h2 id="iso-backup-grid">{t('iso.grid')}</h2>
+            <InfoTip subject={t('iso.grid')}>
+              {editable ? <p>{t('iso.backup.howTo')}</p> : null}
+              <p>{t('iso.backup.note')}</p>
+            </InfoTip>
+          </div>
           <Legend />
         </div>
-        {editable ? <p className="muted small">{t('iso.backup.howTo')}</p> : null}
         {rows.length === 0 ? (
           <p className="muted">
             {t('iso.backup.noJobs')} <Link to={PATHS.isoCatalog}>{t('iso.backup.jobsLink')}</Link>
@@ -390,7 +398,6 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
             </table>
           </div>
         )}
-        <p className="muted small">{t('iso.backup.note')}</p>
       </section>
       <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
     </>

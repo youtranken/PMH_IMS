@@ -88,7 +88,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const toggle = nav.getByRole('button', { name: /Phiếu ISO/ });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
-    for (const name of ['Theo dõi backup · 0203', 'Theo dõi antivirus · 0208', 'Sự cố · 0206', 'Kỳ phiếu & chốt kỳ', 'Danh mục phiếu']) {
+    for (const name of ['Backup · 0203', 'Antivirus · 0208', 'Sự cố · 0206', 'Kỳ phiếu & chốt kỳ', 'Danh mục phiếu']) {
       await expect(nav.getByRole('link', { name })).toBeVisible();
     }
     await toggle.click();
@@ -281,7 +281,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await fillMonth(page, '2021-04', 29);
 
     await page.goto('/iso/periods/0203/2021-04/review');
-    await expect(page.getByText('Còn 1 ô chưa có kết quả')).toBeVisible();
+    await expect(page.getByText('Còn 1 ô bỏ sót')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Gửi chốt phiếu tháng 04/2021' })).toBeDisabled();
     const early = await api(page, 'POST', '/api/v1/iso/periods/0203/2021-04/submit');
     expect(early.status()).toBe(400);

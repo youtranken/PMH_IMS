@@ -643,7 +643,8 @@ function OwnerRow({ me, row, people, manager }: { me: Me; row: FormOwners; peopl
   }));
   const options = [{ value: '', label: t('iso.catalog.nobody') }, ...people.map((p) => ({ value: p.id, label: p.fullName, searchText: p.email }))];
   const changed = primary !== (row.primary?.id ?? '') || backup !== (row.backup?.id ?? '');
-  const label = row.formType === '0203' ? `0203 · ${t('nav.isoBackup')}` : `0208 · ${t('nav.isoAntivirus')}`;
+  // "0203 · Backup", không "0203 · Theo dõi backup · 0203" (mã lặp đôi, PW-B13).
+  const label = row.formType === '0203' ? t('iso.field.tab0203') : t('iso.field.tab0208');
   return (
     <tr>
       <td data-label={t('iso.catalog.form')}>

@@ -211,7 +211,7 @@ function MonthDetail({ me, month }: { me: Me; month: string }) {
                   <Link className="mono" to={PATHS.isoIncident(inc.id)}>
                     {inc.code}
                   </Link>{' '}
-                  {inc.signedCurrent ? t('iso.incidents.signedYes') : inc.locked ? t('iso.incidents.signedNo') : t('iso.incidents.notLocked')}
+                  {inc.signedCurrent ? t('iso.incidents.signedYes') : t('iso.incidents.signedNo')}
                 </span>
               </li>
             ))}
