@@ -14,7 +14,15 @@ import {
   stepUpViaApi,
   DEVICE_FOLDS,
   openDeviceFolds,
+  isoToday,
 } from './helpers';
+
+/** Nút "sửa lần cuối dd/mm/yyyy bởi …" của RecordStamp (UX-E26): hồ sơ vừa dàn cảnh hôm nay. */
+function lastEditButton(): string {
+  const [y, m, d] = isoToday().split('-');
+  return `sửa lần cuối ${d}/${m}/${y} bởi E2E Super Admin`;
+}
+
 
 /**
  * ===== PHẦN HAI: VÀO HẲN TỪNG PHÒNG =====
@@ -1058,6 +1066,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Bổ sung 8 ô còn thiếu',
         // Khu "Hình dùng trên sơ đồ" (Q-23) gập sẵn (Q-27 bổ sung): chỉ còn nút mở.
         'Mở rộng Hình dùng trên sơ đồ',
+        // UX-E26: "sửa lần cuối … bởi …" ở chân thẻ phải, bấm mở tab Lịch sử.
+        lastEditButton(),
       ]);
     await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' }).getByText('Chưa có IP', { exact: true })).toBeVisible();
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);

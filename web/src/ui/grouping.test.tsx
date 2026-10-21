@@ -80,10 +80,10 @@ describe('DataTable `groupBy` — một dòng tiêu đề mỗi nhóm', () => {
       'Ngày 2026-09-29',
       'Ngày 2026-09-28',
     ]);
-    // Danh sách lồng: 2 nhóm, trong đó 3 thẻ — tiêu đề nhóm không bị đếm là một thẻ.
-    const [outer] = screen.getAllByRole('list');
-    expect(outer.querySelectorAll(':scope > li')).toHaveLength(2);
-    expect(outer.querySelectorAll('ul > li.list-card')).toHaveLength(3);
+    // Mỗi nhóm một section (tiêu đề + danh sách thẻ): chỉ THẺ là mục danh sách — tiêu đề nhóm không
+    // bị đếm, và không có mục "nhóm" nào chứa luôn link của thẻ.
+    expect(screen.getAllByRole('list')).toHaveLength(2);
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
   });
 });
 

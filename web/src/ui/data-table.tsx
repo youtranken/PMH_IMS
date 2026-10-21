@@ -597,9 +597,10 @@ export function MobileCardList<T>({
   );
   if (!groupBy) return <ul className="list-cards">{rows.map(item)}</ul>;
   /*
-   * Có nhóm thì danh sách LỒNG: mỗi nhóm một <li> chứa tiêu đề + <ul> thẻ của nó. Tiêu đề nhóm
-   * không phải một thẻ — đặt nó làm <li> anh em thì trình đọc màn hình đếm sai số mục, còn gắn
-   * `role="presentation"` lên <li> thì <ul> chứa con không hợp lệ (axe `list`).
+   * Có nhóm thì mỗi nhóm một <section> (tiêu đề + <ul> thẻ của nó). Tiêu đề nhóm không phải một
+   * thẻ: đặt nó làm <li> anh em thì trình đọc màn hình đếm sai số mục; `role="presentation"` lên
+   * <li> thì <ul> chứa con không hợp lệ (axe `list`); bọc nhóm trong <li> thì <li> nhóm cũng
+   * "chứa" mọi link của thẻ — lọc thẻ theo link ra hai phần tử.
    */
   const starts = groupStarts(rows, groupBy.key);
   const groups: { first: number; rows: { row: T; index: number }[] }[] = [];
@@ -608,9 +609,9 @@ export function MobileCardList<T>({
     groups[groups.length - 1].rows.push({ row, index });
   });
   return (
-    <ul className="list-cards">
+    <div className="list-cards">
       {groups.map((group) => (
-        <li key={rowKey(rows[group.first], group.first)} className="list-cards-section">
+        <section key={rowKey(rows[group.first], group.first)} className="list-cards-section">
           <div className="list-cards-group">
             {/* Cấp 2: danh sách nằm ngay dưới h1 của màn (Nhật ký, Sắp hết hạn) — cấp 3 là nhảy
                 cấp (AX-04, axe heading-order). */}
@@ -619,9 +620,9 @@ export function MobileCardList<T>({
             </span>
           </div>
           <ul className="list-cards-sub">{group.rows.map(({ row, index }) => item(row, index))}</ul>
-        </li>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }
 

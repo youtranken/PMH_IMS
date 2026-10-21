@@ -723,8 +723,7 @@ table.table .col-sticky-end::after {
   background: var(--surface);
   overflow: hidden;
 }
-/* Danh sách có nhóm là danh sách lồng (nhóm → thẻ): lớp lồng không thêm lề hay chấm. */
-.list-cards-section,
+/* Danh sách thẻ của từng nhóm (`section.list-cards-section`): không thêm lề hay chấm. */
 .list-cards-sub {
   list-style: none;
   margin: 0;
