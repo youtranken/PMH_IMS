@@ -933,17 +933,17 @@ function ExpiringBlock({
         cell: ({ row }) => formatDate(row.original.endDate),
       },
       {
+        // Nút Gia hạn đứng cạnh huy hiệu (PW-A06): cột Thao tác riêng thì trống gần hết các dòng
+        // — đa số mục ở đây (bảo hành…) không gia hạn tại chỗ được.
         id: 'left',
         header: t('expiry.state'),
         enableSorting: false,
-        cell: ({ row }) => <ExpiryBadge end={row.original.endDate} />,
-      },
-      {
-        id: 'actions',
-        header: t('common.actions'),
-        enableSorting: false,
-        meta: { className: 'col-center' },
-        cell: ({ row }) => <RenewButton item={row.original} onRenew={setRenewing} />,
+        cell: ({ row }) => (
+          <span className="row nowrap">
+            <ExpiryBadge end={row.original.endDate} />
+            <RenewButton item={row.original} onRenew={setRenewing} />
+          </span>
+        ),
       },
     ],
     [t, kinds],

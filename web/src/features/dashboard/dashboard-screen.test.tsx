@@ -129,6 +129,17 @@ describe('Bảng điều khiển', () => {
     expect(screen.queryByText(/Xin chào/)).toBeNull();
   });
 
+  // PW-A06: cột Thao tác trống gần hết các dòng → bỏ; nút Gia hạn đứng cạnh huy hiệu.
+  it('bảng hạn không có cột Thao tác; dòng gia hạn được có nút "Gia hạn" ở ô Tình trạng', async () => {
+    mockApi({ ...BOARD, expiring: { ...BOARD.expiring, items: [{ ...expiringItem('a', -40), canRenew: true }, expiringItem('b', 5)] } });
+    renderBoard();
+    const block = (await screen.findByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' })).closest('section')!;
+    await within(block).findAllByRole('table');
+    expect(within(block).queryByRole('columnheader', { name: 'Thao tác' })).toBeNull();
+    const renew = within(block).getByRole('button', { name: 'Gia hạn' });
+    expect(renew.closest('td')).toHaveTextContent(/Quá hạn/);
+  });
+
   it('dòng mở két: TÊN người xin, đối tượng là link, trạng thái "Đã duyệt" có màu, không email trần', async () => {
     mockApi(BOARD);
     renderBoard();
