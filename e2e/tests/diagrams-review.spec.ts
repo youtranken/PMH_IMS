@@ -136,7 +136,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await member.goto(`/diagrams/${id}`);
     await expect(viewer(member)).toBeVisible();
     await member.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
-    const submit = member.getByRole('dialog', { name: `Gửi bản vẽ "${name}" cho Admin duyệt` });
+    const submit = member.getByRole('dialog', { name: `Gửi bản vẽ "${name}" cho Quản trị duyệt` });
     await submit.getByLabel(/Lý do/).fill('Vẽ xong tầng 3 E2E');
     await submit.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
     await expect(member.getByText('Đã gửi duyệt kèm 1 cảnh báo vàng cho người duyệt xem.')).toBeVisible();
@@ -231,7 +231,7 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     await expect(viewer(page)).toBeVisible();
     // Admin/SA: Phát hành đứng ngoài thanh, Gửi duyệt nằm trong menu ⋮.
     await diagramBarAction(page, 'Gửi duyệt');
-    const submit = page.getByRole('dialog', { name: /cho Admin duyệt/ });
+    const submit = page.getByRole('dialog', { name: /cho Quản trị duyệt/ });
     await submit.getByLabel(/Lý do/).fill('Thử gửi E2E');
     await submit.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
     const found = page.getByRole('dialog', { name: 'Tự kiểm còn lỗi đỏ' });

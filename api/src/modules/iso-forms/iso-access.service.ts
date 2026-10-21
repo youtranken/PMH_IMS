@@ -88,8 +88,8 @@ export class IsoAccessService {
     const owners = await this.ownersOf(formType);
     const message =
       owners.primary || owners.backup
-        ? `Chỉ người phụ trách phiếu ${formType} (chính hoặc dự phòng) và SA/Admin được ghi phiếu này.`
-        : `Phiếu ${formType} chưa có người phụ trách — chỉ SA/Admin thao tác được. Gán người phụ trách ở Danh mục phiếu.`;
+        ? `Chỉ người phụ trách phiếu ${formType} (chính hoặc dự phòng) và Super Admin / Quản trị được ghi phiếu này.`
+        : `Phiếu ${formType} chưa có người phụ trách — chỉ Super Admin / Quản trị thao tác được. Gán người phụ trách ở Danh mục phiếu.`;
     throw new ForbiddenException({ code: 'ISO_NOT_OWNER', message });
   }
 
@@ -139,7 +139,7 @@ export class IsoAccessService {
     input: { primaryUserId: string | null; backupUserId: string | null },
   ): Promise<FormOwners> {
     if (!isManager(actor)) {
-      throw new ForbiddenException({ code: 'ISO_OWNER_MANAGER_ONLY', message: 'Chỉ SA/Admin gán người phụ trách phiếu.' });
+      throw new ForbiddenException({ code: 'ISO_OWNER_MANAGER_ONLY', message: 'Chỉ Super Admin / Quản trị gán người phụ trách phiếu.' });
     }
     if (input.primaryUserId && input.primaryUserId === input.backupUserId) {
       throw new BadRequestException({

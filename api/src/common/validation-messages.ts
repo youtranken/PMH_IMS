@@ -263,7 +263,7 @@ export function vietnameseFor(
        * phải lỗi người dùng nhập, nên câu nói thẳng ra như vậy: người vận hành đọc xong biết
        * là phải báo IT chứ không ngồi sửa ô nhập.
        */
-      return `Yêu cầu chứa trường không hợp lệ: ${property}. Đây là lỗi của phần mềm, hãy báo IT.`;
+      return `Yêu cầu chứa trường không hợp lệ: ${property}. Đây là lỗi của phần mềm, hãy báo Super Admin.`;
     default:
       /*
        * Ràng buộc chưa có bản dịch. KHÔNG trả câu tiếng Anh ra ngoài: nói chung chung mà đúng

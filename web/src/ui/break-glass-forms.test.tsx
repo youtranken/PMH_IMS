@@ -296,7 +296,7 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
 
   it('người duyệt đã mất quyền duyệt: nói ai, bảo rút và chọn người khác; không còn ô nhập mã', async () => {
     renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, approverActive: false } });
-    expect(await screen.findByText(/Cao Thuận không còn là SA\/Quản trị đang hoạt động/)).toBeInTheDocument();
+    expect(await screen.findByText(/Cao Thuận không còn là Super Admin \/ Quản trị đang hoạt động/)).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: /Mã duyệt/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Gửi lại mã/ })).not.toBeInTheDocument();
   });

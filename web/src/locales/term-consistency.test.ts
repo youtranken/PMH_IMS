@@ -610,3 +610,37 @@ describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
     expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két[^.]*không gửi mail/);
   });
 });
+
+/**
+ * TX-05 / PW-C08: tên vai trò bị trộn 5 kiểu ("SA/Admin", "Admin/SA", "Admin", "Member", "báo IT").
+ * Ba vai chỉ có ba tên: Super Admin, Quản trị, Thành viên; cặp hai vai viết "Super Admin / Quản trị".
+ */
+describe('Tên vai trò thống nhất', () => {
+  it('không còn SA/Admin, Admin/SA, Admin trần, Member, team IT trong chữ giao diện', () => {
+    const bad = leaves()
+      .filter(([, text]) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|(?<!Super )\bAdmin\b|\bMember\b|team IT/.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+
+  it('câu báo của API cũng vậy (api/src, trừ spec)', async () => {
+    const { readFileSync, readdirSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const root = join(__dirname, '..', '..', '..', 'api', 'src');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (name.endsWith('.ts') && !name.endsWith('.spec.ts') && !path.includes('migrations')) files.push(path);
+      }
+    };
+    walk(root);
+    const bad = files.filter((file) => {
+      const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+      const strings = code.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? [];
+      return strings.some((text) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|báo IT|team IT/.test(text));
+    });
+    expect(bad.map((file) => file.slice(root.length + 1))).toEqual([]);
+  });
+});

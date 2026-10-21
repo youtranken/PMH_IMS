@@ -112,12 +112,12 @@ describe('Gửi duyệt (Thành viên) và tự kiểm', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Gửi duyệt' }));
     expect(screen.queryByRole('button', { name: 'Phát hành' })).toBeNull();
-    const dialog = await screen.findByRole('dialog', { name: 'Gửi bản vẽ "Tầng 3 E2E" cho Admin duyệt' });
+    const dialog = await screen.findByRole('dialog', { name: 'Gửi bản vẽ "Tầng 3 E2E" cho Quản trị duyệt' });
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
     expect(within(dialog).getByText('Không được để trống.')).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/Lý do/), 'Vẽ xong tầng 3');
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
-    expect(await screen.findByText('Đã gửi duyệt. Admin sẽ nhận email.')).toBeInTheDocument();
+    expect(await screen.findByText('Đã gửi duyệt. Quản trị sẽ nhận email.')).toBeInTheDocument();
     expect(posted(fetchMock, '/g1/submit')).toEqual([{ reason: 'Vẽ xong tầng 3' }]);
   });
 
@@ -147,7 +147,7 @@ describe('Gửi duyệt (Thành viên) và tự kiểm', () => {
     await viewerReady();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Gửi duyệt' }));
-    const dialog = await screen.findByRole('dialog', { name: /cho Admin duyệt/ });
+    const dialog = await screen.findByRole('dialog', { name: /cho Quản trị duyệt/ });
     await user.type(within(dialog).getByLabelText(/Lý do/), 'Gửi');
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
     const found = await screen.findByRole('dialog', { name: 'Tự kiểm còn lỗi đỏ' });

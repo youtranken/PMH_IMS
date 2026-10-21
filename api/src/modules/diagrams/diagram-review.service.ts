@@ -183,7 +183,7 @@ function notFound(): NotFoundException {
 }
 
 function managerOnly(): ForbiddenException {
-  return new ForbiddenException({ code: 'DIAGRAM_PUBLISH_FORBIDDEN', message: 'Chỉ Admin/SA duyệt hoặc phát hành bản vẽ.' });
+  return new ForbiddenException({ code: 'DIAGRAM_PUBLISH_FORBIDDEN', message: 'Chỉ Super Admin / Quản trị duyệt hoặc phát hành bản vẽ.' });
 }
 
 /**

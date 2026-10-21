@@ -234,12 +234,18 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
   gap: var(--space-6) var(--space-7);
 }
 /* Ô theo độ dài nội dung (`Field size`, FM-16): kẹp bề ngang CHÍNH Ô NHẬP, nhãn và câu gợi ý vẫn
-   rộng theo ô lưới. */
-.field[data-size='xs'] > :is(input, select, .fsel-trigger, .number-stepper) {
-  max-width: 10ch;
+   rộng theo ô lưới. Đơn vị rem, không ch: luật chung cấm kẹp theo ch (shared-ui-rules.test). */
+.field[data-size='xs'] > input,
+.field[data-size='xs'] > select,
+.field[data-size='xs'] > .fsel-trigger,
+.field[data-size='xs'] > .number-stepper {
+  max-width: 7rem;
 }
-.field[data-size='s'] > :is(input, select, .fsel-trigger, .number-stepper) {
-  max-width: 22ch;
+.field[data-size='s'] > input,
+.field[data-size='s'] > select,
+.field[data-size='s'] > .fsel-trigger,
+.field[data-size='s'] > .number-stepper {
+  max-width: 15rem;
 }
 /* Dòng tóm tắt lỗi và khung báo lỗi máy chủ nằm trong lưới thì chiếm TRỌN hàng (FM-02): chiếm
    một ô là đẩy lệch mọi ô sau nó sang cột bên. */

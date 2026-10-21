@@ -93,7 +93,7 @@ export class IsoMailContent implements OnModuleInit {
       };
     }
 
-    const decidedBy = request.decidedBy ? await this.nameOf(request.decidedBy) : 'SA/Admin';
+    const decidedBy = request.decidedBy ? await this.nameOf(request.decidedBy) : 'Super Admin / Quản trị';
     const noteRows = request.decisionNote ? [{ label: 'Ghi chú', value: request.decisionNote }] : [];
     const common = { to: [request.requester], rows: [{ label: 'Kỳ', value: label }, { label: 'Người quyết', value: decidedBy }, ...noteRows] };
     switch (event) {
@@ -192,7 +192,7 @@ export class IsoMailContent implements OnModuleInit {
       to,
       subject: `[IMS] Gửi chốt kỳ ${label}`,
       title: 'Tới lúc gửi chốt kỳ phiếu',
-      intro: `Kỳ ${label} đã tới ngày cuối tháng. Vào Xem lại để kiểm bản in rồi gửi chốt cho SA/Admin duyệt.`,
+      intro: `Kỳ ${label} đã tới ngày cuối tháng. Vào Xem lại để kiểm bản in rồi gửi chốt cho Super Admin / Quản trị duyệt.`,
       rows: [{ label: 'Phiếu', value: FORM_NAME[form] }],
       ctaLabel: 'Xem lại & gửi chốt',
       ctaPath: UI_PATHS.isoReview(form, month),

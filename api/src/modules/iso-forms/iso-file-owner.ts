@@ -106,7 +106,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
       if (row?.state !== 'locked') {
         throw new ConflictException({
           code: 'ISO_SIGN_NOT_LOCKED',
-          message: 'Kỳ chưa được duyệt chốt — tải bản ký sau khi SA/Admin duyệt.',
+          message: 'Kỳ chưa được duyệt chốt — tải bản ký sau khi Super Admin / Quản trị duyệt.',
         });
       }
       await this.access.assertCanWrite(uploader, row.formType as IsoFormType);

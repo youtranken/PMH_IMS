@@ -512,7 +512,7 @@ export class IsoPeriodService implements OnModuleInit {
 
   private assertManager(actor: IsoActor): void {
     if (!isManager(actor)) {
-      throw new ForbiddenException({ code: 'ISO_DECIDE_MANAGER_ONLY', message: 'Chỉ SA/Admin duyệt hoặc trả lại kỳ phiếu.' });
+      throw new ForbiddenException({ code: 'ISO_DECIDE_MANAGER_ONLY', message: 'Chỉ Super Admin / Quản trị duyệt hoặc trả lại kỳ phiếu.' });
     }
   }
 

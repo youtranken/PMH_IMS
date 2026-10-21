@@ -296,7 +296,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(paper.getByText('30 / 04 / 2021')).toBeVisible();
     await page.getByRole('button', { name: 'Gửi chốt phiếu tháng 04/2021' }).click();
     await confirmAction(page, 'Gửi chốt phiếu tháng 04/2021');
-    await expect(page.getByText('Đã gửi chốt kỳ — đang chờ SA/Admin duyệt.')).toBeVisible();
+    await expect(page.getByText('Đã gửi chốt kỳ — đang chờ Super Admin / Quản trị duyệt.')).toBeVisible();
 
     // Từ Chờ duyệt mọi ô bị khoá ở API, không chỉ ở giao diện.
     const locked = await api(page, 'PUT', '/api/v1/iso/backup/ticks', {
@@ -367,7 +367,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
 
     await page.goto(`/iso/incidents/${id}`);
     await expect(page.getByRole('heading', { name: `Phiếu ${code}` })).toBeVisible();
-    await expect(page.getByText('Kỳ của phiếu đang chờ SA/Admin duyệt — chỉ xem.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Kỳ của phiếu đang chờ Super Admin / Quản trị duyệt — chỉ xem.', { exact: false })).toBeVisible();
     await expect(page.getByLabel('Chọn file để đính kèm')).toHaveCount(0);
     const res = await api(page, 'PATCH', `/api/v1/iso/incidents/${id}`, { ...content, description: 'E2E sửa khi chờ duyệt' });
     expect(res.status()).toBe(409);
