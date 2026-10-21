@@ -299,7 +299,6 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               item={item}
               retired={retired}
               csrfToken={me.csrfToken}
-              onRestore={() => setRestoring(true)}
               onBatch={() => setBatching(true)}
               onDone={() => void refresh()}
             />
@@ -424,11 +423,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   </li>
                 ))}
               </ul>
-              {retired ? null : (
-                <button type="button" className="btn sm" onClick={() => setBatching(true)}>
-                  {t("software.addBatch")}
-                </button>
-              )}
+              {/* "Mua thêm đợt mới…" chỉ ở menu ⋮ đầu trang (UX-E22) — một lối cho một việc. */}
             </RailCard>
           ) : null}
           {/* Tên miền nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
@@ -641,14 +636,12 @@ function DetailMoreActions({
   item,
   retired,
   csrfToken,
-  onRestore,
   onBatch,
   onDone,
 }: {
   item: SoftwareRow;
   retired: boolean;
   csrfToken: string;
-  onRestore: () => void;
   onBatch: () => void;
   onDone: () => void;
 }) {
@@ -666,25 +659,23 @@ function DetailMoreActions({
     csrfToken,
     onDone,
   });
+  // Đã thanh lý: "Khôi phục…" ở băng Thanh lý là lối duy nhất (UX-E22) — không còn việc nào cho ⋮.
+  if (retired) return null;
   return (
     <RowActions
       label={t("common.actionsOf", { subject: item.code })}
-      items={
-        retired
-          ? [{ key: "restore", label: t("software.restore"), onSelect: onRestore, ok: true }]
-          : [
-              ...(supportsSeats(item.kind)
-                ? [{ key: "batch", label: t("software.addBatch"), onSelect: onBatch }]
-                : []),
-              {
-                key: "dispose",
-                label: t("software.disposeMenu"),
-                onSelect: dispose.run,
-                danger: true,
-                disabled: dispose.isPending,
-              },
-            ]
-      }
+      items={[
+        ...(supportsSeats(item.kind)
+          ? [{ key: "batch", label: t("software.addBatch"), onSelect: onBatch }]
+          : []),
+        {
+          key: "dispose",
+          label: t("software.disposeMenu"),
+          onSelect: dispose.run,
+          danger: true,
+          disabled: dispose.isPending,
+        },
+      ]}
     />
   );
 }
