@@ -588,9 +588,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         );
       }),
     },
-    { label: t("devices.vendor"), value: item.vendorName },
+    /* Không lặp Nhà cung cấp (thẻ riêng ở cột phải) và Phòng ban (dòng phụ của ô Người dùng) — PW-A04. */
     { label: t("devices.purchaseDate"), value: item.purchaseDate ? formatDate(item.purchaseDate) : null },
-    { label: t("devices.department"), value: item.department },
     { label: t("devices.note"), value: item.note },
   ];
   const blankCount = specItems.filter((entry) =>
