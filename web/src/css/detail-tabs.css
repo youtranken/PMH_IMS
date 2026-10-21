@@ -718,14 +718,6 @@
     flex: 1 1 100%;
   }
 }
-/* Ô tra IP: nút "Tra" đứng CUỐI ô tìm ở mọi cỡ màn — một mình một hàng thì trông như nút lạc. */
-.filter-bar.ip-lookup {
-  flex-wrap: nowrap;
-}
-.filter-bar.ip-lookup > .grow {
-  flex: 1 1 auto;
-  min-width: 0;
-}
 /* Điện thoại hẹp: ô chọn một hàng riêng. Nửa hàng chỉ còn ~170px, chữ "Tất cả nhà cung cấp" /
    "Đang theo dõi (trừ Đã thanh lý)" cụt thành "Tất cả nhà cu…" — không biết đang lọc gì. */
 @media (max-width: 480px) {

@@ -213,3 +213,36 @@ describe('SubnetPane — gộp chuỗi ô trống (Q-27)', () => {
     expect(screen.getAllByRole('button', { name: 'Cấp IP' })).toHaveLength(20);
   });
 });
+
+/* UX-E19: ô "Tra IP" cấp trang trùng Tìm nhanh (Ctrl+K) — bỏ. Ô "Lọc trong dải" gánh phần còn
+   thiếu: gõ một IP đủ dạng thuộc dải KHÁC thì chỉ đường sang dải đó; không dải nào chứa thì gợi ý. */
+describe('SubnetPane — lọc trong dải nhận IP của dải khác', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const OTHER = { ...SUBNET, id: 's2', name: 'LAN khác E2E', cidr: '10.0.2.0/24' };
+
+  function renderPane() {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, []))));
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <SubnetPane subnet={SUBNET} subnets={[SUBNET, OTHER]} me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('IP thuộc dải khác → link mở đúng dải, đúng IP', async () => {
+    renderPane();
+    await userEvent.type(await screen.findByRole('searchbox'), '10.0.2.15');
+    expect(await screen.findByRole('link', { name: /10\.0\.2\.0\/24/ })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/ip-addresses/s2'),
+    );
+  });
+
+  it('IP không dải nào chứa → gợi ý Tìm nhanh', async () => {
+    renderPane();
+    await userEvent.type(await screen.findByRole('searchbox'), '192.168.9.9');
+    expect(await screen.findByText(/Không dải nào chứa 192\.168\.9\.9/)).toBeInTheDocument();
+  });
+});

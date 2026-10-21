@@ -19,7 +19,6 @@ import { useToast } from '@/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { HideDialog, SubnetForm } from './subnet-form';
 import { SubnetPane } from './subnet-detail';
-import { IpLookup } from './ip-lookup';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
 import { useIpamSettings } from './ipam-settings';
@@ -246,7 +245,6 @@ export function IpamScreen({ me }: { me: Me }) {
         />
       ) : (
         <>
-        <IpLookup subnets={rows} />
         <div className="ipam-split">
           {/*
             Điện thoại: MỘT ô chọn dải dính đầu trang thay cho dãy thẻ cuộn ngang — dãy thẻ
@@ -331,7 +329,7 @@ export function IpamScreen({ me }: { me: Me }) {
           )}
 
           <div className="subnet-pane">
-            {selected ? <SubnetPane subnet={selected} me={me} /> : null}
+            {selected ? <SubnetPane subnet={selected} subnets={rows} me={me} /> : null}
           </div>
         </div>
         </>

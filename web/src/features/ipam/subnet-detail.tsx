@@ -5,7 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
-import { maskOfCidr } from "@/lib/ipv4";
+import { cidrContains, maskOfCidr, parseIpv4, subnetOf } from "@/lib/ipv4";
 import type { Me } from "@/lib/me";
 import { NoteField } from "@/ui/note-field";
 import { AttachmentPanel, useOwnerAttachments } from "@/ui/attachment-panel";
@@ -62,6 +62,7 @@ import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
 import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
 import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
+import { paletteShortcut } from "@/ui/command-palette";
 import { clampPage } from "@/lib/paging";
 
 /** Rule NAT đọc ở hộp Thu hồi — chỉ những trường cần để nói "rule nào đang trỏ vào IP này". */
@@ -87,9 +88,12 @@ interface NatRef {
  */
 export function SubnetPane({
   subnet: item,
+  subnets = [],
   me,
 }: {
   subnet: SubnetRow;
+  /** Mọi dải (kể cả đã ngừng) — để ô lọc chỉ đường khi người ta gõ IP của dải khác (UX-E19). */
+  subnets?: SubnetRow[];
   me: Me;
 }) {
   const { t } = useTranslation();
@@ -119,6 +123,13 @@ export function SubnetPane({
   );
   /** Ô tìm ngay trên bảng — lọc tại chỗ trên cả dải. */
   const [needle, setNeedle] = useState("");
+  const jump = useMemo(() => {
+    const ip = needle.trim();
+    if (parseIpv4(ip) === null || cidrContains(item.cidr, ip)) return null;
+    // Chỉ dải còn dùng: dải đã ngừng thì bảng chỉ đọc, sang đó cũng không cấp được.
+    const other = subnetOf(ip, subnets.filter((row) => row.voidedAt === null && row.id !== item.id));
+    return { ip, other };
+  }, [needle, item.cidr, item.id, subnets]);
   /**
    * `?ip=` — đến từ ô tra cứu cấp trang, hộp Tìm nhanh hoặc panel IP của trang thiết bị: nhảy
    * tới đúng trang chứa địa chỉ và tô sáng dòng. Đọc từ URL để link gửi cho nhau mở ra đúng chỗ.
@@ -561,6 +572,22 @@ export function SubnetPane({
           }}
           searchPlaceholder={t("ipam.paneSearch")}
         />
+      ) : null}
+      {/* Ô "Tra IP" cấp trang đã bỏ (UX-E19, trùng Tìm nhanh): gõ đủ một IP không thuộc dải này
+          thì chỉ đường sang dải chứa nó — kể cả IP chưa có hồ sơ, thứ Tìm nhanh không tra được. */}
+      {view === "list" && jump ? (
+        <p className="muted small" role="status">
+          {jump.other ? (
+            <>
+              {t("ipam.jumpTo", { ip: jump.ip })}{" "}
+              <Link to={PATHS.subnetAt(jump.other.id, jump.ip)}>
+                {jump.other.name} · <span className="mono">{jump.other.cidr}</span>
+              </Link>
+            </>
+          ) : (
+            t("ipam.jumpNone", { ip: jump.ip, keys: paletteShortcut() })
+          )}
+        </p>
       ) : null}
 
       {slots.isLoading ? (
