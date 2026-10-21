@@ -2224,7 +2224,6 @@ export default {
     tabHistory: 'Lịch sử',
     renew: 'Gia hạn',
     /* Cột gộp trạng thái Q-03 + số ngày (`software-standing.ts`). */
-    standing: 'Tình trạng',
     overdueDays: 'quá {{count}} ngày',
     autoRetireIn: 'tự thanh lý sau {{count}} ngày',
     matchedDevices: 'khớp máy {{codes}}',

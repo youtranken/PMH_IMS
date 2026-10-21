@@ -192,7 +192,7 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
 describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('tiêu đề "Mã" / "Tên phần mềm"; dòng phụ kỳ hạn dưới tên, ngày hết hạn dưới "Còn n ngày"; cột Ghế sắp được', async () => {
+  it('tiêu đề "Mã" / "Tên phần mềm" / "Hết hạn"; dòng phụ kỳ hạn dưới tên; ngày hết hạn là dòng chính (TB-13); cột Ghế sắp được', async () => {
     mockFetch([row({ id: 'l1', code: 'SW-E2E-01', name: 'Office E2E', kind: 'license', licenseModel: 'subscription', seatTotal: 10, seatUsed: 2, endDate: '2030-01-31' })]);
     renderList('software', '/software');
     const table = await screen.findByRole('table');
@@ -201,7 +201,9 @@ describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
     expect(headers.some((h) => h.startsWith('Tên phần mềm'))).toBe(true);
     const line = within(table).getByRole('link', { name: 'SW-E2E-01' }).closest('tr') as HTMLElement;
     expect(line).toHaveTextContent('Thuê bao');
-    expect(line).toHaveTextContent('đến 31/01/2030');
+    expect(headers.some((h) => h.startsWith('Hết hạn'))).toBe(true);
+    expect(line).toHaveTextContent('31/01/2030');
+    expect(line).not.toHaveTextContent('Đang dùng');
     expect(within(table).getByRole('button', { name: /Ghế/ })).toBeInTheDocument();
   });
 

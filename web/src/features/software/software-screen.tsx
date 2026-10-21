@@ -31,7 +31,7 @@ import { AssignDialog } from './assign-dialog';
 import { SoftwareForm } from './software-form';
 import { activeSeatCodes, softwareDisposeMessage } from './software-dispose-message';
 import { standingOf } from './software-standing';
-import { SeatUsage, SoftwareStanding } from './software-standing-cell';
+import { SeatUsage, SoftwareEndCell, SoftwareStanding } from './software-standing-cell';
 import {
   KIND_KEY,
   SOFTWARE_STATUSES,
@@ -251,11 +251,11 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
           ]
         : []),
       {
-        /* MỘT cột "Tình trạng" thay cho "Tình trạng hạn" + "Trạng thái" — xem
-           `software-standing.ts`. Id `endDate` để bấm tiêu đề là sắp theo hạn. */
+        /* Cột "Hết hạn": ngày là dòng chính vì cột sắp theo ngày; trạng thái xuống dòng phụ
+           (PW-A07 / TB-13) — xem `SoftwareEndCell`. */
         accessorKey: 'endDate',
-        header: t('software.standing'),
-        cell: ({ row }) => <SoftwareStanding item={row.original} />,
+        header: t('expiry.end'),
+        cell: ({ row }) => <SoftwareEndCell item={row.original} />,
       },
       {
         id: 'actions',
