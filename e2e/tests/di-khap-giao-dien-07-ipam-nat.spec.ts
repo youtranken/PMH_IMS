@@ -786,7 +786,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Tất cả site',
       'Tất cả router',
       'Tất cả giao thức',
-      /^Đang mở \d+$/,
+      /^Đang dùng \d+$/,
       /^Đã ngừng dùng \d+$/,
       /^Đã gỡ \d+$/,
       'Chỉ cổng nhạy cảm',
