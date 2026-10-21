@@ -292,7 +292,6 @@ export function AuditLogScreen() {
     <>
       <PageHeader
         title={t('audit.title')}
-        subtitle={t('audit.subtitle')}
         actions={<ExportXlsxButton url={exportUrl} fileName="nhat-ky.xlsx" />}
       />
 

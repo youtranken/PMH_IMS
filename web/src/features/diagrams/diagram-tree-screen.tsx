@@ -313,7 +313,6 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
       <PageHeader
         title={t('diagrams.title')}
         titleTip={t('diagrams.titleTip')}
-        subtitle={t('diagrams.subtitle')}
         actions={
           <div className="dmap-header-tools">
             <input

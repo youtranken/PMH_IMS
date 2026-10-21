@@ -241,7 +241,6 @@ export function IspScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('isp.title')}
-        subtitle={t('isp.subtitle')}
         actions={
           <>
             {/* FR-028: xuất đúng bộ lọc VÀ đúng thứ tự đang xem — cùng query với bảng dưới. */}

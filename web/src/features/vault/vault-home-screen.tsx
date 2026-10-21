@@ -246,7 +246,6 @@ export function VaultHomeScreen({ me }: { me: Me }) {
           trang chiếm chỗ của bảng mà người ta chỉ đọc một lần. */}
       <PageHeader
         title={t('vaultHome.title')}
-        subtitle={t('vaultHome.subtitle')}
         actions={
           <button type="button" className="btn" onClick={() => setRulesOpen(true)}>
             {t('vaultHome.rulesButton')}

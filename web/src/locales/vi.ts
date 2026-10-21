@@ -502,7 +502,6 @@ export default {
   },
   profile: {
     title: 'Hồ sơ của tôi',
-    subtitle: 'Thông tin tài khoản, mật khẩu, xác thực 2 lớp và các máy đang đăng nhập',
     infoTitle: 'Thông tin',
     infoHint: 'Muốn đổi tên hay vai trò, liên hệ Super Admin.',
     fullName: 'Họ tên',
@@ -595,7 +594,6 @@ export default {
   },
   catalog: {
     title: 'Danh mục',
-    subtitle: 'Khai một lần ở đây, mọi màn chỉ chọn lại.',
     groupLocation: 'Vị trí',
     groupDevice: 'Thiết bị',
     groupPartner: 'Đối tác & tổ chức',
@@ -800,7 +798,6 @@ export default {
   },
   diagrams: {
     title: 'Sơ đồ mạng',
-    subtitle: 'Mỗi ô là một bản vẽ, đặt đúng chỗ của nó trong công ty. Bấm ô để xem chi tiết; mở nội dung cần mã 2 lớp.',
     treeLabel: 'Cây bản vẽ',
     add: 'Thêm bản vẽ',
     addChild: 'Thêm bản vẽ con',
@@ -1719,7 +1716,6 @@ export default {
     title: 'Thiết bị',
     since: 'từ {{date}}',
     copySerial: 'Chép serial',
-    subtitle: 'Kho thiết bị IT — tra theo site, tủ, loại hoặc serial',
     add: 'Thêm thiết bị',
     edit: 'Sửa hồ sơ',
     // KHÔNG mở đầu bằng "Sửa hồ sơ": trang chi tiết có nút đúng tên đó, mà Playwright khớp
@@ -2390,7 +2386,6 @@ export default {
   isp: {
     title: 'Đường truyền',
     copyWanIp: 'Chép IP WAN',
-    subtitle: 'Nhà mạng, IP WAN, hotline và số hợp đồng của từng đường',
     add: 'Thêm đường truyền',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng',
@@ -2493,7 +2488,6 @@ export default {
     walked: 'Đã đi {{percent}}%',
     noStart: 'Chưa khai báo mốc bắt đầu',
     title: 'Sắp hết hạn',
-    subtitle: 'Bảo hành, license, SSL, tên miền, hợp đồng — mọi thứ có hạn',
     item: 'Mục',
     kind: 'Loại',
     end: 'Hết hạn',
@@ -2676,7 +2670,6 @@ export default {
     saveProfileFailed: 'Không lưu được hồ sơ.',
     createFailed: 'Không tạo được tài khoản.',
     title: 'Người dùng IMS',
-    subtitle: 'Super Admin tạo, khóa, đặt lại mật khẩu và đóng phiên đăng nhập từ xa',
     create: 'Thêm người dùng',
     profileSaved: 'Đã lưu hồ sơ tài khoản.',
     fullName: 'Họ tên',
@@ -3037,7 +3030,6 @@ export default {
   },
   ipam: {
     title: 'Địa chỉ IP',
-    subtitle: 'Chỉ quản IP tĩnh — mọi IP đều có chủ, không ai cấp trùng',
     railTitle: 'Dải mạng / VLAN',
     railLabel: 'Danh sách dải mạng',
     vlan: 'VLAN',
@@ -3215,7 +3207,6 @@ export default {
     linkedMissing: 'Luật NAT trong link không nằm trong bảng đang xem (bộ lọc, ô tìm hoặc chip đang ẩn nó).',
     linkedShow: 'Bỏ lọc để thấy luật này',
     title: 'Sổ NAT',
-    subtitle: 'Mọi luật chuyển cổng: cổng nào mở, dẫn tới máy nào, cho ai, vì sao.',
     add: 'Thêm luật NAT',
     edit: 'Sửa luật NAT',
     saved: 'Đã lưu luật NAT.',
@@ -3335,7 +3326,6 @@ export default {
     phLogin: 'vd ketoan@pmh.com.vn',
     phAllowedIps: 'vd 203.113.1.5, 118.70.2.0/24',
     title: 'Tài khoản dịch vụ',
-    subtitle: 'Tài khoản dùng chung và tài khoản VPN. Mật khẩu cất trong két.',
     add: 'Thêm tài khoản',
     edit: 'Sửa hồ sơ',
     saved: 'Đã lưu tài khoản dịch vụ.',
@@ -3445,7 +3435,6 @@ export default {
   },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Mọi hồ sơ đang cất mật khẩu trong két — lọc theo loại ở dưới.',
     whereItLives:
       'Trang này chỉ liệt kê hồ sơ và số ngăn, không hiện tên hay giá trị từng ngăn. Bấm "Mở két" để xem từng ngăn.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',
@@ -3486,7 +3475,6 @@ export default {
   },
   disposal: {
     title: 'Kho thanh lý',
-    subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã thanh lý hoặc ngừng dùng',
     /* Cách dùng lại khác nhau theo loại — nên ở menu ⋮ của từng dòng, không trong câu chung. */
     note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
@@ -3551,7 +3539,6 @@ export default {
   },
   audit: {
     title: 'Nhật ký hệ thống',
-    subtitle: 'Ai làm gì, lúc nào, từ đâu — chỉ đọc, không ai sửa hay xóa được',
     searchActor: 'Lọc theo người thao tác (email)…',
     action: 'Hành động',
     allActions: 'Tất cả hành động',
@@ -3900,7 +3887,6 @@ export default {
   access: {
     stepUpCopy: 'Nhập mã 6 số trên điện thoại để xác nhận gán quyền két cho {{name}}.',
     title: 'Quyền két sắt',
-    subtitle: 'Ai xem thẳng được mật khẩu nào, ai phải xin duyệt.',
     search: 'Tìm theo tên hoặc email…',
     defaultDenied:
       'Mặc định không có quyền: chưa được gán thì không xem, cũng không xin được. Gán để mở, gỡ để đóng.',
@@ -4785,7 +4771,6 @@ export default {
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   failedMail: {
     title: 'Thư gửi lỗi',
-    subtitle: 'Thư hệ thống gửi tự động không thành. Sửa cấu hình thư nếu cần rồi bấm Gửi lại.',
     empty: 'Không có thư nào gửi lỗi.',
     colTopic: 'Loại thư',
     colCreated: 'Tạo lúc',
@@ -4818,7 +4803,6 @@ export default {
   settings: {
     stepUpSave: 'Nhập mã 6 số trên điện thoại để xác nhận lưu tham số hệ thống.',
     title: 'Tham số hệ thống',
-    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển, mạng IP và giấy tờ đính kèm. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
     groupAuth: 'Đăng nhập & bảo mật',
     groupVault: 'Két sắt',

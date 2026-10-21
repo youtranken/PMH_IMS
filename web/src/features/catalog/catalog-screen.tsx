@@ -707,7 +707,6 @@ export function CatalogScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('catalog.title')}
-        subtitle={t('catalog.subtitle')}
         actions={
           modelTab ? (
             <button type="button" className="btn primary catalog-add" onClick={() => setAddingModel(true)}>

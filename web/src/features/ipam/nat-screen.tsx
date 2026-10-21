@@ -443,7 +443,6 @@ export function NatScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('nat.title')}
-        subtitle={t('nat.subtitle')}
         actions={
           <>
             <ExportXlsxButton

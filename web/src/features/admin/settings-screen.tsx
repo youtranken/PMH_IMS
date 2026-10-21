@@ -283,7 +283,7 @@ export function SettingsScreen({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
+      <PageHeader title={t('settings.title')} />
       {list.isLoading ? (
         <Loading />
       ) : list.isError ? (

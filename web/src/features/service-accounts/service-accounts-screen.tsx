@@ -252,7 +252,6 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         title={t('serviceAccounts.title')}
         /* Cùng câu với trạng thái rỗng: có dữ liệu thì câu ấy không còn in ra nữa. */
         titleTip={t('serviceAccounts.emptyHint')}
-        subtitle={t('serviceAccounts.subtitle')}
         actions={
           <>
             {/* FR-028: xuất đúng bộ lọc và thứ tự đang xem. File KHÔNG có mật khẩu (FR-026) —

@@ -99,7 +99,7 @@ export function FailedMailScreen({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader title={t('failedMail.title')} subtitle={t('failedMail.subtitle')} />
+      <PageHeader title={t('failedMail.title')} />
       {list.isError ? (
         <LoadError error={list.error} onRetry={() => void list.refetch()} />
       ) : list.data && list.data.items.length === 0 ? (

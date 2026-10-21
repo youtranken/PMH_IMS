@@ -484,7 +484,6 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('access.title')}
-        subtitle={t('access.subtitle')}
         actions={
           <button type="button" className="btn" onClick={() => setChecking(true)}>
             {t('access.check')}

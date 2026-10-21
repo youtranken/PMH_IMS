@@ -197,7 +197,6 @@ export function IpamScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('ipam.title')}
-        subtitle={t('ipam.subtitle')}
         actions={
           <>
             {selected ? (

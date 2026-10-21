@@ -709,7 +709,6 @@ export function AccountsScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('accounts.title')}
-        subtitle={t('accounts.subtitle')}
         actions={
           <>
             <ExportXlsxButton url={exportUrl} fileName="tai-khoan.xlsx" />

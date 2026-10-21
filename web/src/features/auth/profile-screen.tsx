@@ -58,7 +58,7 @@ export function ProfileScreen({ me }: { me: Me }) {
 
   return (
     <div className="profile-page">
-      <PageHeader title={t('profile.title')} subtitle={t('profile.subtitle')} />
+      <PageHeader title={t('profile.title')} />
 
       <section className="card profile-card" aria-labelledby="profile-info">
         <h2 id="profile-info">{t('profile.infoTitle')}</h2>

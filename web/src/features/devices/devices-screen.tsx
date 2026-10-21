@@ -316,7 +316,6 @@ export function DevicesScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('devices.title')}
-        subtitle={t('devices.subtitle')}
         actions={
           <>
             {/* File mẫu là bước con của Nhập nên nằm TRONG hộp nhập, không đứng ngang hàng ở

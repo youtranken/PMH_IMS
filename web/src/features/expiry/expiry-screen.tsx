@@ -383,7 +383,6 @@ export function ExpiryScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('expiry.title')}
-        subtitle={t('expiry.subtitle')}
         actions={
           tab === 'rules' ? (
             canEditRules ? (

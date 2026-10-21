@@ -106,13 +106,10 @@ describe('Trang tổng Két sắt', () => {
   });
 
   /* Q-21: luật két nằm sau một nút mở hộp đọc, không chiếm chỗ cố định cuối trang. */
-  it('phụ đề liệt kê bốn loại hồ sơ; luật két chỉ hiện khi bấm nút "Luật két"', async () => {
+  it('không có phụ đề (UX-E01); luật két chỉ hiện khi bấm nút "Luật két"', async () => {
     renderHome();
-    expect(
-      await screen.findByText(
-        'Mọi hồ sơ đang cất mật khẩu trong két — lọc theo loại ở dưới.',
-      ),
-    ).toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Luật két' });
+    expect(screen.queryByText('Mọi hồ sơ đang cất mật khẩu trong két — lọc theo loại ở dưới.')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Luật của két' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Mỗi lần mở đều ghi nhật ký/)).not.toBeInTheDocument();
 

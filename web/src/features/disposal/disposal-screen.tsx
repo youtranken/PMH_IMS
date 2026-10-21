@@ -175,7 +175,6 @@ export function DisposalScreen() {
     <>
       <PageHeader
         title={t('disposal.title')}
-        subtitle={t('disposal.subtitle')}
         actions={
           <ExportXlsxButton url={`/api/v1/disposal/export.xlsx?${query}`} fileName="kho-thanh-ly.xlsx" />
         }
