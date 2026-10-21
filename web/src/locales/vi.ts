@@ -3352,7 +3352,7 @@ export default {
     allowedIps: 'Dải IP được phép',
     /* Hạn dùng (Q-20) — khác cột "Đổi lần cuối" (hạn đổi mật khẩu trong két, Q-15). */
     endDate: 'Hết hạn',
-    endDateOptional: 'Hết hạn (tùy chọn)',
+    endDateOptional: 'Hết hạn',
     endDateTip:
       'Tài khoản cấp có thời hạn (VPN cho đối tác, tài khoản dùng thử…). Gần tới hạn hệ thống nhắc như các hạn khác; quá hạn chỉ nhắc, không tự ngừng dùng. Để trống nếu không có hạn.',
     allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng.',
