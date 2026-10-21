@@ -134,9 +134,11 @@ export function ImportDialog<TRow>({
           <button type="button" className="btn" disabled={busy} onClick={onClose}>
             {t('common.cancel')}
           </button>
+          {/* Nút chính theo bước (PW-A31): chưa đối chiếu thì là "Đối chiếu", có kết quả rồi thì
+              chuyển sang "Xác nhận ghi" — ba nút cùng trọng lượng thì không biết bấm cái nào. */}
           <button
             type="button"
-            className="btn"
+            className={plan ? 'btn' : 'btn primary'}
             disabled={!file || busy}
             {...previewReason.buttonProps}
             onClick={() => void run('preview')}
@@ -145,7 +147,7 @@ export function ImportDialog<TRow>({
           </button>
           <button
             type="button"
-            className="btn primary"
+            className={plan ? 'btn primary' : 'btn'}
             disabled={!plan || hasErrors || writable === 0 || busy}
             {...commitReason.buttonProps}
             onClick={() => void run('commit')}
