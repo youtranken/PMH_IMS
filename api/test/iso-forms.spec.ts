@@ -482,6 +482,13 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(new Set(full.months.flatMap((m) => m.forms.map((f) => f.formType)))).toEqual(new Set(['0203', '0208']));
     });
 
+    // PW-B27: bộ ô số của màn Kỳ phiếu không được đổi theo vai — cùng khóa, cùng thứ tự hiển thị ở web.
+    it('KPI kỳ phiếu: Member và Super Admin nhận cùng một bộ khóa', async () => {
+      const keys = ['awaitingSigned', 'done', 'pending', 'reopenPending', 'unlinkedFails'];
+      expect(Object.keys((await periods.overview(people.other, 2026)).kpis).sort()).toEqual(keys);
+      expect(Object.keys((await periods.overview(people.sa, 2026)).kpis).sort()).toEqual(keys);
+    });
+
     it('Member chỉ có 0208 mở kỳ 0203 → 403 FEATURE_HIDDEN', async () => {
       await expect(
         periods.detail({ ...people.other, features: ['iso_0208', 'iso'] }, '0203', 2026, 11),

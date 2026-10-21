@@ -4588,7 +4588,7 @@ export default {
     periods: {
       subtitle: 'Gửi chốt → duyệt → in, ký, tải bản ký',
       kpiPending: 'kỳ đang chờ duyệt',
-      kpiReopen: 'yêu cầu mở lại chờ duyệt',
+      reopenPendingCount: 'Có {{count}} yêu cầu mở lại kỳ đang chờ duyệt.',
       kpiSigned: 'kỳ chờ tải bản ký',
       kpiDone: 'kỳ hoàn tất năm nay',
       kpiUnlinked: 'ô ✗ chưa có 0206',

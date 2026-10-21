@@ -185,19 +185,15 @@ export class IsoPeriodService implements OnModuleInit {
     const cells = months.flatMap((m) => (m.access === 'ok' ? m.forms : []));
     const pendingReopen = (await this.approvals.pending(PERIOD_REOPEN_KIND)).length;
     const unlinked = (await this.incidents.unlinked({ year })).filter((c) => forms.includes(c.form)).length;
-    const kpis: Record<string, number> = isManager(actor)
-      ? {
-          pending: cells.filter((c) => c.display === 'pending').length,
-          reopenPending: pendingReopen,
-          awaitingSigned: cells.filter((c) => c.display === 'locked').length,
-          done: cells.filter((c) => c.display === 'done').length,
-        }
-      : {
-          unlinkedFails: unlinked,
-          awaitingSigned: cells.filter((c) => c.display === 'locked').length,
-          pending: cells.filter((c) => c.display === 'pending').length,
-          done: cells.filter((c) => c.display === 'done').length,
-        };
+    // Cùng một bộ khóa cho mọi vai (PW-B27): bộ khác nhau thì web xếp ô số khác chỗ theo vai,
+    // người dùng hai vai đọc hai màn khác nhau. Vai nào cần nhấn ô nào là việc của tông màu.
+    const kpis: Record<string, number> = {
+      unlinkedFails: unlinked,
+      pending: cells.filter((c) => c.display === 'pending').length,
+      reopenPending: pendingReopen,
+      awaitingSigned: cells.filter((c) => c.display === 'locked').length,
+      done: cells.filter((c) => c.display === 'done').length,
+    };
     return { year, months, kpis };
   }
 
