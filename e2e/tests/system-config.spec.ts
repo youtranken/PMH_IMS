@@ -53,7 +53,7 @@ test.describe('Tham số hệ thống', () => {
     await review.getByRole('button', { name: 'Lưu thay đổi' }).click();
 
     await expect(page.getByText('Đã lưu 1 tham số.')).toBeVisible();
-    await expect(page.getByText(new RegExp(`Sửa lần cuối bởi ${E2E_SA.email}`)).first()).toBeVisible();
+    await expect(page.getByText(new RegExp(`Sửa lần cuối .* · ${E2E_SA.email}`)).first()).toBeVisible();
     expect(getConfig(GRACE)).toBe(next);
     expect(
       sql(

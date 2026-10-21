@@ -17,10 +17,10 @@ import {
   isoToday,
 } from './helpers';
 
-/** Nút "sửa lần cuối dd/mm/yyyy bởi …" của RecordStamp (UX-E26): hồ sơ vừa dàn cảnh hôm nay. */
+/** Nút "sửa lần cuối dd/mm/yyyy · …" của RecordStamp (UX-E26): hồ sơ vừa dàn cảnh hôm nay. */
 function lastEditButton(): string {
   const [y, m, d] = isoToday().split('-');
-  return `sửa lần cuối ${d}/${m}/${y} bởi E2E Super Admin`;
+  return `sửa lần cuối ${d}/${m}/${y} · E2E Super Admin`;
 }
 
 

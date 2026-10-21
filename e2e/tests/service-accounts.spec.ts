@@ -384,7 +384,7 @@ test.describe('Tài khoản dịch vụ', () => {
     // Và nói NGAY đầu trang hồ sơ — không bắt mở tab Lịch sử mới biết ai đóng, vì sao.
     await page.goto(`/service-accounts/${id}`);
     await expect(
-      page.getByText(/Ngừng dùng ngày \d{2}\/\d{2}\/\d{4} bởi .+ — lý do: nhân sự phụ trách đã nghỉ/),
+      page.getByText(/Ngừng dùng \d{2}\/\d{2}\/\d{4} · .+ · nhân sự phụ trách đã nghỉ/),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Dùng lại…' })).toBeVisible();
   });

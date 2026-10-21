@@ -67,7 +67,7 @@ describe('SubnetCard — dải đã ngừng dùng', () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Gộp vào VLAN 20/)).toHaveTextContent('bởi —');
+    expect(screen.getByText(/Gộp vào VLAN 20/)).toHaveTextContent('· —');
   });
 });
 

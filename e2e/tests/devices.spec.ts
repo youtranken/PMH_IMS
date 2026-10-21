@@ -172,7 +172,7 @@ test.describe('Kho thiết bị', () => {
     await confirmAction(page);
     await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.')).toBeVisible();
     // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
-    await expect(page.getByText(/Thanh lý lúc .* bởi /)).toBeVisible();
+    await expect(page.getByText(/Đã thanh lý .* · /)).toBeVisible();
     // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đổi trạng thái" (Q-20).
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toHaveCount(0);
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.

@@ -60,7 +60,7 @@ test.describe('Thiết bị — soát UX đợt 2', () => {
     await expect(page.getByRole('link', { name: `PC-E2E-NB${stamp}` })).toHaveCount(0);
 
     await page.goto(`/devices/${inId}`);
-    const foot = page.getByText(/sửa lần cuối .* bởi E2E Super Admin/);
+    const foot = page.getByText(/sửa lần cuối .* · E2E Super Admin/);
     await expect(foot).toBeVisible();
     await expect(foot).toHaveAttribute('title', E2E_SA.email);
   });

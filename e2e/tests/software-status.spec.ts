@@ -257,8 +257,8 @@ test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Khôi ph
   await retire(page, id);
 
   await page.goto(`/software/${id}`);
-  await expect(page.getByRole('status').filter({ hasText: 'Đã thanh lý ngày' })).toContainText(
-    `bởi ${E2E_SA.email}`,
+  await expect(page.getByRole('status').filter({ hasText: 'Đã thanh lý' })).toContainText(
+    `· ${E2E_SA.email}`,
   );
   await expect(page.getByRole('button', { name: 'Gia hạn', exact: true })).toHaveCount(0);
 

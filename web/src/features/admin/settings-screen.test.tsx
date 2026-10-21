@@ -123,7 +123,7 @@ describe('Màn Tham số hệ thống', () => {
     expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toHaveValue('20');
     expect(screen.getByText('lần/phút')).toBeInTheDocument();
     expect(screen.queryByText(/mặc định 20 lần\/phút/)).toBeNull();
-    expect(screen.getByText(/Sửa lần cuối bởi cao.thuan@pmh.com.vn/)).toBeInTheDocument();
+    expect(screen.getByText(/Sửa lần cuối .* · cao.thuan@pmh.com.vn/)).toBeInTheDocument();
   });
 
   // TX-41: dòng phụ chỉ hiện khi đã có người sửa; chỉ nhắc mặc định khi giá trị đang khác nó.
@@ -131,7 +131,7 @@ describe('Màn Tham số hệ thống', () => {
     const rows = ROWS.map((r) => (r.key === 'login.rate_limit_per_ip' ? { ...r, value: 50 } : r));
     renderAt('/admin/settings', () => jsonResponse(200, rows));
     expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toHaveValue('50');
-    expect(screen.getByText(/Sửa lần cuối bởi cao.thuan@pmh.com.vn .* · mặc định 20 lần\/phút/)).toBeInTheDocument();
+    expect(screen.getByText(/Sửa lần cuối .* · cao.thuan@pmh.com.vn · mặc định 20 lần\/phút/)).toBeInTheDocument();
     expect(screen.queryByText(/Chưa sửa từ lúc cài đặt/)).toBeNull();
   });
 
