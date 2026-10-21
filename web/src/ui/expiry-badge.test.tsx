@@ -119,3 +119,15 @@ describe('mọi màn danh sách vẽ ExpiryBadge đều khai notCounted', () => 
     expect(readFileSync(route, 'utf8')).toContain('notCounted=');
   });
 });
+
+/* PW-A32: trên thẻ thiết bị 390px huy hiệu đứng một mình — "Còn 1075 ngày" không nói hạn gì. */
+describe('ExpiryBadge subject', () => {
+  it('ghép chủ thể và định dạng số ngày: "BH còn 1.075 ngày"', () => {
+    mount(<ExpiryBadge end="2029-10-10" now={new Date(2026, 10, 1)} subject="BH" />);
+    expect(screen.getByText('BH còn 1.074 ngày')).toBeInTheDocument();
+  });
+  it('quá hạn: "BH quá hạn 3 ngày"', () => {
+    mount(<ExpiryBadge end="2026-10-29" now={new Date(2026, 10, 1)} subject="BH" />);
+    expect(screen.getByText('BH quá hạn 3 ngày')).toBeInTheDocument();
+  });
+});

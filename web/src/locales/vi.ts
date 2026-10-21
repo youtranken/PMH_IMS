@@ -1861,6 +1861,7 @@ export default {
     noUserYet: 'chưa khai',
     ipUnknown: 'đang đọc…',
     warrantyRange: '{{from}} → {{to}}',
+    warrantyShort: 'BH',
     rackUnits: '{{count}}U',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
@@ -2481,9 +2482,11 @@ export default {
     navBadge: '{{count}} Mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
     labelNone: 'Không có hạn',
-    labelOverdue: 'Quá hạn {{count}} ngày',
+    labelOverdue: 'Quá hạn {{n}} ngày',
     labelToday: 'Hết hạn hôm nay',
-    labelLeft: 'Còn {{count}} ngày',
+    labelLeft: 'Còn {{n}} ngày',
+    /* Huy hiệu đứng một mình (thẻ điện thoại) cần nói hạn GÌ: "BH còn 1.075 ngày" — PW-A32. */
+    labelOf: '{{subject}} {{label}}',
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
        bị, hạn license/SSL/tên miền. Đặt trong chính khối `expiry` vì
        khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */

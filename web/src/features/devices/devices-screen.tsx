@@ -306,7 +306,7 @@ export function DevicesScreen({ me }: { me: Me }) {
           .filter(Boolean)
           .join(' · ') || null,
       aside: (item) => (
-        <ExpiryBadge end={item.warrantyEnd} notCounted={item.status === 'retired'} />
+        <ExpiryBadge end={item.warrantyEnd} notCounted={item.status === 'retired'} subject={t('devices.warrantyShort')} />
       ),
     }),
     [t, ipsOf],

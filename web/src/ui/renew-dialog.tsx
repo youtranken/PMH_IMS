@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { daysUntil } from '@/lib/expiry';
-import { formatDate, todayIso } from '@/lib/format';
+import { formatCount, formatDate, todayIso } from '@/lib/format';
 import { parseMoneyInput } from '@/lib/money-input';
 import { renewMinDate, renewPreset } from '@/lib/renew-dates';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
@@ -214,10 +214,10 @@ export function RenewDialog({
           <span className={left < 0 ? 'renew-overdue' : 'muted'}>
             (
             {left < 0
-              ? t('expiry.labelOverdue', { count: -left })
+              ? t('expiry.labelOverdue', { count: -left, n: formatCount(-left) })
               : left === 0
                 ? t('expiry.labelToday')
-                : t('expiry.labelLeft', { count: left })}
+                : t('expiry.labelLeft', { count: left, n: formatCount(left) })}
             )
           </span>
         </p>

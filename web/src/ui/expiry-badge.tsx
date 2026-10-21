@@ -25,6 +25,7 @@ export function ExpiryBadge({
   showDate = false,
   notCounted = false,
   thresholds: thresholdsProp,
+  subject,
 }: {
   end: string | Date | null | undefined;
   now?: Date;
@@ -57,6 +58,8 @@ export function ExpiryBadge({
    * Không truyền thì hỏi hook. Mọi màn khác không có ngưỡng đi kèm.
    */
   thresholds?: ExpiryThresholds;
+  /** Hạn GÌ, khi huy hiệu đứng một mình (thẻ điện thoại): "BH" → "BH còn 1.075 ngày" (PW-A32). */
+  subject?: string;
 }) {
   const { t } = useTranslation();
   // Ngưỡng đọc TỪ SERVER (AD-11), không phải bản sao trong web — xem `use-expiry-thresholds`.
@@ -81,7 +84,10 @@ export function ExpiryBadge({
 
   const thresholds = thresholdsProp ?? nguongHook;
   const level = expiryLevel(end, now, thresholds);
-  const label = expiryLabel(end, now);
+  const bare = expiryLabel(end, now);
+  const label = subject
+    ? t('expiry.labelOf', { subject, label: bare.charAt(0).toLowerCase() + bare.slice(1) })
+    : bare;
   /* "Chưa khai hạn" viền đứt, khác hẳn "Không tính hạn" xám đặc: hai nhãn xám nói hai chuyện
      khác nhau (thiếu dữ liệu ≠ hồ sơ đã thanh lý) thì không được trông như một. */
   if (level === 'none') {
