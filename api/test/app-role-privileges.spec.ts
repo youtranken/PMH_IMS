@@ -355,20 +355,33 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
    * Bài dưới GIEO chính dòng ấy rồi hỏi lại cổng. Trên bản chưa vá, cổng trả `ok: true`.
    */
   describe('thừa kế vai — đường thứ ba tới quyền chủ sở hữu', () => {
+    /*
+     * Hỏi DB ai sở hữu audit_log thay vì viết cứng `ims`: CI chạy Postgres với user khác
+     * (`ims_ci`), viết cứng thì GRANT trượt vì role không tồn tại chứ không phải vì cổng.
+     */
+    async function ownerRole(): Promise<string> {
+      const { rows } = await scratch.pool.query<{ owner: string }>(
+        `SELECT quote_ident(pg_get_userbyid(relowner)) AS owner FROM pg_class
+          WHERE relname = 'audit_log' AND relkind IN ('r', 'p')`,
+      );
+      return rows[0].owner;
+    }
+
     afterEach(async () => {
-      await scratch.pool.query(`REVOKE ims FROM ims_app`).catch(() => undefined);
+      await scratch.pool.query(`REVOKE ${await ownerRole()} FROM ims_app`).catch(() => undefined);
     });
 
     it('GRANT vai chủ sở hữu cho ims_app → cổng phải TRƯỢT', async () => {
-      await scratch.pool.query(`GRANT ims TO ims_app`);
+      await scratch.pool.query(`GRANT ${await ownerRole()} TO ims_app`);
       const verdict = appRoleVerdict(await readAppRoleFacts(app));
       expect(verdict.ok).toBe(false);
       expect(verdict.reason).toMatch(/THÀNH VIÊN|SET ROLE/);
     });
 
     it('gỡ GRANT ra thì cổng đậu lại (vế đối chứng: nó đo thừa kế, không đo thứ khác)', async () => {
-      await scratch.pool.query(`GRANT ims TO ims_app`);
-      await scratch.pool.query(`REVOKE ims FROM ims_app`);
+      const owner = await ownerRole();
+      await scratch.pool.query(`GRANT ${owner} TO ims_app`);
+      await scratch.pool.query(`REVOKE ${owner} FROM ims_app`);
       expect(appRoleVerdict(await readAppRoleFacts(app))).toEqual({ ok: true, reason: null });
     });
 
