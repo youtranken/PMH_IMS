@@ -40,6 +40,11 @@ export function useCatalogLists(options?: { enabled?: boolean }): UseQueryResult
  *
  * KHÔNG dùng cho ô LỌC ở màn danh sách: ở đó người ta cần tra cả hồ sơ cũ theo mục đã ngừng.
  */
+/** Nhãn site trong ô chọn của FORM: "mã — tên" (FM-11). Ô LỌC thì chỉ mã cho gọn. */
+export function siteFormLabel(site: { code: string; name: string }): string {
+  return `${site.code} — ${site.name}`;
+}
+
 export function activeOptions<T extends { id: string; active: boolean }>(
   rows: readonly T[] | undefined,
   currentId: string | null | undefined,

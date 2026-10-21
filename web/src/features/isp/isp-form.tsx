@@ -20,7 +20,7 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { IspRow } from './isp-types';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
@@ -374,7 +374,7 @@ export function IspForm({
               options={activeOptions(
                 lists.data?.sites,
                 row?.siteId,
-                (site) => `${site.code} — ${site.name}`,
+                siteFormLabel,
               )}
               onChange={(value) => set('siteId', value)}
             />

@@ -22,7 +22,7 @@ import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
@@ -521,7 +521,7 @@ export function DeviceForm({
               options={activeOptions(
                 lists.data?.sites,
                 device?.siteId,
-                (site) => `${site.code} — ${site.name}`,
+                siteFormLabel,
               )}
               failed={lists.isError}
               onChange={(value) => set('siteId', value)}

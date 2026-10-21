@@ -10,7 +10,7 @@ import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
 import { useIpamSettings } from './ipam-settings';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { IpInput } from '@/ui/code-input';
 
@@ -253,7 +253,7 @@ export function SubnetForm({
             placeholder={t('ipam.noSite')}
             options={[
               { value: '', label: t('ipam.noSite') },
-              ...activeOptions(lists.data?.sites, subnet?.siteId, (site) => site.code),
+              ...activeOptions(lists.data?.sites, subnet?.siteId, siteFormLabel),
             ]}
             failed={lists.isError}
           />

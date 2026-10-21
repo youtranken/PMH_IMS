@@ -11,7 +11,7 @@ import { Field } from '@/ui/page-header';
 import { NumberStepper } from '@/ui/number-stepper';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import { CableSwatch } from '@/ui/cable-swatch';
@@ -319,7 +319,7 @@ export function CatalogForm({
               options={activeOptions(
                 lists.data?.sites,
                 (row as CabinetRow | null)?.siteId,
-                (site) => `${site.code} — ${site.name}`,
+                siteFormLabel,
               )}
               onChange={pickSite}
             />
