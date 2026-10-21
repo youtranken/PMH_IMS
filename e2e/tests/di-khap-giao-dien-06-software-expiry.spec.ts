@@ -881,7 +881,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Bám vào KHU lịch sử: chữ "Gia hạn" còn nằm trên nút đầu trang, tìm toàn trang là trúng hai chỗ.
     const history = page.getByLabel('Lịch sử');
     await expect(
-      history.getByText('Tạo hồ sơ'),
+      history.getByText('Thêm hồ sơ'),
       'Lịch sử phải ghi lại việc hồ sơ được tạo — không có dòng đó thì sổ bắt đầu từ hư không',
     ).toBeVisible();
     await expect(

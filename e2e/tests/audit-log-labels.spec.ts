@@ -39,7 +39,7 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
     const userId = ((await created.json()) as { user: { id: string } }).user.id;
 
     await page.goto(`/admin/audit-log?objectId=${userId}`);
-    const row = page.getByRole('row', { name: /Tạo tài khoản/ });
+    const row = page.getByRole('row', { name: /Thêm tài khoản/ });
     await expect(row).toBeVisible();
     const link = row.getByRole('link', { name: new RegExp(email.replace(/[.+]/g, '\\$&')) });
     await expect(link).toBeVisible();

@@ -107,7 +107,7 @@ function actionText(row: DeviceHistoryRow, t: TFunction): string {
 }
 
 function detailText(row: DeviceHistoryRow, t: TFunction): string | null {
-  /* Tạo hồ sơ: liệt kê "(trống) → …" cho từng ô chỉ là đọc lại hồ sơ dưới dạng khó đọc hơn. */
+  /* Thêm hồ sơ: liệt kê "(trống) → …" cho từng ô chỉ là đọc lại hồ sơ dưới dạng khó đọc hơn. */
   if (row.action === 'created' || row.action === 'imported') return null;
   const changes = row.changes ? { ...row.changes } : null;
   if (changes && PORT_ACTION[row.action]) {

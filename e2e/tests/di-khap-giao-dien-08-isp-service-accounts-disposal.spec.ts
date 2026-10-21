@@ -604,8 +604,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         name: /^Lịch sử$/,
         marker: async () => {
           await expect(
-            main.getByRole('listitem').filter({ hasText: 'Tạo hồ sơ' }),
-            'Tab Lịch sử phải có sẵn dòng "Tạo hồ sơ" — mọi hồ sơ đều sinh ra từ một lượt ghi',
+            main.getByRole('listitem').filter({ hasText: 'Thêm hồ sơ' }),
+            'Tab Lịch sử phải có sẵn dòng "Thêm hồ sơ" — mọi hồ sơ đều sinh ra từ một lượt ghi',
           ).toBeVisible();
         },
       },
@@ -960,7 +960,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     for (const [name, marker] of [
       [/^Két sắt/, page.getByText(/Chưa cất mật khẩu hay key nào/)],
       [/^Giấy tờ/, page.getByText('Chưa có giấy tờ nào.')],
-      [/^Lịch sử$/, page.getByRole('listitem').filter({ hasText: 'Tạo hồ sơ' })],
+      [/^Lịch sử$/, page.getByRole('listitem').filter({ hasText: 'Thêm hồ sơ' })],
     ] as [RegExp, Locator][]) {
       const button = page.getByRole('tab', { name: name });
       await button.click();

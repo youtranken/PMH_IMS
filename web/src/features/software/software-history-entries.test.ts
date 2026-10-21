@@ -121,7 +121,7 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
 
   it('không có changes thì không bịa mô tả', () => {
     const [entry] = toSoftwareHistory([row({ action: 'created', changes: null })], t);
-    expect(entry.action).toBe('Tạo hồ sơ');
+    expect(entry.action).toBe('Thêm hồ sơ');
     expect(entry.detail).toBeNull();
   });
 });

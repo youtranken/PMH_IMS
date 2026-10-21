@@ -117,7 +117,7 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
 
   it('bản ghi không có changes vẫn ra dòng đọc được, không phải "undefined"', () => {
     const [entry] = toIpHistoryEntries([
-      row({ action: 'Tạo hồ sơ', fromStatus: null, toStatus: 'assigned', changes: null }),
+      row({ action: 'Thêm hồ sơ', fromStatus: null, toStatus: 'assigned', changes: null }),
     ], t);
     expect(entry.detail).toBe('Đang dùng');
   });
@@ -172,7 +172,7 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
  */
 describe('actionLabel — tên việc bằng tiếng Việt', () => {
   it.each([
-    ['ip.created', 'Tạo hồ sơ'],
+    ['ip.created', 'Thêm hồ sơ'],
     ['ip.updated', 'Sửa hồ sơ'],
     ['ip.assigned', 'Cấp IP'],
     ['ip.voided', 'Xóa hồ sơ IP nhập nhầm'],

@@ -250,10 +250,10 @@ test.describe('Trang hồ sơ phần mềm', () => {
     await expect(history.getByText(/đổi deviceId/)).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Ghế', exact: true }).click();
-    await expect(history.getByText('Tạo hồ sơ')).toHaveCount(0);
+    await expect(history.getByText('Thêm hồ sơ')).toHaveCount(0);
     await expect(history.getByText('Gán license vào máy')).toBeVisible();
     await page.getByRole('button', { name: 'Hồ sơ', exact: true }).click();
-    await expect(history.getByText('Tạo hồ sơ')).toBeVisible();
+    await expect(history.getByText('Thêm hồ sơ')).toBeVisible();
   });
 
   test('SW-040: Thanh lý nằm trong menu ⋯ đầu trang, vẫn hỏi lại trước khi làm', async ({ page }) => {

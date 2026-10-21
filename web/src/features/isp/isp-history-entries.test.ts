@@ -45,7 +45,7 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
     expect(entry.detail).toBe('ngày hết hạn: 30/08/2026 → 30/08/2027');
   });
 
-  it('dòng "Tạo hồ sơ" liệt kê giá trị ban đầu — không có "(trống) →" và bỏ ô trống', () => {
+  it('dòng "Thêm hồ sơ" liệt kê giá trị ban đầu — không có "(trống) →" và bỏ ô trống', () => {
     const [entry] = toIspHistory(
       [
         row({
@@ -59,7 +59,7 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
       ],
       t,
     );
-    expect(entry.action).toBe('Tạo hồ sơ');
+    expect(entry.action).toBe('Thêm hồ sơ');
     expect(entry.detail).toBe('mã đường: ISP-E2E-01; hotline: 1800 1166');
   });
 

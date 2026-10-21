@@ -22,7 +22,7 @@ const ENTRIES: HistoryEntry[] = [
     id: 'h1',
     at: '2026-09-30T02:00:00.000Z',
     actor: 'it01@pmh.com.vn',
-    action: 'Tạo hồ sơ',
+    action: 'Thêm hồ sơ',
     tone: 'create',
   },
 ];

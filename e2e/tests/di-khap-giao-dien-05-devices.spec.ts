@@ -1156,7 +1156,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Máy vừa khai xong phải có ĐÚNG MỘT dòng lịch sử — không có dòng nào nghĩa là lượt tạo không được ghi sổ (AD-13)',
     ).toHaveCount(1);
     await expect(
-      panel.getByText('Tạo hồ sơ', { exact: true }),
+      panel.getByText('Thêm hồ sơ', { exact: true }),
       'và dòng đó phải đọc được ra tiếng Việt, không phải chuỗi thô "created"',
     ).toBeVisible();
     // DEV-085: lịch sử nêu HỌ TÊN người làm (không phải email).

@@ -60,7 +60,7 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     await rowAction(page, new RegExp(code), 'Lịch sử');
     const dialog = page.getByRole('dialog', { name: new RegExp(`Lịch sử của .*${code}`) });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('Tạo mục')).toBeVisible();
+    await expect(dialog.getByText('Thêm mục')).toBeVisible();
     await expect(dialog.getByText('Ngừng dùng')).toBeVisible();
     await expect(dialog.getByText('địa chỉ: (trống) → Tầng 3', { exact: true })).toBeVisible();
     await expect(dialog.getByText(new RegExp(E2E_SA.email)).first()).toBeVisible();
@@ -116,7 +116,7 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     await page.getByRole('tab', { name: 'Tủ mạng' }).click();
     await rowAction(page, new RegExp(renamed), 'Lịch sử');
     const dialog = page.getByRole('dialog', { name: new RegExp(`Lịch sử của .*${renamed}`) });
-    await expect(dialog.getByText('Tạo mục')).toBeVisible();
+    await expect(dialog.getByText('Thêm mục')).toBeVisible();
     await expect(dialog.getByText(/^site: /)).toHaveCount(0);
     await expect(dialog.getByText('đổi site')).toHaveCount(0);
   });
@@ -130,6 +130,6 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     await firstLogin(page, E2E_MEMBER);
     await page.goto('/admin/catalog');
     await rowAction(page, new RegExp(code), 'Lịch sử');
-    await expect(page.getByRole('dialog').getByText('Tạo mục')).toBeVisible();
+    await expect(page.getByRole('dialog').getByText('Thêm mục')).toBeVisible();
   });
 });

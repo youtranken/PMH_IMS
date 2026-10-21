@@ -117,7 +117,7 @@ test.describe('Kho thiết bị', () => {
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
+    await expect(page.getByText('Thêm hồ sơ')).toBeVisible();
     await expect(page.getByText(/người sử dụng: \(trống\) → anh Nam/)).toBeVisible();
   });
 

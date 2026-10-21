@@ -39,7 +39,7 @@ describe('toCatalogHistory — sổ danh mục có hình dạng riêng, không p
       [row({ action: 'created', changes: { code: 'HCM', name: 'Hồ Chí Minh' } })],
       t,
     );
-    expect(entry.action).toBe('Tạo mục');
+    expect(entry.action).toBe('Thêm mục');
     expect(entry.detail).toBeNull();
     expect(entry.actor).toBe('it01@pmh.com.vn');
   });

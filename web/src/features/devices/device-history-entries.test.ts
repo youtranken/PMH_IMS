@@ -78,7 +78,7 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
 
   it('không có changes thì không bịa ra mô tả', () => {
     const [entry] = toHistoryEntries([row({ action: 'created', changes: null })], t);
-    expect(entry.action).toBe('Tạo hồ sơ');
+    expect(entry.action).toBe('Thêm hồ sơ');
     expect(entry.detail).toBeNull();
   });
 
@@ -93,7 +93,7 @@ describe('toHistoryEntries — câu tự nhiên, không phải khoá thô', () =
     const [entry] = toHistoryEntries([
       row({ action: 'created', changes: { code: { before: null, after: 'SW-01' } } }),
     ], t);
-    expect(entry.action).toBe('Tạo hồ sơ');
+    expect(entry.action).toBe('Thêm hồ sơ');
     expect(entry.detail).toBeNull();
   });
 
