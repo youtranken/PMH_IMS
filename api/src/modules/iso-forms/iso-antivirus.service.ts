@@ -360,7 +360,7 @@ export class IsoAntivirusService {
       if (current.linkedCode) {
         throw new ConflictException({
           code: 'ISO_CELL_LINKED',
-          message: `Dòng này đã gắn phiếu ${current.linkedCode} — bỏ gắn ở phiếu đó trước khi xoá.`,
+          message: `Dòng này đã gắn phiếu ${current.linkedCode} — bỏ gắn ở phiếu đó trước khi xóa.`,
         });
       }
       await tx.delete(isoAvIssueTable).where(eq(isoAvIssueTable.id, id));

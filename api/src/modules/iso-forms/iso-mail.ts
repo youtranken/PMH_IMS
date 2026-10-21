@@ -102,7 +102,7 @@ export class IsoMailContent implements OnModuleInit {
           ...common,
           subject: `[IMS] Đã duyệt chốt kỳ ${label}`,
           title: 'Kỳ phiếu đã được duyệt chốt',
-          intro: 'Kỳ đã khoá. In bản phiếu, ký, scan rồi tải bản ký lên ở màn Kỳ phiếu.',
+          intro: 'Kỳ đã khóa. In bản phiếu, ký, scan rồi tải bản ký lên ở màn Kỳ phiếu.',
           ctaLabel: 'Mở Kỳ phiếu',
           ctaPath: UI_PATHS.isoPeriod(form, month),
         };
@@ -250,7 +250,7 @@ export class IsoMailContent implements OnModuleInit {
       to: [incident.createdBy],
       subject: `[IMS] Phiếu ${incident.code} vẫn In Progress`,
       title: 'Phiếu sự cố chưa xử lý xong',
-      intro: 'Sửa xong thì đổi Current Status sang Resolved, phiếu tự khoá rồi in và tải bản ký.',
+      intro: 'Sửa xong thì đổi Current Status sang Resolved, phiếu tự khóa rồi in và tải bản ký.',
       rows: [
         { label: 'Phiếu', value: incident.code },
         { label: 'Mô tả', value: incident.description.slice(0, 160) },

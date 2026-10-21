@@ -635,7 +635,7 @@ export function inReviewIncident(code: string) {
 export function lockedIncident(code: string) {
   return new ConflictException({
     code: 'ISO_INCIDENT_LOCKED',
-    message: `Phiếu ${code} đã khoá theo kỳ đã chốt — chỉ xem. Cần sửa thì xin mở lại kỳ ở Kỳ phiếu.`,
+    message: `Phiếu ${code} đã khóa theo kỳ đã chốt — chỉ xem. Cần sửa thì xin mở lại kỳ ở Kỳ phiếu.`,
   });
 }
 

@@ -197,7 +197,7 @@ export class DeviceModelsService {
       if (Number(value) > 0) {
         throw new ConflictException({
           code: 'DEVICE_MODEL_IN_USE',
-          message: `Model còn ${Number(value)} máy dùng — gán model khác cho các máy đó trước khi xoá.`,
+          message: `Model còn ${Number(value)} máy dùng — gán model khác cho các máy đó trước khi xóa.`,
         });
       }
       await tx.delete(deviceModelTable).where(eq(deviceModelTable.id, id));

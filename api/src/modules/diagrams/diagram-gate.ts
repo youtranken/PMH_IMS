@@ -136,7 +136,7 @@ function checkLabelAttrs(tagName: string, rest: string, closing: boolean): strin
     const name = attr[1].toLowerCase();
     if (!LABEL_ATTRS.has(name)) return `Nhãn có thuộc tính không được phép: ${name} trên <${tagName}>.`;
     const decoded = decodeHtml(attr[2] ?? attr[3] ?? attr[4] ?? '');
-    if (decoded === null) return `Nhãn có ký tự mã hoá lạ trong thuộc tính ${name}.`;
+    if (decoded === null) return `Nhãn có ký tự mã hóa lạ trong thuộc tính ${name}.`;
     if (BAD_CSS.test(decoded) || BAD_SCHEME.test(squash(decoded))) {
       return `Nhãn có ${name} tải tài nguyên ngoài hoặc chạy mã.`;
     }

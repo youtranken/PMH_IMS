@@ -639,7 +639,8 @@ describe('Tên vai trò thống nhất', () => {
     const bad = files.filter((file) => {
       const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
       const strings = code.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? [];
-      return strings.some((text) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|báo IT|team IT/.test(text));
+      // Q-20: "khóa / xóa / hóa" (dấu trên chữ cái chính) như giao diện; TX-26.
+      return strings.some((text) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|báo IT|team IT|(?<![\p{L}])(khoá|xoá|hoá)(?![\p{L}])/iu.test(text));
     });
     expect(bad.map((file) => file.slice(root.length + 1))).toEqual([]);
   });

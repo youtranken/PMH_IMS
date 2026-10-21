@@ -249,12 +249,10 @@ export function vietnameseFor(
       if (/shorter than/.test(englishDefault) && limit) return `${label} tối đa ${limit} ký tự.`;
       return `${label} có độ dài không hợp lệ.`;
     }
-    case 'isIn': {
-      const allowed = /values:\s*(.+)$/.exec(englishDefault)?.[1];
-      return allowed
-        ? `${label} chỉ nhận một trong: ${allowed}.`
-        : `${label} không nằm trong danh sách cho phép.`;
-    }
+    case 'isIn':
+      // Không liệt kê giá trị cho phép (TX-26): đó là mã enum (in_use, spare…), người dùng không
+      // gõ được, và ô chọn ở web vốn chỉ bày giá trị đúng.
+      return `${label} không nằm trong danh sách cho phép.`;
     case 'matches':
       return `${label} sai định dạng.`;
     case 'whitelistValidation':
