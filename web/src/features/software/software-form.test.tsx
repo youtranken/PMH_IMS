@@ -154,6 +154,22 @@ describe('Form theo màn (Q-22)', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Kỳ hạn' })).toBeNull();
   });
 
+  // FM-23: tên miền là thứ người ta có trên tay đầu tiên — ô đứng đầu, Tên hồ sơ tự điền theo nó.
+  it('Tên miền & SSL: ô Tên miền đứng trước Tên hồ sơ; gõ tên miền → Tên hồ sơ tự điền, sửa tay thì giữ', async () => {
+    mockFetch();
+    renderOn('domains');
+    const user = userEvent.setup();
+    const domains = screen.getByRole('textbox', { name: /^Tên miền/ });
+    const name = screen.getByRole('textbox', { name: /Tên hồ sơ/ });
+    expect(domains.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.type(domains, 'pmh.com.vn{Enter}mail.pmh.com.vn');
+    expect(name).toHaveValue('pmh.com.vn');
+    await user.clear(name);
+    await user.type(name, 'Tên miền chính');
+    await user.type(domains, '{Enter}vpn.pmh.com.vn');
+    expect(name).toHaveValue('Tên miền chính');
+  });
+
   it('Tên miền & SSL: phải có ít nhất một tên miền — ô "Tên miền" báo lỗi, không gửi', async () => {
     const writes = mockFetch();
     renderOn('domains');

@@ -193,6 +193,14 @@ export function SoftwareForm({
       if (key === 'licenseModel' && value === 'perpetual') {
         return { ...current, licenseModel: 'perpetual', endDate: '' };
       }
+      // Tên hồ sơ theo tên miền đầu tiên (FM-23) — chỉ khi ô tên còn trống hoặc vẫn đang là
+      // bản tự điền; người dùng đã sửa tay thì giữ nguyên.
+      if (key === 'websites') {
+        const before = websiteLines(current.websites)[0] ?? '';
+        const after = websiteLines(value as string)[0] ?? '';
+        const auto = current.name.trim() === '' || current.name === before;
+        return { ...current, websites: value as string, name: auto ? after : current.name };
+      }
       // Ghế riêng cần từ 2 ghế: bớt xuống dưới 2 (hay xoá trống = không giới hạn) thì tự tắt.
       if (key === 'seatTotal' && !(Number(value) >= 2)) {
         return { ...current, seatTotal: value as string, perSeat: false };
@@ -440,6 +448,25 @@ export function SoftwareForm({
               </div>
             </Field>
           ) : null}
+          {/* Tên miền / SSL: ô Tên miền đứng ĐẦU (FM-23) — thứ có sẵn trên tay; Tên hồ sơ tự điền theo nó. */}
+          {hasDomains ? (
+            <Field
+              label={t('software.domainNames')}
+              hint={t('software.domainNamesHint')}
+              htmlFor="sw-websites"
+              required
+              span={3}
+              error={check.error('websites')}
+            >
+              <textarea
+                id="sw-websites"
+                className="inp"
+                rows={3}
+                value={form.websites}
+                onChange={(e) => set('websites', e.target.value)}
+              />
+            </Field>
+          ) : null}
           {/* Một hàng ba ô (Q-27): tên · mã · nhà cung cấp — "cái gì, gọi là gì, mua của ai". */}
           <Field label={t('software.name')} required htmlFor="sw-name" error={check.error('name')}>
             <input
@@ -613,31 +640,14 @@ export function SoftwareForm({
         {/* Ghi chú chung — với license bật ghế riêng thì ghi chú nằm ở từng ghế. */}
         {perSeat ? null : (
           <FormSection
-            title={hasDomains ? t('software.sectionWebsitesNote') : hasSeats ? t('software.sectionNoteFiles') : undefined}
+            title={hasSeats ? t('software.sectionNoteFiles') : undefined}
             columns={3}
           >
-            {hasDomains ? (
-              <Field
-                label={t('software.domainNames')}
-                hint={t('software.domainNamesHint')}
-                htmlFor="sw-websites"
-                required
-                error={check.error('websites')}
-              >
-                <textarea
-                  id="sw-websites"
-                  className="inp"
-                  rows={3}
-                  value={form.websites}
-                  onChange={(e) => set('websites', e.target.value)}
-                />
-              </Field>
-            ) : null}
             <NoteField
               id="sw-note"
               value={form.note}
               onChange={(v) => set('note', v)}
-              span={hasDomains ? 2 : 3}
+              span={3}
               error={check.error('note')}
             />
           </FormSection>

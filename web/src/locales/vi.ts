@@ -2179,7 +2179,6 @@ export default {
     batchesTitle: 'Mua theo đợt',
     batchSeats: '{{count}} Ghế',
     contractPerSeat: 'Riêng từng ghế ({{count}})',
-    sectionWebsitesNote: 'Tên miền và ghi chú',
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',
