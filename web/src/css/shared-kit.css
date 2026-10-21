@@ -2236,6 +2236,12 @@ html[data-motion='off'] .spinner {
   border: 1px dashed var(--border-2);
   border-radius: var(--r-lg);
 }
+/* Trong khung bảng thì khung bảng đã là viền: thêm viền đứt + nền riêng là khung kép (ST-02). */
+.table-wrap .empty {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
 /* Icon "khay rỗng" (Lucide inbox) — biến chữ trôi thành khối có chủ đích. */
 .empty::before {
   content: '';

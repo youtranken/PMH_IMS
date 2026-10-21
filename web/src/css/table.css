@@ -1000,6 +1000,10 @@ table.table thead th .th-sort:focus-visible .sort-arrow.idle {
 }
 /* Khung chờ của màn danh sách (`SkeletonTable`): mỗi vạch là một "dòng" cao bằng dòng bảng, có
    kẻ chân như bảng thật, để lúc dữ liệu về mắt không thấy cả khối nhảy. */
+/* Dòng giữ chỗ vẽ ngay, vạch xám chỉ hiện sau 300ms (`data-shown`) — tải nhanh không chớp. */
+.skeleton-table:not([data-shown]) .skeleton {
+  visibility: hidden;
+}
 .skeleton-table {
   border: 1px solid var(--border);
   border-radius: var(--r);

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useAnnounce } from '@/ui/live-region';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 /** Tải nhanh hơn mốc này thì không vẽ khung xương — tránh chớp một nhịp rồi biến mất. */
 const SHOW_AFTER_MS = 300;
@@ -57,19 +59,22 @@ export function SkeletonTable({ label, rows = 6 }: { label?: string; rows?: numb
   const text = label ?? t('app.loading');
   useAnnounce(text);
   const shown = useShownAfterDelay();
+  // Điện thoại: danh sách thật là THẺ (DataTable mobileCard) — khung xương cũng là thẻ (ST-03).
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
+  if (narrow) return <SkeletonCards />;
+  /* Dòng vẽ NGAY để giữ chỗ (ST-03): chờ 300ms mới vẽ thì trang trống trơn rồi nhảy. Chỉ vạch xám
+     hiện sau mốc đó (`data-shown`), để tải nhanh không chớp. */
   return (
-    <div className="skeleton-table" aria-busy="true">
+    <div className="skeleton-table" aria-busy="true" data-shown={shown ? 'true' : undefined}>
       <span className="sr-only">{text}</span>
       <div aria-hidden="true">
-        {shown
-          ? Array.from({ length: rows }, (_, i) => (
-              <div key={i} className="skeleton-line">
-                <span className="skeleton sk-bar sk-lead" />
-                <span className="skeleton sk-bar" />
-                <span className="skeleton sk-bar sk-narrow" />
-              </div>
-            ))
-          : null}
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} className="skeleton-line">
+            <span className="skeleton sk-bar sk-lead" />
+            <span className="skeleton sk-bar" />
+            <span className="skeleton sk-bar sk-narrow" />
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -125,3 +125,12 @@ describe('Dải nút trong form xuống hàng', () => {
     expect(body).toMatch(/overflow-x:\s*visible/);
   });
 });
+
+/** ST-02: ô rỗng của bảng là khung viền đứt NẰM TRONG khung bảng — khung kép. */
+describe('Trạng thái rỗng trong khung bảng', () => {
+  it('.table-wrap .empty: không viền đứt, không nền riêng', () => {
+    const body = css('shared-kit.css').match(/\.table-wrap \.empty\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(body).toMatch(/border:\s*none/);
+    expect(body).toMatch(/background:\s*transparent/);
+  });
+});
