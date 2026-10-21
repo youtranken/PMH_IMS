@@ -186,7 +186,7 @@ function JobsTab({ me }: { me: Me }) {
                   </td>
                   <td data-label={t('iso.catalog.trackedFrom')}>{formatDate(job.trackedFrom)}</td>
                   <td data-label={t('iso.catalog.status')}>{jobStatus(job)}</td>
-                  {canWrite ? <td data-label={t('common.actions')}>{jobActions(job)}</td> : null}
+                  {canWrite ? <td data-label={t('common.actions')} className="col-center">{jobActions(job)}</td> : null}
                 </tr>
               ))}
             </tbody>
@@ -491,10 +491,15 @@ function DivisionsTab({ me }: { me: Me }) {
                     <span className={`badge ${d.active ? 'ok' : 'muted'}`}>{d.active ? t('iso.catalog.inUse') : t('iso.catalog.notInUse')}</span>
                   </td>
                   {canWrite ? (
-                    <td data-label={t('common.actions')}>
-                      <button type="button" className="btn sm ghost" aria-label={t('common.editOf', { subject: d.name })} onClick={() => setEditing(d)}>
-                        {t('common.edit')}
-                      </button>
+                    <td data-label={t('common.actions')} className="col-center">
+                      {/* Cùng khuôn nút dòng với tab Job (PW-B30): nút viền "Sửa" + ô giữ chỗ ba chấm
+                          để cột thẳng hàng. */}
+                      <div className="action-cell">
+                        <button type="button" className="btn sm" aria-label={t('common.editOf', { subject: d.name })} onClick={() => setEditing(d)}>
+                          {t('common.edit')}
+                        </button>
+                        <span className="kebab-slot" aria-hidden="true" />
+                      </div>
                     </td>
                   ) : null}
                 </tr>

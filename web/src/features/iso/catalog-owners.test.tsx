@@ -59,4 +59,24 @@ describe('Danh mục phiếu — tab Người phụ trách', () => {
       }),
     );
   });
+
+  // PW-B30: tab Bộ phận cùng khuôn nút dòng với tab Job — nút viền, không phải chữ trơn.
+  it('tab Bộ phận: "Sửa" là nút viền trong ô thao tác', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(jsonResponse(200, String(input).includes('divisions') ? [{ id: 'd1', code: 'D1', name: 'D&E Division', active: true }] : [])),
+    ));
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/iso/catalog?tab=divisions']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <CatalogScreen me={SA} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const edit = await screen.findByRole('button', { name: 'Sửa D&E Division' });
+    expect(edit).toHaveClass('btn', 'sm');
+    expect(edit).not.toHaveClass('ghost');
+    expect(edit.closest('.action-cell')).not.toBeNull();
+  });
 });
