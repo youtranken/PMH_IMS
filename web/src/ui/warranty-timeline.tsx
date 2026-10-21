@@ -61,12 +61,15 @@ export function WarrantyTimeline({
         <div className="wt-track" aria-hidden="true">
           <div className="wt-fill none" style={{ right: 0 }} />
         </div>
-        <div className="wt-legend">
-          <span className="left">
-            {toLabel} {formatDate(end)}
-          </span>
-          <span className="right muted">{t('expiry.notCountedRetired')}</span>
-        </div>
+        {/* Bản gọn đứng cạnh huy hiệu "Không tính hạn" và dòng khoảng ngày — nhắc lại là lặp (PW-A05). */}
+        {compact ? null : (
+          <div className="wt-legend">
+            <span className="left">
+              {toLabel} {formatDate(end)}
+            </span>
+            <span className="right muted">{t('expiry.notCountedRetired')}</span>
+          </div>
+        )}
       </div>
     );
   }
