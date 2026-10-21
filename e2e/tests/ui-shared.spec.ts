@@ -28,17 +28,22 @@ async function useTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
 }
 
-/** Nền của ô đầu trong dòng chứa `code`. */
-async function rowBackground(page: Page, code: string): Promise<string> {
+/** Vạch trái (box-shadow inset) của ô đầu trong dòng chứa `code`. */
+async function rowMark(page: Page, code: string): Promise<string> {
   const row = page.getByRole('row').filter({ has: page.getByRole('link', { name: new RegExp(code) }) });
   await expect(row).toHaveCount(1);
   return row
     .getByRole('cell')
     .first()
-    .evaluate((el) => getComputedStyle(el).backgroundColor);
+    .evaluate((el) => getComputedStyle(el).boxShadow);
 }
 
-test('hai dòng quá hạn liền nhau cùng giữ nền đỏ, ở cả sáng lẫn tối', async ({ page }) => {
+/*
+ * Quá hạn chỉ đánh dấu bằng VẠCH TRÁI đỏ + huy hiệu, không tô nền cả dòng (TB-11/DS-08): 6.470
+ * dòng quá hạn tô nền thì cả trang thành một mảng đỏ. Hai dòng liền nhau phải cùng một vạch,
+ * không bị sọc dòng chẵn làm mất.
+ */
+test('hai dòng quá hạn liền nhau cùng có vạch đỏ bên trái, ở cả sáng lẫn tối', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
@@ -61,8 +66,8 @@ test('hai dòng quá hạn liền nhau cùng giữ nền đỏ, ở cả sáng l
 
   for (const theme of ['light', 'dark'] as const) {
     await useTheme(page, theme);
-    const [a, b] = await Promise.all(codes.map((code) => rowBackground(page, code)));
-    expect(a, `[${theme}] dòng quá hạn phải có nền riêng`).not.toBe('rgba(0, 0, 0, 0)');
-    expect(b, `[${theme}] hai dòng quá hạn phải cùng một nền, không bị sọc dòng đè`).toBe(a);
+    const [a, b] = await Promise.all(codes.map((code) => rowMark(page, code)));
+    expect(a, `[${theme}] dòng quá hạn phải có vạch trái`).toMatch(/inset/);
+    expect(b, `[${theme}] hai dòng quá hạn phải cùng một vạch`).toBe(a);
   }
 });

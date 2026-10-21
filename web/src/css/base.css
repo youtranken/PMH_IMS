@@ -3,23 +3,25 @@ input,
 select,
 textarea {
   font: inherit;
+  /* --fs-input: 16px ở màn cảm ứng để iOS không tự phóng (DS-05). Độ ưu tiên (0,0,1) như cũ:
+     ô riêng (ô mã OTP, ô số trang…) tự khai cỡ chữ vẫn thắng. */
+  font-size: var(--fs-input);
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--field-border);
   border-radius: var(--r);
-  padding: var(--space-4) var(--space-5);
+  /* Đệm dọc nhỏ: chiều cao do --h-ctl quyết (luật dưới). */
+  padding: var(--space-1) var(--space-5);
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
     background 0.15s var(--ease);
 }
-/* Ô một dòng cao đúng --h-ctl như nút đứng cạnh (DS-02); chữ theo --fs-input (16px ở màn cảm ứng). */
-input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
-select {
+/* Ô một dòng cao đúng --h-ctl như nút đứng cạnh (DS-02). `:where()` = độ ưu tiên 0: chuỗi
+   `:not()` viết trần cộng lên (0,4,1) và đè cả ô tự khai kích thước. */
+:where(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), select) {
   min-height: var(--h-ctl);
-  padding-block: 0;
-  font-size: var(--fs-input);
 }
 textarea {
-  font-size: var(--fs-input);
+  padding-block: var(--space-4);
 }
 input::placeholder {
   color: var(--ink-3);
@@ -376,8 +378,15 @@ a.linkbtn.sm {
 /* Màn thấp (laptop 768px): Danh mục nằm trong nhóm Tài sản luôn mở (Q-27) làm menu dài thêm một
    mục — siết đệm dọc để mục cuối vẫn thấy mà không phải cuộn (Q-18). Màn cao giữ nguyên. */
 @media (max-height: 800px) {
+  /* Chữ menu lên sàn 12/13px (DS-19) thì mỗi mục cao thêm ~3px: bù bằng giãn dòng, không bằng
+     cỡ chữ. */
   .nav-item {
-    padding-block: var(--space-1);
+    padding-block: 3px;
+    line-height: 1.3;
+  }
+  .nav-label {
+    padding-top: var(--space-3);
+    line-height: 1.2;
   }
 }
 .nav-item:hover {

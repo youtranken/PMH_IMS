@@ -144,8 +144,9 @@
     text-wrap: balance;
     overflow-wrap: break-word;
   }
-  /* Chân hộp một hàng (FM-01/LY-17): 2–3 nút rộng hết màn xếp dọc ăn ~20% màn điện thoại. Hủy và
-     nút phụ co theo chữ, nút chính giãn hết phần còn lại; hết chỗ thì tự xuống hàng. */
+  /* Chân hộp gọn (FM-01/DS-17): 3 nút rộng hết màn xếp dọc ăn ~20% màn điện thoại. Hủy + nút phụ
+     chung một hàng, nút chính một hàng riêng ở dưới cùng (gần ngón cái); hộp chỉ có Hủy + nút
+     chính thì cả hai chung một hàng. */
   .dialog-viewport .sheet-footer {
     position: sticky;
     bottom: 0;
@@ -165,10 +166,16 @@
   .dialog-viewport .sheet-footer > button.danger {
     order: 1;
     flex: 2 1 auto;
+    min-height: 48px;
+  }
+  .dialog-viewport .sheet-footer:has(> button:nth-of-type(3)) > button.primary,
+  .dialog-viewport .sheet-footer:has(> button:nth-of-type(3)) > button.danger {
+    flex-basis: 100%;
   }
   /* Câu lý do nút xám: hàng riêng, TRÊN các nút, đọc trước khi bấm. */
   .dialog-viewport .sheet-footer > .disabled-reason {
     order: -1;
+    flex-basis: 100%;
     margin-right: 0;
   }
 }

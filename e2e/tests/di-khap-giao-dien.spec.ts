@@ -175,14 +175,14 @@ import { fileURLToPath } from 'node:url';
  *     → Trang tổng Két sắt: bốn nút lọc đổi bảng thật, popup mở đúng két, luật đủ bốn gạch
  * [x] Ma trận Quyền: đủ cột · Member có nút gán · SA/Admin ở khối "toàn quyền theo vai"
  *     → Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin ở khối "toàn quyền theo vai"
- * [x] Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút
- *     → Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút
+ * [x] Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và chỉ có nút Từ chối (Q-30: duyệt bằng mã)
+ *     → Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và chỉ có nút Từ chối
  * [x] Bảng điều khiển: SA đủ sáu khối, Member THIẾU đúng hai khối an ninh
  *     → Bảng điều khiển: SA thấy đủ sáu khối, Member thiếu đúng hai khối an ninh
  * [x] Hộp Cất mật khẩu/khóa · Xác nhận danh tính · Hiện secret
  *     → Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret
- * [x] Hộp Duyệt · Từ chối · gán quyền hàng loạt
- *     → Bên trong hộp Duyệt, hộp Từ chối và hộp gán quyền hàng loạt
+ * [x] Hộp Từ chối · gán quyền hàng loạt
+ *     → Bên trong hộp Từ chối và hộp gán quyền hàng loạt
  * [x] Esc lúc menu ô chọn đang mở chỉ đóng MENU (canh bản vá `ui/dialog.tsx`)
  *     → Esc lúc menu ô chọn đang mở chỉ đóng MENU, không đóng cả hộp thoại
  *
