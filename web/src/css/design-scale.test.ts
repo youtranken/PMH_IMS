@@ -116,3 +116,12 @@ describe('Khung báo trong lưới form chiếm trọn hàng', () => {
     expect(form).toMatch(/\.form-grid > \.alert[^{]*\{[^}]*grid-column:\s*1 \/ -1/);
   });
 });
+
+/** FM-03 / Q-32: dải chọn một trong FORM xuống hàng khi hẹp, không cuộn ngang mất lựa chọn. */
+describe('Dải nút trong form xuống hàng', () => {
+  it('.field > .segmented: flex-wrap wrap, không cuộn ngang', () => {
+    const body = css('form-layout.css').match(/\.field > \.segmented:not\(\.wrap\),\s*\.segmented\.fill\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(body).toMatch(/flex-wrap:\s*wrap/);
+    expect(body).toMatch(/overflow-x:\s*visible/);
+  });
+});

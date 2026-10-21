@@ -1347,6 +1347,16 @@ Member thấy như nhau.
 - **Thư không đổi:** thư hạn (người nhận do SA khai từng luật), thư nhắc ISO (người phụ trách + SA /
   Admin), thư sơ đồ và thư mở két vẫn gửi như cũ.
 
+### Q-32 · Soát giao diện doanh nghiệp (21/10/2026, chủ dự án duyệt mockup)
+
+Chủ dự án duyệt mockup bố cục ngày 21/10/2026 và cho làm toàn bộ kế hoạch soát giao diện. Mục nào
+đổi một quyết định cũ thì ghi ở đây, kèm quyết định bị đổi.
+
+- **Dải nút chọn một trong FORM xuống hàng khi hẹp** (đổi một phần Q-24). Vẫn trải hết bề ngang
+  ô và chia đều như Q-24, nhưng không đủ chỗ (điện thoại, phiếu 0206 có 5 lựa chọn) thì xuống hàng
+  thành lưới các ô bằng nhau, thay vì cuộn ngang làm mất lựa chọn cuối ("Other") và cắt chữ ("In
+  Pro…"). Dải nút LỌC trên thanh công cụ vẫn cuộn ngang như cũ.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

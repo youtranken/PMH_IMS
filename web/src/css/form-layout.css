@@ -87,12 +87,17 @@
  * nằm trong hộp form mà không qua `Field` thì tự mang `fill`. Dải LỌC trên thanh công cụ không
  * đụng tới — chúng đứng cạnh nút khác, kéo dài ra là chiếm chỗ của ô tìm kiếm. Chip chọn nhiều
  * xuống dòng (`.wrap`, lọc loại thiết bị) cũng không: kéo giãn từng hàng chip là vỡ hàng.
- * `min-width: max-content` giữ chữ không bị bóp; dải hẹp hơn tổng chữ thì cuộn ngang như cũ.
+ * `min-width: max-content` giữ chữ không bị bóp; dải hẹp hơn tổng chữ thì XUỐNG HÀNG (Q-32): cuộn
+ * ngang giấu mất lựa chọn cuối ("Other" ở phiếu 0206 trên điện thoại) và cắt chữ ("In Pro…").
+ * Nút trên mỗi hàng vẫn giãn đều phủ hết bề ngang.
  */
 .field > .segmented:not(.wrap),
 .segmented.fill {
   display: flex;
+  flex-wrap: wrap;
   width: 100%;
+  overflow-x: visible;
+  background: var(--surface-2);
 }
 .field > .segmented:not(.wrap) > label,
 .field > .segmented:not(.wrap) > button,
