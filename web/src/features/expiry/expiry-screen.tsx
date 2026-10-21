@@ -2,8 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { Chevron } from '@/ui/chevron';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
@@ -137,6 +136,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const askConfirm = useConfirm();
+  const navigate = useNavigate();
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
   const [addingRule, setAddingRule] = useState(false);
@@ -354,14 +354,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
             <button type="button" className="btn sm" onClick={() => setRenewing(row.original)}>
               {t('expiry.renew')}
             </button>
-          ) : (
-            /* Bảo hành không gia hạn ở đây: cho lối sang hồ sơ (sửa ngày ở đó) thay vì một câu
-               xám lặp lại trên mọi dòng, đọc như chữ của một nút bị vô hiệu. */
-            <Link className="with-icon" to={row.original.link}>
-              {t('expiry.openRecordShort')}
-              <Chevron direction="right" />
-            </Link>
-          ),
+          ) : /* Không gia hạn được ở đây (bảo hành): ô trống. Lối sang hồ sơ là link mã ở cột
+                 Mục và bấm cả dòng (PW-A20) — thêm "Mở hồ sơ ›" là lặp lại trên mọi dòng. */
+          null,
       },
     ],
     /*
@@ -592,6 +587,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
              sách là theo tháng. Sắp theo cột khác thì nhóm tháng vô nghĩa nên bỏ. */
           groupBy={sortKey === 'end' ? byMonth : undefined}
           rowClassName={(row) => (row.daysLeft < 0 ? 'row-danger' : '')}
+          onRowClick={(row) => navigate(row.link)}
+          rowHref={(row) => row.link}
           /* Chọn nhiều dòng để gia hạn một lượt (cuối năm cả chục license/SSL cùng một hợp
              đồng). Dòng không gia hạn được ở đây thì bỏ qua lúc chạy, và nói ra con số đó. */
           selection={{
