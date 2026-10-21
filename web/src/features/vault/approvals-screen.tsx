@@ -30,7 +30,6 @@ import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useDebouncedValue } from "@/ui/use-debounced-value";
 import { useToast } from "@/ui/toast";
-import { usePendingDiagramReviews, type PendingDiagramReview } from "@/shell/use-pending-diagram-reviews";
 
 type ApprovalRow = BreakGlassRow;
 
@@ -298,7 +297,6 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         // Xuất cùng một chỗ ở mọi màn, kể cả điện thoại: đầu trang (PW-C16).
         actions={exportButton}
       />
-      {canDecide ? <DiagramReviewQueue me={me} /> : null}
 
       {/* Một tab thôi thì thanh tab chỉ là một vạch trang trí — bỏ. */}
       {tabs.length > 1 ? (
@@ -440,7 +438,8 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     className="row"
                     style={{ gap: "var(--space-3)", flexWrap: "wrap" }}
                   >
-                    <BreakGlassStateBadge row={row} />
+                    {/* Ở tab Chờ duyệt thẻ nào cũng đang chờ — badge trạng thái chỉ lặp lại (UX-E07). */}
+                    {tab === "pending" ? null : <BreakGlassStateBadge row={row} />}
                     {isFocused ? (
                       <span className="badge warn">
                         {t("approvals.fromMail")}
@@ -750,34 +749,5 @@ function LogTable({
         href: (row) => PATHS.approval(row.id),
       }}
     />
-  );
-}
-
-/**
- * Bản vẽ đang chờ người này duyệt (D-07). Duyệt bản vẽ đi trên chính màn bản vẽ ("Duyệt…"), nên
- * khối này chỉ là lối vào: tên, phiên bản, ai gửi, lúc nào. Không có gì chờ thì không bày khối.
- */
-function DiagramReviewQueue({ me }: { me: Me }) {
-  const { t } = useTranslation();
-  const { rows } = usePendingDiagramReviews(me);
-  if (rows.length === 0) return null;
-  return (
-    <section className="card diagram-review-queue">
-      <h2>{t("diagrams.reviewQueue.title", { count: rows.length })}</h2>
-      <p className="muted">{t("diagrams.reviewQueue.hint")}</p>
-      <ul className="diagram-review-queue-list">
-        {rows.map((row: PendingDiagramReview) => (
-          <li key={row.approvalId}>
-            <Link to={PATHS.diagram(row.diagramId)} aria-label={t("diagrams.reviewQueue.open", { name: row.name })}>
-              {row.name}
-            </Link>
-            {row.seq !== null ? <span className="badge warn">{t("diagrams.reviewQueue.version", { seq: row.seq })}</span> : null}
-            <span className="muted">
-              {t("diagrams.reviewQueue.sentBy", { name: row.requesterName, at: formatDateTime(row.submittedAt) })}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

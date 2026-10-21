@@ -584,8 +584,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .toBeVisible();
     await expect(
       panel.getByText('Chờ duyệt', { exact: true }),
-      'phiếu phải đeo huy hiệu trạng thái "Chờ duyệt"',
-    ).toBeVisible();
+      'tab Chờ duyệt: thẻ không đeo lại huy hiệu "Chờ duyệt" — cả tab đều đang chờ (UX-E07)',
+    ).toHaveCount(0);
     await expect(panel.getByText(E2E_MEMBER.email), 'phiếu phải nói rõ AI xin').toBeVisible();
     await expect(
       panel.getByRole('link', { name: new RegExp(`^${deviceCode} · `) }),

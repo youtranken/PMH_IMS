@@ -189,6 +189,35 @@ describe('Bản đồ — gốc là băng, con là khu, cháu là ô', () => {
   });
 });
 
+/** UX-E07: hàng chờ duyệt bản vẽ nằm ở màn Sơ đồ mạng — nav "Sơ đồ mạng" mang badge, bấm là tới đây. */
+describe('Khối "Bản vẽ chờ duyệt"', () => {
+  const QUEUE = [
+    { approvalId: 'p1', diagramId: 'kt', name: 'Kế toán E2E', requester: 'tv@pmh.com.vn', requesterName: 'Thành viên E2E', seq: 4, submittedAt: '2026-10-05T01:00:00Z' },
+  ];
+
+  it('Admin/SA thấy bản vẽ đang chờ mình duyệt, link mở thẳng bản vẽ', async () => {
+    routeFetch({ '/api/v1/diagrams/reviews/pending': () => jsonResponse(200, QUEUE) });
+    renderScreen('/diagrams');
+    const block = await screen.findByRole('heading', { name: 'Bản vẽ chờ duyệt · 1' });
+    const card = block.closest('section') as HTMLElement;
+    expect(within(card).getByRole('link', { name: 'Mở Kế toán E2E' })).toHaveAttribute('href', '/diagrams/kt');
+    expect(card).toHaveTextContent('Phiên bản #4');
+    expect(card).toHaveTextContent('Thành viên E2E gửi lúc');
+  });
+
+  it('không có bản vẽ nào chờ thì không bày khối; Thành viên không hỏi hàng chờ', async () => {
+    const fetchMock = routeFetch({ '/api/v1/diagrams/reviews/pending': () => jsonResponse(200, []) });
+    const view = renderScreen('/diagrams');
+    await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(screen.queryByRole('heading', { name: /Bản vẽ chờ duyệt/ })).toBeNull();
+    view.unmount();
+    fetchMock.mockClear();
+    renderScreen('/diagrams', MEMBER);
+    await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/reviews/pending'))).toBe(false);
+  });
+});
+
 describe('Dải "Cần làm" và ô tìm', () => {
   it('đếm nháp / chờ duyệt / lệch kho; bấm chip thì nút không khớp mờ đi (không biến mất), ?todo= trong URL', async () => {
     routeFetch({});

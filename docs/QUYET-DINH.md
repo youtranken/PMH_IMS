@@ -644,7 +644,7 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     gắn trong cùng lượt (dữ liệu cũ tự sạch khi có người sửa, không sửa ngầm lúc chưa ai đụng).
   - **Bản vẽ chờ duyệt phải có chỗ cho người duyệt thấy** (D-07): mục "Sơ đồ mạng" trên menu mang
     số bản vẽ đang chờ Admin/SA này duyệt (không tính yêu cầu do chính họ gửi — bốn mắt); màn
-    "Duyệt" có khối "Bản vẽ chờ duyệt" (tên bản vẽ, người gửi, lúc gửi, bấm là mở). Bản đồ /diagrams
+    "Duyệt" có khối "Bản vẽ chờ duyệt" (tên bản vẽ, người gửi, lúc gửi, bấm là mở; nay ở màn Sơ đồ mạng — Q-32). Bản đồ /diagrams
     giữ chip "Chờ duyệt" sẵn có. Chỉ tên / trạng thái — không nội dung, không hỏi mã sơ đồ (cùng
     mức với bản đồ).
   - **Tìm nhanh (Ctrl+K) có nhóm Sơ đồ** (D-08): tên bản vẽ khớp, và "mã máy → bản vẽ có máy đó"
@@ -1363,6 +1363,10 @@ Chủ dự án duyệt mockup bố cục ngày 21/10/2026 và cho làm toàn b�
   bày". Tìm, chỉ đường, lớp, điện thoại chỉ xem của FR-046 giữ nguyên.
 - **Bỏ ô "Tra IP hoặc máy…" ở màn Địa chỉ IP** (UX-E19). Trùng Tìm nhanh (Ctrl+K, cùng API, cùng
   đích — tra được cả IP trống). Ô "Lọc trong dải" chỉ đường khi gõ đủ một IP của dải khác.
+- **Khối "Bản vẽ chờ duyệt" dời từ màn Duyệt sang đầu màn Sơ đồ mạng** (đổi một phần D-07,
+  UX-E07). Màn Duyệt chỉ còn yêu cầu mở két; mục "Sơ đồ mạng" trên menu vẫn mang số bản vẽ chờ
+  và nay dẫn thẳng tới khối đó. Ở tab "Chờ duyệt" của màn Duyệt, thẻ không đeo lại huy hiệu
+  "Chờ duyệt"; huy hiệu "Chờ lâu" giữ nguyên.
 
 ### Q-09 · Tài liệu
 

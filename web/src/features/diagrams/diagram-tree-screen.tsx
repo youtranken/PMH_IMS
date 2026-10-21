@@ -23,6 +23,7 @@ import { useIsNarrow } from '@/ui/use-narrow';
 import { useNow } from '@/ui/use-now';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { TREE_KEY, type DiagramNode, type FoundDevice } from './diagram-api';
+import { DiagramReviewQueue } from './diagram-review-queue';
 import { buildMap, canPurge, filterActive, nodeMatches, resolveSelection, TODO_KINDS, todoCounts, type MapFilter, type TodoKind } from './diagram-map';
 import { DiagramArchivedSection, useArchivedDiagrams } from './diagram-archived';
 import { DiagramListView, DiagramMapView } from './diagram-map-view';
@@ -201,6 +202,7 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
     const clearFilter = () => update({ todo: null, q: null });
     body = (
       <>
+        <DiagramReviewQueue me={me} />
         <div className="dmap-toolbar">
           <ScrollX ariaLabel={t('diagrams.map.todoLabel')} className="dmap-todo">
             {TODO_KINDS.some((kind) => counts[kind] > 0) ? (

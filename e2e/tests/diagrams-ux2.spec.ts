@@ -119,7 +119,8 @@ test.describe('Sơ đồ mạng — soát UX đợt 2', () => {
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     const diagramsLink = nav.getByRole('link', { name: 'Sơ đồ mạng' });
     await expect(diagramsLink).toHaveAccessibleDescription(/\d+ Bản vẽ chờ duyệt/);
-    await page.goto('/approvals');
+    // Hàng chờ duyệt bản vẽ ở màn Sơ đồ mạng — nơi badge nav dẫn tới (UX-E07).
+    await diagramsLink.click();
     await expect(page.getByRole('heading', { name: /^Bản vẽ chờ duyệt · \d+$/ })).toBeVisible();
     await page.getByRole('link', { name: `Mở ${name}` }).click();
     await expect(page).toHaveURL(new RegExp(`/diagrams/${id}$`));
