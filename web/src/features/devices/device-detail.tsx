@@ -64,6 +64,7 @@ import {
   type DeviceStatus,
 } from "@/lib/device-types";
 import { PATHS } from "@/lib/routes";
+import { actorLabel } from '@/ui/actor';
 
 type HeldKey = "ipam" | "ports" | "nat" | "isp" | "software" | "vault" | "attachments";
 
@@ -860,7 +861,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                         <span title={lastEdit.actor}>
                           {t("devices.lastEditBy", {
                             date: formatDate(lastEdit.createdAt),
-                            actor: lastEdit.actorName ?? lastEdit.actor,
+                            actor: actorLabel(lastEdit.actor, lastEdit.actorName, t).text,
                           })}
                         </span>
                       </>

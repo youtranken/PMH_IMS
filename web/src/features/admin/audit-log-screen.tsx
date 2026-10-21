@@ -28,6 +28,7 @@ import {
   objectTypeLabel,
 } from './audit-actions';
 import { detailChanges } from './audit-detail';
+import { Actor, actorLabel } from '@/ui/actor';
 
 export interface AuditRow {
   id: string;
@@ -223,7 +224,7 @@ export function AuditLogScreen() {
         enableSorting: false,
         cell: ({ row }) => (
           <>
-            {row.original.actorName ?? row.original.actor}
+            {actorLabel(row.original.actor, row.original.actorName, t).text}
             {row.original.actorName ? (
               <span className="cell-sub">{row.original.actor}</span>
             ) : null}
@@ -276,7 +277,9 @@ export function AuditLogScreen() {
     /* Tên / email người làm KHÔNG ngắt giữa chừng ("e2e-" | "sa@…") — chỉ ngắt quanh mũi tên. */
     subtitle: (row) => (
       <>
-        <span className="nowrap">{row.actorName ?? row.actor}</span>
+        <span className="nowrap">
+          <Actor actor={row.actor} actorName={row.actorName} />
+        </span>
         {' → '}
         {[objectTypeLabel(row.objectType, t), row.objectLabel].filter(Boolean).join(' · ') || '—'}
       </>
@@ -493,7 +496,7 @@ function AuditDetailDialog({
       onOpenChange={onClose}
       maxWidth={640}
       initialFocus="title"
-      title={`${row.actorName ?? row.actor} · ${auditActionLabel(row.action, t)}`}
+      title={`${actorLabel(row.actor, row.actorName, t).text} · ${auditActionLabel(row.action, t)}`}
       footer={
         <button type="button" className="btn" onClick={onClose}>
           {t('common.close')}
@@ -513,7 +516,7 @@ function AuditDetailDialog({
         </dd>
         <dt>{t('audit.actor')}</dt>
         <dd>
-          {row.actorName ?? row.actor}
+          {actorLabel(row.actor, row.actorName, t).text}
           {row.actorName ? <span className="cell-sub">{row.actor}</span> : null}
         </dd>
         <dt>{t('audit.action')}</dt>

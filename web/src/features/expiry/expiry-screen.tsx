@@ -33,6 +33,7 @@ import { RenewDialog } from '@/ui/renew-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { DigestRulesPanel } from './digest-rules-panel';
+import { Actor, actorLabel } from '@/ui/actor';
 
 interface ExpiryRow {
   id: string;
@@ -838,12 +839,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         accessorKey: 'actor',
         enableSorting: false,
         header: t('expiry.renewedBy'),
-        cell: ({ row }) =>
-          row.original.actorName ? (
-            <span title={row.original.actor}>{row.original.actorName}</span>
-          ) : (
-            row.original.actor
-          ),
+        cell: ({ row }) => <Actor actor={row.original.actor} actorName={row.original.actorName} />,
       },
     ],
     [t, kindLabel],
@@ -903,7 +899,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
           title: (row) => row.label,
           href: (row) => softwareItemPath(row.objectKind, row.objectId),
           meta: (row) =>
-            `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actorName ?? row.actor}`,
+            `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${actorLabel(row.actor, row.actorName, t).text}`,
           aside: (row) => formatDate(row.createdAt),
         }}
       />

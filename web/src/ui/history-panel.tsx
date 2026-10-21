@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '@/lib/format';
+import { Actor } from '@/ui/actor';
 
 export interface HistoryEntry {
   id: string;
@@ -58,7 +59,7 @@ export function HistoryPanel({
             <p className="history-action">{entry.action}</p>
             {entry.detail ? <p className="history-detail muted">{entry.detail}</p> : null}
             <p className="history-meta muted">
-              {entry.actorName ? <span title={entry.actor}>{entry.actorName}</span> : entry.actor}
+              <Actor actor={entry.actor} actorName={entry.actorName} />
             </p>
           </div>
         </li>

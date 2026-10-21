@@ -295,6 +295,7 @@ export default {
     unknownShort: 'Chưa đọc được',
   },
   common: {
+    actorSystem: 'Hệ thống',
     save: 'Lưu',
     /* Nhãn nút trong lúc lượt GHI đang bay. "Đang tải…" (`loading`) là câu của lượt ĐỌC — đặt
        trên nút Lưu thì người dùng tưởng hệ thống đang tải lại chứ chưa lưu. */

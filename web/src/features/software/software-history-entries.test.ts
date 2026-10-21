@@ -30,7 +30,7 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
       row({ action: 'renewed', changes: { endDate: { before: '2026-08-30', after: '2027-08-30' } } }),
     ], t);
     expect(entry.action).toBe('Gia hạn');
-    expect(entry.detail).toBe('ngày hết hạn: 2026-08-30 → 2027-08-30');
+    expect(entry.detail).toBe('ngày hết hạn: 30/08/2026 → 30/08/2027');
   });
 
   it('gia hạn kèm hợp đồng + chi phí đọc ra như bối cảnh, không như "đổi từ … sang …"', () => {

@@ -42,7 +42,7 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
       t,
     );
     expect(entry.action).toBe('Gia hạn hợp đồng');
-    expect(entry.detail).toBe('ngày hết hạn: 2026-08-30 → 2027-08-30');
+    expect(entry.detail).toBe('ngày hết hạn: 30/08/2026 → 30/08/2027');
   });
 
   it('dòng "Tạo hồ sơ" liệt kê giá trị ban đầu — không có "(trống) →" và bỏ ô trống', () => {

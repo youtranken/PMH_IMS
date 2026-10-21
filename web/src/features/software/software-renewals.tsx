@@ -6,6 +6,7 @@ import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
 import { DataTable } from '@/ui/data-table';
 import { LoadError } from '@/ui/load-state';
 import { DetailSection } from '@/ui/detail-layout';
+import { Actor } from '@/ui/actor';
 
 /** Một dòng sổ gia hạn (`renewal_history`, chủ là module expiry) — `GET /software/:id/renewals`. */
 export interface RenewalRow {
@@ -88,12 +89,7 @@ export function SoftwareRenewals({
       id: 'actor',
       header: t('software.renewalActor'),
       // Cùng cách gọi người như màn Sắp hết hạn: họ tên, email ở chú thích.
-      cell: ({ row }) =>
-        row.original.actorName ? (
-          <span title={row.original.actor}>{row.original.actorName}</span>
-        ) : (
-          row.original.actor
-        ),
+      cell: ({ row }) => <Actor actor={row.original.actor} actorName={row.original.actorName} />,
     },
   ];
 

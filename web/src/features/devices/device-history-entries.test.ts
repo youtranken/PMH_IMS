@@ -30,7 +30,7 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
       row({ changes: { warrantyEnd: { before: '2026-08-30', after: '2027-08-30' } } }),
     ], t);
     expect(entry.action).toBe('Sửa hồ sơ');
-    expect(entry.detail).toBe('bảo hành đến: 2026-08-30 → 2027-08-30');
+    expect(entry.detail).toBe('bảo hành đến: 30/08/2026 → 30/08/2027');
   });
 
   it('giá trị rỗng hiện "(trống)" chứ không phải null', () => {
