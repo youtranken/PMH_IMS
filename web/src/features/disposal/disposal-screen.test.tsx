@@ -96,10 +96,8 @@ describe('Kho thanh lý', () => {
     const user = userEvent.setup();
     renderWith([], [DEVICE, SERVICE_ACCOUNT]);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với TK-E2E-01' }));
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Mở hồ sơ',
-      'Mở hồ sơ để dùng lại',
-    ]);
+    // UX-E14: một mục — "Mở hồ sơ" cạnh nó là hai mục cùng một đích.
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Mở hồ sơ để dùng lại']);
     expect(screen.getByRole('menuitem', { name: 'Mở hồ sơ để dùng lại' })).toHaveClass('ok');
   });
 

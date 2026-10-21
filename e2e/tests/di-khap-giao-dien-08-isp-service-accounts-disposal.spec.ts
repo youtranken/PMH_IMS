@@ -18,7 +18,15 @@ import {
   writeHeaders,
   uniqueStamp,
   stepUpViaApi,
+  isoToday,
 } from './helpers';
+
+/** Nút "sửa lần cuối dd/mm/yyyy bởi …" của RecordStamp (UX-E26): hồ sơ vừa dàn cảnh hôm nay. */
+function lastEditButton(): string {
+  const [y, m, d] = isoToday().split('-');
+  return `sửa lần cuối ${d}/${m}/${y} bởi E2E Super Admin`;
+}
+
 
 /*
  * ===== PHẦN 5 — VÀO HẲN TRONG PHÒNG: ĐƯỜNG TRUYỀN · TÀI KHOẢN DỊCH VỤ · KHO THANH LÝ =====
@@ -267,6 +275,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Sửa ${codeA}`,
         `Thao tác với ${codeA}`,
         'Số dòng',
+        // UX-E36: ô tìm đang có chữ → nút xóa lọc có đếm.
+        'Xóa lọc (1)',
       ]),
     );
 
@@ -519,6 +529,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sửa hồ sơ',
         `Thao tác với ${itemCode}`,
         'Chép số hợp đồng',
+        // UX-E26: dòng "Tạo … · sửa lần cuối …" dưới dải 4 ô, bấm mở tab Lịch sử.
+        lastEditButton(),
       ]),
     );
     // Ô Hotline ở dải đầu trang: gọi là MỘT cú chạm.
@@ -891,6 +903,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Sửa ${activeCode}`,
         `Thao tác với ${activeCode}`,
         'Số dòng',
+        // UX-E36: ô tìm + lọc trạng thái đang bật → nút xóa lọc có đếm.
+        'Xóa lọc (2)',
       ]),
     );
 
@@ -1376,14 +1390,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     // Nói thẳng ra ba thứ tuyệt đối không được có, để log lúc đỏ đọc là hiểu ngay.
     /*
-     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): "Mở hồ sơ", và "Khôi phục…" cho phần mềm hoặc
-     * "Mở hồ sơ để dùng lại" cho loại khác (Q-19) — không mục nào ghi dữ liệu ngay tại đây,
-     * dùng lại vẫn làm ở đúng module chủ.
+     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): phần mềm "Mở hồ sơ" + "Khôi phục…", loại khác MỘT
+     * mục "Mở hồ sơ để dùng lại" (Q-19, UX-E14) — không mục nào ghi dữ liệu ngay tại đây, dùng
+     * lại vẫn làm ở đúng module chủ.
      */
     expect(
       await rowActionNames(page, deviceCode),
       'Thiết bị trong kho: chỉ có lối mở hồ sơ gốc',
-    ).toEqual(['Mở hồ sơ', 'Mở hồ sơ để dùng lại']);
+    ).toEqual(['Mở hồ sơ để dùng lại']);
     // "Xuất Excel" ĐƯỢC có (DP-004): nó chỉ đọc, và lượt xuất vẫn ghi sổ `disposal.exported`.
     for (const forbiddenLabel of [/Thêm/, /^Sửa/, /^Xóa/, /Khôi phục/]) {
       await expect(

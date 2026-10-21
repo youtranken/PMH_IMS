@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { formatDate, orDash, todayIso } from '@/lib/format';
+import { formatCount, formatDate, orDash, todayIso } from '@/lib/format';
 import { matchPeriod, periodRange, PERIODS, type Period } from '@/lib/period-range';
 import { OWNER_PATH } from '@/lib/routes';
 import {
@@ -146,29 +146,24 @@ export function DisposalScreen() {
      lặp nhãn Mã/Loại/Chi tiết/Ngày trên từng thẻ nên cao gấp đôi mà không nói thêm gì. */
   const narrow = useMediaQuery(MOBILE_CARD_QUERY);
 
-  const actionsOf = (item: DisposalItem): RowAction[] => [
-    {
-      key: 'open',
-      label: t('disposal.open'),
-      onSelect: () => navigate(LINK[item.kind](item.id)),
-    },
-    /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13).
-       Loại khác dùng lại ở trang hồ sơ của nó (Q-19): kho không ghi gì, nên mục này chỉ dẫn
-       đường, và mang tên nói rõ việc người ta tìm tới. */
+  /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13). Loại
+     khác dùng lại ở trang hồ sơ của nó (Q-19): MỘT mục mang tên nói rõ việc người ta tìm tới —
+     để thêm "Mở hồ sơ" cạnh nó là hai mục cùng một đích (UX-E14). */
+  const actionsOf = (item: DisposalItem): RowAction[] =>
     item.kind === 'software'
-      ? {
-          key: 'restore',
-          label: t('software.restore'),
-          ok: true,
-          onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
-        }
-      : {
-          key: 'reuse',
-          label: t('disposal.reuse'),
-          ok: true,
-          onSelect: () => navigate(LINK[item.kind](item.id)),
-        },
-  ];
+      ? [
+          { key: 'open', label: t('disposal.open'), onSelect: () => navigate(LINK.software(item.id)) },
+          {
+            key: 'restore',
+            label: t('software.restore'),
+            ok: true,
+            onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
+          },
+        ]
+      : [{ key: 'reuse', label: t('disposal.reuse'), ok: true, onSelect: () => navigate(LINK[item.kind](item.id)) }];
+  /** Loại chạm trần 500 dòng của API thì số trên chip là TRẦN, không phải số thật (PW-A09). */
+  const chipCount = (key: DisposalKind) =>
+    `${formatCount(counts?.[key] ?? 0)}${truncated.includes(key) ? '+' : ''}`;
 
   const setPeriod = (next: Period | '') => {
     const range = next ? periodRange(next, today) : { from: '', to: '' };
@@ -205,7 +200,11 @@ export function DisposalScreen() {
               value: '',
               label: (
                 <>
-                  {t('disposal.allKinds')} <span className="seg-count">{countAll}</span>
+                  {t('disposal.allKinds')}{' '}
+                  <span className="seg-count">
+                    {formatCount(countAll)}
+                    {truncated.length > 0 ? '+' : ''}
+                  </span>
                 </>
               ),
             },
@@ -213,7 +212,7 @@ export function DisposalScreen() {
               value: key,
               label: (
                 <>
-                  {t(KIND_KEY[key])} <span className="seg-count">{counts?.[key] ?? 0}</span>
+                  {t(KIND_KEY[key])} <span className="seg-count">{chipCount(key)}</span>
                 </>
               ),
             })),
@@ -261,14 +260,13 @@ export function DisposalScreen() {
         />
       </FilterBar>
 
-      <p className="alert info">{t('disposal.note')}</p>
-      {truncated.length > 0 ? (
-        <p className="alert">
-          {t('disposal.truncated', {
-            kinds: truncated.map((key) => t(KIND_KEY[key])).join(', '),
-          })}
-        </p>
-      ) : null}
+      {/* MỘT băng (PW-A09): hai băng khác kiểu chồng nhau thì mắt bỏ qua cả hai. */}
+      <p className="alert info">
+        {t('disposal.note')}
+        {truncated.length > 0
+          ? ` ${t('disposal.truncated', { kinds: truncated.map((key) => t(KIND_KEY[key])).join(', ') })}`
+          : null}
+      </p>
 
       {inventory.isLoading ? (
         <Loading variant="table" />
