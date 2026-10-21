@@ -15,7 +15,7 @@ import { useToast } from '@/ui/toast';
 import { FEATURE_GROUPS_KEY, useFeatureGroups, type FeatureGroup } from '@/ui/use-feature-groups';
 import { useSubmitError } from '@/ui/use-form-errors';
 import { useUnsavedGuard } from '@/ui/use-unsaved-guard';
-import { changedGroups, FEATURE_ROWS, toggleTick } from './feature-groups-rules';
+import { changedGroups, FEATURE_ROWS, lockedBy, toggleTick } from './feature-groups-rules';
 
 /**
  * Nhóm quyền của Thành viên (Q-31) — bảng tick: hàng là mục, cột là nhóm. Chỉ SA. Màn nhập
@@ -174,7 +174,8 @@ export function FeatureGroupsScreen({ me }: { me: Me }) {
                               type="checkbox"
                               aria-label={`${group.name} · ${t(row.labelKey)}`}
                               checked={ticks.includes(row.tick)}
-                              disabled={saving}
+                              disabled={saving || lockedBy(ticks, row.tick)}
+                              title={lockedBy(ticks, row.tick) ? t('featureGroups.incidentsLocked') : undefined}
                               onChange={() => setDrafts((current) => toggleTick(list, current, group.id, row.tick))}
                             />
                           </td>

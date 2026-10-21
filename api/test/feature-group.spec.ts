@@ -111,9 +111,10 @@ describe('Q-31 · nhóm quyền của Thành viên', () => {
     });
 
     it('Member trong nhóm: đúng ô tick + khóa suy ra', async () => {
+      // Ghi thẳng SQL, không có 0206: quyền vẫn kéo 0206 theo 0208.
       const id = await group('E2E Tài sản', ['overview', 'assets', 'iso_0208']);
       const req = await guardedRequest(await user('member', id));
-      expect(req.user?.features).toEqual(['overview', 'assets', 'iso_0208', 'expiry', 'iso']);
+      expect(req.user?.features).toEqual(['overview', 'assets', 'iso_0206', 'iso_0208', 'expiry', 'iso']);
     });
 
     it('SA đổi ô tick là có hiệu lực ở request kế tiếp, không cần đăng nhập lại', async () => {

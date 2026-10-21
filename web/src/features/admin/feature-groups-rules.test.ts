@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedGroups, FEATURE_ROWS, toggleTick } from './feature-groups-rules';
+import { changedGroups, FEATURE_ROWS, lockedBy, toggleTick } from './feature-groups-rules';
 
 const GROUPS = [
   { id: 'g1', name: 'Mạng', features: ['overview', 'network'], memberCount: 2 },
@@ -27,6 +27,23 @@ describe('Bảng nhóm quyền (Q-31)', () => {
     [{ g1: ['overview'] }, 'g1', 'network', {}],
   ] as const)('toggleTick %j %s %s', (draft, id, tick, expected) => {
     expect(toggleTick(GROUPS, { ...draft } as Record<string, string[]>, id, tick)).toEqual(expected);
+  });
+
+  it('tick 0203 / 0208 kéo theo 0206; bỏ 0203 thì 0206 vẫn giữ', () => {
+    expect(toggleTick(GROUPS, {}, 'g2', 'iso_0208')).toEqual({ g2: ['assets', 'iso_0206', 'iso_0208'] });
+    expect(toggleTick(GROUPS, {}, 'g2', 'iso_0203')).toEqual({ g2: ['assets', 'iso_0203', 'iso_0206'] });
+    expect(toggleTick(GROUPS, { g2: ['assets', 'iso_0203', 'iso_0206'] }, 'g2', 'iso_0203')).toEqual({
+      g2: ['assets', 'iso_0206'],
+    });
+  });
+
+  it.each([
+    [['iso_0203', 'iso_0206'], 'iso_0206', true],
+    [['iso_0206', 'iso_0208'], 'iso_0206', true],
+    [['iso_0206'], 'iso_0206', false],
+    [['iso_0203', 'iso_0206'], 'iso_0203', false],
+  ] as const)('lockedBy %j %s → khóa %s', (ticks, tick, locked) => {
+    expect(lockedBy(ticks, tick)).toBe(locked);
   });
 
   it('bỏ hết tick vẫn giữ trong nháp (nút Lưu báo lỗi, API cũng chặn)', () => {

@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { FeatureHolderRegistry } from '../../common/feature-holders.registry';
-import { FEATURE_TICKS, holdingConflicts, type FeatureHolding } from '../../common/features';
+import { FEATURE_TICKS, holdingConflicts, withImpliedTicks, type FeatureHolding } from '../../common/features';
 import { conflictOnUnique } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -165,11 +165,11 @@ function cleanName(raw: string): string {
   return name;
 }
 
-/** Bỏ trùng, giữ thứ tự hàng trên màn; khóa lạ là lỗi, không lặng lẽ bỏ. */
+/** Bỏ trùng, giữ thứ tự hàng trên màn, thêm 0206 khi có 0203 / 0208; khóa lạ là lỗi, không lặng lẽ bỏ. */
 function cleanTicks(raw: string[]): string[] {
   const unknown = raw.filter((tick) => !(FEATURE_TICKS as readonly string[]).includes(tick));
   if (unknown.length > 0 || raw.length === 0) {
     throw new BadRequestException({ code: 'FEATURE_GROUP_TICKS', message: 'Nhóm phải tick ít nhất một mục hợp lệ.' });
   }
-  return FEATURE_TICKS.filter((tick) => raw.includes(tick));
+  return withImpliedTicks(raw);
 }

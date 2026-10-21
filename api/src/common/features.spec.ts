@@ -38,8 +38,11 @@ describe('Nhóm quyền của Thành viên (Q-31)', () => {
       ['member', ['assets'], ['assets']],
       ['member', ['overview', 'assets'], ['overview', 'assets', 'expiry']],
       // Kỳ phiếu & danh mục phiếu hiện khi có ≥1 phiếu.
-      ['member', ['iso_0208'], ['iso_0208', 'iso']],
+      ['member', ['iso_0206'], ['iso_0206', 'iso']],
       ['member', ['iso_0203', 'iso_0206'], ['iso_0203', 'iso_0206', 'iso']],
+      // 0203 / 0208 kéo theo 0206: ô ✗ cần phiếu sự cố thì kỳ mới chốt được.
+      ['member', ['iso_0208'], ['iso_0206', 'iso_0208', 'iso']],
+      ['member', ['iso_0203'], ['iso_0203', 'iso_0206', 'iso']],
       // Khóa lạ trong DB (đổi tên sau này) bị bỏ, không mở thêm gì.
       ['member', ['network', 'bogus'], ['network']],
     ] as const)('%s + %j → %j', (role, ticks, expected) => {

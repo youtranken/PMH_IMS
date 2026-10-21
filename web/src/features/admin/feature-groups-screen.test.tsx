@@ -50,6 +50,16 @@ describe('Màn Nhóm quyền (Q-31)', () => {
     expect(JSON.parse(String(init?.body))).toEqual({ features: ['assets', 'break_glass'] });
   });
 
+  it('tick 0208 → ô 0206 tự tick và khóa', async () => {
+    renderScreen(() => jsonResponse(200, GROUPS));
+    const user = userEvent.setup();
+    const incidents = await screen.findByRole('checkbox', { name: 'Tài sản · Sự cố · 0206' });
+    expect(incidents).toBeEnabled();
+    await user.click(screen.getByRole('checkbox', { name: 'Tài sản · Theo dõi antivirus · 0208' }));
+    expect(incidents).toBeChecked();
+    expect(incidents).toBeDisabled();
+  });
+
   it('bỏ hết tick của một nhóm → báo lỗi một dòng, không gọi API', async () => {
     const fetchMock = renderScreen(() => jsonResponse(200, GROUPS));
     const user = userEvent.setup();

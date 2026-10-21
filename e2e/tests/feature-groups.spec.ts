@@ -64,10 +64,13 @@ test.describe('Nhóm quyền (Q-31)', () => {
     await naming.getByRole('button', { name: 'Thêm nhóm' }).click();
     await expect(page.getByText('Đã thêm nhóm "E2E Mạng".')).toBeVisible();
 
-    // Nhóm mới bắt đầu đủ bảy ô; bỏ hết trừ Mạng.
-    for (const label of ['Tổng quan', 'Tài sản', 'Theo dõi backup · 0203', 'Sự cố · 0206', 'Theo dõi antivirus · 0208', 'Xin mở két']) {
+    // Nhóm mới bắt đầu đủ bảy ô; bỏ hết trừ Mạng. 0206 khóa tới khi bỏ xong 0203 lẫn 0208.
+    const incidents = page.getByRole('checkbox', { name: 'E2E Mạng · Sự cố · 0206' });
+    for (const label of ['Tổng quan', 'Tài sản', 'Theo dõi backup · 0203', 'Theo dõi antivirus · 0208', 'Xin mở két']) {
+      if (label === 'Theo dõi antivirus · 0208') await expect(incidents).toBeDisabled();
       await page.getByRole('checkbox', { name: `E2E Mạng · ${label}` }).uncheck();
     }
+    await incidents.uncheck();
     await expect(page.getByRole('checkbox', { name: 'E2E Mạng · Mạng' })).toBeChecked();
     await expect(page.getByText('Đã đổi 1 nhóm')).toBeVisible();
     await page.getByRole('button', { name: 'Lưu' }).click();

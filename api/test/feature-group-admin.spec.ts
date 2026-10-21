@@ -94,6 +94,17 @@ describe('Q-31 · quản trị nhóm quyền', () => {
     expect(await auditActions(id)).toEqual(['feature_group.created']);
   });
 
+  it('0203 / 0208 kéo theo 0206 khi lưu, cả lúc tạo lẫn lúc sửa', async () => {
+    const { id } = await groups.create(SA, { name: 'E2E Kéo 0206', features: ['iso_0208'] });
+    const saved = async () => (await groups.list()).find((g) => g.id === id)?.features;
+    expect(await saved()).toEqual(['iso_0206', 'iso_0208']);
+    await groups.update(SA, id, { features: ['network', 'iso_0203'] });
+    expect(await saved()).toEqual(['network', 'iso_0203', 'iso_0206']);
+    // Bỏ hết phiếu kéo thì 0206 được bỏ.
+    await groups.update(SA, id, { features: ['network'] });
+    expect(await saved()).toEqual(['network']);
+  });
+
   it('tạo nhóm trùng tên (khác hoa thường) → 409 FEATURE_GROUP_NAME_TAKEN', async () => {
     await groups.create(SA, { name: 'E2E Trùng', features: ['assets'] });
     await expect(groups.create(SA, { name: 'e2e trùng', features: ['assets'] })).rejects.toMatchObject({

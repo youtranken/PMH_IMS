@@ -30,6 +30,15 @@ export function isFeatureTick(key: string): key is FeatureTick {
 }
 
 /**
+ * Ô 0203 / 0208 kéo theo 0206: ô ✗ trên hai phiếu đó phải có phiếu sự cố thì kỳ mới chốt được.
+ * Áp cả khi lưu nhóm lẫn khi tính quyền, để nhóm ghi bằng đường khác vẫn không thiếu 0206.
+ */
+export function withImpliedTicks(ticks: readonly string[]): FeatureTick[] {
+  const pulls0206 = ticks.includes('iso_0203') || ticks.includes('iso_0208');
+  return FEATURE_TICKS.filter((tick) => ticks.includes(tick) || (tick === 'iso_0206' && pulls0206));
+}
+
+/**
  * Tập tính năng một người được dùng. `null` = không bị giới hạn: SA/Admin luôn đủ, Member chưa
  * gán nhóm thấy như trước Q-31.
  */
@@ -38,7 +47,7 @@ export function effectiveFeatures(
   groupTicks: readonly string[] | null,
 ): Feature[] | null {
   if (role !== 'member' || groupTicks === null) return null;
-  const ticks: Feature[] = FEATURE_TICKS.filter((tick) => groupTicks.includes(tick));
+  const ticks: Feature[] = withImpliedTicks(groupTicks);
   if (ticks.includes('overview') && ticks.includes('assets')) ticks.push('expiry');
   if (ISO_FORM_FEATURES.some((form) => ticks.includes(form))) ticks.push('iso');
   return ticks;

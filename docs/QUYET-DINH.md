@@ -1335,6 +1335,10 @@ Member thấy như nhau.
   - không gán làm người phụ trách (chính / dự phòng) một Member mà nhóm của họ ẩn phiếu đó;
   - không bỏ tick một phiếu khỏi nhóm, không chuyển Member sang nhóm ẩn phiếu đó, khi người ấy đang
     phụ trách phiếu.
+- **Tick 0203 hoặc 0208 thì kéo theo 0206** (21/10/2026). Lý do: ô ✗ trên phiếu 0203 / 0208 phải có
+  phiếu sự cố 0206 thì kỳ mới chốt được; người phụ trách không thấy 0206 thì kẹt kỳ. Trên bảng tick,
+  ô 0206 tự tick và khóa khi nhóm còn 0203 hoặc 0208. API cũng tự thêm 0206 khi lưu và khi tính
+  quyền, nên nhóm lưu bằng đường khác vẫn không thiếu.
 - **Không đòi mã 6 số** khi tạo / sửa / xoá nhóm hay đổi nhóm của một người: nhóm chỉ thu hẹp quyền
   Member, không bao giờ cho thêm. Mọi thao tác vẫn ghi nhật ký (AD-5, AD-9). Xoá nhóm còn người thì
   bị chặn.

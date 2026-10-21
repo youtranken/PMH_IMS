@@ -2636,6 +2636,7 @@ export default {
     rename: 'Đổi tên',
     delete: 'Xóa',
     deleteInUse: 'Nhóm còn người — chuyển họ sang nhóm khác trước',
+    incidentsLocked: 'Phiếu 0203 / 0208 cần 0206 để chốt kỳ',
     deleteTitle: 'Xóa nhóm "{{name}}"?',
     deleteMessage: 'Không khôi phục được.',
     members: '{{count}} Người',
