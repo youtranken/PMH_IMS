@@ -5,6 +5,7 @@ import {
   SOFTWARE_STATUS_TONE,
 } from '@/lib/status-tone';
 import { screenOfKind } from '@/lib/software-screens';
+import { bandwidthLabel } from '@/lib/bandwidth';
 
 /**
  * Các loại hồ sơ vào kho thanh lý + nhãn i18n của chúng — MỘT nơi khai (AD-15).
@@ -89,6 +90,7 @@ export function disposalDetailText(
 ): string | null {
   if (!detail) return null;
   const keys = DETAIL_KEY[kind];
+  if (kind === 'isp') return bandwidthLabel(detail); // "400" trơn → "400 Mbps" như màn Đường truyền
   if (!keys) return detail;
   return keys[detail] ? t(keys[detail]) : null;
 }

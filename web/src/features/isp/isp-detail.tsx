@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { bandwidthLabel } from "@/lib/bandwidth";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -148,7 +149,7 @@ export function IspDetail({ me }: { me: Me }) {
 
   /* Mọi trường chưa nói ở dải 4 ô, đủ cả, theo thứ tự cố định — ô trống ghi "chưa khai". */
   const specItems = [
-    { label: t("isp.bandwidth"), value: item.bandwidth },
+    { label: t("isp.bandwidth"), value: bandwidthLabel(item.bandwidth) },
     { label: t("isp.site"), value: item.siteCode },
     { label: t("isp.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
     { label: t("isp.note"), value: item.note },

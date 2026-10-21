@@ -6,6 +6,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import { bandwidthLabel } from '@/lib/bandwidth';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -155,7 +156,7 @@ export function IspScreen({ me }: { me: Me }) {
           <>
             {row.original.provider}
             {row.original.bandwidth ? (
-              <span className="cell-sub">{row.original.bandwidth}</span>
+              <span className="cell-sub">{bandwidthLabel(row.original.bandwidth)}</span>
             ) : null}
           </>
         ),
@@ -349,7 +350,7 @@ export function IspScreen({ me }: { me: Me }) {
               badge: (row) => (
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
               ),
-              subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
+              subtitle: (row) => [row.provider, bandwidthLabel(row.bandwidth)].filter(Boolean).join(' · '),
               meta: (row) =>
                 [row.siteCode, row.deviceCode, row.wanIps.join(', ')].filter(Boolean).join(' · '),
               aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
