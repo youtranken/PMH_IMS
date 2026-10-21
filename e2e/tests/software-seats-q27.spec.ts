@@ -95,6 +95,41 @@ test.describe('Ghế riêng và đợt mua (Q-27)', () => {
     await expect(page.getByText('Riêng từng ghế (3)')).toBeVisible();
   });
 
+  /*
+   * LF-02: hồ sơ thuộc một nhóm "Mua theo đợt" thì cột phải mọc SAU khi danh sách đợt về. Cột
+   * phải mọc làm DetailLayout dựng lại cả cột chính, hộp Gán vừa mở biến mất (~5/10 lượt). Hoãn
+   * danh sách đợt để cột phải chắc chắn mọc muộn — dựng lại đúng điều kiện của lỗi.
+   */
+  test('đợt mua thứ hai: Lưu rồi gán → hộp Gán vẫn mở sau khi cột "Mua theo đợt" mọc', async ({ page }) => {
+    test.setTimeout(90_000);
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const name = `Office E2E dot ${stamp}`;
+    const first = await page.request.post('/api/v1/software', {
+      headers: await headers(page),
+      data: { code: `LIC-E2E-DOT-${stamp}-1`, name, kind: 'license', licenseModel: 'perpetual', seatTotal: 2 },
+    });
+    expect(first.status()).toBe(201);
+    await page.route(/\/api\/v1\/software\?kind=license&limit=50&search=/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
+
+    await page.goto('/software');
+    await page.getByRole('button', { name: 'Thêm phần mềm' }).first().click();
+    const form = page.getByRole('dialog', { name: 'Thêm phần mềm' });
+    await form.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill(name);
+    await form.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill(`LIC-E2E-DOT-${stamp}-2`);
+    await form.getByRole('radio', { name: 'Vĩnh viễn' }).check();
+    await form.getByRole('textbox', { name: 'Số ghế', exact: true }).fill('2');
+    await form.getByRole('button', { name: 'Lưu rồi gán vào máy' }).click();
+
+    const assign = page.getByRole('dialog', { name: `Gán license vào máy — LIC-E2E-DOT-${stamp}-2` });
+    await expect(assign).toBeVisible();
+    await expect(page.getByText('Mua theo đợt')).toBeVisible();
+    await expect(assign, 'cột phải mọc muộn không được đóng hộp Gán').toBeVisible();
+  });
+
   test('đường hỏng: bớt ghế đang có máy (vẫn bật ghế riêng) bị chặn, hồ sơ không đổi', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();

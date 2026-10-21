@@ -51,39 +51,41 @@ export function DetailLayout({
   const narrow = useMediaQuery(RAIL_COLLAPSE_QUERY);
   const [open, setOpen] = useState(false);
   /* Không có `railSummary` thì một cột trơn: trang đã có tóm tắt ở chỗ khác (dải 4 ô, Q-27). */
-  if (railStrip || !rail) {
-    return (
-      <div className="detail-2col detail-1col">
-        <div className="detail-main">
-          {railSummary ? <div className="rail-strip">{railSummary}</div> : null}
-          {children}
-        </div>
-      </div>
-    );
-  }
+  const single = railStrip || !rail;
+  /*
+   * MỘT cây cho cả hai bố cục, `children` luôn ở cùng một chỗ. Hai nhánh `return` riêng đặt nội
+   * dung chính ở hai vị trí khác nhau, nên cột phải mọc muộn (các đợt mua về sau hồ sơ) hay đổi
+   * tab bảng ↔ tổng quan làm React tháo và dựng lại cả cột chính: hộp vừa mở biến mất, bộ lọc
+   * và trang của tab về mặc định (LF-02).
+   */
   return (
-    <div className="detail-2col">
-      <div className="detail-main">{children}</div>
-      <aside className="detail-rail">
-        {railSummary && narrow ? (
-          <details
-            className="rail-collapse"
-            open={open}
-            onToggle={(event) => setOpen(event.currentTarget.open)}
-          >
-            <summary>
-              <span className="rail-summary">{railSummary}</span>
-              <span className="rail-more">
-                {t('detail.railMore')}
-                <Chevron direction={open ? 'up' : 'down'} />
-              </span>
-            </summary>
-            {rail}
-          </details>
-        ) : (
-          rail
-        )}
-      </aside>
+    <div className={single ? 'detail-2col detail-1col' : 'detail-2col'}>
+      <div className="detail-main">
+        {single && railSummary ? <div className="rail-strip">{railSummary}</div> : null}
+        {children}
+      </div>
+      {single ? null : (
+        <aside className="detail-rail">
+          {railSummary && narrow ? (
+            <details
+              className="rail-collapse"
+              open={open}
+              onToggle={(event) => setOpen(event.currentTarget.open)}
+            >
+              <summary>
+                <span className="rail-summary">{railSummary}</span>
+                <span className="rail-more">
+                  {t('detail.railMore')}
+                  <Chevron direction={open ? 'up' : 'down'} />
+                </span>
+              </summary>
+              {rail}
+            </details>
+          ) : (
+            rail
+          )}
+        </aside>
+      )}
     </div>
   );
 }
