@@ -714,9 +714,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         'Tổng hợp hết hạn cần xử lý',
         'Dải mạng ≥ N%',
         'Két lâu chưa đổi',
-        'Sự cố tuần qua',
-        'Yêu cầu mở két tuần qua',
-        'Tổng hợp kho thanh lý (7 ngày)',
+        'Sự cố · 7 ngày',
+        'Yêu cầu mở két · 7 ngày',
+        'Kho thanh lý · 7 ngày',
       ]),
     );
 
@@ -743,8 +743,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       asSet([
         'Tổng hợp hết hạn cần xử lý',
         'Dải mạng ≥ N%',
-        'Sự cố tuần qua',
-        'Tổng hợp kho thanh lý (7 ngày)',
+        'Sự cố · 7 ngày',
+        'Kho thanh lý · 7 ngày',
       ]),
     );
 
@@ -760,7 +760,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       asSet(missing),
       'Member KHÔNG được thấy hai khối an ninh — và cũng không được thiếu khối nào khác: ' +
         `SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
-    ).toEqual(asSet(['Két lâu chưa đổi', 'Yêu cầu mở két tuần qua']));
+    ).toEqual(asSet(['Két lâu chưa đổi', 'Yêu cầu mở két · 7 ngày']));
   });
 
   /* ================================================================== *

@@ -27,7 +27,7 @@ import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
-import { DISPOSAL_KIND_KEY, disposalDetailText, type DisposalKind } from '@/lib/disposal-kinds';
+import { disposalDetailText, disposalItemKindLabel, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
 import { cutExpiryBoard } from './expiry-board-cut';
 
@@ -150,11 +150,8 @@ export function DashboardScreen({ me }: { me: Me }) {
       title={t('dashboard.title')}
       subtitle={
         data.dataUpdatedAt
-          ? t('dashboard.greetingAt', {
-              name: me.fullName,
-              time: formatDateTime(new Date(data.dataUpdatedAt).toISOString()),
-            })
-          : t('dashboard.greeting', { name: me.fullName })
+          ? t('dashboard.updatedAt', { time: formatDateTime(new Date(data.dataUpdatedAt).toISOString()) })
+          : undefined
       }
       actions={
         /* Nút phụ có viền như "Xuất Excel" ở các màn khác — nút `ghost` trơn đọc thành chữ thường. */
@@ -378,7 +375,7 @@ export function DashboardScreen({ me }: { me: Me }) {
                   <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
                   <span className="dash-line-sub">{item.name}</span>
                 </span>
-                <span className="badge muted">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
+                <span className="badge muted">{disposalItemKindLabel(item.kind, item.detail, t)}</span>
               </div>
               <span className="muted">
                 {[detail, item.disposedAt ? formatDate(item.disposedAt) : null]
@@ -914,7 +911,7 @@ function ExpiringBlock({
     () => [
       {
         id: 'label',
-        header: t('dashboard.expiringSubject'),
+        header: t('expiry.item'),
         enableSorting: false,
         cell: ({ row }) =>
           row.original.link ? (
@@ -937,7 +934,7 @@ function ExpiringBlock({
       },
       {
         id: 'left',
-        header: t('dashboard.expiringLeft'),
+        header: t('expiry.state'),
         enableSorting: false,
         cell: ({ row }) => <ExpiryBadge end={row.original.endDate} />,
       },

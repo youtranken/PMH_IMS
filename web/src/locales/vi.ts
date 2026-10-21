@@ -4702,10 +4702,9 @@ export default {
     },
   },
   dashboard: {
-    /* Tên TRANG (tab trình duyệt, topbar, h1 cùng một chữ); lời chào xuống dòng phụ. */
+    /* Tên TRANG (tab trình duyệt, topbar, h1 cùng một chữ); dòng phụ chỉ nói giờ cập nhật (TX-18). */
     title: 'Bảng điều khiển',
-    greeting: 'Xin chào, {{name}}',
-    greetingAt: 'Xin chào, {{name}} · cập nhật lúc {{time}}',
+    updatedAt: 'Cập nhật lúc {{time}}',
     refresh: 'Làm mới',
 
     /* Hàng số ở đầu trang làm việc PHÂN LOẠI: quá hạn (xử lý ngay) tách khỏi sắp hết hạn
@@ -4725,17 +4724,15 @@ export default {
     expiringUpcoming: 'Sắp tới ({{count}})',
     expiringEmpty: 'Không có gì sắp hết hạn.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
-    expiringSubject: 'Đối tượng',
-    expiringLeft: 'Còn lại',
-    incidents: 'Sự cố tuần qua',
-    incidentsEmpty: 'Tuần qua không có sự cố nào.',
+    incidents: 'Sự cố · 7 ngày',
+    incidentsEmpty: '7 ngày qua không có sự cố nào.',
     seeAllIncidents: 'Xem danh sách sự cố 0206',
     incidentSeverity_low: 'Thấp',
     incidentSeverity_medium: 'Trung bình',
     incidentSeverity_high: 'Cao',
     /* Cùng tên với trang chi tiết phiếu ("Yêu cầu mở két"), không dùng chữ kỹ thuật "break-glass". */
-    breakGlass: 'Yêu cầu mở két tuần qua',
-    breakGlassEmpty: 'Tuần qua không ai xin mở két.',
+    breakGlass: 'Yêu cầu mở két · 7 ngày',
+    breakGlassEmpty: '7 ngày qua không ai xin mở két.',
     seeAllBreakGlass: 'Xem nhật ký đầy đủ',
     by: 'quyết bởi {{who}}',
     validUntil: 'hiệu lực đến {{time}}',
@@ -4759,8 +4756,8 @@ export default {
     secretCount: '{{count}} Ngăn',
     staleSince: 'Đổi lần cuối {{date}} · {{days}} ngày trước',
 
-    disposed: 'Tổng hợp kho thanh lý (7 ngày)',
-    disposedEmpty: 'Tuần qua không thanh lý gì.',
+    disposed: 'Kho thanh lý · 7 ngày',
+    disposedEmpty: '7 ngày qua không thanh lý gì.',
     seeAllDisposed: 'Xem toàn bộ kho thanh lý',
     /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */
     needsYou: 'Cần bạn duyệt ({{count}})',
@@ -4768,7 +4765,7 @@ export default {
     isoClose: 'Chốt kỳ {{form}} · {{month}}',
     isoReopen: 'Mở lại kỳ {{form}} · {{month}}',
     isoSentBy: '{{name}} gửi lúc {{at}}',
-    isoOpen: 'Xem & duyệt ›',
+    isoOpen: 'Xem & duyệt',
     askedAt: 'xin lúc {{at}} · {{hours}}',
   },
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
