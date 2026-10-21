@@ -1408,11 +1408,6 @@ html[data-motion='off'] .kpi:hover { transform: none; }
 .approval-active > h2 {
   font-size: var(--fs-md);
 }
-.approval-export-end {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: var(--space-5);
-}
 /* Khối tóm tắt đầu hộp Duyệt/Từ chối/Thu hồi: người · lúc gửi / đối tượng / lý do / số giờ. */
 .decision-summary {
   display: flex;

@@ -28,8 +28,6 @@ import { Pagination } from "@/ui/pagination";
 import { Select } from "@/ui/select";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useConfirm } from "@/ui/confirm-provider";
-import { BREAKPOINTS } from "@/ui/breakpoints";
-import { useMediaQuery } from "@/ui/use-media-query";
 import { useDebouncedValue } from "@/ui/use-debounced-value";
 import { useToast } from "@/ui/toast";
 import { usePendingDiagramReviews, type PendingDiagramReview } from "@/shell/use-pending-diagram-reviews";
@@ -44,11 +42,6 @@ const PAGE_LIMIT = 20;
  * trực — không làm mới thì danh sách nói một đằng còn sổ đã một nẻo.
  */
 const PENDING_REFETCH_MS = 30_000;
-
-/** Trên điện thoại nút Xuất xuống cuối nhật ký, không chiếm một hàng giữa tiêu đề và thanh tab.
-    Cùng mốc với thẻ gọn của bảng: lệch mốc thì ở 600–640px nút đã rời đầu trang trong khi bảng
-    vẫn là bảng desktop. */
-const NARROW_QUERY = BREAKPOINTS.cards;
 
 interface ApprovalPage {
   items: ApprovalRow[];
@@ -127,7 +120,6 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
-  const narrow = useMediaQuery(NARROW_QUERY);
   const canDecide = me.role === "sa" || me.role === "admin";
   /**
    * Member vào thẳng tab của mình — `tab` khởi tạo phải khớp tab `Tabs` đang sáng, không thì
@@ -303,7 +295,8 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         subtitle={t(
           canDecide ? "approvals.subtitle" : "approvals.subtitleMine",
         )}
-        actions={narrow ? null : exportButton}
+        // Xuất cùng một chỗ ở mọi màn, kể cả điện thoại: đầu trang (PW-C16).
+        actions={exportButton}
       />
       {canDecide ? <DiagramReviewQueue me={me} /> : null}
 
@@ -589,9 +582,6 @@ export function ApprovalsScreen({ me }: { me: Me }) {
             total={paged.total}
             onPageChange={paged.set}
           />
-        ) : null}
-        {narrow && exportButton ? (
-          <div className="approval-export-end">{exportButton}</div>
         ) : null}
       </TabPanel>
 
