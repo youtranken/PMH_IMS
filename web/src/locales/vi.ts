@@ -2499,8 +2499,6 @@ export default {
     window: 'Khoảng thời gian',
     /* Cửa sổ LUÔN kèm mục đã quá hạn — nhãn phải nói thật điều đó. */
     windowDays: 'Quá hạn + {{days}} ngày tới',
-    windowMonth: 'Quá hạn + tới hết tháng này',
-    windowQuarter: 'Quá hạn + tới hết quý này',
     windowCustom: 'Quá hạn + tới ngày…',
     windowUntil: 'Tới ngày',
     monthGroup: 'Tháng {{month}}',

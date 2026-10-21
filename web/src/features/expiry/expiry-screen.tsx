@@ -7,7 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, formatDateTime, formatMoney, orDash, todayIso } from '@/lib/format';
-import { daysBetweenIso, periodRange } from '@/lib/period-range';
+import { daysBetweenIso } from '@/lib/period-range';
 import type { Me } from '@/lib/me';
 import { renewPreset } from '@/lib/renew-dates';
 import { softwareItemPath } from '@/lib/software-screens';
@@ -105,16 +105,16 @@ interface ExpiryResponse {
   failedKinds?: string[];
 }
 
-/** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
-const WINDOWS = [7, 30, 60, 90, 180, 365];
+/** Cửa sổ nhìn tới — bốn mốc + "Tới ngày…" (UX-E24): 12 lựa chọn thì phải đọc hết mới chọn được. */
+const WINDOWS = [30, 90, 180, 365];
 /** Cửa sổ mặc định khi URL không nói (hoặc nói sai) — một chỗ cho cả lượt hỏi lẫn tô ô lọc. */
 const DEFAULT_WINDOW = 30;
 
 /**
- * Cửa sổ theo LỊCH ("tới hết tháng này / quý này / tới ngày…") cho câu hỏi ngân sách: "tháng
- * này có gì hết hạn". Quy về `withinDays` của API (1–365), vẫn luôn kèm mục đã quá hạn.
+ * Cửa sổ "tới ngày…" cho câu hỏi ngân sách ("tới cuối quý có gì hết hạn"). Quy về `withinDays`
+ * của API (1–365), vẫn luôn kèm mục đã quá hạn. Link cũ `?period=month|quarter` rơi về mặc định.
  */
-const PERIOD_WINDOWS = ['month', 'quarter', 'custom'] as const;
+const PERIOD_WINDOWS = ['custom'] as const;
 type PeriodWindow = (typeof PERIOD_WINDOWS)[number];
 
 /** Cột bấm sắp được — tên khớp `EXPIRY_SORTS` bên API. */
@@ -169,12 +169,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const period = (PERIOD_WINDOWS as readonly string[]).includes(url.filters.period)
     ? (url.filters.period as PeriodWindow)
     : '';
-  const until =
-    period === 'custom'
-      ? url.filters.until || ''
-      : period
-        ? periodRange(period, today).to
-        : '';
+  const until = period === 'custom' ? url.filters.until || '' : '';
   const withinDays = until
     ? windowUntil(until, today)
     : WINDOWS.includes(Number(url.filters.withinDays))
@@ -501,15 +496,13 @@ export function ExpiryScreen({ me }: { me: Me }) {
           /* Tô như bộ lọc đang bật chỉ khi KHÁC mặc định (30 ngày tới): phạm vi mặc định tô xanh
              thì người dùng đi tìm một bộ lọc để tắt mà không có. */
           indicateFilled={Boolean(period) || withinDays !== DEFAULT_WINDOW}
-          /* Chín mốc cố định, đọc lướt là thấy — ô gõ lọc chỉ thêm một bước. */
+          /* Năm mốc cố định, đọc lướt là thấy — ô gõ lọc chỉ thêm một bước. */
           searchable={false}
           options={[
             ...WINDOWS.map((days) => ({
               value: String(days),
               label: t('expiry.windowDays', { days }),
             })),
-            { value: 'month', label: t('expiry.windowMonth') },
-            { value: 'quarter', label: t('expiry.windowQuarter') },
             { value: 'custom', label: t('expiry.windowCustom') },
           ]}
           onChange={setWindow}
