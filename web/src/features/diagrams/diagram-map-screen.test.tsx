@@ -279,6 +279,33 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(aside.querySelector('.dpanel-top')).toBeNull();
   });
 
+  // PW-B23: "Chưa vẽ" đã là trạng thái — dòng "Chưa lưu lần nào" chỉ lặp lại; chưa vẽ thì việc
+  // chính là Sửa, không phải mở xem một bản vẽ trống.
+  it('bản vẽ chưa vẽ: không lặp "Chưa lưu lần nào"; Sửa là nút chính', async () => {
+    const LONE = node('lone', null, 'Một mình E2E');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(String(input).endsWith('/api/v1/diagrams') ? jsonResponse(200, [LONE]) : jsonResponse(404, { code: 'NOT_FOUND' })),
+      ),
+    );
+    renderScreen('/diagrams?node=lone');
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(within(map).getByText('Chưa vẽ')).toBeInTheDocument();
+    expect(screen.queryByText('Chưa lưu lần nào')).toBeNull();
+    const aside = await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    expect(within(aside).getByRole('button', { name: 'Sửa' })).toHaveClass('primary');
+    expect(within(aside).getByRole('button', { name: 'Mở xem' })).not.toHaveClass('primary');
+  });
+
+  it('bản vẽ đã có nội dung: Mở là nút chính, Sửa là nút thường', async () => {
+    routeFetch({});
+    renderScreen('/diagrams?node=t1');
+    const aside = await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    expect(await within(aside).findByRole('button', { name: 'Mở bản chính thức' })).toHaveClass('primary');
+    expect(within(aside).getByRole('button', { name: 'Sửa' })).not.toHaveClass('primary');
+  });
+
   it('bấm tab bản vẽ khác: panel đổi sang nó, ?node= đổi theo', async () => {
     routeFetch({});
     renderScreen('/diagrams?node=sv');

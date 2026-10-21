@@ -971,7 +971,6 @@ export default {
       allRoots: 'Tất cả bản vẽ',
       inside: '{{count}} Bản vẽ bên trong',
       drafts: '{{count}} Bản nháp',
-      never: 'Chưa lưu lần nào',
       ago_now: 'vừa xong',
       ago_minutes: '{{count}} phút trước',
       ago_hours: '{{count}} giờ trước',

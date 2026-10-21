@@ -1803,9 +1803,10 @@ button.tree-summary:hover:not(:disabled) {
 .dmap-tile[data-tone='danger'] {
   border-top-color: var(--danger);
 }
+/* Ô đang chọn: viền 2px primary là đủ — vòng sáng + viền đỏ trạng thái đè nhau trông quá nặng (PW-B23). */
 .dmap-tile[data-selected] {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 .dmap-tile-main {
   display: flex;

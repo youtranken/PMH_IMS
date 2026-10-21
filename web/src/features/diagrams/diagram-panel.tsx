@@ -122,6 +122,8 @@ export function DiagramPanel({
   const latest = node.latestVersion;
   const newer = node.kind === 'presentation' ? newerOfficialSeq(node.source) : null;
   const hasDraft = Boolean(latest) && (node.draftCount ?? 0) > 0;
+  // Chưa vẽ gì thì mở xem chỉ ra khung trống: việc chính là Sửa (PW-B23).
+  const drawFirst = canEdit && !latest;
   const manager = me.role === 'sa' || me.role === 'admin';
   const reviewable = node.kind === 'official';
   const canSend = canEdit && reviewable && hasDraft && !node.pendingApprovalId && node.status !== 'pending' && canSubmitVersion(latest, me);
@@ -348,11 +350,11 @@ export function DiagramPanel({
           {actions.length > 0 ? <RowActions label={t('diagrams.actionsOf', { name: node.name })} items={actions} /> : null}
         </div>
         <div className="dpanel-actions">
-          <button type="button" className="btn primary" onClick={() => navigate(PATHS.diagram(node.id))}>
+          <button type="button" className={drawFirst ? 'btn' : 'btn primary'} onClick={() => navigate(PATHS.diagram(node.id))}>
             {node.officialVersionId ? t('diagrams.panel.openOfficial') : t('diagrams.panel.open')}
           </button>
           {canEdit ? (
-            <button type="button" className="btn" onClick={() => navigate(`${PATHS.diagram(node.id)}?mode=edit`)}>
+            <button type="button" className={drawFirst ? 'btn primary' : 'btn'} onClick={() => navigate(`${PATHS.diagram(node.id)}?mode=edit`)}>
               {hasDraft && latest
                 ? savedByOther(latest, me)
                   ? t('diagrams.panel.editDraftOf', { seq: latest.seq, name: latest.savedByName ?? latest.savedBy })

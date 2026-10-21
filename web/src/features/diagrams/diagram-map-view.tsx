@@ -19,7 +19,8 @@ const BADGE_OF: Record<TileTone, string> = {
 /** "v8 · Thuận · 3 ngày trước" (hay "Nháp #9 · …") — lần lưu mới nhất; cũ hơn 30 ngày thì ghi ngày giờ. */
 function savedLine(node: DiagramNode, t: Translate, now: number): string {
   const latest = node.latestVersion;
-  if (!latest) return t('diagrams.map.never');
+  // Chưa lưu lần nào thì badge "Chưa vẽ" đã nói đủ — dòng phụ không lặp lại (PW-B23).
+  if (!latest) return '';
   const ago = agoParts(latest.savedAt, now);
   const when = !ago ? '' : ago.unit === 'days' && ago.count > 30 ? formatDateTime(latest.savedAt) : t(`diagrams.map.ago_${ago.unit}`, { count: ago.count });
   return [diagramVersionLabel(t, latest.seq, node.officialSeq, 'short'), latest.savedByName ?? latest.savedBy, when].filter(Boolean).join(' · ');
@@ -27,7 +28,7 @@ function savedLine(node: DiagramNode, t: Translate, now: number): string {
 
 /** "v12 · 3 Bản nháp" — bản chính thức + số lần lưu chưa phát hành (ô nhỏ không đủ chỗ cho tên người). */
 function tileLine(node: DiagramNode, t: Translate): string {
-  if (!node.latestVersion) return t('diagrams.map.never');
+  if (!node.latestVersion) return '';
   const parts: string[] = [];
   if (node.officialSeq) parts.push(diagramVersionLabel(t, node.officialSeq, node.officialSeq, 'short'));
   if (node.draftCount) parts.push(t('diagrams.map.drafts', { count: node.draftCount }));
@@ -111,7 +112,7 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
                       <strong>{area.node.name}</strong>{' '}
                       <span className={BADGE_OF[tileTone(area.node)]}>{statusText(area.node, t, true)}</span>
                     </span>{' '}
-                    <span className="dmap-meta">{savedLine(area.node, t, now)}</span>
+                    {area.node.latestVersion ? <span className="dmap-meta">{savedLine(area.node, t, now)}</span> : null}
                   </button>
                   <ul className="dmap-tiles" aria-label={t('diagrams.panel.siblingsOf', { name: area.node.name })}>
                     {area.tiles.map((tile) => {
@@ -130,7 +131,7 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
                               <span className="dmap-dot" aria-hidden="true" />
                               {statusText(tile.node, t, false)}
                             </span>{' '}
-                            <span className="dmap-meta">{tileLine(tile.node, t)}</span>
+                            {tile.node.latestVersion ? <span className="dmap-meta">{tileLine(tile.node, t)}</span> : null}
                           </button>
                           {tile.children > 0 ? (
                             <button
