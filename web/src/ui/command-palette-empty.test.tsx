@@ -85,6 +85,8 @@ describe('Tìm nhanh — trạng thái trống và không khớp', () => {
     const user = await openPalette();
     await user.type(screen.getByRole('combobox'), 'zzqq');
     expect(await screen.findByText('Không có hồ sơ nào khớp "zzqq".')).toBeInTheDocument();
+    // ST-06: chỉ ba gợi ý — tám dòng "Tìm … trong …" kín cả màn điện thoại.
+    expect(screen.getAllByRole('option')).toHaveLength(3);
     await user.click(screen.getByRole('option', { name: 'Tìm "zzqq" trong Thiết bị' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/devices?q=zzqq');
   });

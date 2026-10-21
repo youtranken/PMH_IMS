@@ -597,7 +597,7 @@ export function CommandPalette({ me }: { me: Me }) {
    * Ba cảnh của danh sách, và cả ba đều CHỌN ĐƯỢC bằng mũi tên:
    *  - chưa gõ đủ 2 ký tự: "Mở gần đây" + "Đi tới" (các màn trong menu) — lúc mở hộp là lúc tốt
    *    nhất để đưa lại đúng hồ sơ người trực đang xử lý dở;
-   *  - không có gì khớp (và không nhóm nào hỏng): lối đi tiếp "Tìm "x" trong …" thay cho ngõ cụt;
+   *  - không có gì khớp (và không nhóm nào hỏng): ba lối "Tìm "x" trong …" thay cho ngõ cụt;
    *  - còn lại: kết quả tìm.
    */
   const hits = useMemo<Hit[]>(() => {
@@ -633,6 +633,8 @@ export function CommandPalette({ me }: { me: Me }) {
       { list: PATHS.serviceAccounts, key: 'nav.serviceAccounts' },
     ]
       .filter(({ list }) => canSeePath(me, list))
+      // Ba gợi ý là đủ (ST-06): tám dòng "Tìm … trong …" kín cả màn điện thoại.
+      .slice(0, 3)
       .map(({ list, key }) => ({
         group,
         title: t('palette.searchIn', { q, where: t(key) }),
