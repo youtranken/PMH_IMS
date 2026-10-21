@@ -146,6 +146,15 @@ interface DiagramFoundHit {
 }
 
 /** Nhận "vlan 20", "VLAN20" hay chỉ "20" — ở PMH người ta gọi dải theo VLAN. */
+/**
+ * Hồ sơ đang dùng lên trước, đã thanh lý / ngừng dùng xuống cuối nhóm (ST-05): gõ "DM-0001" mà
+ * dòng đầu là DM-000100 đã thanh lý thì Enter mở nhầm. Giữ thứ tự server trong từng phần.
+ */
+function liveFirst<T extends { status?: string }>(rows: T[]): T[] {
+  const ended = (row: T) => (row.status && disposalStatusKey(row.status) ? 1 : 0);
+  return [...rows].sort((a, b) => ended(a) - ended(b));
+}
+
 function vlanOf(q: string): number | null {
   const match = /^(?:vlan\s*)?(\d{1,4})$/i.exec(q.trim());
   return match ? Number(match[1]) : null;
@@ -481,7 +490,7 @@ export function CommandPalette({ me }: { me: Me }) {
     const accountRows = accounts.data?.items ?? [];
     return [
       ...(ipFirst ? network : []),
-      ...deviceRows.map((row) => ({
+      ...liveFirst(deviceRows).map((row) => ({
         group: t('nav.devices'),
         title: row.code,
         sub: [row.name, row.siteCode].filter(Boolean).join(' · '),
@@ -499,7 +508,7 @@ export function CommandPalette({ me }: { me: Me }) {
         if (rows.length === 0) return [];
         const cut = (software.data?.total ?? 0) > softwareRows.length;
         return [
-          ...rows.map((row) => ({
+          ...liveFirst(rows).map((row) => ({
             group: t(spec.navKey),
             title: row.code,
             sub: row.name,
@@ -521,7 +530,7 @@ export function CommandPalette({ me }: { me: Me }) {
             : []),
         ];
       }),
-      ...ispRows.map((row) => ({
+      ...liveFirst(ispRows).map((row) => ({
         group: t('nav.isp'),
         title: row.code,
         sub: row.provider,
@@ -530,7 +539,7 @@ export function CommandPalette({ me }: { me: Me }) {
         status: row.status,
       })),
       ...more(t('nav.isp'), isp.data?.total, ispRows.length, PATHS.ispLines, 'nav.isp'),
-      ...accountRows.map((row) => ({
+      ...liveFirst(accountRows).map((row) => ({
         group: t('nav.serviceAccounts'),
         title: row.code,
         sub: [row.name, row.login].filter(Boolean).join(' · '),
