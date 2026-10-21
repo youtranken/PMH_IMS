@@ -12,6 +12,8 @@ export interface Me {
   email: string;
   fullName: string;
   role: UserRole;
+  /** Nhóm quyền (Q-31), đã suy ra ở API; `null` = không bị giới hạn. Hỏi qua `canSee` (`lib/features`). */
+  features: string[] | null;
   mustChangePassword: boolean;
   /** Đúng mật khẩu nhưng chưa qua TOTP — chỉ vài route được phép. */
   totpPending: boolean;

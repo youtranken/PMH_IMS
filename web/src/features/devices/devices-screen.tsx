@@ -4,6 +4,7 @@ import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import { canSee } from '@/lib/features';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable, type MobileCard } from '@/ui/data-table';
@@ -179,9 +180,11 @@ export function DevicesScreen({ me }: { me: Me }) {
    * IP đang giữ của cả trang, một lượt, qua module `ipam` (AD-2). Chỉ là dòng phụ: hỏng thì
    * dòng phụ vắng, danh sách vẫn dùng được — không đáng một thông báo lỗi.
    */
+  // Cột IP thuộc mảng Mạng (Q-31): nhóm không có Mạng thì không hỏi, không vẽ cột.
+  const seesNetwork = canSee(me, 'network');
   const heldIps = useQuery({
     queryKey: ['ipam', 'devices', 'addresses', deviceIds],
-    enabled: deviceIds.length > 0,
+    enabled: seesNetwork && deviceIds.length > 0,
     queryFn: () =>
       apiFetch<Record<string, string[]>>(
         `/api/v1/ipam/devices/addresses?deviceIds=${deviceIds.join(',')}`,
@@ -233,7 +236,7 @@ export function DevicesScreen({ me }: { me: Me }) {
           </span>
         ),
       },
-      {
+      ...(seesNetwork ? [{
         id: 'ip',
         header: t('devices.managementIp'),
         // Nhiều IP thì hiện cái đầu + số còn lại; đủ danh sách ở `title`.
@@ -247,7 +250,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             </span>
           );
         },
-      },
+      } satisfies ColumnDef<DeviceRow, unknown>] : []),
       {
         id: 'location',
         header: t('devices.locationCol'),
@@ -281,7 +284,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         ),
       },
     ],
-    [t, ipsOf, navigate, openStatus, dueOf],
+    [t, ipsOf, seesNetwork, navigate, openStatus, dueOf],
   );
 
   /* Điện thoại: thẻ gọn ~96px thay cho bảng xếp chồng 8 dòng/máy. Không có nút Sửa — form

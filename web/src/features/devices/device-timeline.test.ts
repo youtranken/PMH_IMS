@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
 import type { HistoryEntry } from '@/ui/history-panel';
-import { mergeDeviceTimeline, type TimelineItem } from './device-timeline';
+import { mergeDeviceTimeline, timelineFilters, type TimelineItem } from './device-timeline';
 
 /** `t` thật của app: khoá gõ sai hay quên khai trong vi.ts là đỏ ở đây (DEV-086). */
 const t = i18n.t;
@@ -50,5 +50,15 @@ describe('mergeDeviceTimeline — lịch sử hồ sơ + sự kiện module khá
   it('hành động lạ vẫn hiện (in nguyên mã) chứ không biến mất', () => {
     const rows = mergeDeviceTimeline([], [{ ...OTHERS[0], action: 'ip-moved' }], '', t);
     expect(rows[0].action).toContain('ip-moved');
+  });
+});
+
+describe('timelineFilters — chip lọc theo nhóm quyền (Q-31)', () => {
+  it('thấy Mạng: đủ bốn chip', () => {
+    expect(timelineFilters(true)).toEqual(['', 'profile', 'ipam', 'software']);
+  });
+
+  it('nhóm ẩn Mạng: không có chip IP (API đã bỏ nguồn đó, chip chỉ ra danh sách rỗng)', () => {
+    expect(timelineFilters(false)).toEqual(['', 'profile', 'software']);
   });
 });

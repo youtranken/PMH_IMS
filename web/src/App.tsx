@@ -29,7 +29,9 @@ import { LEGACY_ROUTES, PATHS, ROUTE_ROLES, canSeeRoute } from '@/lib/routes';
 import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS } from '@/lib/software-screens';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
-import { Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
+import { FeatureHidden, Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
+import { canSee, canSeePath } from '@/lib/features';
+import { visibleGroups } from '@/shell/app-nav';
 import { ToastProvider } from '@/ui/toast';
 import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
@@ -65,6 +67,9 @@ import { LiveRegion } from '@/ui/live-region';
  * khiển, thiết bị, phần mềm, IP) vẫn tải sẵn.
  */
 const AccountsScreen = lazy(() => import('@/features/admin/accounts-screen').then((m) => ({ default: m.AccountsScreen })));
+const FeatureGroupsScreen = lazy(() =>
+  import('@/features/admin/feature-groups-screen').then((m) => ({ default: m.FeatureGroupsScreen })),
+);
 const AuditLogScreen = lazy(() => import('@/features/admin/audit-log-screen').then((m) => ({ default: m.AuditLogScreen })));
 const AccessMatrixScreen = lazy(() => import('@/features/vault/access-matrix-screen').then((m) => ({ default: m.AccessMatrixScreen })));
 const SettingsScreen = lazy(() => import('@/features/admin/settings-screen').then((m) => ({ default: m.SettingsScreen })));
@@ -223,6 +228,21 @@ function AppRoutes() {
     );
   }
 
+  /*
+   * Nhóm quyền (Q-31) gác TRƯỚC khi dựng màn: dựng rồi mới từ chối thì màn đã kịp gọi API của
+   * mảng bị ẩn. Không có Tổng quan thì `/` (đích sau đăng nhập) sang mục đầu tiên còn hiện.
+   */
+  if (location.pathname === PATHS.dashboard && !canSee(me, 'overview')) {
+    return <Navigate to={visibleGroups(me)[0]?.items[0]?.to ?? PATHS.profile} replace />;
+  }
+  if (!canSeePath(me, location.pathname)) {
+    return (
+      <AppShell me={me}>
+        <FeatureHidden />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell me={me}>
       <Suspense fallback={<Loading />}>
@@ -235,6 +255,11 @@ function AppRoutes() {
           <Route path={PATHS.adminAccounts} element={<AccountsScreen me={me} />} />
         ) : (
           <Route path={PATHS.adminAccounts} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminAccounts]} />} />
+        )}
+        {canSeeRoute(PATHS.adminFeatureGroups, me.role) ? (
+          <Route path={PATHS.adminFeatureGroups} element={<FeatureGroupsScreen me={me} />} />
+        ) : (
+          <Route path={PATHS.adminFeatureGroups} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminFeatureGroups]} />} />
         )}
         {canSeeRoute(PATHS.adminCatalog, me.role) ? (
           <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />

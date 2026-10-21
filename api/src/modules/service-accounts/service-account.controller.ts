@@ -24,6 +24,7 @@ import { UsersApiService } from '../users/users.api';
 import { withActorNames } from '../../common/history';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
+import { Feature } from '../auth/feature.decorator';
 
 /** Chữ trong file xuất — cùng chữ với màn danh sách (`serviceAccounts.kind*Short`). */
 const KIND_LABEL: Record<string, string> = { shared: 'Dùng chung', vpn: 'VPN' };
@@ -121,6 +122,7 @@ function filterOf(query: {
  * Mật khẩu KHÔNG nằm ở đây — nó ở két sắt với `ownerType: 'service_account'`.
  */
 @NoStepUp()
+@Feature('assets')
 @Controller('api/v1/service-accounts')
 export class ServiceAccountController {
   constructor(

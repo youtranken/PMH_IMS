@@ -10,6 +10,8 @@
  * Kiểu đó phá đồ thị phụ thuộc và mỗi epic mới lại phải sửa vào devices.
  */
 
+import type { Feature } from './features';
+
 interface DevicePanelItem {
   label: string;
   value: string;
@@ -45,10 +47,14 @@ export interface PanelViewer {
   email: string;
   /** 'sa' | 'admin' | 'member'. */
   role: string;
+  /** Nhóm quyền (Q-31); `null` = không bị giới hạn. Registry bỏ panel của mảng bị ẩn. */
+  features: readonly string[] | null;
 }
 
 export interface DevicePanelProvider {
   readonly panelKey: string;
+  /** Mảng của panel (Q-31). Không khai = không thuộc mảng nào, ai xem được trang cũng thấy. */
+  readonly feature?: Feature;
   /**
    * Trả `null` = module này không có gì để nói về thiết bị đó (không hiện panel).
    * Trả panel có `items` rỗng = có liên quan nhưng đang trống (hiện `emptyText`).

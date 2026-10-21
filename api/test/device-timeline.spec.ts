@@ -83,7 +83,7 @@ describe('DEV-086 · dòng thời gian thiết bị — tầng DB', () => {
   it(
     'IP về/rời máy + ghế license gán/gỡ, mới nhất lên đầu; IP của máy khác không lọt',
     async () => {
-      const { items, failedSources } = await registry.timelineFor(deviceId, 200);
+      const { items, failedSources } = await registry.timelineFor(deviceId, 200, null);
       expect(failedSources).toEqual([]);
       expect(items.map((row) => [row.source, row.action, row.subject])).toEqual([
         ['software', 'license-released', 'LIC-E2E-TL'],
@@ -100,7 +100,7 @@ describe('DEV-086 · dòng thời gian thiết bị — tầng DB', () => {
   it(
     'máy kia chỉ thấy phần của nó',
     async () => {
-      const { items } = await registry.timelineFor(otherId, 200);
+      const { items } = await registry.timelineFor(otherId, 200, null);
       expect(items.map((row) => [row.action, row.subject])).toEqual([
         ['ip-released', '10.78.1.5'],
         ['ip-assigned', '10.78.1.5'],

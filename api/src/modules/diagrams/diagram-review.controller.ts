@@ -7,6 +7,7 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DiagramReviewService } from './diagram-review.service';
+import { Feature } from '../auth/feature.decorator';
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã bản vẽ không hợp lệ.' })
@@ -69,6 +70,7 @@ class ResolveDto {
  * duyệt hiện mã thiết bị, bình luận nêu id ô.
  */
 @NoStepUp()
+@Feature('network')
 @Controller('api/v1/diagrams')
 export class DiagramReviewController {
   constructor(private readonly review: DiagramReviewService) {}

@@ -8,6 +8,7 @@ import { AccessListService } from './access-list.service';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { SCOPE_TYPES, type ScopeType } from './access-tier';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
+import { FeatureFree } from '../auth/feature.decorator';
 
 export class AccessRuleDto {
   @IsString() @Length(3, 160) memberEmail!: string;
@@ -59,6 +60,7 @@ class IdParamDto {
  * chính xác chỗ nào yếu.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/vault/access')
 export class VaultAccessController {
   constructor(private readonly access: AccessListService) {}

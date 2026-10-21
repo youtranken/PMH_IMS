@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Post,
@@ -18,12 +19,16 @@ import { IsIn, IsUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Audited } from '../audit/audited.decorator';
 import { OwnerAccessRegistry } from '../../common/owner-access.registry';
+import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
+import { FEATURE_HIDDEN, hasFeature } from '../../common/features';
 import { ConfigThrottle } from '../../common/config-throttle';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { MULTER_LIMIT } from './file-validation';
 import { FILE_OWNER_TYPES, FilesService, type FileOwnerType } from './files.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { FeatureFree } from '../auth/feature.decorator';
+import { FILE_FEATURES } from './file-features';
 
 class OwnerDto {
   @IsIn([...FILE_OWNER_TYPES], { message: 'Loại chủ thể đính kèm không hợp lệ.' })
@@ -57,11 +62,13 @@ class FileIdParamDto {
  * nhập đều xem được.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/files')
 export class FilesController {
   constructor(
     private readonly files: FilesService,
     private readonly access: OwnerAccessRegistry,
+    private readonly owners: OwnerExistsRegistry,
   ) {}
 
   /**
@@ -87,6 +94,9 @@ export class FilesController {
    */
   private async assertCanRead(req: AuthedRequest, ownerType: FileOwnerType, ownerId: string) {
     const user = requireUser(req);
+    // Q-31 trước ma trận két: nhóm quyền ẩn mảng thì ẩn cả giấy tờ của mảng (`features` null = đủ).
+    if (!hasFeature(user.features, FILE_FEATURES[ownerType])) throw new ForbiddenException(FEATURE_HIDDEN);
+    if (user.features) await this.owners.assertFeatureVisible(ownerType, ownerId, user.features);
     if (user.role === 'sa' || user.role === 'admin') return;
     await this.access.assertCanRead(user.email, ownerType, ownerId);
   }

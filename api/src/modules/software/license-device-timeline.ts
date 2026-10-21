@@ -18,6 +18,7 @@ import { licenseAssignmentTable, softwareTable } from './software.schema';
 @Injectable()
 export class LicenseDeviceTimeline implements DeviceTimelineProvider, OnModuleInit {
   readonly source = 'software';
+  readonly feature = 'assets' as const;
 
   constructor(
     private readonly registry: DeviceTimelineRegistry,

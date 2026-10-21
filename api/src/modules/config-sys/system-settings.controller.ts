@@ -14,6 +14,7 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemSettingsService } from './system-settings.service';
+import { FeatureFree } from '../auth/feature.decorator';
 
 class SettingChangeDto {
   @IsString()
@@ -40,6 +41,7 @@ class UpdateSettingsDto {
  * Đọc thì không đòi step-up: xem ngưỡng hiện tại không mở được gì.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/admin/settings')
 export class SystemSettingsController {
   constructor(private readonly settings: SystemSettingsService) {}

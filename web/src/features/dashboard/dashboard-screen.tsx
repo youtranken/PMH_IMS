@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { ToneIcon } from '@/ui/glyph-icons';
 import { apiFetch } from '@/lib/api-client';
+import { canSee } from '@/lib/features';
 import {
   BREAK_GLASS_KEY,
   BreakGlassStateBadge,
@@ -206,8 +207,9 @@ export function DashboardScreen({ me }: { me: Me }) {
     else if (lane === 'main') main.push(node);
     else side.push({ rank: lane, node });
   };
+  // Khối của mảng bị nhóm quyền ẩn (Q-31): API đã không trả dữ liệu; không bày cả dòng "lỗi tải".
 
-  place(
+  if (canSee(me, 'expiry')) place(
     board.expiring,
     <BlockCard
       key="expiring"
@@ -227,7 +229,7 @@ export function DashboardScreen({ me }: { me: Me }) {
 
   /* Dải nào sắp hết chỗ (FR-020) — không ai mở màn IP khi chưa có việc. */
   const threshold = board.subnetLoad.thresholdPercent ?? null;
-  place(
+  if (canSee(me, 'network')) place(
     board.subnetLoad,
     <BlockCard
       key="subnetLoad"
@@ -350,7 +352,7 @@ export function DashboardScreen({ me }: { me: Me }) {
   }
 
   /* Tuần qua công ty bỏ những gì — các loại gộp sẵn ở module `disposal`, không gộp lại. */
-  place(
+  if (canSee(me, 'assets')) place(
     board.disposed,
     <BlockCard
       key="disposed"
@@ -391,7 +393,7 @@ export function DashboardScreen({ me }: { me: Me }) {
   );
 
   /* Sự cố tuần qua — phiếu 0206 theo Detection Time (FR-027 ②). */
-  place(
+  if (canSee(me, 'iso_0206')) place(
     board.incidents,
     <BlockCard
       key="incidents"
@@ -431,7 +433,7 @@ export function DashboardScreen({ me }: { me: Me }) {
       <NeedsYouBlock me={me} />
       <IsoNeedsYouBlock me={me} />
       {/* Người XIN mở két: "đã được duyệt chưa, còn hiệu lực bao lâu" — đứng đầu khi có việc. */}
-      <MyRequestsBlock />
+      {canSee(me, 'break_glass') ? <MyRequestsBlock /> : null}
 
       <BoardKpis board={board} />
 

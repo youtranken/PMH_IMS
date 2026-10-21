@@ -26,6 +26,7 @@ import type { AuthedRequest } from '../auth/types';
 import { IsoAccessService } from './iso-access.service';
 import { IsoCatalogService } from './iso-catalog.service';
 import { ISO_FORM_TYPES, type IsoFormType } from './iso-rules';
+import { Feature, FeatureFree } from '../auth/feature.decorator';
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã không hợp lệ.' })
@@ -89,6 +90,7 @@ class OwnersDto {
  * khoản IT sửa được; người phụ trách chỉ SA/Admin gán.
  */
 @NoStepUp()
+@Feature('iso')
 @Controller('api/v1/iso/catalog')
 export class IsoCatalogController {
   constructor(
@@ -97,12 +99,14 @@ export class IsoCatalogController {
   ) {}
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Get('jobs')
   jobs(@Query() query: JobListQuery) {
     return this.catalog.jobs(query.status ?? 'all');
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Post('jobs')
   @Audited('iso_job.created', 'iso_backup_job', { writtenByService: true })
   createJob(@Body() dto: JobDto, @Req() req: AuthedRequest) {
@@ -110,6 +114,7 @@ export class IsoCatalogController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Patch('jobs/:id')
   @Audited('iso_job.updated', 'iso_backup_job', { writtenByService: true })
   updateJob(@Param() params: IdParamDto, @Body() dto: JobDto, @Req() req: AuthedRequest) {
@@ -117,6 +122,7 @@ export class IsoCatalogController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Post('jobs/:id/stop')
   @Audited('iso_job.stopped', 'iso_backup_job', { writtenByService: true })
   stopJob(@Param() params: IdParamDto, @Body() dto: StopDto, @Req() req: AuthedRequest) {
@@ -124,6 +130,7 @@ export class IsoCatalogController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Post('jobs/:id/resume')
   @Audited('iso_job.resumed', 'iso_backup_job', { writtenByService: true })
   resumeJob(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
@@ -131,6 +138,7 @@ export class IsoCatalogController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Post('jobs/:id/move')
   @Audited('iso_job.moved', 'iso_backup_job', { writtenByService: true })
   moveJob(@Param() params: IdParamDto, @Body() dto: MoveDto, @Req() req: AuthedRequest) {
@@ -138,12 +146,14 @@ export class IsoCatalogController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Get('divisions')
   divisions() {
     return this.catalog.divisions();
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Post('divisions')
   @Audited('iso_division.created', 'iso_division', { writtenByService: true })
   createDivision(@Body() dto: DivisionDto, @Req() req: AuthedRequest) {
@@ -151,6 +161,7 @@ export class IsoCatalogController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Patch('divisions/:id')
   @Audited('iso_division.updated', 'iso_division', { writtenByService: true })
   updateDivision(@Param() params: IdParamDto, @Body() dto: DivisionUpdateDto, @Req() req: AuthedRequest) {
@@ -165,6 +176,7 @@ export class IsoCatalogController {
 
   /** Danh sách chọn người phụ trách — chỉ tên + email của tài khoản còn hoạt động. */
   @Roles('sa', 'admin')
+  @FeatureFree()
   @Get('people')
   people() {
     return this.access.people();

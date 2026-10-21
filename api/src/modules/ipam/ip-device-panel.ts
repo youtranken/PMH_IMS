@@ -14,6 +14,7 @@ import type { IpStatus } from './ip-lifecycle';
 @Injectable()
 export class IpDevicePanel implements DevicePanelProvider, OnModuleInit {
   readonly panelKey = 'ipam';
+  readonly feature = 'network' as const;
 
   constructor(
     private readonly panels: DevicePanelRegistry,

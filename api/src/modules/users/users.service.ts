@@ -15,6 +15,7 @@ import {
 } from '../../common/lockout';
 import type { UserRole } from '../auth/types';
 import { usersTable } from './users.schema';
+import { featureGroupTable } from './feature-groups.schema';
 import type { UserCredentials, UserDirectoryEntry, UserRecord } from './users.types';
 
 /**
@@ -38,6 +39,57 @@ export class UsersService {
   async findById(id: string): Promise<UserRecord | null> {
     const found = await this.findCredentialsById(id);
     return found ? strip(found) : null;
+  }
+
+  /**
+   * SessionGuard gọi mỗi request: tài khoản + ô tick nhóm quyền (Q-31) trong MỘT câu. `groupTicks`
+   * `null` = chưa gán nhóm. Có nhóm mà không đọc được nhóm (FK RESTRICT nên không xảy ra) thì trả
+   * rỗng: đóng, không mở.
+   */
+  async findForSession(id: string): Promise<(UserRecord & { groupTicks: string[] | null }) | null> {
+    const rows = await this.db
+      .select({ user: usersTable, features: featureGroupTable.features })
+      .from(usersTable)
+      .leftJoin(featureGroupTable, eq(featureGroupTable.id, usersTable.featureGroupId))
+      .where(eq(usersTable.id, id));
+    const row = rows[0];
+    if (!row) return null;
+    return { ...strip(toCredentials(row.user)), groupTicks: row.user.featureGroupId ? (row.features ?? []) : null };
+  }
+
+  /**
+   * `id → ô tick của nhóm`; `null` = đủ quyền. Khóa FOR SHARE người rồi nhóm của họ trước khi đọc:
+   * lượt bỏ tick, chuyển nhóm hay đổi vai đang chạy phải xong trước, không thì người phụ trách ISO
+   * được gán theo ô tick sắp mất (Q-31).
+   */
+  async featureTicksByIdsWithin(tx: Tx, ids: readonly string[]): Promise<Map<string, string[] | null>> {
+    if (ids.length === 0) return new Map();
+    const people = await tx
+      .select({ id: usersTable.id, groupId: usersTable.featureGroupId })
+      .from(usersTable)
+      .where(inArray(usersTable.id, [...ids]))
+      .for('share');
+    const groupIds = [...new Set(people.flatMap((p) => (p.groupId ? [p.groupId] : [])))];
+    const groups =
+      groupIds.length === 0
+        ? []
+        : await tx
+            .select({ id: featureGroupTable.id, features: featureGroupTable.features })
+            .from(featureGroupTable)
+            .where(inArray(featureGroupTable.id, groupIds))
+            .for('share');
+    const ticks = new Map(groups.map((g) => [g.id, g.features]));
+    return new Map(people.map((p) => [p.id, p.groupId ? (ticks.get(p.groupId) ?? []) : null]));
+  }
+
+  /** Vai + nhóm hiện tại, khóa FOR UPDATE: đổi nhóm phải thấy vai mới nhất (CHECK chỉ-Member). */
+  async lockRoleAndGroupWithin(tx: Tx, id: string): Promise<{ role: UserRole; featureGroupId: string | null } | null> {
+    const rows = await tx
+      .select({ role: usersTable.role, featureGroupId: usersTable.featureGroupId })
+      .from(usersTable)
+      .where(eq(usersTable.id, id))
+      .for('update');
+    return rows[0] ? { role: rows[0].role as UserRole, featureGroupId: rows[0].featureGroupId } : null;
   }
 
   /**
@@ -150,6 +202,7 @@ export class UsersService {
       passwordHash: string;
       totpLoginRequired: boolean;
       tempPasswordExpiresAt: Date;
+      featureGroupId?: string | null;
     },
   ): Promise<UserRecord> {
     const rows = await tx
@@ -214,7 +267,16 @@ export class UsersService {
   async setRoleWithin(tx: Tx, userId: string, role: UserRole): Promise<void> {
     await tx
       .update(usersTable)
-      .set({ role, updatedAt: new Date() })
+      // Nhóm quyền chỉ cho Member (Q-31, CHECK `users_feature_group_member_check`): rời vai Member
+      // thì bỏ nhóm trong cùng câu, không thì câu UPDATE bị DB từ chối.
+      .set(role === 'member' ? { role, updatedAt: new Date() } : { role, featureGroupId: null, updatedAt: new Date() })
+      .where(eq(usersTable.id, userId));
+  }
+
+  async setFeatureGroupWithin(tx: Tx, userId: string, groupId: string | null): Promise<void> {
+    await tx
+      .update(usersTable)
+      .set({ featureGroupId: groupId, updatedAt: new Date() })
       .where(eq(usersTable.id, userId));
   }
 
@@ -587,6 +649,7 @@ function toCredentials(row: Row): UserCredentials {
     employeeCode: row.employeeCode ?? null,
     birthDate: row.birthDate ?? null,
     role: row.role as UserRole,
+    featureGroupId: row.featureGroupId ?? null,
     status: row.status as UserCredentials['status'],
     mustChangePassword: row.mustChangePassword,
     tempPasswordExpiresAt: row.tempPasswordExpiresAt ?? null,

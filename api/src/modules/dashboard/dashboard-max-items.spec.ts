@@ -78,7 +78,7 @@ function buildService(maxItems: number, pageLimits: number[]): DashboardService 
 describe('Trang chủ — số dòng mỗi khối theo system_config', () => {
   it.each([8, 3])('dashboard.max_items = %i → mọi khối cắt đúng số đó, total đếm đủ', async (max) => {
     const pageLimits: number[] = [];
-    const board = await buildService(max, pageLimits).build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    const board = await buildService(max, pageLimits).build({ email: 'sep@pmh.com.vn', role: 'admin', features: null });
 
     expect(board.expiring.items).toHaveLength(max);
     expect(board.expiring.total).toBe(20);

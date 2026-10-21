@@ -42,6 +42,7 @@ import {
   type IncidentStatus,
   type IsoFormType,
 } from './iso-rules';
+import { Feature } from '../auth/feature.decorator';
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -150,6 +151,7 @@ function toCells(cells: CellDto[]): CellInput[] {
  * (người phụ trách + SA/Admin) kiểm trong service — `@Roles` ở đây chỉ chặn ngoài tài khoản IMS.
  */
 @NoStepUp()
+@Feature('iso')
 @Controller('api/v1/iso')
 export class IsoFormsController {
   constructor(
@@ -162,6 +164,7 @@ export class IsoFormsController {
   /* ---------------------------------------------------------------- 0203 --- */
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Get('backup/:month')
   backupGrid(@Param() params: MonthParamDto, @Req() req: AuthedRequest) {
     const { year, month } = monthOfParam(params.month);
@@ -169,6 +172,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Put('backup/ticks')
   // 204: lượt ghi không trả gì. Để mặc định 200/201 thân rỗng thì web đọc JSON hỏng và báo lỗi dù đã lưu.
   @HttpCode(204)
@@ -178,6 +182,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0203')
   @Post('backup/fill-day')
   @Audited('iso_backup.day_filled', 'iso_period', { writtenByService: true })
   fillDay(@Body() dto: DayDto, @Req() req: AuthedRequest) {
@@ -187,6 +192,7 @@ export class IsoFormsController {
   /* ---------------------------------------------------------------- 0208 --- */
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Get('antivirus/:month')
   antivirusGrid(@Param() params: MonthParamDto, @Req() req: AuthedRequest) {
     const { year, month } = monthOfParam(params.month);
@@ -194,6 +200,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Post('antivirus/clear-days')
   @HttpCode(204)
   @Audited('iso_antivirus.day_cleared', 'iso_period', { writtenByService: true })
@@ -202,6 +209,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Delete('antivirus/clear-days/:day')
   @HttpCode(204)
   @Audited('iso_antivirus.day_uncleared', 'iso_period', { writtenByService: true })
@@ -210,6 +218,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Put('antivirus/marks')
   @HttpCode(204)
   @Audited(['iso_antivirus.mark_set', 'iso_antivirus.day_cleared', 'iso_antivirus.day_uncleared'], 'iso_av_issue', { writtenByService: true })
@@ -218,6 +227,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Post('antivirus/issues')
   @Audited(['iso_antivirus.issue_created', 'iso_division.created'], 'iso_av_issue', { writtenByService: true })
   createIssue(@Body() dto: IssueDto, @Req() req: AuthedRequest) {
@@ -225,6 +235,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Patch('antivirus/issues/:id')
   @Audited(['iso_antivirus.issue_updated', 'iso_division.created'], 'iso_av_issue', { writtenByService: true })
   updateIssue(@Param() params: IdParamDto, @Body() dto: IssueDto, @Req() req: AuthedRequest) {
@@ -232,6 +243,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0208')
   @Delete('antivirus/issues/:id')
   @HttpCode(204)
   @Audited('iso_antivirus.issue_deleted', 'iso_av_issue', { writtenByService: true })
@@ -242,6 +254,7 @@ export class IsoFormsController {
   /* ---------------------------------------------------------------- 0206 --- */
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0206')
   @Get('incidents')
   async listIncidents(@Query() query: IncidentListQuery) {
     const [items, unlinked] = await Promise.all([this.incidents.list(query), this.incidents.unlinked({ year: query.year })]);
@@ -250,18 +263,21 @@ export class IsoFormsController {
 
   /** Ô ✗ chưa có phiếu của các kỳ còn Đang ghi — khu "gắn thêm ô ✗" của form 0206. */
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0206')
   @Get('incidents/linkable')
   linkable() {
     return this.incidents.unlinked({});
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0206')
   @Get('incidents/:id')
   incident(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     return this.incidents.getFor(req.user!, params.id);
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0206')
   @Post('incidents')
   @Audited('iso_incident.created', 'iso_incident', { writtenByService: true })
   createIncident(@Body() dto: IncidentDto, @Req() req: AuthedRequest) {
@@ -269,6 +285,7 @@ export class IsoFormsController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('iso_0206')
   @Patch('incidents/:id')
   @Audited('iso_incident.updated', 'iso_incident', { writtenByService: true })
   updateIncident(@Param() params: IdParamDto, @Body() dto: IncidentDto, @Req() req: AuthedRequest) {

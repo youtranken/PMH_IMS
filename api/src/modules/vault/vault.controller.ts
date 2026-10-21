@@ -36,6 +36,7 @@ import {
   type SecretKind,
   type SecretOwnerType,
 } from './vault.service';
+import { FeatureFree } from '../auth/feature.decorator';
 
 class OwnerQueryDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại chủ thể không hợp lệ.' })
@@ -102,6 +103,7 @@ class IdParamDto {
  * nên gắn tay ở đây vừa thừa vừa gợi ý sai rằng route không gắn thì không được canh.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/vault/secrets')
 export class VaultController {
   private readonly logger = new Logger(VaultController.name);

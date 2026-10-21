@@ -77,6 +77,7 @@ export const PATHS = {
   disposal: '/disposal',
 
   adminAccounts: '/admin/accounts',
+  adminFeatureGroups: '/admin/feature-groups',
   adminCatalog: '/admin/catalog',
   adminVaultAccess: '/admin/vault-access',
   adminAuditLog: '/admin/audit-log',
@@ -168,6 +169,8 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
 export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   // `accounts.controller.ts` — toàn bộ là `@Roles('sa')`.
   [PATHS.adminAccounts]: ['sa'],
+  // `feature-groups.controller.ts` — `@Roles('sa')` (Q-31).
+  [PATHS.adminFeatureGroups]: ['sa'],
   // `vault-access.controller.ts` — `@Roles('sa', 'admin')`.
   [PATHS.adminVaultAccess]: ['sa', 'admin'],
   // `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp.
@@ -240,6 +243,7 @@ const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.vault]: 'nav.vault',
   [PATHS.disposal]: 'nav.disposal',
   [PATHS.adminAccounts]: 'nav.accounts',
+  [PATHS.adminFeatureGroups]: 'nav.featureGroups',
   [PATHS.adminCatalog]: 'nav.catalog',
   [PATHS.adminVaultAccess]: 'nav.vaultAccess',
   [PATHS.adminAuditLog]: 'nav.auditLog',

@@ -25,6 +25,7 @@ const ME: Me = {
   email: 'admin@pmh.com.vn',
   fullName: 'Quản trị',
   role: 'admin',
+  features: null,
   mustChangePassword: false,
   totpPending: false,
   totpEnrolled: true,
@@ -1000,5 +1001,22 @@ describe('VaultPanel — lỗi máy chủ không đứng lại sau khi đổi lo
     await userEvent.click(within(dialog).getByRole('button', { name: 'Loại' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Mật khẩu' }));
     expect(within(dialog).queryByText(/Khóa bí mật chỉ gồm chữ A–Z/)).not.toBeInTheDocument();
+  });
+});
+
+describe('VaultPanel — nhóm quyền ẩn "Xin mở két" (Q-31)', () => {
+  it('Member có két cần duyệt nhưng nhóm không tick Xin mở két → không có nút xin, không badge "Cần duyệt"', async () => {
+    mockApi(NEEDS_APPROVAL, [SECRET]);
+    renderPanel({ ...ME, role: 'member', features: ['assets'] });
+
+    await screen.findByText('admin web');
+    expect(screen.queryByRole('button', { name: 'Xin mở két' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Cần duyệt')).not.toBeInTheDocument();
+  });
+
+  it('vế đối chứng: nhóm có tick → nút xin vẫn hiện', async () => {
+    mockApi(NEEDS_APPROVAL, [SECRET]);
+    renderPanel({ ...ME, role: 'member', features: ['assets', 'break_glass'] });
+    expect(await screen.findByRole('button', { name: 'Xin mở két' })).toBeInTheDocument();
   });
 });

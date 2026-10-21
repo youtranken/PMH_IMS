@@ -8,6 +8,8 @@ import { OutboxModule } from '../outbox/outbox.module';
 import { UsersModule } from '../users/users.module';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
+import { FeatureGroupsAdminService } from './feature-groups-admin.service';
+import { FeatureGroupsController } from './feature-groups.controller';
 import { AuthApiService } from './auth.api';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -26,7 +28,7 @@ import { TotpService } from './totp.service';
 @Module({
   // ApprovalsModule: vô hiệu hóa tài khoản rút yêu cầu mở két đang chờ qua `approvals.api` (Q-15).
   imports: [UsersModule, AuditModule, OutboxModule, ApprovalsModule],
-  controllers: [AuthController, AccountsController],
+  controllers: [AuthController, AccountsController, FeatureGroupsController],
   providers: [
     ExcelExportService,
     LoginRateGuard,
@@ -34,6 +36,7 @@ import { TotpService } from './totp.service';
     AuthService,
     AuthApiService,
     AccountsService,
+    FeatureGroupsAdminService,
     SessionService,
     SessionAuditLabeler,
     TotpService,

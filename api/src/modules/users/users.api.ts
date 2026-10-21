@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { UserRole } from '../auth/types';
+import type { Tx } from '../../common/tx';
 import { UsersService } from './users.service';
 import type { UserDirectoryEntry, UserRecord } from './users.types';
 
@@ -39,6 +40,11 @@ export class UsersApiService {
    */
   directory(): Promise<UserDirectoryEntry[]> {
     return this.users.directory();
+  }
+
+  /** Q-31: `id → ô tick của nhóm quyền`, khóa FOR SHARE; `null` = đủ quyền. Id không có tài khoản thì vắng khỏi map. */
+  featureTicksByIdsWithin(tx: Tx, ids: readonly string[]): Promise<Map<string, string[] | null>> {
+    return this.users.featureTicksByIdsWithin(tx, ids);
   }
 
   /** Người nhận email theo vai — dùng cho outbox/digest và cảnh báo bảo mật. */

@@ -11,6 +11,7 @@ import { IsoFormsApiService } from '../iso-forms/iso-forms.api';
 import type { UserRole } from '../auth/types';
 import { pickExpiring, pickLoadedSubnets, pickRecent, pickStaleOwners } from './dashboard-rules';
 import { redactMessage } from '../../common/log-redact';
+import { hasFeature, type Feature } from '../../common/features';
 
 /** Cửa sổ "tuần qua" của các khối tính theo tuần. */
 const WEEK_DAYS = 7;
@@ -159,8 +160,10 @@ export class DashboardService {
     private readonly iso: IsoFormsApiService,
   ) {}
 
-  async build(viewer: { email: string; role: UserRole }): Promise<Dashboard> {
+  async build(viewer: { email: string; role: UserRole; features: readonly string[] | null }): Promise<Dashboard> {
     const isBoss = viewer.role === 'sa' || viewer.role === 'admin';
+    // Q-31: khối của mảng bị nhóm quyền ẩn không được hỏi, cùng lẽ với cắt theo vai ở dưới.
+    const sees = (feature: Feature) => hasFeature(viewer.features, [feature]);
     /*
      * MỘT lần đọc đồng hồ cho cả trang.
      *
@@ -173,11 +176,11 @@ export class DashboardService {
     const maxItems = await this.config.getNumber('dashboardMaxItems');
 
     const [expiring, breakGlass, subnetLoad, staleSecrets, disposed, incidents] = await Promise.all([
-      this.expiringBlock(maxItems),
+      sees('expiry') ? this.expiringBlock(maxItems) : { ...emptyBlock<Dashboard['expiring']['items'][number]>(), overdueTotal: 0 },
       // AC: Member thấy dashboard RÚT GỌN — không có khối break-glass toàn cục. Họ vẫn xem
       // được yêu cầu của chính mình ở màn Duyệt yêu cầu.
       isBoss ? this.breakGlassBlock(now, maxItems) : emptyBlock<BreakGlassEntry>(),
-      this.subnetLoadBlock(maxItems),
+      sees('network') ? this.subnetLoadBlock(maxItems) : { ...emptyBlock<SubnetLoadEntry>(), thresholdPercent: null },
       /*
        * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners`.
        *
@@ -185,8 +188,8 @@ export class DashboardService {
        * mật ở đâu" vẫn đi qua dây và Member mở tab mạng ra là đọc được.
        */
       isBoss ? this.staleSecretsBlock(now, maxItems) : emptyBlock<StaleSecretEntry>(),
-      this.disposedBlock(now, maxItems),
-      this.incidentsBlock(now, maxItems),
+      sees('assets') ? this.disposedBlock(now, maxItems) : emptyBlock<DisposedEntry>(),
+      sees('iso_0206') ? this.incidentsBlock(now, maxItems) : emptyBlock<IncidentEntry>(),
     ]);
 
     return {

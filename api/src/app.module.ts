@@ -14,6 +14,7 @@ import { DiagramsModule } from './modules/diagrams/diagrams.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { OwnerAccessModule } from './common/owner-access.registry';
+import { FeatureHolderModule } from './common/feature-holders.registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
 import { DeviceTimelineModule } from './common/device-timeline.registry';
 import { DeviceRetirementModule } from './common/device-retirement.registry';
@@ -33,6 +34,7 @@ import { ExpiryModule } from './modules/expiry/expiry.module';
 import { CsrfGuard } from './modules/auth/csrf.guard';
 import { StepUpGuard } from './modules/auth/step-up.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
+import { FeatureGuard } from './modules/auth/feature.guard';
 import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
 import { SystemConfigService } from './modules/config-sys/system-config.service';
@@ -81,6 +83,7 @@ import { VaultModule } from './modules/vault/vault.module';
     OwnerExistsModule,
     AuditObjectLabelsModule,
     OwnerAccessModule,
+    FeatureHolderModule,
     ExpiryRegistryModule,
     CatalogUsageModule,
     ApprovalsRegistryModule,
@@ -117,6 +120,8 @@ import { VaultModule } from './modules/vault/vault.module';
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Nhóm quyền của Member (Q-31) chỉ thu hẹp thêm sau khi vai đã cho qua.
+    { provide: APP_GUARD, useClass: FeatureGuard },
     /*
      * StepUpGuard chạy SAU RolesGuard và là guard cuối: nó chỉ có nghĩa khi đã biết route này
      * ai được vào. Nó MẶC ĐỊNH ĐÓNG — route không khai `@RequiresStepUp()` hoặc

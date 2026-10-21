@@ -1,4 +1,5 @@
 import type { Me } from '@/lib/me';
+import { canSeePath } from '@/lib/features';
 import { PATHS, titleKeyOf } from '@/lib/routes';
 
 interface NavItem {
@@ -108,6 +109,8 @@ export const navGroups: NavGroup[] = [
     collapsible: true,
     items: [
       { key: 'nav.accounts', to: PATHS.adminAccounts, roles: ['sa'] },
+      // Nhóm quyền của Thành viên (Q-31) — chỉ SA, khớp `@Roles('sa')` của API.
+      { key: 'nav.featureGroups', to: PATHS.adminFeatureGroups, roles: ['sa'] },
       // Ma trận quyền két sắt là bản đồ phòng thủ — chỉ SA/Admin thấy.
       { key: 'nav.vaultAccess', to: PATHS.adminVaultAccess, roles: ['sa', 'admin'] },
       { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'] },
@@ -124,7 +127,11 @@ export function visibleGroups(me: Me | null): NavGroup[] {
   return navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.roles || item.roles.includes(me.role)),
+      items: group.items.filter(
+        // Vai trước, rồi nhóm quyền (Q-31): mảng của mục lấy từ CHÍNH bảng gác route, nên menu và
+        // URL không lệch nhau được.
+        (item) => (!item.roles || item.roles.includes(me.role)) && canSeePath(me, item.to),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 }

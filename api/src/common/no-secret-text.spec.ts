@@ -102,6 +102,8 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     'startPort', 'endPort', 'peerPort',
     'groupName', 'ownerName', 'assignedTo', 'department', 'usedBy', 'login', 'bandwidth',
     'contract', 'contractNo', 'contact', 'vlan', 'key', 'kind',
+    // Khóa ô tick của nhóm quyền (Q-31), service chỉ nhận đúng 7 khóa.
+    'features',
     // Mạng.
     'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',

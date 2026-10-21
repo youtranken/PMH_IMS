@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { disposalStatusKey } from '@/lib/disposal-kinds';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { canSee, canSeePath } from '@/lib/features';
 import { SOFTWARE_SCREENS, SOFTWARE_SCREEN_KEYS, screenOfKind } from '@/lib/software-screens';
 import { visibleGroups } from '@/shell/app-nav';
 import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
@@ -271,6 +272,9 @@ export function CommandPalette({ me }: { me: Me }) {
   }, [open, me.email]);
 
   const enabled = open && q.length >= 2;
+  // Nhóm quyền (Q-31): không hỏi — và không gợi ý — hồ sơ của mảng bị ẩn.
+  const assetsOn = enabled && canSee(me, 'assets');
+  const networkOn = enabled && canSee(me, 'network');
 
   const devices = useQuery({
     queryKey: ['palette', 'devices', q],
@@ -280,7 +284,7 @@ export function CommandPalette({ me }: { me: Me }) {
       >(
         `/api/v1/devices?page=1&limit=5&search=${encodeURIComponent(q)}`,
       ),
-    enabled,
+    enabled: assetsOn,
   });
   const software = useQuery({
     queryKey: ['palette', 'software', q],
@@ -288,7 +292,7 @@ export function CommandPalette({ me }: { me: Me }) {
       apiFetch<Page<{ id: string; code: string; name: string; kind?: string; status?: string }>>(
         `/api/v1/software?page=1&limit=4&search=${encodeURIComponent(q)}`,
       ),
-    enabled,
+    enabled: assetsOn,
   });
   const isp = useQuery({
     queryKey: ['palette', 'isp', q],
@@ -296,7 +300,7 @@ export function CommandPalette({ me }: { me: Me }) {
       apiFetch<Page<{ id: string; code: string; provider: string; status?: string }>>(
         `/api/v1/isp-lines?page=1&limit=3&search=${encodeURIComponent(q)}`,
       ),
-    enabled,
+    enabled: assetsOn,
   });
   const accounts = useQuery({
     queryKey: ['palette', 'service-accounts', q],
@@ -306,7 +310,7 @@ export function CommandPalette({ me }: { me: Me }) {
       >(
         `/api/v1/service-accounts?page=1&limit=3&search=${encodeURIComponent(q)}`,
       ),
-    enabled,
+    enabled: assetsOn,
   });
 
   /*
@@ -318,12 +322,12 @@ export function CommandPalette({ me }: { me: Me }) {
     queryKey: ['palette', 'ip', q],
     queryFn: () =>
       apiFetch<IpHit[]>(`/api/v1/ipam/addresses?limit=5&search=${encodeURIComponent(q)}`),
-    enabled,
+    enabled: networkOn,
   });
   const subnets = useQuery({
     queryKey: ['palette', 'subnets'],
     queryFn: () => apiFetch<SubnetHit[]>('/api/v1/ipam/subnets'),
-    enabled,
+    enabled: networkOn,
     staleTime: 60_000,
   });
   const ipFirst = looksLikeIp(q);
@@ -335,13 +339,13 @@ export function CommandPalette({ me }: { me: Me }) {
   const diagramTree = useQuery({
     queryKey: ['palette', 'diagrams'],
     queryFn: () => apiFetch<DiagramTreeHit[]>('/api/v1/diagrams'),
-    enabled,
+    enabled: networkOn,
     staleTime: 60_000,
   });
   const diagramFind = useQuery({
     queryKey: ['palette', 'diagram-find', q],
     queryFn: () => apiFetch<DiagramFoundHit[]>(`/api/v1/diagrams/find?q=${encodeURIComponent(q)}`),
-    enabled,
+    enabled: networkOn,
   });
   const diagramHits = useMemo<Hit[]>(() => {
     if (!enabled) return [];
@@ -592,7 +596,10 @@ export function CommandPalette({ me }: { me: Me }) {
       const recentGroup = t('palette.groupRecent');
       const gotoGroup = t('palette.groupGoto');
       return [
-        ...recent.map((hit) => ({ ...hit, group: recentGroup })),
+        // Mục mở gần đây của mảng vừa bị nhóm quyền ẩn thì không bày ra nữa (Q-31).
+        ...recent
+          .filter((hit) => canSeePath(me, hit.to.split('?')[0]))
+          .map((hit) => ({ ...hit, group: recentGroup })),
         ...visibleGroups(me)
           .flatMap((group) => group.items)
           .map((item) => ({
@@ -615,14 +622,16 @@ export function CommandPalette({ me }: { me: Me }) {
       })),
       { list: PATHS.ispLines, key: 'nav.isp' },
       { list: PATHS.serviceAccounts, key: 'nav.serviceAccounts' },
-    ].map(({ list, key }) => ({
-      group,
-      title: t('palette.searchIn', { q, where: t(key) }),
-      sub: '',
-      to: `${list}?q=${encodeURIComponent(q)}`,
-      navKey: key,
-      kind: 'action' as const,
-    }));
+    ]
+      .filter(({ list }) => canSeePath(me, list))
+      .map(({ list, key }) => ({
+        group,
+        title: t('palette.searchIn', { q, where: t(key) }),
+        sub: '',
+        to: `${list}?q=${encodeURIComponent(q)}`,
+        navKey: key,
+        kind: 'action' as const,
+      }));
   }, [q, recent, me, found, searching, anyFailed, t]);
 
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của

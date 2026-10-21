@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UsersApiService } from './users.api';
 import { UsersService } from './users.service';
+import { FeatureGroupsService } from './feature-groups.service';
 import { UsersAuditLabeler } from './users-audit-labeler';
 
 /**
@@ -9,7 +10,7 @@ import { UsersAuditLabeler } from './users-audit-labeler';
  * auth là module cùng tầng nền và cần đọc/ghi credential, không thể đi qua api rút gọn.
  */
 @Module({
-  providers: [UsersService, UsersApiService, UsersAuditLabeler],
-  exports: [UsersApiService, UsersService],
+  providers: [UsersService, UsersApiService, UsersAuditLabeler, FeatureGroupsService],
+  exports: [UsersApiService, UsersService, FeatureGroupsService],
 })
 export class UsersModule {}

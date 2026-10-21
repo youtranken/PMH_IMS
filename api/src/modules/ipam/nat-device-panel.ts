@@ -32,6 +32,7 @@ function describe(rule: NatRuleRecord, sensitive: number[]): string {
 @Injectable()
 export class NatDevicePanel implements DevicePanelProvider, OnModuleInit {
   readonly panelKey = 'nat';
+  readonly feature = 'network' as const;
 
   constructor(
     private readonly panels: DevicePanelRegistry,
@@ -71,6 +72,7 @@ export class NatDevicePanel implements DevicePanelProvider, OnModuleInit {
 @Injectable()
 export class NatTargetDevicePanel implements DevicePanelProvider, OnModuleInit {
   readonly panelKey = 'nat-target';
+  readonly feature = 'network' as const;
 
   constructor(
     private readonly panels: DevicePanelRegistry,

@@ -72,6 +72,9 @@ const DOMAINS = {
   users: [
     `UPDATE system_config SET value = '${E2E_LOGIN_RATE_LIMIT}' WHERE key = 'login.rate_limit_per_ip'`,
     `UPDATE system_config SET value = '${E2E_TOTP_RATE_LIMIT}' WHERE key = 'rate.totp_per_minute'`,
+    // Nhóm quyền của bài kiểm (Q-31, tên chứa "E2E"): gỡ người khỏi nhóm trước — FK RESTRICT.
+    `UPDATE users SET feature_group_id = NULL WHERE email LIKE 'e2e-%' OR feature_group_id IN (SELECT id FROM feature_group WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM feature_group WHERE name ILIKE '%E2E%'`,
     `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
     `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
     `DELETE FROM users WHERE email LIKE 'e2e-tao-moi-%'`,

@@ -110,6 +110,22 @@ export function Forbidden({ roles }: { roles: readonly UserRole[] }) {
   );
 }
 
+/**
+ * Màn có tồn tại nhưng nhóm quyền của Member này ẩn nó (Q-31). Không nói ai được xem: nhóm do SA
+ * đặt cho từng người, câu "dành cho ai" không có nghĩa ở đây.
+ */
+export function FeatureHidden() {
+  const { t } = useTranslation();
+  return (
+    <div className="error-state">
+      <div className="error-code">403</div>
+      <h1>{t('app.featureHiddenTitle')}</h1>
+      <p className="muted">{t('app.featureHiddenHint')}</p>
+      <ExitActions />
+    </div>
+  );
+}
+
 function ExitActions() {
   const { t } = useTranslation();
   return (

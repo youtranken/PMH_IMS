@@ -30,7 +30,8 @@ import {
   type IspRow,
   type IspStatus,
 } from "./isp-types";
-import { errorMessage } from "@/lib/api";
+import { errorMessage, useMe } from "@/lib/api";
+import { canSee } from "@/lib/features";
 import { RowActions } from "@/ui/row-actions";
 import { useOwnerSecrets } from "@/ui/vault-panel";
 import { ispMenuItems, parseIspAction } from "./isp-status-menu";
@@ -364,7 +365,10 @@ function EdgeFacts({ deviceId, deviceName }: { deviceId: string; deviceName: str
     queryKey: ["devices", deviceId],
     queryFn: () => apiFetch<{ model: string | null }>(`/api/v1/devices/${deviceId}`),
   });
+  // IP LAN thuộc mảng Mạng (Q-31): nhóm không có Mạng thì không hỏi.
+  const { data: me } = useMe();
   const ips = useQuery({
+    enabled: canSee(me, "network"),
     queryKey: ["ipam", "devices", "addresses", [deviceId]],
     queryFn: () =>
       apiFetch<Record<string, string[]>>(`/api/v1/ipam/devices/addresses?deviceIds=${deviceId}`),

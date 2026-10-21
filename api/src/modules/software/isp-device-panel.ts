@@ -16,6 +16,7 @@ import { UI_PATHS } from '../../common/ui-paths';
 @Injectable()
 export class IspDevicePanel implements DevicePanelProvider, OnModuleInit {
   readonly panelKey = 'isp';
+  readonly feature = 'assets' as const;
 
   constructor(
     private readonly panels: DevicePanelRegistry,

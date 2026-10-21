@@ -60,6 +60,7 @@ import {
 } from './devices.service';
 import { DEVICE_STATUSES, deviceStatusQuery, type DeviceStatus } from './devices.types';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { Feature, FeatureFree } from '../auth/feature.decorator';
 
 export class DeviceBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
@@ -188,6 +189,7 @@ class PortParamDto extends IdParamDto {
  * Không có endpoint DELETE: thiết bị chỉ đổi trạng thái sang "đã thanh lý".
  */
 @NoStepUp()
+@Feature('assets')
 @Controller('api/v1/devices')
 export class DevicesController {
   constructor(
@@ -201,6 +203,7 @@ export class DevicesController {
   ) {}
 
   @Roles('sa', 'admin', 'member')
+  @FeatureFree()
   @Get()
   list(
     @Query() query: DeviceListQueryDto,
@@ -291,6 +294,7 @@ export class DevicesController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Get(':id')
   findOne(@Param() params: IdParamDto) {
     return this.devices.findOne(params.id);
@@ -308,6 +312,7 @@ export class DevicesController {
     return this.panels.listFor(params.id, {
       email: req.user!.email,
       role: req.user!.role,
+      features: req.user!.features,
     });
   }
 
@@ -326,8 +331,8 @@ export class DevicesController {
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id/timeline')
-  async timeline(@Param() params: IdParamDto) {
-    const timeline = await this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT);
+  async timeline(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    const timeline = await this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT, req.user!.features);
     return {
       ...timeline,
       items: await withActorNames(timeline.items, (emails) => this.users.namesByEmails(emails)),
@@ -342,6 +347,7 @@ export class DevicesController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Patch(':id')
   @Audited('device.updated', 'device', { writtenByService: true })
   update(
@@ -372,6 +378,7 @@ export class DevicesController {
    * đang cắm vào nó — dựng bằng query, không có bản ghi đối xứng nào trong DB (AD-14).
    */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Get(':id/ports')
   listPorts(@Param() params: IdParamDto) {
     return this.ports.listFor(params.id);
@@ -379,6 +386,7 @@ export class DevicesController {
 
   /** Mặt cổng (Q-26): cổng vật lý của máy, cổng nào đang có dây và đầu kia. Chỉ đọc. */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Get(':id/port-panel')
   portPanel(@Param() params: IdParamDto) {
     return this.ports.panel(params.id);
@@ -386,6 +394,7 @@ export class DevicesController {
 
   /** Sửa danh sách cổng (thêm cổng riêng, bỏ cổng không dây) — cùng quyền với sửa sơ đồ cổng. */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Patch(':id/port-layout')
   @Audited('device.ports-layout', 'device', { writtenByService: true })
   async setPortLayout(@Param() params: IdParamDto, @Body() body: PortLayoutBodyDto, @Req() req: AuthedRequest) {
@@ -397,6 +406,7 @@ export class DevicesController {
    * trống thì nối dòng đó, nên một lượt có thể là thêm hoặc sửa dòng.
    */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Post(':id/ports/link')
   @Audited(['device.port-added', 'device.port-updated'], 'device', { writtenByService: true })
   linkPort(@Param() params: IdParamDto, @Body() body: LinkBodyDto, @Req() req: AuthedRequest) {
@@ -405,6 +415,7 @@ export class DevicesController {
 
   /** Bảng xem trước "máy → cổng" của Nối hàng loạt. Chỉ đọc. */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Get(':id/ports/bulk-plan')
   bulkPlan(@Param() params: IdParamDto, @Query() query: BulkPlanQueryDto) {
     const count = Number(query.count);
@@ -416,6 +427,7 @@ export class DevicesController {
 
   /** Nối một switch với N máy trong MỘT transaction — thiếu cổng hay vướng luật thì không ghi máy nào. */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Post(':id/ports/bulk-link')
   @Audited(['device.port-added', 'device.port-updated'], 'device', { writtenByService: true })
   bulkLink(@Param() params: IdParamDto, @Body() body: BulkLinkBodyDto, @Req() req: AuthedRequest) {
@@ -423,6 +435,7 @@ export class DevicesController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Post(':id/ports')
   @Audited('device.port-added', 'device', { writtenByService: true })
   addPort(
@@ -434,6 +447,7 @@ export class DevicesController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Patch(':id/ports/:portId')
   @Audited('device.port-updated', 'device', { writtenByService: true })
   updatePort(
@@ -446,6 +460,7 @@ export class DevicesController {
 
   /** Gỡ sợi dây của một dòng; dòng còn VLAN/người dùng/ghi chú thì giữ dòng, chỉ bỏ đầu kia. */
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Post(':id/ports/:portId/unlink')
   @Audited(['device.port-updated', 'device.port-removed'], 'device', { writtenByService: true })
   unlinkPort(@Param() params: PortParamDto, @Req() req: AuthedRequest) {
@@ -453,6 +468,7 @@ export class DevicesController {
   }
 
   @Roles('sa', 'admin', 'member')
+  @Feature('assets', 'network')
   @Delete(':id/ports/:portId')
   @Audited('device.port-removed', 'device', { writtenByService: true })
   async removePort(@Param() params: PortParamDto, @Req() req: AuthedRequest) {

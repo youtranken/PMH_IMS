@@ -3,6 +3,7 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DashboardService } from './dashboard.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { Feature } from '../auth/feature.decorator';
 
 /**
  * Bảng điều khiển (FR-025).
@@ -16,6 +17,7 @@ import { NoStepUp } from '../auth/step-up.decorator';
  * công ty.
  */
 @NoStepUp()
+@Feature('overview')
 @Controller('api/v1/dashboard')
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}
@@ -24,6 +26,6 @@ export class DashboardController {
   @Get()
   build(@Req() req: AuthedRequest) {
     const user = req.user!;
-    return this.dashboard.build({ email: user.email, role: user.role });
+    return this.dashboard.build({ email: user.email, role: user.role, features: user.features });
   }
 }

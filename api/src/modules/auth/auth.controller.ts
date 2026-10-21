@@ -36,10 +36,12 @@ import { AllowTotpPending } from './totp-pending.decorator';
 import type { AuthedRequest } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
 import { STEP_UP_GRACE_KEY } from './session-policy';
+import { FeatureFree } from './feature.decorator';
 
 const ALL_ROLES = ['sa', 'admin', 'member'] as const;
 
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(
@@ -298,6 +300,8 @@ export class AuthController {
       email: user.email,
       fullName: user.fullName,
       role: user.role,
+      // Q-31: web ẩn menu / route / khối theo đúng tập này; `null` = không bị giới hạn.
+      features: user.features,
       mustChangePassword: user.mustChangePassword,
       totpPending: session.totpPending,
       totpEnrolled: enrolledAt !== null,

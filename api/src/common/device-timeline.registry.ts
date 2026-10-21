@@ -1,4 +1,5 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
+import { hasFeature, type Feature } from './features';
 import { redactMessage } from './log-redact';
 
 /**
@@ -25,6 +26,8 @@ export interface DeviceTimelineEntry {
 
 export interface DeviceTimelineProvider {
   readonly source: string;
+  /** Mảng của nguồn (Q-31): người bị nhóm ẩn mảng này không thấy dòng của nó. */
+  readonly feature?: Feature;
   /** Tối đa `limit` sự kiện mới nhất của máy này. */
   timelineFor(deviceId: string, limit: number): Promise<DeviceTimelineEntry[]>;
 }
@@ -51,10 +54,17 @@ export class DeviceTimelineRegistry {
   }
 
   /** Mới nhất lên đầu, cắt ở `limit` sau khi gộp mọi nguồn. */
-  async timelineFor(deviceId: string, limit: number): Promise<DeviceTimeline> {
+  async timelineFor(
+    deviceId: string,
+    limit: number,
+    features: readonly string[] | null,
+  ): Promise<DeviceTimeline> {
     const failedSources: string[] = [];
+    const visible = this.providers.filter(
+      (provider) => !provider.feature || hasFeature(features, [provider.feature]),
+    );
     const lists = await Promise.all(
-      this.providers.map(async (provider) => {
+      visible.map(async (provider) => {
         try {
           return await provider.timelineFor(deviceId, limit);
         } catch (error) {

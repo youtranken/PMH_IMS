@@ -63,7 +63,7 @@ const MODULE_DOORS = String.raw`(?![^/]+/[^/]*\.(?:api|module|types)$)`;
  * cho cả sáu cách gõ ở `MODULE_ENTRIES`, không chỉ cách gõ ngắn.
  */
 const INFRA_PRIMITIVES = [
-  String.raw`(?!auth/(?:roles\.decorator|step-up\.decorator|no-idle-touch\.decorator|types)$)`,
+  String.raw`(?!auth/(?:roles\.decorator|feature\.decorator|step-up\.decorator|no-idle-touch\.decorator|types)$)`,
   String.raw`(?!audit/(?:audited\.decorator|audit-writer\.service)$)`,
   String.raw`(?!config-sys/system-config\.service$)`,
   String.raw`(?!outbox/outbox\.service$)`,

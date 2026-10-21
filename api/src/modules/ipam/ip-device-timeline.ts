@@ -44,6 +44,7 @@ export function ipDeviceEvent(
 @Injectable()
 export class IpDeviceTimeline implements DeviceTimelineProvider, OnModuleInit {
   readonly source = 'ipam';
+  readonly feature = 'network' as const;
 
   constructor(
     private readonly registry: DeviceTimelineRegistry,

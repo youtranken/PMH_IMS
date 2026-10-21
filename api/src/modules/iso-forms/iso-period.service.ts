@@ -9,7 +9,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { FilesApiService } from '../files/files.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
-import { IsoAccessService, isManager, type IsoActor } from './iso-access.service';
+import { assertSeesForm, IsoAccessService, isManager, seesForm, type IsoActor } from './iso-access.service';
 import { IsoAntivirusService } from './iso-antivirus.service';
 import { IsoBackupService } from './iso-backup.service';
 import { IsoClock } from './iso-clock';
@@ -152,6 +152,9 @@ export class IsoPeriodService implements OnModuleInit {
   /* --------------------------------------------------------------- đọc --- */
 
   async overview(actor: IsoActor, year: number): Promise<YearOverview> {
+    // Q-31: chỉ cột của phiếu nhóm cho thấy, và KPI cũng chỉ đếm trên các cột đó.
+    const forms = ISO_FORM_TYPES.filter((formType) => seesForm(actor, formType));
+    const seesIncidents = seesForm(actor, '0206');
     const today = await this.clock.today();
     const firstMonth = await this.store.firstMonth();
     const rows = await this.store.ofYear(year);
@@ -159,13 +162,13 @@ export class IsoPeriodService implements OnModuleInit {
     const periodFiles = await this.files.listForOwners('iso_period', rows.map((r) => r.id));
     const months: MonthOverview[] = [];
     for (let month = 12; month >= 1; month -= 1) {
-      const ofMonth = incidents.filter((i) => i.month === month);
+      const ofMonth = seesIncidents ? incidents.filter((i) => i.month === month) : [];
       months.push({
         month,
         access: periodAccess(year, month, today, firstMonth),
         incidents: ofMonth.length,
         incidentsSigned: ofMonth.filter((i) => i.signedCurrent).length,
-        forms: ISO_FORM_TYPES.map((formType) => {
+        forms: forms.map((formType) => {
           const row = rows.find((r) => r.formType === formType && r.month === month) ?? null;
           const state = row?.state ?? 'open';
           const signed = row ? periodFiles.some((f) => f.ownerId === row.id && toSigned(f, row.lockedAt).current) : false;
@@ -181,7 +184,7 @@ export class IsoPeriodService implements OnModuleInit {
     }
     const cells = months.flatMap((m) => (m.access === 'ok' ? m.forms : []));
     const pendingReopen = (await this.approvals.pending(PERIOD_REOPEN_KIND)).length;
-    const unlinked = (await this.incidents.unlinked({ year })).length;
+    const unlinked = (await this.incidents.unlinked({ year })).filter((c) => forms.includes(c.form)).length;
     const kpis: Record<string, number> = isManager(actor)
       ? {
           pending: cells.filter((c) => c.display === 'pending').length,
@@ -199,6 +202,7 @@ export class IsoPeriodService implements OnModuleInit {
   }
 
   async detail(actor: IsoActor, formType: IsoFormType, year: number, month: number): Promise<PeriodDetail> {
+    assertSeesForm(actor, formType);
     const today = await this.clock.today();
     await this.store.assertAccessible(year, month, today);
     const row = await this.store.find(formType, year, month);

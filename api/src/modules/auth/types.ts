@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { Feature } from '../../common/features';
 
 /** Vai trò (NFR-01). Thứ tự KHÔNG mang ý nghĩa cấp bậc — quyền kiểm bằng RolesGuard. */
 export type UserRole = 'sa' | 'admin' | 'member';
@@ -15,6 +16,8 @@ export interface AuthedUser {
   /** Mốc gõ TOTP gần nhất cho phạm vi SƠ ĐỒ — tách khỏi két (AD-17). */
   diagramSteppedUpAt: Date | null;
   mustChangePassword: boolean;
+  /** Q-31: tính năng được dùng; `null` = không bị nhóm quyền giới hạn. */
+  features: Feature[] | null;
 }
 
 /**

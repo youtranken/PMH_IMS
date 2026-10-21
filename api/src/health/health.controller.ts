@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { Public } from '../modules/auth/public.decorator';
 import { NoStepUp } from '../modules/auth/step-up.decorator';
+import { FeatureFree } from '../modules/auth/feature.decorator';
 
 const DB_TIMEOUT_MS = 2_000;
 
@@ -12,6 +13,7 @@ const DB_TIMEOUT_MS = 2_000;
  * qua outbox trong DB) — Redis do healthcheck của worker canh.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('health')
 export class HealthController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}

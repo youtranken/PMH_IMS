@@ -5,6 +5,7 @@ import { VaultOwnersService } from './vault-owners.service';
 import { SecretDueService } from './secret-due.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
+import { FeatureFree } from '../auth/feature.decorator';
 
 class DueQueryDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại hồ sơ không hợp lệ.' })
@@ -26,6 +27,7 @@ class DueQueryDto {
  * thứ mở cho mọi người, kể cả khi nó không nói trong đó có gì.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/vault/owners')
 export class VaultOwnersController {
   constructor(

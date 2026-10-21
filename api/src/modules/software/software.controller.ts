@@ -63,6 +63,7 @@ import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { assignmentExportSheet } from './license-assignments-export';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { Feature } from '../auth/feature.decorator';
 
 /** Lọc mã máy rác khỏi danh sách `?deviceIds=` trước khi đưa xuống truy vấn. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -201,6 +202,7 @@ class IdParamDto {
  * Thứ cần siết là KÉT SẮT: key/mật khẩu KHÔNG nằm trong module này.
  */
 @NoStepUp()
+@Feature('assets')
 @Controller('api/v1/software')
 export class SoftwareController {
   constructor(

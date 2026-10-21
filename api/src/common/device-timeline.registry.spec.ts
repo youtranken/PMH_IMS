@@ -21,7 +21,7 @@ describe('DeviceTimelineRegistry — dòng thời gian hợp nhất của thiế
       source: 'software',
       timelineFor: () => Promise.resolve([entry('software', '2026-09-02')]),
     });
-    const result = await registry.timelineFor('d1', 2);
+    const result = await registry.timelineFor('d1', 2, null);
     expect(result.items.map((row) => row.id)).toEqual(['ipam-2026-09-03', 'software-2026-09-02']);
     expect(result.failedSources).toEqual([]);
   });
@@ -33,7 +33,7 @@ describe('DeviceTimelineRegistry — dòng thời gian hợp nhất của thiế
       source: 'software',
       timelineFor: () => Promise.resolve([entry('software', '2026-09-02')]),
     });
-    const result = await registry.timelineFor('d1', 10);
+    const result = await registry.timelineFor('d1', 10, null);
     expect(result.items).toHaveLength(1);
     expect(result.failedSources).toEqual(['ipam']);
   });
@@ -46,6 +46,22 @@ describe('DeviceTimelineRegistry — dòng thời gian hợp nhất của thiế
     };
     registry.register(provider);
     registry.register(provider);
-    expect((await registry.timelineFor('d1', 10)).items).toHaveLength(1);
+    expect((await registry.timelineFor('d1', 10, null)).items).toHaveLength(1);
+  });
+
+  it('Q-31: nguồn của mảng bị nhóm quyền ẩn không góp dòng nào', async () => {
+    const registry = new DeviceTimelineRegistry();
+    const ipam = jest.fn(() => Promise.resolve([entry('ipam', '2026-09-03')]));
+    registry.register({ source: 'ipam', feature: 'network', timelineFor: ipam });
+    registry.register({
+      source: 'software',
+      feature: 'assets',
+      timelineFor: () => Promise.resolve([entry('software', '2026-09-02')]),
+    });
+    const result = await registry.timelineFor('d1', 10, ['assets']);
+    expect(result.items.map((row) => row.source)).toEqual(['software']);
+    expect(ipam).not.toHaveBeenCalled();
+    expect((await registry.timelineFor('d1', 10, null)).items).toHaveLength(2);
   });
 });
+

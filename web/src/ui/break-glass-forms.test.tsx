@@ -155,6 +155,7 @@ const MEMBER: Me = {
   email: 'e2e-member@pmh.com.vn',
   fullName: 'Trần Thị B',
   role: 'member',
+  features: null,
   mustChangePassword: false,
   totpPending: false,
   totpEnrolled: true,

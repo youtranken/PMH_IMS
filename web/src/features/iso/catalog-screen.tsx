@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { formatDate, todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { canSee } from '@/lib/features';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -31,10 +32,14 @@ const TABS: Tab[] = ['jobs', 'divisions', 'owners'];
 export function CatalogScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
+  // Q-31: tab job chỉ khi nhóm có 0203, tab bộ phận chỉ khi có 0208. Người phụ trách luôn có.
+  const sees0203 = canSee(me, 'iso_0203');
+  const sees0208 = canSee(me, 'iso_0208');
+  const tabs = TABS.filter((key) => (key === 'jobs' ? sees0203 : key === 'divisions' ? sees0208 : true));
   const raw = params.get('tab') as Tab | null;
-  const tab: Tab = raw && TABS.includes(raw) ? raw : 'jobs';
-  const jobs = useJobs('live');
-  const divisions = useDivisions();
+  const tab: Tab = raw && tabs.includes(raw) ? raw : tabs[0];
+  const jobs = useJobs('live', sees0203);
+  const divisions = useDivisions(sees0208);
   return (
     <>
       <PageHeader
@@ -42,8 +47,8 @@ export function CatalogScreen({ me }: { me: Me }) {
         subtitle={t('iso.catalog.subtitle')}
         actions={
           <>
-            <Link to={PATHS.isoBackup}>{t('nav.isoBackup')}</Link>
-            <Link to={PATHS.isoAntivirus}>{t('nav.isoAntivirus')}</Link>
+            {sees0203 ? <Link to={PATHS.isoBackup}>{t('nav.isoBackup')}</Link> : null}
+            {sees0208 ? <Link to={PATHS.isoAntivirus}>{t('nav.isoAntivirus')}</Link> : null}
           </>
         }
       />
@@ -52,8 +57,10 @@ export function CatalogScreen({ me }: { me: Me }) {
         value={tab}
         onChange={(key) => setParams({ tab: key }, { replace: true })}
         items={[
-          { key: 'jobs', label: t('iso.catalog.tabJobs'), count: jobs.data?.length },
-          { key: 'divisions', label: t('iso.catalog.tabDivisions'), count: divisions.data?.filter((d) => d.active).length },
+          ...(sees0203 ? [{ key: 'jobs', label: t('iso.catalog.tabJobs'), count: jobs.data?.length }] : []),
+          ...(sees0208
+            ? [{ key: 'divisions', label: t('iso.catalog.tabDivisions'), count: divisions.data?.filter((d) => d.active).length }]
+            : []),
           { key: 'owners', label: t('iso.catalog.tabOwners') },
         ]}
       />

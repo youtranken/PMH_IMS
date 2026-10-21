@@ -19,10 +19,12 @@ export interface IsoTodo {
 /**
  * Việc phiếu ISO đang chờ người này (Q-28), tách theo mục phải mở để làm việc đó.
  */
-export function useIsoTodo(): IsoTodo {
+export function useIsoTodo(enabled = true): IsoTodo {
   const todo = useQuery({
     queryKey: ISO_TODO_KEY,
     queryFn: () => apiFetch<{ count: number; pendingApprovals: number; unlinkedFails: number; awaitingSigned: number }>('/api/v1/iso/todo'),
+    // Nhóm quyền không có phiếu nào (Q-31) thì API trả 403 — không hỏi.
+    enabled,
     refetchInterval: REFRESH_MS,
     staleTime: REFRESH_MS,
     // Badge là đồ trang trí cho điều hướng — hỏng thì im, không kéo lỗi lên cả shell.

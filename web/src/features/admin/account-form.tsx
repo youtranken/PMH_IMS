@@ -11,6 +11,7 @@ import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { PhoneInput } from '@/ui/phone-input';
 import { isEmail } from '@/lib/email';
 import { RoleChoice } from './role-choice';
+import { FeatureGroupSelect } from './account-dialogs';
 
 interface CreateResult {
   user: { id: string; email: string; fullName: string; role: Me['role'] };
@@ -64,7 +65,9 @@ export function AccountForm({
   const [birthDate, setBirthDate] = useState(account?.birthDate ?? '');
   const [role, setRole] = useState<Me['role']>('member');
   const [totpLoginRequired, setTotpLoginRequired] = useState(true);
-  const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired]);
+  // Q-31: '' = Đủ quyền. Chỉ gửi khi vai là Thành viên — SA/Admin luôn đủ quyền.
+  const [featureGroupId, setFeatureGroupId] = useState('');
+  const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired, featureGroupId]);
 
   const create = useApiMutation<Record<string, unknown>, CreateResult>('/api/v1/accounts', {
     csrfToken,
@@ -135,7 +138,13 @@ export function AccountForm({
             });
             return;
           }
-          const input = { ...contact, email: email.trim(), role, totpLoginRequired };
+          const input = {
+            ...contact,
+            email: email.trim(),
+            role,
+            totpLoginRequired,
+            ...(role === 'member' && featureGroupId ? { featureGroupId } : {}),
+          };
           stepUp.run(() => create.mutateAsync(input), t('accounts.stepUpCreate', { email: input.email })).then(
             (result) =>
               onCreated(result.temporaryPassword, {
@@ -197,6 +206,9 @@ export function AccountForm({
             <RoleChoice value={role} onChange={setRole} name="create-role" />
           </div>
         )}
+        {!editing && role === 'member' ? (
+          <FeatureGroupSelect id="acc-feature-group" value={featureGroupId} onChange={setFeatureGroupId} />
+        ) : null}
 
         {/* Hai ô mới: gọi được người giữ máy lúc 2h sáng, và đối chiếu được sang bảng lương. */}
         <Field label={t('accounts.phone')} htmlFor="acc-phone">

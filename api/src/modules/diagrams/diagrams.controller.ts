@@ -17,6 +17,7 @@ import { DiagramPruneService } from './diagram-prune.service';
 import { DiagramReviewService, type ReviewedNode } from './diagram-review.service';
 import { DIAGRAM_NODE_TYPES, type DiagramNodeType } from './diagram.schema';
 import { DEVICE_INFO_MAX_IDS, DEVICE_LOOKS_MAX_IDS, DiagramsService } from './diagrams.service';
+import { Feature } from '../auth/feature.decorator';
 
 /** Trần thô của DTO; trần thật (`diagram.xml_max_kb`, `diagram.svg_max_kb`) do cổng kiểm áp. */
 const RAW_MAX_BYTES = 6 * 1024 * 1024;
@@ -199,6 +200,7 @@ export interface DiagramEditorSettings {
  * không ghi đè được bản vẽ khi chưa gõ mã).
  */
 @NoStepUp()
+@Feature('network')
 @Controller('api/v1/diagrams')
 export class DiagramsController {
   constructor(

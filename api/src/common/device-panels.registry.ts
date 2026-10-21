@@ -1,5 +1,6 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
 import type { DevicePanel, DevicePanelProvider, PanelViewer } from './device-panels';
+import { hasFeature } from './features';
 import { redactMessage } from './log-redact';
 
 /**
@@ -24,8 +25,11 @@ export class DevicePanelRegistry {
   }
 
   async listFor(deviceId: string, viewer: PanelViewer): Promise<DevicePanel[]> {
+    const visible = this.providers.filter(
+      (provider) => !provider.feature || hasFeature(viewer.features, [provider.feature]),
+    );
     const results = await Promise.all(
-      this.providers.map(async (provider) => {
+      visible.map(async (provider) => {
         try {
           return await provider.buildFor(deviceId, viewer);
         } catch (error) {

@@ -5,12 +5,14 @@ import { Roles } from '../auth/roles.decorator';
 import { NoStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { OutboxAdminService } from './outbox-admin';
+import { FeatureFree } from '../auth/feature.decorator';
 
 /**
  * Thư gửi lỗi (Q-25) — CHỈ SA, cùng phạm vi với Tham số hệ thống. Không đòi mã 2 lớp: gửi lại chỉ
  * gửi đúng thư hệ thống đã định gửi, không mở thêm gì; mỗi lần gửi lại vẫn là một dòng nhật ký.
  */
 @NoStepUp()
+@FeatureFree()
 @Controller('api/v1/admin/outbox')
 export class OutboxAdminController {
   constructor(private readonly admin: OutboxAdminService) {}

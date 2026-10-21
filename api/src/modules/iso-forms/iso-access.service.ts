@@ -7,11 +7,15 @@ import type { UserRole } from '../auth/types';
 import { UsersApiService } from '../users/users.api';
 import { isoFormOwnerTable } from './iso-forms.schema';
 import { ISO_FORM_TYPES, type IsoFormType } from './iso-rules';
+import { hasFeature, type FeatureHolding, type FeatureTick } from '../../common/features';
+import type { Tx } from '../../common/tx';
 
 export interface IsoActor {
   id: string;
   email: string;
   role: UserRole;
+  /** Nhóm quyền (Q-31); vắng hoặc `null` = không bị giới hạn. Controller truyền nguyên `req.user`. */
+  features?: readonly string[] | null;
 }
 
 export interface IsoPerson {
@@ -24,6 +28,20 @@ export interface FormOwners {
   formType: IsoFormType;
   primary: IsoPerson | null;
   backup: IsoPerson | null;
+}
+
+export function formFeature(formType: IsoFormType): FeatureTick {
+  return `iso_${formType}`;
+}
+
+/** Q-31: phiếu này có nằm trong nhóm quyền của người đang xem không. */
+export function seesForm(actor: Pick<IsoActor, 'features'>, formType: IsoFormType | '0206'): boolean {
+  return hasFeature(actor.features ?? null, [`iso_${formType}`]);
+}
+
+export function assertSeesForm(actor: Pick<IsoActor, 'features'>, formType: IsoFormType): void {
+  if (seesForm(actor, formType)) return;
+  throw new ForbiddenException({ code: 'FEATURE_HIDDEN', message: 'Nhóm quyền của bạn không có phiếu này.' });
 }
 
 export function isManager(actor: Pick<IsoActor, 'role'>): boolean {
@@ -75,6 +93,39 @@ export class IsoAccessService {
     throw new ForbiddenException({ code: 'ISO_NOT_OWNER', message });
   }
 
+  /** Q-31: người phụ trách (chính / dự phòng) của các phiếu, chỉ những ai nằm trong `userIds`. */
+  async holdings(userIds: readonly string[]): Promise<FeatureHolding[]> {
+    const wanted = new Set(userIds);
+    const rows = await this.db.select().from(isoFormOwnerTable);
+    return rows.flatMap((row) =>
+      [row.primaryUserId, row.backupUserId]
+        .filter((id): id is string => id !== null && wanted.has(id))
+        .map((userId) => ({ userId, feature: formFeature(row.formType as IsoFormType), label: `phiếu ${row.formType}` })),
+    );
+  }
+
+  /** Q-31: nhóm quyền của người được gán phải có ô tick của phiếu đó. */
+  private async assertOwnersSeeFormWithin(
+    tx: Tx,
+    formType: IsoFormType,
+    people: IsoPerson[],
+    ids: (string | null)[],
+  ): Promise<void> {
+    const chosen = ids.filter((id): id is string => id !== null);
+    const ticks = await this.users.featureTicksByIdsWithin(tx, chosen);
+    const feature = formFeature(formType);
+    const blind = chosen.filter((id) => {
+      const own = ticks.get(id) ?? null;
+      return own !== null && !own.includes(feature);
+    });
+    if (blind.length === 0) return;
+    const names = blind.map((id) => people.find((p) => p.id === id)?.fullName ?? id).join(', ');
+    throw new BadRequestException({
+      code: 'ISO_OWNER_FEATURE_HIDDEN',
+      message: `Nhóm quyền của ${names} đang ẩn phiếu ${formType}. Tick phiếu này cho nhóm trước.`,
+    });
+  }
+
   /** Tài khoản còn hoạt động — danh sách chọn người phụ trách. */
   async people(): Promise<IsoPerson[]> {
     return (await this.users.directory())
@@ -96,7 +147,8 @@ export class IsoAccessService {
         message: 'Người dự phòng phải khác người phụ trách chính.',
       });
     }
-    const active = new Set((await this.people()).map((p) => p.id));
+    const people = await this.people();
+    const active = new Set(people.map((p) => p.id));
     for (const id of [input.primaryUserId, input.backupUserId]) {
       if (id && !active.has(id)) {
         throw new BadRequestException({
@@ -106,6 +158,7 @@ export class IsoAccessService {
       }
     }
     await this.db.transaction(async (tx) => {
+      await this.assertOwnersSeeFormWithin(tx, formType, people, [input.primaryUserId, input.backupUserId]);
       const [before] = await tx.select().from(isoFormOwnerTable).where(eq(isoFormOwnerTable.formType, formType)).for('update');
       await tx
         .update(isoFormOwnerTable)

@@ -50,6 +50,7 @@ import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { withActorNames } from '../../common/history';
 import { sensitivePortsOf } from './nat-sensitive';
+import { Feature } from '../auth/feature.decorator';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -240,6 +241,7 @@ class IdParamDto {
  * bắt họ chờ Admin duyệt thì cuốn sổ sẽ lại quay về file Excel trên máy ai đó.
  */
 @NoStepUp()
+@Feature('network')
 @Controller('api/v1/ipam')
 export class IpamController {
   constructor(

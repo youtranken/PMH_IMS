@@ -57,6 +57,7 @@ function userSteppedUpMinutesAgo(
     steppedUpAt: ago(minutes),
     diagramSteppedUpAt: ago(diagramMinutes),
     mustChangePassword: false,
+    features: null,
   };
 }
 
