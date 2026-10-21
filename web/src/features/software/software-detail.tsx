@@ -514,7 +514,10 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               role="group"
               aria-label={t("software.historyFilter")}
             >
-              {(["", "renew", "seat", "profile"] as const).map((group) => (
+              {/* Loại không có ghế (SSL, tên miền, hợp đồng…) thì chip "Ghế" chỉ lọc ra rỗng (PW-A21). */}
+              {(["", "renew", "seat", "profile"] as const)
+                .filter((group) => group !== "seat" || supportsSeats(item.kind))
+                .map((group) => (
                 <button
                   key={group || "all"}
                   type="button"

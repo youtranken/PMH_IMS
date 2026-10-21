@@ -186,6 +186,15 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
       `${PATHS.domains}?kind=ssl`,
     );
   });
+
+  // PW-A21: SSL / tên miền / hợp đồng không có ghế → chip "Ghế" ở tab Lịch sử là lọc ra rỗng.
+  it('tab Lịch sử của SSL không có chip "Ghế"', async () => {
+    mockFetch([], row({ id: 's9', code: 'SSL-E2E-09' }));
+    renderDetail('/domains/s9?tab=history');
+    const chips = await screen.findByRole('group', { name: 'Lọc lịch sử' });
+    expect(within(chips).queryByRole('button', { name: 'Ghế' })).toBeNull();
+    expect(within(chips).getByRole('button', { name: 'Hạn' })).toBeInTheDocument();
+  });
 });
 
 /** P-01: danh sách nói rõ cột, có ngày hết hạn và kỳ hạn, sắp được theo Ghế. */
