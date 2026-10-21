@@ -512,6 +512,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             /* Bấm vào dòng là mở hồ sơ — nhắm trúng mã 12px là quá khó. Ô Mã vẫn là `<Link>`
                thật cho Ctrl+bấm / mở tab mới; `DataTable` bỏ qua lượt bấm rơi vào link/nút. */
             onRowClick={(item) => navigate(PATHS.device(item.id))}
+            rowHref={(item) => PATHS.device(item.id)}
             expandLabel={(item, open) => {
               const count = installedCounts.data?.[item.id];
               const what = count

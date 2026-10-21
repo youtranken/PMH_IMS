@@ -395,6 +395,8 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
             data={rows}
             columns={columns}
             emptyText={url.isFiltered ? t('software.emptyFiltered') : t(spec.emptyKey)}
+            onRowClick={(item) => navigate(softwareItemPath(item.kind, item.id))}
+            rowHref={(item) => softwareItemPath(item.kind, item.id)}
             stackOnMobile
             stickyActions
             /* ≤600px: thẻ 3 dòng để quét "cái gì sắp hết hạn" trên điện thoại. Thẻ không bung

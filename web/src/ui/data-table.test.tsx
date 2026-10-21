@@ -7,6 +7,7 @@ import {
   within,
   waitFor,
   userEvent,
+  fireEvent,
 } from '@/test/test-utils';
 
 interface Row {
@@ -183,5 +184,29 @@ describe('DataTable — bấm dòng', () => {
       />,
     );
     expect(screen.getByRole('button', { name: '3 license' })).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+/** TB-07 / UX-E37: bấm dòng mở chi tiết ở mọi danh sách; Ctrl+bấm / chuột giữa mở tab mới. */
+describe('DataTable — rowHref', () => {
+  it('Ctrl+bấm dòng mở tab mới theo rowHref, không gọi onRowClick', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const onRowClick = vi.fn();
+    renderWithI18n(
+      <DataTable data={DATA} columns={COLUMNS} emptyText="—" onRowClick={onRowClick} rowHref={(row) => `/x/${row.name}`} />,
+    );
+    const cell = screen.getByRole('cell', { name: 'Banana' });
+    fireEvent.click(cell, { ctrlKey: true });
+    expect(open).toHaveBeenCalledWith('/x/Banana', '_blank', 'noopener');
+    expect(onRowClick).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+  it('bấm thường vẫn gọi onRowClick', async () => {
+    const onRowClick = vi.fn();
+    renderWithI18n(
+      <DataTable data={DATA} columns={COLUMNS} emptyText="—" onRowClick={onRowClick} rowHref={(row) => `/x/${row.name}`} />,
+    );
+    await userEvent.click(screen.getByRole('cell', { name: 'Banana' }));
+    expect(onRowClick).toHaveBeenCalledWith(DATA[0]);
   });
 });

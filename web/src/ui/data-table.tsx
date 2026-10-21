@@ -90,6 +90,11 @@ interface DataTableProps<T> {
   /** Bấm cả dòng (vd mở chi tiết). Kèm bàn phím (Enter/Space) cho a11y. */
   onRowClick?: (row: T) => void;
   /**
+   * Đường tới trang chi tiết của dòng (TB-07): Ctrl/Cmd + bấm hoặc chuột giữa mở TAB MỚI như một
+   * link thật; thẻ điện thoại dùng làm link. Bấm thường vẫn đi qua `onRowClick` (SPA).
+   */
+  rowHref?: (row: T) => string;
+  /**
    * Có giá trị → thêm cột ▸ để BUNG 1 hàng chi tiết in-context ngay dưới dòng
    * (trang Tài sản). Không truyền → bảng giữ nguyên như cũ (mọi trang khác).
    */
@@ -198,6 +203,7 @@ export function DataTable<T>({
   sorting: controlledSorting,
   onSortingChange: controlledOnSortingChange,
   onRowClick,
+  rowHref,
   renderExpanded,
   canExpand,
   expandLabel,
@@ -273,7 +279,7 @@ export function DataTable<T>({
           <MobileCardList
             rows={rows.map((row) => row.original)}
             rowKey={(_, index) => rows[index].id}
-            card={mobileCard}
+            card={rowHref && !mobileCard.href ? { ...mobileCard, href: rowHref } : mobileCard}
             rowClassName={rowClassName}
             onRowClick={onRowClick}
             groupBy={groupBy}
@@ -437,7 +443,19 @@ export function DataTable<T>({
                         onRowClick
                           ? (event) => {
                               if (isInnerControlClick(event)) return;
+                              if (rowHref && (event.ctrlKey || event.metaKey)) {
+                                window.open(rowHref(row.original), '_blank', 'noopener');
+                                return;
+                              }
                               onRowClick(row.original);
+                            }
+                          : undefined
+                      }
+                      onAuxClick={
+                        rowHref
+                          ? (event) => {
+                              if (event.button !== 1 || isInnerControlClick(event)) return;
+                              window.open(rowHref(row.original), '_blank', 'noopener');
                             }
                           : undefined
                       }

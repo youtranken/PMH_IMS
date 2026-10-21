@@ -338,6 +338,8 @@ export function IspScreen({ me }: { me: Me }) {
             data={rows}
             columns={columns}
             emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
+            onRowClick={(row) => navigate(PATHS.ispLine(row.id))}
+            rowHref={(row) => PATHS.ispLine(row.id)}
             stackOnMobile
             /* Màn này hay được mở trên điện thoại lúc mất mạng: thẻ gọn với nút gọi hotline ở
                góc thay cho bảng gập bảy dòng toàn nhãn. */

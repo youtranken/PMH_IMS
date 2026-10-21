@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -63,6 +63,7 @@ const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '', anyIp: '' };
  */
 export function ServiceAccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();
   /*
@@ -352,6 +353,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
             data={rows}
             columns={columns}
             emptyText={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
+            onRowClick={(row) => navigate(PATHS.serviceAccount(row.id))}
+            rowHref={(row) => PATHS.serviceAccount(row.id)}
             stackOnMobile
             /* Điện thoại: thẻ 2 dòng (mã + trạng thái; tên đăng nhập · loại · bộ phận) thay cho
                5 hàng nhãn–giá trị ~270px một tài khoản. */
