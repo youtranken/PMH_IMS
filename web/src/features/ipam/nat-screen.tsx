@@ -502,8 +502,8 @@ export function NatScreen({ me }: { me: Me }) {
             ...PROTOCOLS.map((protocol) => ({ value: protocol, label: protocolLabel(protocol, t) })),
           ]}
         />
-        {/* Ba chip bật/tắt độc lập, không phải chọn-một: "đang mở + đã tắt" là mặc định
-            (mọi thứ còn trong sổ), và auditor hay cần thêm "đã gỡ" chứ không thay cái kia. Dáng
+        {/* Ba chip bật/tắt độc lập, không phải chọn-một: mặc định chỉ "đang dùng" (PW-B10), và
+            người rà soát hay cần THÊM "tạm tắt" / "đã gỡ" chứ không thay cái kia. Dáng
             chip có ô tick — dáng nhóm nút liền nhau đọc như chọn-một, hai nút cùng sáng thành
             câu đố. */}
         <div className="filter-chip-group" role="group" aria-label={t('nat.bucketGroup')}>

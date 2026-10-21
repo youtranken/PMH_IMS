@@ -14,9 +14,10 @@ export const NAT_BUCKET_KEY: Record<NatBucket, string> = {
   voided: 'nat.bucketVoided',
 };
 
+/** Mặc định chỉ luật đang dùng (PW-B10): luật tạm tắt nằm xen giữa sổ làm khó đọc; bật bằng chip. */
 export const NAT_DEFAULT_SHOWN: Record<NatBucket, boolean> = {
   open: true,
-  off: true,
+  off: false,
   voided: false,
 };
 
