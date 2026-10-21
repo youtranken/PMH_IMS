@@ -199,7 +199,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                 {t('iso.av.markAll', { count: data.summary.missedDays.length })}
               </button>
             ) : null}
-            <button type="button" className="btn sm primary" onClick={() => setEditing('new')}>
+            <button type="button" className="btn sm" onClick={() => setEditing('new')}>
               {t('iso.av.addIssue')}
             </button>
           </div>

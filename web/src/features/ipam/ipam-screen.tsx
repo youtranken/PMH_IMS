@@ -208,10 +208,13 @@ export function IpamScreen({ me }: { me: Me }) {
                 allFileName="ip-tat-ca.xlsx"
               />
             ) : null}
+            {/* Nút viền (PW-B06): đã có dải thì việc chính của màn là "Cấp IP trống kế tiếp" —
+                hai nút xanh đặc trong một khung nhìn thì không nút nào là chính. Chưa có dải thì
+                nút chính nằm ở khung trống. */}
             {canEdit ? (
               <button
                 type="button"
-                className="btn primary"
+                className="btn"
                 onClick={() => setEditing({ subnet: null })}
               >
                 {t('ipam.addSubnet')}
