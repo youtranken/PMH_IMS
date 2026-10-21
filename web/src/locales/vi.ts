@@ -4554,8 +4554,6 @@ export default {
       backToGrid: '‹ Quay lại sửa phiếu',
       stateTitle: 'Trạng thái kỳ',
       checksTitle: 'Kiểm trước khi gửi',
-      jobCount: 'Danh sách job của kỳ: {{count}} job',
-      divisionCount: 'Bộ phận có issue trong kỳ: {{count}}',
       fixGrid: 'Về lưới ›',
       fixIncidents: 'Lập 0206',
       submit: 'Gửi chốt phiếu tháng {{month}}',

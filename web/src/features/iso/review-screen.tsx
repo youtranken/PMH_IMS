@@ -124,7 +124,8 @@ function ReviewAside({ me, detail, month }: { me: Me; detail: PeriodDetail; mont
         <section className="card" aria-labelledby="iso-review-checks">
           <h2 id="iso-review-checks">{t('iso.review.checksTitle')}</h2>
           <ul className="sheet-checks">
-            {detail.checklist.items.map((item) => (
+            {/* Dòng "In Progress" chỉ khi > 0 (PW-B25) — nó không chặn gửi, 0 thì không có gì để đọc. */}
+            {detail.checklist.items.filter((item) => item.key !== 'in_progress' || item.count > 0).map((item) => (
               <li key={item.key} data-bad={item.ok ? undefined : ''}>
                 <span className="sheet-check-icon" aria-hidden="true">
                   {item.key === 'in_progress' ? 'i' : item.ok ? '✓' : '✗'}
@@ -146,12 +147,6 @@ function ReviewAside({ me, detail, month }: { me: Me; detail: PeriodDetail; mont
                 </span>
               </li>
             ))}
-            <li>
-              <span className="sheet-check-icon" aria-hidden="true">
-                i
-              </span>
-              <span>{t(detail.formType === '0203' ? 'iso.review.jobCount' : 'iso.review.divisionCount', { count: detail.counts.rows })}</span>
-            </li>
           </ul>
           {detail.canWrite ? (
             <div className="chip-row">
