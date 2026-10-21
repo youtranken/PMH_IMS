@@ -275,6 +275,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('serviceAccounts.search')}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.kind}

@@ -264,6 +264,8 @@ export function IspScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('isp.search')}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.siteId}
