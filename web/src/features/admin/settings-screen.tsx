@@ -355,13 +355,16 @@ export function SettingsScreen({ me }: { me: Me }) {
                       {t(warn.key, warn.params)}
                     </p>
                   ) : null}
-                  <p className="muted settings-meta">
-                    {t('settings.defaultIs', { value: withUnit(row, row.defaultValue) })}
-                    {' · '}
-                    {row.updatedBy && row.updatedAt
-                      ? t('settings.lastEdited', { who: row.updatedBy, at: formatDateTime(row.updatedAt) })
-                      : t('settings.neverEdited')}
-                  </p>
+                  {/* Chỉ nói khi có chuyện để nói (TX-41): mỗi tham số lặp "Mặc định: X · Chưa sửa từ
+                      lúc cài đặt" là 40 dòng nhiễu trên một trang. */}
+                  {row.updatedBy && row.updatedAt ? (
+                    <p className="muted settings-meta">
+                      {t('settings.lastEdited', { who: row.updatedBy, at: formatDateTime(row.updatedAt) })}
+                      {toDraft(row.value) !== toDraft(row.defaultValue)
+                        ? ` · ${t('settings.defaultIs', { value: withUnit(row, row.defaultValue) })}`
+                        : null}
+                    </p>
+                  ) : null}
                   {draftOf(row).trim() !== toDraft(row.defaultValue) ? (
                     <button
                       type="button"
