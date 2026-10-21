@@ -315,7 +315,7 @@ export default {
     // Nút trong khối "trống" khi lọc không ra — cùng chữ với danh sách thiết bị.
     clearFilters: 'Xóa bộ lọc',
     /* Ô lọc trạng thái vòng đời (Q-20, `ui/lifecycle-status-options.ts`): một khuôn cho bốn màn. */
-    lifecycleLive: 'Đang theo dõi (trừ {{end}})',
+    lifecycleLive: 'Trừ {{end}}',
     lifecycleAll: 'Tất cả (cả {{end}})',
     /* Bảng trống ở bộ lọc mặc định mà vẫn còn hồ sơ cuối đời khớp (`ui/lifecycle-hidden-empty.tsx`). */
     lifecycleHidden: 'Có {{count}} hồ sơ {{end}} đang ẩn',
@@ -466,9 +466,9 @@ export default {
     /* Không kèm số lần còn lại: con số đó cho kẻ dò biết email nào có thật. */
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
     signedOut: 'Bạn đã đăng xuất.',
-    totpExpired: 'Hết thời gian nhập mã, vui lòng đăng nhập lại.',
+    totpExpired: 'Hết thời gian nhập mã. Đăng nhập lại.',
     tempPasswordExpired: 'Mật khẩu tạm đã hết hạn. Liên hệ Super Admin để được đặt lại mật khẩu.',
-    totpEmpty: 'Vui lòng nhập mã xác thực.',
+    totpEmpty: 'Chưa nhập mã xác thực.',
     totpMissing: 'Còn thiếu {{count}} số.',
     otpDigit: 'Số thứ {{n}} trên {{total}}',
     otpVerified: 'Đã xác thực',
@@ -2744,7 +2744,7 @@ export default {
     toastUnlocked: 'Đã mở khóa {{name}}.',
     toastDisabled: 'Đã vô hiệu hóa {{name}}.',
     toastReactivated: 'Đã bật lại {{name}}.',
-    totpColumn: '2 Lớp',
+    totpColumn: 'Xác thực 2 lớp',
     totpStateEnrolled: 'Đã kích hoạt',
     totpStateMissing: 'Bắt buộc – chưa kích hoạt',
     totpStateOptional: 'Không bắt buộc',

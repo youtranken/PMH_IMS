@@ -175,7 +175,7 @@ test.describe('Quản trị tài khoản', () => {
     // Đang lọc "Đã vô hiệu hóa" nên dòng rời bảng; về bộ lọc mặc định để thấy nó sống lại.
     await expect(row).toHaveCount(0);
     await statusFilter.click();
-    await page.getByRole('option', { name: 'Đang theo dõi (trừ Đã vô hiệu hóa)' }).click();
+    await page.getByRole('option', { name: 'Trừ đã vô hiệu hóa' }).click();
     await expect(
       row.getByText('Đang hoạt động'),
       'kích hoạt lại phải mở THẬT, không chỉ đổi chữ',

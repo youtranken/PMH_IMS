@@ -119,7 +119,7 @@ describe('Tài khoản dịch vụ — bộ lọc trạng thái mặc định (Q
   it('mặc định chỉ hỏi tài khoản đang dùng, ô lọc nói rõ', async () => {
     expect((await listParams('/service-accounts')).get('status')).toBe('active');
     expect(screen.getByRole('button', { name: 'Trạng thái' })).toHaveTextContent(
-      'Đang theo dõi (trừ Đã ngừng dùng)',
+      'Trừ đã ngừng dùng',
     );
   });
 

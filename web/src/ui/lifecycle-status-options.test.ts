@@ -26,7 +26,7 @@ describe('lifecycleStatusOptions', () => {
   });
 
   it('chữ theo một khuôn, gọi tên trạng thái cuối đời của chính màn đó', () => {
-    expect(options[0].label).toBe('Đang theo dõi (trừ Đã thanh lý)');
+    expect(options[0].label).toBe('Trừ đã thanh lý');
     expect(options[options.length - 1].label).toBe('Tất cả (cả Đã thanh lý)');
   });
 
@@ -36,7 +36,7 @@ describe('lifecycleStatusOptions', () => {
       labelOf: (status) => (status === 'active' ? 'Đang dùng' : 'Đã ngừng dùng'),
       endStatus: 'disabled',
     });
-    expect(sa[0].label).toBe('Đang theo dõi (trừ Đã ngừng dùng)');
+    expect(sa[0].label).toBe('Trừ đã ngừng dùng');
     expect(sa[sa.length - 1].label).toBe('Tất cả (cả Đã ngừng dùng)');
   });
 });

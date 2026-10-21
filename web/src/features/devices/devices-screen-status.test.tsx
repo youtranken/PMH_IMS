@@ -58,7 +58,7 @@ describe('Màn Thiết bị — bộ lọc trạng thái mặc định (Q-20)', 
     const query = await listQuery('/devices');
     expect(query.get('status')).toBe('live');
     expect(screen.getByRole('button', { name: 'Trạng thái' })).toHaveTextContent(
-      'Đang theo dõi (trừ Đã thanh lý)',
+      'Trừ đã thanh lý',
     );
   });
 

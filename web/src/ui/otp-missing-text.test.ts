@@ -8,7 +8,7 @@ describe('otpMissingText', () => {
   it.each([
     [null, null],
     [0, null],
-    [6, 'Vui lòng nhập mã xác thực.'],
+    [6, 'Chưa nhập mã xác thực.'],
     [5, 'Còn thiếu 5 số.'],
     [1, 'Còn thiếu 1 số.'],
   ])('thiếu %s → %s', (missing, expected) => {

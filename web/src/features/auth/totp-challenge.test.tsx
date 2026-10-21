@@ -55,13 +55,13 @@ function logoutCalls(fetchMock: ReturnType<typeof vi.fn>) {
  * ngay dưới ô, và sai mã thì con trỏ quay về ô để bàn phím số không đóng.
  */
 describe('TotpChallenge', () => {
-  it('bấm Xác nhận khi ô trống → "Vui lòng nhập mã xác thực.", không gọi API (Q-20)', async () => {
+  it('bấm Xác nhận khi ô trống → "Chưa nhập mã xác thực.", không gọi API (Q-20)', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     freshFromLogin();
     renderChallenge();
     await userEvent.click(screen.getByRole('button', { name: 'Xác nhận' }));
-    expect(screen.getByText('Vui lòng nhập mã xác thực.')).toBeInTheDocument();
+    expect(screen.getByText('Chưa nhập mã xác thực.')).toBeInTheDocument();
     expect(screen.queryByText('Còn thiếu 6 số.')).toBeNull();
     expect(screen.getByLabelText('Số thứ 1 trên 6')).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();

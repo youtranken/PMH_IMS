@@ -334,7 +334,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       status,
       'Ô lọc Trạng thái: mặc định trừ Đã thanh lý (Q-20), bốn trạng thái của DEVICE_STATUSES, rồi mục "cả Đã thanh lý"',
     ).toEqual([
-      'Đang theo dõi (trừ Đã thanh lý)',
+      'Trừ đã thanh lý',
       'Đang dùng',
       'Dự phòng',
       'Hỏng',
