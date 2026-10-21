@@ -614,9 +614,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       assign.getByRole('button'),
       'Hộp gán có đúng 3 nút: ✕ · Hủy · Gán vào máy',
     ).toHaveCount(3);
-    // Chọn máy theo Máy | Phòng ban | Người sử dụng (Q-15) — dải radio, mặc định là Máy.
+    // Chọn máy theo Máy | Phòng ban | Người dùng (Q-15) — dải radio, mặc định là Máy.
     const pickBy = assign.getByRole('radiogroup', { name: 'Chọn máy theo' });
-    await expect(pickBy.getByRole('radio')).toHaveText(['Máy', 'Phòng ban', 'Người sử dụng']);
+    await expect(pickBy.getByRole('radio')).toHaveText(['Máy', 'Phòng ban', 'Người dùng']);
     await expect(pickBy.getByRole('radio', { name: 'Máy', exact: true })).toBeChecked();
     for (const name of ['Đóng hộp thoại', 'Hủy', 'Gán vào máy']) {
       await expect(

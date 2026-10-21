@@ -125,7 +125,7 @@ describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
     expect(screen.getByText('Đang dùng')).toBeInTheDocument();
     const info = screen.getByRole('group', { name: 'Thông tin' });
     expect(info).toHaveTextContent('Nhóm VPNchưa khai');
-    expect(info).toHaveTextContent('Phòng banKế toán');
+    expect(info).toHaveTextContent('Người dùng / phòng banKế toán');
     // Chỉ đếm ô của khối Thông tin: Nhóm VPN, Ghi chú. Người phụ trách trống ở dải 4 ô không tính.
     expect(screen.getByRole('button', { name: 'Bổ sung 2 ô còn thiếu' })).toBeInTheDocument();
   });
@@ -145,7 +145,7 @@ describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
     );
     renderAs('sa');
     const info = await screen.findByRole('group', { name: 'Thông tin' });
-    expect(info).toHaveTextContent('Phòng banchưa khai');
+    expect(info).toHaveTextContent('Người dùng / phòng banchưa khai');
     expect(screen.getByRole('button', { name: 'Bổ sung 1 ô còn thiếu' })).toBeInTheDocument();
   });
 });

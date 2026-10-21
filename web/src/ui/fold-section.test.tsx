@@ -26,8 +26,8 @@ describe('FoldSection', () => {
   });
 
   it('defaultOpen: mở sẵn', () => {
-    renderWithI18n(<FoldSection title="Người dùng" defaultOpen><label>Người sử dụng<input /></label></FoldSection>);
-    expect(screen.getByRole('textbox', { name: 'Người sử dụng' })).toBeVisible();
+    renderWithI18n(<FoldSection title="Người dùng" defaultOpen><label>Người dùng<input /></label></FoldSection>);
+    expect(screen.getByRole('textbox', { name: 'Người dùng' })).toBeVisible();
   });
 
   it('forceOpen (có lỗi bên trong): mở và không gập lại được', async () => {

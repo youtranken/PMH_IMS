@@ -8,7 +8,7 @@ import { DevicesScreen } from './devices-screen';
 
 /**
  * Cột bảng thiết bị (Q-27): Ảnh · Mã thiết bị · Tên gọi · IP quản trị · Vị trí · Trạng thái ·
- * Thao tác. Người sử dụng, Bảo hành, dòng phụ loại · model · serial đã có trong hồ sơ.
+ * Thao tác. Người dùng, Bảo hành, dòng phụ loại · model · serial đã có trong hồ sơ.
  */
 
 const ME = { role: 'member', csrfToken: 't', email: 'm@pmh.com.vn' } as unknown as Me;
@@ -60,7 +60,7 @@ function renderScreen() {
 describe('/devices — cột theo Q-27', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('đúng bộ cột; không còn Người sử dụng, Bảo hành', async () => {
+  it('đúng bộ cột; không còn Người dùng, Bảo hành', async () => {
     mockFetch();
     renderScreen();
     const table = await screen.findByRole('table', {}, { timeout: 5000 });
@@ -68,7 +68,7 @@ describe('/devices — cột theo Q-27', () => {
     for (const name of ['Ảnh', 'Mã thiết bị', 'Tên gọi', 'IP quản trị', 'Vị trí', 'Trạng thái']) {
       expect(headers).toContain(name);
     }
-    expect(headers).not.toContain('Người sử dụng');
+    expect(headers).not.toContain('Người dùng');
     expect(headers).not.toContain('Bảo hành');
   });
 

@@ -156,7 +156,7 @@ describe('DeviceIpAssign', () => {
     // Máy không đổi được trong hộp Đổi IP — chỉ địa chỉ đổi.
     expect(screen.queryByRole('combobox', { name: 'Thiết bị' })).toBeNull();
     // Người/bộ phận và ghi chú của IP cũ đi theo máy — điền sẵn, sửa được.
-    expect(screen.getByRole('combobox', { name: 'Người / phòng ban dùng' })).toHaveValue('Phòng Kế toán');
+    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Phòng Kế toán');
     expect(screen.getByLabelText('Ghi chú')).toHaveValue('Cổng 3 switch tầng 2');
     await userEvent.click(screen.getByRole('button', { name: 'Đổi IP' }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());

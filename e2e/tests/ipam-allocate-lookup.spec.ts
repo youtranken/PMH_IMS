@@ -149,7 +149,7 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: `Cấp IP — ${address}` });
     await expect(dialog.getByRole('combobox', { name: 'Thiết bị' })).toBeVisible();
-    await expect(dialog.getByRole('combobox', { name: 'Người / phòng ban dùng' })).toHaveValue('');
+    await expect(dialog.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('');
     await dialog.getByRole('combobox', { name: 'Thiết bị' }).fill(f.deviceCode);
     await page.getByRole('option', { name: new RegExp(f.deviceCode) }).click();
     await dialog.getByRole('textbox', { name: 'Lý do' }).fill('cấp lại E2E');

@@ -146,7 +146,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
     }
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('Phòng Nhân sự');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('kiem tra Esc giua luot ghi');
 
     const before = Number(sql('SELECT count(*) FROM nat_rule WHERE external_from BETWEEN 18081 AND 18083'));

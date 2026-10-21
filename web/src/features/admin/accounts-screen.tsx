@@ -1111,7 +1111,7 @@ export function TemporaryPasswordDialog({
               className="btn"
               onClick={() => {
                 onClose();
-                // Mở sẵn tìm theo tên người: ô tìm thiết bị khớp cả "Người sử dụng" (DEV-013).
+                // Mở sẵn tìm theo tên người: ô tìm thiết bị khớp cả "Người dùng" (DEV-013).
                 navigate(`${PATHS.devices}?q=${encodeURIComponent(created.fullName)}`);
               }}
             >

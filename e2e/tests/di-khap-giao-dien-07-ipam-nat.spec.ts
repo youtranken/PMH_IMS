@@ -415,7 +415,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Trạng thái',
       'Thiết bị',
       'Site',
-      'Người / phòng ban dùng',
+      'Người dùng / phòng ban',
       'Thao tác',
     ]);
     await expect(table.getByRole('row'), 'một hàng tiêu đề + 6 địa chỉ').toHaveCount(7);
@@ -494,11 +494,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toBeVisible();
 
     await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
-    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người / phòng ban dùng".
+    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người dùng / phòng ban".
     await expectHandles(
       assign,
       'combobox',
-      ['Thiết bị', 'Người / phòng ban dùng'],
+      ['Thiết bị', 'Người dùng / phòng ban'],
       'Hộp "Cấp IP"',
     );
     // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày; nó điền sẵn hôm nay nên có nút "Xóa ngày".
@@ -521,7 +521,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await ipRow(page, first).getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const again = page.getByRole('dialog', { name: `Cấp IP — ${first}` });
     await again
-      .getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true })
+      .getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true })
       .fill('Chị Lan — Kế toán');
     await again
       .getByRole('textbox', { name: 'Ghi chú', exact: true })
@@ -544,7 +544,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Hộp "Sửa hồ sơ IP"',
     );
     await expect(
-      edit.getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true }),
+      edit.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }),
       'mở Sửa mà ô trống thì bấm Lưu là xóa sạch chủ cũ, im lặng',
     ).toHaveValue('Chị Lan — Kế toán');
     await expect(edit.getByRole('textbox', { name: 'Ghi chú', exact: true })).toHaveValue(
@@ -635,11 +635,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       assign,
       'combobox',
-      ['Thiết bị', 'Người / phòng ban dùng'],
+      ['Thiết bị', 'Người dùng / phòng ban'],
       'Hộp "Cấp IP"',
     );
     await expect(
-      assign.getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true }),
+      assign.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }),
       'chủ cũ đã đi khỏi lúc thu hồi — điền sẵn tên họ là hồi sinh một chủ không còn',
     ).toHaveValue('');
     await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
@@ -826,7 +826,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       table.getByRole('columnheader'),
       'mất cột "Mở cho ai" hoặc "Lý do mở" là cuốn sổ mất đúng thứ nó sinh ra để giữ',
       /* "Chuyển tiếp" đọc ngang ngoài → trong; trạng thái là cột riêng, không dính vào số port. */
-    ).toHaveText(['Router', 'Chuyển tiếp', 'Mở cho ai', 'Lý do mở', 'Trạng thái', 'Thao tác']);
+    ).toHaveText(['Router', 'Chuyển tiếp', 'Người dùng / phòng ban', 'Lý do mở', 'Trạng thái', 'Thao tác']);
     const row = page.getByRole('row', { name: new RegExp(esc(fixture.routerCode)) });
     await expect(row.getByText('TCP 8080')).toBeVisible();
     await expect(row.getByText(`${fixture.internalIp}:80`)).toBeVisible();
@@ -913,7 +913,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         'Lọc dịch vụ cho Cổng ngoài',
         'Lọc dịch vụ cho Cổng trong',
         'Máy đích (được NAT)',
-        'Mở cho ai',
+        'Người dùng / phòng ban',
       ],
       'Hộp "Thêm luật NAT"',
     );
@@ -992,7 +992,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toBeVisible();
 
     /* ----- Hộp con 1: "Thêm thiết bị mới" — hộp CHA phải sống ----- */
-    await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('Phòng Nhân sự');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }).fill('Phòng Nhân sự');
     await form.getByRole('combobox', { name: 'Router', exact: true }).click();
     await form.getByRole('button', { name: 'Thêm thiết bị mới', exact: true }).click();
     const deviceForm = page.getByRole('dialog', { name: 'Thêm thiết bị' });
@@ -1008,7 +1008,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       form.getByRole('button', { name: 'Bỏ cổng 8000-8010' }),
       'và form đang khai dở phải còn nguyên — mất nó là gõ lại từ đầu',
     ).toBeVisible();
-    await expect(form.getByRole('combobox', { name: 'Mở cho ai', exact: true })).toHaveValue(
+    await expect(form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true })).toHaveValue(
       'Phòng Nhân sự',
     );
 
@@ -1028,7 +1028,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await form.getByRole('textbox', { name: 'IP trong', exact: true }).fill(fixture.internalIp);
     await form.getByRole('textbox', { name: 'Cổng trong', exact: true }).fill('80');
     // "Mở cho ai" cũng bắt buộc (API từ chối rule không có người dùng) — điền để chỉ còn đúng lỗi port.
-    await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('P. Kỹ thuật');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở', exact: true }).fill(`thử E2E ${stamp}`);
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(
@@ -1117,7 +1117,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       fixture.internalIp,
     );
     await expect(form.getByRole('textbox', { name: 'Cổng trong', exact: true })).toHaveValue('9000');
-    await expect(form.getByRole('combobox', { name: 'Mở cho ai', exact: true })).toHaveValue(
+    await expect(form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true })).toHaveValue(
       'Phòng Nhân sự',
     );
     await expect(form.getByRole('textbox', { name: 'Lý do mở', exact: true })).toHaveValue(reason);

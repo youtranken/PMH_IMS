@@ -416,7 +416,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(page.getByRole('columnheader')), {
         message:
-          'Bảng thiết bị (Q-27): Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người sử dụng, bảo hành, loại · model · serial nằm ở hồ sơ',
+          'Bảng thiết bị (Q-27): Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người dùng, bảo hành, loại · model · serial nằm ở hồ sơ',
       })
       .toEqual([
         'Ảnh',
@@ -440,7 +440,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(headerRow.getByRole('button')), {
         message:
-          'Đúng ba cột sắp xếp được (Q-27 bỏ Người sử dụng, Bảo hành khỏi bảng), và nhãn phải NÓI RÕ đây là nút sắp xếp',
+          'Đúng ba cột sắp xếp được (Q-27 bỏ Người dùng, Bảo hành khỏi bảng), và nhãn phải NÓI RÕ đây là nút sắp xếp',
       })
       .toEqual([
         'Sắp xếp theo Mã thiết bị',
@@ -571,7 +571,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
    * `devices.spec.ts` mở hộp "Thêm thiết bị" hàng chục lần, nhưng lần nào cũng chỉ chạm ba ô:
-   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người sử dụng, Phòng ban,
+   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người dùng, Phòng ban,
    * Nhà cung cấp, ba ô ngày, Ghi chú — chưa có bài nào biết chúng còn tồn tại hay không. Xóa
    * hẳn ô "Bảo hành đến" khỏi form thì cả bộ E2E vẫn xanh, và cái máy tiếp theo được khai sẽ
    * không có hạn bảo hành, mãi mãi.
@@ -634,13 +634,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     await expect(
       dialog.getByRole('textbox'),
-      'Hộp thêm thiết bị có đúng 5 ô gõ chữ: Mã · Tên · Serial · Người sử dụng · Ghi chú — Model là ô gợi ý từ danh mục model',
+      'Hộp thêm thiết bị có đúng 5 ô gõ chữ: Mã · Tên · Serial · Người dùng · Ghi chú — Model là ô gợi ý từ danh mục model',
     ).toHaveCount(5);
     for (const label of [
       'Mã thiết bị',
       'Tên gọi',
       'Serial',
-      'Người sử dụng',
+      'Người dùng',
       'Ghi chú',
     ]) {
       await expect(
@@ -655,7 +655,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * cấm khai một phòng ban vừa lập.
      */
     await expect(
-      dialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      dialog.getByRole('combobox', { name: 'Phòng ban' }),
       'Ô Phòng ban phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
     ).toHaveCount(1);
     await expect(
@@ -866,7 +866,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ['Mã thiết bị', code],
       ['Tên gọi', 'Switch tầng 3 của bài kiểm kê'],
       ['Serial', `SN-E2E-${stamp}`],
-      ['Người sử dụng', 'Anh Tuấn hạ tầng'],
+      ['Người dùng', 'Anh Tuấn hạ tầng'],
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
     ]) {
       await expect(
@@ -875,7 +875,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      editDialog.getByRole('combobox', { name: 'Phòng ban' }),
       'Ô Phòng ban (combobox) cũng phải điền sẵn',
     ).toHaveValue('Phòng CNTT');
     await expect(
@@ -1080,7 +1080,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     const spec = panel.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
       'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Phòng ban sử dụng', 'Ghi chú',
+      'Nhà cung cấp', 'Ngày mua', 'Phòng ban', 'Ghi chú',
     ]);
     await expect(spec.getByRole('definition').first(), 'loại đã khai thì in giá trị').toHaveText('Switch');
     await expect(

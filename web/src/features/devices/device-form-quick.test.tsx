@@ -81,7 +81,7 @@ describe('Form thiết bị — khai nhanh', () => {
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('Latitude 5440');
     expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Serial', hidden: true })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'Người sử dụng', hidden: true })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Người dùng', hidden: true })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Ghi chú', hidden: true })).toHaveValue('');
   });
 

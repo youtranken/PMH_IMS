@@ -392,8 +392,8 @@ describe('Q-18: "Phòng ban", không còn "Bộ phận"', () => {
   it('tab danh mục, nút thêm, ô trên hồ sơ thiết bị và ô "ai đang dùng" của IP', () => {
     expect(lookup('catalog.tabDepartment')).toBe('Phòng ban');
     expect(lookup('catalog.addDepartment')).toBe('Thêm phòng ban');
-    expect(lookup('devices.department')).toBe('Phòng ban sử dụng');
-    expect(lookup('ipam.usedBy')).toBe('Người / phòng ban dùng');
+    expect(lookup('devices.department')).toBe('Phòng ban');
+    expect(lookup('ipam.usedBy')).toBe('Người dùng / phòng ban');
   });
 });
 

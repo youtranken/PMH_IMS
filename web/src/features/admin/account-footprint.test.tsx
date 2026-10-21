@@ -63,7 +63,7 @@ describe('AccountFootprint — người này còn giữ gì', () => {
     );
     const urls = fetchMock.mock.calls.map(([input]) => String(input));
     expect(urls.some((url) => url.includes(`memberEmail=${encodeURIComponent(MEMBER.email)}`))).toBe(true);
-    // Khớp ĐÚNG ô "Người sử dụng" và bỏ máy đã thanh lý — tìm chữ tự do đếm cả máy ghi chú tên
+    // Khớp ĐÚNG ô "Người dùng" và bỏ máy đã thanh lý — tìm chữ tự do đếm cả máy ghi chú tên
     // người này, và máy đã thanh lý thì không còn gì phải thu.
     const devicesUrl = new URL(urls.find((url) => url.includes('/devices?'))!, 'http://x');
     expect(devicesUrl.searchParams.get('assignedTo')).toBe('Nguyễn An');

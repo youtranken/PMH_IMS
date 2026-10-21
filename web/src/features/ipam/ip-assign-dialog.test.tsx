@@ -102,7 +102,7 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     renderDialog(null, onDone);
     const user = userEvent.setup();
     await user.type(
-      await screen.findByRole('combobox', { name: 'Người / phòng ban dùng' }),
+      await screen.findByRole('combobox', { name: 'Người dùng / phòng ban' }),
       'Chị Lan',
     );
     await user.type(screen.getByRole('textbox', { name: 'Lý do' }), 'máy mới');
@@ -133,7 +133,7 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     renderDialog(FREE_RECORD, onDone);
     const user = userEvent.setup();
     // Chủ cũ đã đi khỏi lúc thu hồi — ô mở ra trống, ghi chú thì giữ.
-    const usedBy = await screen.findByRole('combobox', { name: 'Người / phòng ban dùng' });
+    const usedBy = await screen.findByRole('combobox', { name: 'Người dùng / phòng ban' });
     expect(usedBy).toHaveValue('');
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('đã thu hồi');
     await user.type(usedBy, 'Kho');

@@ -1082,8 +1082,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sortVi(SHARED_FIELDS));
     expect(
       await nameByRole(dialog, 'combobox'),
-      'Phòng ban là ô GỢI Ý (gõ tự do được), không phải ô chọn cứng',
-    ).toEqual(['Phòng ban']);
+      'Người dùng / phòng ban là ô GỢI Ý (gõ tự do được), không phải ô chọn cứng',
+    ).toEqual(['Người dùng / phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
       'Hộp thêm tài khoản có đúng mười một nút: ô chọn Loại, (i) của Loại và Người phụ trách, ô ngày Hết hạn + (i) của nó, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',

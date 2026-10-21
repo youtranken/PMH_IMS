@@ -113,7 +113,7 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
     await openFold(form, 'Người dùng và phòng ban');
-    await form.getByLabel('Người sử dụng').fill('anh Nam');
+    await form.getByLabel('Người dùng').fill('anh Nam');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
@@ -320,12 +320,12 @@ test.describe('Kho thiết bị', () => {
 
     // Khối đã có giá trị mở sẵn khi sửa (Q-27) — người dùng hiện có phải thấy ngay.
     await expect(form.getByRole('button', { name: /^Người dùng và phòng ban/ })).toHaveAttribute('aria-expanded', 'true');
-    await expect(form.getByLabel('Người sử dụng')).toHaveValue('chị Lan');
-    await form.getByLabel('Người sử dụng').fill('anh Tuấn');
+    await expect(form.getByLabel('Người dùng')).toHaveValue('chị Lan');
+    await form.getByLabel('Người dùng').fill('anh Tuấn');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    // Bảng không còn cột Người sử dụng (Q-27): đọc lại hồ sơ để chắc đã lưu.
+    // Bảng không còn cột Người dùng (Q-27): đọc lại hồ sơ để chắc đã lưu.
     const saved = await page.request.get(`/api/v1/devices?search=${encodeURIComponent(code)}`);
     expect((await saved.json()).items[0]).toMatchObject({ code, assignedTo: 'anh Tuấn' });
   });

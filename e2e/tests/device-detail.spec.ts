@@ -262,7 +262,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     const spec = page.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
       'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Phòng ban sử dụng', 'Ghi chú',
+      'Nhà cung cấp', 'Ngày mua', 'Phòng ban', 'Ghi chú',
     ]);
     await expect(spec.getByRole('definition').filter({ hasText: 'chưa khai' })).toHaveCount(8);
     await expect(page.getByRole('button', { name: 'Bổ sung 8 ô còn thiếu' })).toBeVisible();
