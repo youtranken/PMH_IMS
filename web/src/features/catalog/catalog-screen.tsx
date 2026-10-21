@@ -24,7 +24,7 @@ import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { PageHeader } from '@/ui/page-header';
-import { Pagination } from '@/ui/pagination';
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/ui/pagination';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
@@ -55,7 +55,6 @@ import { CableSwatch } from '@/ui/cable-swatch';
 import { lowerFirstAfterNumber } from '@/lib/count-label';
 import { CatalogSetup, useSetupModels } from './catalog-setup';
 
-const DEFAULT_LIMIT = 20;
 
 /* Thứ tự = ba nhóm của Q-27 (Vị trí · Thiết bị · Đối tác & tổ chức); tab Model chen sau Loại
    thiết bị lúc dựng thanh tab. Đổi thứ tự ở đây là đổi thứ tự trên màn. */
@@ -445,7 +444,6 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const url = useListUrlState<CatalogFilters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     searchKey: 'search',
   });
   const { page, limit, filters } = url;
@@ -976,7 +974,7 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
 
 /** Tham số của file xuất — cùng bộ lọc với bảng, không phân trang. */
 function exportQuery(search: string, status: string, siteId: string, sorting: SortingState): string {
-  return buildQuery(1, DEFAULT_LIMIT, search, status, siteId, sorting)
+  return buildQuery(1, DEFAULT_PAGE_SIZE, search, status, siteId, sorting)
     .split('&')
     .filter((part) => !part.startsWith('page=') && !part.startsWith('limit='))
     .join('&');

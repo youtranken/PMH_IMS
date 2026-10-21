@@ -267,8 +267,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Sửa ${codeA}`,
         `Thao tác với ${codeA}`,
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
       ]),
     );
 
@@ -893,8 +891,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Sửa ${activeCode}`,
         `Thao tác với ${activeCode}`,
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
       ]),
     );
 
@@ -993,8 +989,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
       ]),
     );
   });
@@ -1371,8 +1365,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thanh lý đến ngày',
         'Sắp xếp',
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
         'Xuất Excel',
       ]),
     );

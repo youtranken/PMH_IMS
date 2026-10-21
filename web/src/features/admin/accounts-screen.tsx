@@ -180,7 +180,6 @@ const STATUS_TONE: Record<AccountStatus, string> = {
  * KHÔNG dùng đỏ / cam: hai màu đó là lỗi và cảnh báo — "Super Admin" đỏ cạnh "Còn 1 ngày" đỏ
  * đọc thành tài khoản đang có vấn đề.
  */
-const DEFAULT_LIMIT = 20;
 
 interface AccountFilters extends Record<string, string> {
   search: string;
@@ -215,7 +214,6 @@ export function AccountsScreen({ me }: { me: Me }) {
   /* Trạng thái danh sách sống trên THANH ĐỊA CHỈ: chia sẻ được link đã lọc, Back gỡ bộ lọc. */
   const url = useListUrlState<AccountFilters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'fullName', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn người đã vô hiệu hóa), không gửi chữ lạ lên API (Q-20).

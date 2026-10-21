@@ -13,6 +13,9 @@ import { formatCount } from '@/lib/format';
 /** Số dòng một trang cho người dùng chọn. 10 cho điện thoại, 100 cho lúc soi cả kho. */
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 
+/** Cỡ trang mặc định của mọi danh sách (TB-15) — một chỗ, không lặp `DEFAULT_LIMIT` ở từng màn. */
+export const DEFAULT_PAGE_SIZE = 20;
+
 export function Pagination({
   page: requestedPage,
   limit,
@@ -85,6 +88,9 @@ export function Pagination({
         </span>
       ) : null}
 
+      {/* Một trang thì ‹ "Trang 1/1" › không bấm được gì (TB-15): chỉ còn dòng đếm. */}
+      {lastPage > 1 ? (
+      <>
       <button
         type="button"
         className="btn sm pager-nav"
@@ -132,6 +138,8 @@ export function Pagination({
       >
         <Chevron direction="right" />
       </button>
+      </>
+      ) : null}
       {needsJump ? (
         <PageJump lastPage={lastPage} onJump={(target) => onPageChange(target)} />
       ) : null}

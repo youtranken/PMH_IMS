@@ -89,7 +89,6 @@ const EMPTY_FILTERS: Filters = {
   each: '',
 };
 
-const DEFAULT_LIMIT = 20;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Nút chọn nhanh khoảng ngày — "Hôm nay" là 1 ngày. */
@@ -153,7 +152,6 @@ export function AuditLogScreen() {
   const { t } = useTranslation();
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     searchKey: 'actor',
   });
   const { page, limit, filters } = url;

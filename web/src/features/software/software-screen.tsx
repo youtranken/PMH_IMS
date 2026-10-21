@@ -54,7 +54,6 @@ import {
   type SoftwareScreenSpec,
 } from '@/lib/software-screens';
 
-const DEFAULT_LIMIT = 20;
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
    TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `kind`/`status` vẫn giữ union hẹp cho chỗ
@@ -108,7 +107,6 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
