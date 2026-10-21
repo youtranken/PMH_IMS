@@ -156,6 +156,18 @@ describe('Trang tổng Két sắt — theo màn của hồ sơ (K-01, K-02)', ()
     expect(within(ssl.closest('tr') as HTMLElement).getByText('Tên miền & SSL')).toHaveClass('badge', 'outline');
   });
 
+  // PW-C25: 8 chip mà 7 chip đếm 0 — trên điện thoại phải cuộn ngang qua chip rỗng.
+  it('chip đếm 0 không bày; "Tất cả" luôn còn; chip đang bật từ URL vẫn hiện dù 0', async () => {
+    const view = renderMixed();
+    const group = await screen.findByRole('group', { name: 'Lọc theo loại hồ sơ' });
+    await within(group).findByRole('button', { name: 'Tên miền & SSL 1' });
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tất cả', 'Thiết bị 1', 'Phần mềm 1', 'Tên miền & SSL 1']);
+    view.unmount();
+    renderMixed('/vault?kinds=isp');
+    const again = await screen.findByRole('group', { name: 'Lọc theo loại hồ sơ' });
+    expect(await within(again).findByRole('button', { name: /^Đường truyền 0$/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('mã thiết bị là link về hồ sơ máy', async () => {
     renderMixed();
     expect(await screen.findByRole('link', { name: 'SW-E2E-01' })).toHaveAttribute('href', '/devices/d1');

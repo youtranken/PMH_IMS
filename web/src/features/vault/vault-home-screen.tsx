@@ -275,7 +275,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         <ChipToggleGroup
           label={t('vaultHome.filterKind')}
           allLabel={t('vaultHome.allKinds')}
-          options={OWNER_GROUPS.map((kind) => ({
+          // Chip đếm 0 không bày (PW-C25) — trừ chip đang bật từ URL, không thì mất đường tắt nó.
+          options={OWNER_GROUPS.filter((kind) => countOf(kind) > 0 || kinds.includes(kind)).map((kind) => ({
             value: kind,
             label: (
               <>
