@@ -46,11 +46,22 @@ DO $$ BEGIN RAISE EXCEPTION 'thiếu -v allow_demo=1'; END $$;
 \set ON_ERROR_STOP on
 BEGIN;
 
--- Bảng lịch sử là CHỈ-THÊM (AD-13): trigger chặn DELETE. Lượt gieo đi
--- thẳng vào bảng chính bằng SQL nên KHÔNG đẻ ra dòng lịch sử nào —
--- không có gì phải dọn ở đó, và cũng không được phép dọn.
+-- Bảng lịch sử là CHỈ-THÊM (AD-13): trigger chặn DELETE. Lượt gieo không đẻ
+-- lịch sử, nhưng job tự thanh lý hồ sơ quá hạn thì CÓ — chạy vài giờ sau khi
+-- gieo là software_history đã có dòng trỏ vào DMSW-*, và DELETE software
+-- vướng khóa ngoại. Tắt trigger đúng lúc xóa rồi bật lại, như reset-e2e.mjs;
+-- nằm trong BEGIN nên lỗi giữa chừng thì trigger không bị tắt luôn.
+ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete;
+DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE code LIKE 'DMSW-%');
+ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete;
+ALTER TABLE device_history DISABLE TRIGGER device_history_no_delete;
+DELETE FROM device_history WHERE device_id IN (SELECT id FROM device WHERE code LIKE 'DM-%');
+ALTER TABLE device_history ENABLE TRIGGER device_history_no_delete;
+ALTER TABLE service_account_history DISABLE TRIGGER service_account_history_no_delete;
+DELETE FROM service_account_history WHERE service_account_id IN (SELECT id FROM service_account WHERE code LIKE 'DMSA-%');
+ALTER TABLE service_account_history ENABLE TRIGGER service_account_history_no_delete;
 
-DELETE FROM nat_rule          WHERE created_by  = 'demo@pmh.com.vn';
+DELETE FROM nat_rule         WHERE created_by  = 'demo@pmh.com.vn';
 DELETE FROM ip_address        WHERE assigned_by = 'demo@pmh.com.vn';
 DELETE FROM subnet            WHERE name LIKE 'DM VLAN %';
 DELETE FROM license_assignment WHERE assigned_by = 'demo@pmh.com.vn';
