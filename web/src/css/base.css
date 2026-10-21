@@ -82,7 +82,7 @@ label {
   line-height: 1.25;
 }
 /* Link nằm trong đoạn văn / khung báo phải khác chữ thường bằng hơn một màu (AX-05, WCAG 1.4.1). */
-:where(p, .alert) a:not([class*='btn']) {
+:where(p, .alert, dd) a:not([class*='btn']) {
   text-decoration: underline;
   text-underline-offset: 2px;
 }

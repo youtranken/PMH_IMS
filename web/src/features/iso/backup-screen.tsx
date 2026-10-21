@@ -240,7 +240,14 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
             {t('iso.backup.noJobs')} <Link to={PATHS.isoCatalog}>{t('iso.backup.jobsLink')}</Link>
           </p>
         ) : (
-          <div className="sheet-scroll" ref={scrollRef}>
+          <div
+            className="sheet-scroll"
+            ref={scrollRef}
+            // Lưới rộng hơn màn: vùng cuộn phải vào được bằng bàn phím (AX-07).
+            tabIndex={0}
+            role="region"
+            aria-label={t('iso.field.tab0203')}
+          >
             <table className="sheet-grid sheet-grid-0203" style={{ '--sheet-days': days.length } as React.CSSProperties}>
               <colgroup>
                 <col className="sheet-col-no" />
@@ -273,9 +280,12 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                 </tr>
                 {editable ? (
                   <tr>
-                    {days.map((d) => (
-                      <th key={d.day} scope="col" className="sheet-day">
-                        {blankDays.has(d.day) ? (
+                    {days.map((d) =>
+                      // Ngày không còn ô trống thì không có nút: ô tiêu đề rỗng là lỗi trợ năng (AX-09).
+                      !blankDays.has(d.day) ? (
+                        <td key={d.day} className="sheet-day" />
+                      ) : (
+                        <th key={d.day} scope="col" className="sheet-day">
                           <button
                             type="button"
                             className="sheet-fill"
@@ -294,9 +304,9 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                           >
                             ✓
                           </button>
-                        ) : null}
-                      </th>
-                    ))}
+                        </th>
+                      ),
+                    )}
                   </tr>
                 ) : null}
               </thead>
@@ -361,7 +371,13 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                           ) : state === 'fail-linked' && tick?.incident ? (
                             <IncidentMark label={label} onOpen={() => setDialog({ incidentId: tick.incident?.id ?? '' })} />
                           ) : (
-                            <span className="sheet-mark" data-state={state} aria-label={state === 'off' || state === 'future' ? undefined : label}>
+                            <span
+                              className="sheet-mark"
+                              data-state={state}
+                              // aria-label trên span trần không có tác dụng (axe aria-prohibited-attr): cần role (AX-08).
+                              role={state === 'off' || state === 'future' ? undefined : 'img'}
+                              aria-label={state === 'off' || state === 'future' ? undefined : label}
+                            >
                               {MARK[state]}
                             </span>
                           )}

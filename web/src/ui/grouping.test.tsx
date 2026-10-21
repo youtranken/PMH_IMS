@@ -76,7 +76,7 @@ describe('DataTable `groupBy` — một dòng tiêu đề mỗi nhóm', () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'Ngày 2026-09-29',
       'Ngày 2026-09-28',
     ]);

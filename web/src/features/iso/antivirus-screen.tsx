@@ -213,7 +213,8 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
             {t('iso.av.summary', { issues: data.issues.length, divisions: groups.length, missed: data.summary.missedDays.length })}
           </span>
         </div>
-        <div className="sheet-scroll">
+        {/* Lưới rộng hơn màn: vùng cuộn phải vào được bằng bàn phím (AX-07). */}
+        <div className="sheet-scroll" tabIndex={0} role="region" aria-label={t('iso.field.tab0208')}>
           <table className="sheet-grid">
             <thead>
               <tr>

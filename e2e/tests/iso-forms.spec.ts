@@ -143,8 +143,13 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await page.goto('/iso/backup?month=2021-02');
     await expect(page.getByRole('heading', { name: 'Theo dõi backup · 0203' })).toBeVisible();
 
+    // AX-07/09: lưới rộng vào được bằng bàn phím; không còn ô tiêu đề cột rỗng.
+    await expect(page.getByRole('region', { name: '0203 · Backup' })).toHaveAttribute('tabindex', '0');
+    await expect(page.getByRole('columnheader', { name: '', exact: true })).toHaveCount(0);
+
     await page.getByRole('button', { name: 'Đánh ✓ mọi ô trống ngày 01/02' }).click();
     await expect(page.getByRole('button', { name: `${name} ngày 1: Đạt` })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: '', exact: true })).toHaveCount(0);
 
     // Một lần bấm một bước, không bảng chọn: bỏ sót → ✓ → ✗ → trống → ✓ → ✗.
     const day2 = page.getByRole('button', { name: new RegExp(`^${name} ngày 2:`) });

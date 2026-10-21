@@ -586,7 +586,9 @@ export function MobileCardList<T>({
       {groups.map((group) => (
         <li key={rowKey(rows[group.first], group.first)} className="list-cards-section">
           <div className="list-cards-group">
-            <span role="heading" aria-level={3}>
+            {/* Cấp 2: danh sách nằm ngay dưới h1 của màn (Nhật ký, Sắp hết hạn) — cấp 3 là nhảy
+                cấp (AX-04, axe heading-order). */}
+            <span role="heading" aria-level={2}>
               {groupBy.label(groupBy.key(rows[group.first]), rows[group.first])}
             </span>
           </div>
