@@ -855,7 +855,7 @@ export default {
     actionsOf: 'Thao tác với {{name}}',
     emptyTitle: 'Chưa có bản vẽ nào.',
     emptyHint: 'Bấm "Thêm bản vẽ" để tạo gốc cây (thường là Tổng công ty).',
-    titleTip: 'Mỗi bản vẽ là một nút trên cây. Xem cây không cần mã; mở nội dung một bản vẽ thì nhập mã 6 số sơ đồ (nhập một lần, dùng tiếp 10 phút).',
+    titleTip: 'Mỗi bản vẽ là một nút trên cây. Xem cây không cần mã; mở nội dung một bản vẽ thì nhập mã 6 số sơ đồ (nhập một lần, không phải nhập lại mỗi lần mở).',
     stepsLabel: 'Các bước bắt đầu',
     treeSteps: {
       root: 'Bấm "Thêm bản vẽ" để tạo gốc cây — thường là Tổng công ty.',
@@ -933,7 +933,7 @@ export default {
       menuTitle: 'Menu ba chấm (⋮)',
       menu1: 'Việc ít dùng nằm trong menu ⋮ cạnh nút Lưu, chia nhóm: Dây & kết nối · Khung, tủ & ảnh · Phiên bản & duyệt · Trợ giúp. Mỗi mục có một dòng nói việc đó làm gì.',
       codeTitle: 'Mã 2 lớp',
-      code1: 'Xem hay sửa nội dung bản vẽ cần mã 6 số của phạm vi sơ đồ; nhập một lần dùng tiếp 10 phút. Mã đăng nhập và mã két không mở sơ đồ.',
+      code1: 'Xem hay sửa nội dung bản vẽ cần mã 6 số của phạm vi sơ đồ; nhập một lần, không phải nhập lại mỗi lần mở. Mã đăng nhập và mã két không mở sơ đồ.',
     },
     nodeType: {
       company: 'Tổng công ty',
@@ -4721,7 +4721,7 @@ export default {
     expiring: 'Tổng hợp hết hạn cần xử lý',
     expiringOverdue: 'Đã quá hạn ({{count}})',
     expiringUpcoming: 'Sắp tới ({{count}})',
-    expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
+    expiringEmpty: 'Không có gì sắp hết hạn.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
     expiringSubject: 'Đối tượng',
     expiringLeft: 'Còn lại',
