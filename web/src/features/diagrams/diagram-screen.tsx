@@ -759,6 +759,7 @@ function ScreenFrame({
   tabs,
   primary,
   menu = [],
+  trailing,
   popovers,
   status,
   band,
@@ -772,6 +773,8 @@ function ScreenFrame({
   primary?: ReactNode;
   /** Việc còn lại — menu ⋮ (Q-18). */
   menu?: BarAction[];
+  /** Nút chính đứng mép phải, sau ⋮ (Lưu của tab Sửa — PW-B21). */
+  trailing?: ReactNode;
   /** Hộp nổi mở từ mục menu — neo vào nút ⋮. */
   popovers?: ReactNode;
   status?: ReactNode;
@@ -797,6 +800,7 @@ function ScreenFrame({
             <span ref={setAnchor} className="full-bar-more">
               <BarMenu label={t('diagrams.actionsOf', { name: title })} subject={title} items={items} />
             </span>
+            {trailing}
             {popovers}
           </div>
         </BarAnchorProvider>
@@ -1423,17 +1427,18 @@ function DiagramEditor({
             />
           </Popover>
           <InfoTip subject={t('diagrams.stock.button')}>{t('diagrams.help.stock')}</InfoTip>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!ready || busy || (!dirty && !needsPreview)}
-            title={ready && !busy && !dirty && !needsPreview ? t('diagrams.screen.nothingToSave') : undefined}
-            onClick={() => frame.current?.send({ action: 'save' })}
-          >
-            {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
-          </button>
-          <InfoTip subject={t('diagrams.screen.save')}>{t('diagrams.help.save')}</InfoTip>
         </>
+      }
+      trailing={
+        <button
+          type="button"
+          className="btn primary"
+          disabled={!ready || busy || (!dirty && !needsPreview)}
+          title={ready && !busy && !dirty && !needsPreview ? t('diagrams.screen.nothingToSave') : undefined}
+          onClick={() => frame.current?.send({ action: 'save' })}
+        >
+          {busy ? t('diagrams.screen.saving') : t('diagrams.screen.save')}
+        </button>
       }
       menu={[
         ...(content.diagram.kind === 'presentation' ? presentationTools.menu : []),

@@ -877,7 +877,6 @@ export default {
     help: {
       search: 'Tìm một máy trên bản vẽ theo mã, tên hoặc IP rồi bay tới nó.',
       stock: 'Tìm máy có trong kho rồi chèn lên bản vẽ — hình, mã, IP lấy từ kho. Máy đã thanh lý không hiện.',
-      save: 'Lưu thành một phiên bản nháp mới. Lưu không ghi gì vào sơ đồ cổng.',
       publish: 'Biến phiên bản đã lưu mới nhất thành bản chính thức (tự kiểm chạy trước).',
       submit: 'Gửi phiên bản đã lưu cho Quản trị duyệt; hệ thống tự kiểm lỗi trước khi gửi.',
       decide: 'Xem tóm tắt thay đổi, ghim góp ý lên bản vẽ, rồi Duyệt hoặc Trả về.',
