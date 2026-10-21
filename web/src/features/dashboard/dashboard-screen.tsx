@@ -29,6 +29,7 @@ import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { DISPOSAL_KIND_KEY, disposalDetailText, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
+import { cutExpiryBoard } from './expiry-board-cut';
 
 interface Block<T> {
   available: boolean;
@@ -900,12 +901,12 @@ function ExpiringBlock({
   const [renewing, setRenewing] = useState<ExpiringItem | null>(null);
   const narrow = useMediaQuery(MOBILE_QUERY);
   const [all, setAll] = useState(false);
-  // Điện thoại: 3 mục đầu (quá hạn đứng trước) + "Xem thêm N" bung tại chỗ.
-  const cut = narrow && !all && board.items.length > MOBILE_ITEMS;
-  const visible = cut ? board.items.slice(0, MOBILE_ITEMS) : board.items;
-
-  const overdueItems = visible.filter((item) => item.daysLeft < 0);
-  const upcomingItems = visible.filter((item) => item.daysLeft >= 0);
+  // Điện thoại: mỗi nhóm 3 mục đầu + "Xem thêm N" bung tại chỗ.
+  const { overdue: overdueItems, upcoming: upcomingItems, hidden } = cutExpiryBoard(board.items, {
+    narrow,
+    all,
+    per: MOBILE_ITEMS,
+  });
   const overdueTotal = board.overdueTotal ?? board.items.filter((item) => item.daysLeft < 0).length;
   const upcomingTotal = Math.max(0, board.total - overdueTotal);
 
@@ -981,9 +982,9 @@ function ExpiringBlock({
           {table(upcomingItems)}
         </>
       ) : null}
-      {cut ? (
+      {hidden > 0 ? (
         <button type="button" className="ghost sm dash-more" onClick={() => setAll(true)}>
-          {t('dashboard.showMore', { count: board.items.length - MOBILE_ITEMS })}
+          {t('dashboard.showMore', { count: hidden })}
         </button>
       ) : null}
       {renewing ? (
