@@ -129,12 +129,19 @@ export function RowActions({
   );
 }
 
+/**
+ * Trần chiều cao mặc định của menu ⋮ (px): đủ cho chục mục (~38px/mục). Menu dòng tài khoản có
+ * ~10 việc; trần 320 cũ giấu mất Khóa · Vô hiệu hóa sau một vùng cuộn không ai thấy dù màn còn
+ * trống. Khung nhìn hẹp hơn thì `useAnchoredMenu` vẫn tự cắt theo chỗ trống còn lại.
+ */
+export const ROW_MENU_MAX_HEIGHT = 480;
+
 function RowActionsMenu({
   label,
   items,
   subject,
   triggerText,
-  maxHeight = 320,
+  maxHeight = ROW_MENU_MAX_HEIGHT,
 }: {
   /** Tên khả truy cập của nút ba chấm — PHẢI nói rõ nó thuộc dòng nào ("Thao tác với LIC-01"). */
   label: string;

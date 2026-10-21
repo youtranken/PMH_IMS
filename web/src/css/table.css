@@ -338,7 +338,14 @@ table.table tbody tr.row-suspended td:first-child {
      vô hiệu hóa — tràn ra ngoài màn và không bấm được. */
   overflow-y: auto;
   padding: var(--space-1);
-  background: var(--surface);
+  /* Còn mục khuất thì mép trên / dưới có bóng mờ — cùng mẹo nền hai lớp với `.segmented`: lớp
+     `local` che bóng khi đã cuộn tới mép, lớp `scroll` đứng yên ở mép khung. */
+  background:
+    linear-gradient(var(--surface) 40%, transparent) center top / 100% 1.5rem no-repeat local,
+    linear-gradient(transparent, var(--surface) 60%) center bottom / 100% 1.5rem no-repeat local,
+    linear-gradient(var(--scroll-edge), transparent) center top / 100% 0.6rem no-repeat scroll,
+    linear-gradient(transparent, var(--scroll-edge)) center bottom / 100% 0.6rem no-repeat scroll,
+    var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
   box-shadow: var(--shadow-float);
