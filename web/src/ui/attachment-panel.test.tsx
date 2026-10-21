@@ -301,10 +301,10 @@ describe('AttachmentPanel — luật tải về nằm trong nút (i)', () => {
 });
 
 /*
- * Gợi ý khi chưa có giấy tờ phải nói đúng loại hồ sơ, như ô thả file: tài khoản dịch vụ không có
- * "hóa đơn", và ở đó còn phải nhắc KHÔNG đính mật khẩu.
+ * Gợi ý ví dụ phải nói đúng loại hồ sơ: tài khoản dịch vụ không có "hóa đơn", và ở đó còn phải
+ * nhắc KHÔNG đính mật khẩu. Câu đó nằm ở ô thả file; khung trống không lặp lại (PW-A28).
  */
-describe('AttachmentPanel — gợi ý khi trống theo loại hồ sơ', () => {
+describe('AttachmentPanel — gợi ý theo loại hồ sơ ở ô thả; khung trống một câu', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each([
@@ -324,7 +324,8 @@ describe('AttachmentPanel — gợi ý khi trống theo loại hồ sơ', () => 
       </ToastProvider>,
     );
     const empty = (await screen.findByText('Chưa có giấy tờ nào.')).parentElement!;
-    expect(empty).toHaveTextContent(expected);
-    if (ownerType !== 'device') expect(empty).not.toHaveTextContent(/hóa đơn/i);
+    expect(empty).not.toHaveTextContent(expected);
+    expect(screen.getByText(expected)).toHaveClass('file-picker-hint');
+    if (ownerType !== 'device') expect(screen.queryByText(/hóa đơn/i)).toBeNull();
   });
 });

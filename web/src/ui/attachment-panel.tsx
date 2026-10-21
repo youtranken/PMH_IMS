@@ -312,7 +312,7 @@ export function AttachmentPanel({
       ) : rows.length === 0 ? (
         <EmptyState
           title={t('attachments.empty')}
-          hint={canEdit ? t('attachments.emptyHint', { examples: t(hintKey) }) : undefined}
+          /* Không gợi ý ở đây (PW-A28): câu ví dụ đã nằm ở ô thả file ngay trên. */
         />
       ) : (
         <div className="table-wrap">
