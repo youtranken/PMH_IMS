@@ -2857,7 +2857,7 @@ export default {
        giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
     autoHidden: 'Đã tự ẩn giá trị. Bấm "Xem" nếu cần mở lại.',
-    intro: 'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
+    intro: 'Chưa cất mật khẩu hay key nào.',
     // Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu kiểu "chỉ Quản trị xem
     // được" vừa sai vừa làm người đọc thôi không đi hỏi nữa.
     /* Thuật ngữ két: "két" là nơi chứa của một hồ sơ, "ngăn" là một mật khẩu/khóa trong két.
@@ -2872,7 +2872,7 @@ export default {
     rotate_totp: 'Đổi mã 2 lớp',
     rotate_other: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    rotateOrder: 'IMS không đổi gì trên hệ thống thật. Đổi ở nơi cấp (thiết bị, phần mềm, cổng VPN, nhà mạng…) và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
+    rotateOrder: 'IMS không đổi trên thiết bị. Đổi ở hệ thống thật và đăng nhập thử TRƯỚC, rồi mới lưu — lưu xong không xem lại giá trị cũ.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',

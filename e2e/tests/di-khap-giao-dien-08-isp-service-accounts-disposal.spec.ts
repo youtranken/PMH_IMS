@@ -578,7 +578,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         name: /^Két sắt/,
         marker: async () => {
           await expect(
-            main.getByText(/Nơi cất mật khẩu và license key/),
+            main.getByText(/Chưa cất mật khẩu hay key nào/),
             'Tab Két sắt phải mở ra panel két, không phải khoảng trắng',
           ).toBeVisible();
           await expect(
@@ -958,7 +958,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     );
 
     for (const [name, marker] of [
-      [/^Két sắt/, page.getByText(/Nơi cất mật khẩu và license key/)],
+      [/^Két sắt/, page.getByText(/Chưa cất mật khẩu hay key nào/)],
       [/^Giấy tờ/, page.getByText('Chưa có giấy tờ nào.')],
       [/^Lịch sử$/, page.getByRole('listitem').filter({ hasText: 'Tạo hồ sơ' })],
     ] as [RegExp, Locator][]) {

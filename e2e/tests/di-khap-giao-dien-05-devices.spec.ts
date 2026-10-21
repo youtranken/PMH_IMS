@@ -1139,9 +1139,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
       panel.getByText(
-        'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
+        'Chưa cất mật khẩu hay key nào.',
       ),
-      'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
+      'Két sắt trống nói một câu trạng thái, không chào hàng (UX-E09)',
     ).toBeVisible();
     await expect(
       panel.getByRole('button', { name: 'Cất vào két' }),

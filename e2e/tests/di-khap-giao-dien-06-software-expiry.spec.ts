@@ -857,7 +857,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // ===== TAB KÉT SẮT =====
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
-      page.getByText(/Nơi cất mật khẩu và license key/),
+      page.getByText(/Chưa cất mật khẩu hay key nào/),
       'Tab Két sắt phải nói ngay nó là gì — key KHÔNG nằm trong hồ sơ phần mềm',
     ).toBeVisible();
     await expect(
