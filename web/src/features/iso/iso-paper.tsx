@@ -1,7 +1,8 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo } from '@/ui/brand-logo';
 import { avIssueMark, avMarkIndex, avOtherMark, daysOf, groupBackupRows, groupByDivision, pad2, tickIndex, toVnParts } from './iso-rules';
+import { paperZoom } from './iso-paper-fit';
 import type { AvIssue, AvMark, BackupRow, IncidentContent, IncidentKind, IncidentSeverity, IncidentStatus, TickCell } from './iso-types';
 
 /**
@@ -62,6 +63,34 @@ function SignBlock({ left, right, joined }: { left: string; right: string; joine
   );
 }
 
+/**
+ * Khung thu bản giấy vừa bề rộng màn (`paperZoom`): bản giấy vẽ đúng khổ (CSS `data-page`) rồi thu
+ * cả khối, không để trình duyệt bóp bảng. Khi in thì CSS bỏ `zoom` — giấy ra đúng khổ.
+ */
+function PaperFit({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const wrap = ref.current;
+    const paper = wrap?.firstElementChild as HTMLElement | null;
+    if (!wrap || !paper) return undefined;
+    const fit = () => {
+      paper.style.zoom = '';
+      const zoom = paperZoom(wrap.clientWidth, paper.offsetWidth);
+      paper.style.zoom = zoom < 1 ? String(zoom) : '';
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(fit);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className="paper-fit">
+      {children}
+    </div>
+  );
+}
+
 /** SP-IT0203 — A3 ngang, Check Date = ngày cuối kỳ (Q-28). */
 export function BackupPaper({
   year,
@@ -80,61 +109,63 @@ export function BackupPaper({
   const grouped = groupBackupRows(rows);
   const index = tickIndex(ticks);
   return (
-    <section className="paper" data-page="a3l" aria-label="SP-IT0203">
-      <PaperHead code="SP-IT0203" title="System Data Checklist & Storage Record Form" />
-      <PaperMeta system={`System: ${systemName}`} checkDate={lastDayLabel(year, month)} />
-      <table className="paper-table">
-        <thead className="paper-fill-head">
-          <tr>
-            <th>No</th>
-            <th colSpan={2}>Name Job Backup</th>
-            <th>Points NAS</th>
-            <th>Storage location</th>
-            <th>Points Cloud</th>
-            <th>Storage location</th>
-            {days.map((d) => (
-              <th key={d.day}>{d.n}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {grouped.map((row) => (
-            <tr key={row.lineId}>
-              {row.first ? <td rowSpan={row.span}>{row.no}</td> : null}
-              {row.split ? (
-                <>
-                  {row.first ? (
-                    <td rowSpan={row.span} className="paper-left paper-nowrap">
-                      {row.name}
-                    </td>
-                  ) : null}
-                  <td className="paper-left paper-nowrap">{row.label}</td>
-                </>
-              ) : (
-                <td colSpan={2} className="paper-left paper-nowrap">
-                  {row.name}
-                </td>
-              )}
-              <td>{row.pointsNas}</td>
-              <td>{row.storageNas}</td>
-              <td>{row.pointsCloud}</td>
-              <td>{row.storageCloud}</td>
-              {days.map((d) => {
-                const tick = index.get(`${row.lineId}|${d.day}`);
-                return <td key={d.day}>{tick ? (tick.result === 'ok' ? '✓' : '✗') : ''}</td>;
-              })}
+    <PaperFit>
+      <section className="paper" data-page="a3l" aria-label="SP-IT0203">
+        <PaperHead code="SP-IT0203" title="System Data Checklist & Storage Record Form" />
+        <PaperMeta system={`System: ${systemName}`} checkDate={lastDayLabel(year, month)} />
+        <table className="paper-table">
+          <thead className="paper-fill-head">
+            <tr>
+              <th>No</th>
+              <th colSpan={2}>Name Job Backup</th>
+              <th>Points NAS</th>
+              <th>Storage location</th>
+              <th>Points Cloud</th>
+              <th>Storage location</th>
+              {days.map((d) => (
+                <th key={d.day}>{d.n}</th>
+              ))}
             </tr>
-          ))}
-          <tr className="paper-fill-note">
-            <td colSpan={3}>
-              <strong>Note</strong>
-            </td>
-            <td colSpan={4 + days.length}>Planned Monthly Data Storage Maintenance: Successful: &quot;✓&quot;, Failed: &quot;✗&quot;</td>
-          </tr>
-        </tbody>
-      </table>
-      <SignBlock left="IT Department" right="Implementation Personnel" />
-    </section>
+          </thead>
+          <tbody>
+            {grouped.map((row) => (
+              <tr key={row.lineId}>
+                {row.first ? <td rowSpan={row.span}>{row.no}</td> : null}
+                {row.split ? (
+                  <>
+                    {row.first ? (
+                      <td rowSpan={row.span} className="paper-left paper-nowrap">
+                        {row.name}
+                      </td>
+                    ) : null}
+                    <td className="paper-left paper-nowrap">{row.label}</td>
+                  </>
+                ) : (
+                  <td colSpan={2} className="paper-left paper-nowrap">
+                    {row.name}
+                  </td>
+                )}
+                <td>{row.pointsNas}</td>
+                <td>{row.storageNas}</td>
+                <td>{row.pointsCloud}</td>
+                <td>{row.storageCloud}</td>
+                {days.map((d) => {
+                  const tick = index.get(`${row.lineId}|${d.day}`);
+                  return <td key={d.day}>{tick ? (tick.result === 'ok' ? '✓' : '✗') : ''}</td>;
+                })}
+              </tr>
+            ))}
+            <tr className="paper-fill-note">
+              <td colSpan={3}>
+                <strong>Note</strong>
+              </td>
+              <td colSpan={4 + days.length}>Planned Monthly Data Storage Maintenance: Successful: &quot;✓&quot;, Failed: &quot;✗&quot;</td>
+            </tr>
+          </tbody>
+        </table>
+        <SignBlock left="IT Department" right="Implementation Personnel" />
+      </section>
+    </PaperFit>
   );
 }
 
@@ -159,61 +190,63 @@ export function AntivirusPaper({
   const results = avMarkIndex(clearDays, marks);
   const fmt = (day: string | null) => (day ? `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}` : '');
   return (
-    <section className="paper" data-page="a4l" aria-label="SP-IT0208">
-      <PaperHead code="SP-IT0208" title="Antivirus Health Check Form" />
-      <PaperMeta system={`System Antivirus: ${systemName}`} checkDate={lastDayLabel(year, month)} />
-      <table className="paper-table">
-        <thead className="paper-fill-head">
-          <tr>
-            <th>Reported Date</th>
-            <th>Computer Name</th>
-            <th>Incident Description</th>
-            <th>Resolution Date</th>
-            <th>Handled</th>
-            {days.map((d) => (
-              <th key={d.day}>{d.n}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {groups.map((group) => (
-            <Fragment key={group.divisionId}>
-              <tr className="paper-group">
-                <td colSpan={5}>{group.divisionName}</td>
-                <td colSpan={days.length} className="paper-fill-day" />
-              </tr>
-              {group.issues.map((issue) => (
-                <tr key={issue.id}>
-                  <td>{fmt(issue.reportedOn)}</td>
-                  <td>{issue.computerName}</td>
-                  <td className="paper-left">{issue.description}</td>
-                  <td>{fmt(issue.resolvedOn)}</td>
-                  <td>{issue.handledBy}</td>
-                  {days.map((d) => (
-                    <td key={d.day}>{avIssueMark(issue, d.day, results)}</td>
-                  ))}
-                </tr>
+    <PaperFit>
+      <section className="paper" data-page="a4l" aria-label="SP-IT0208">
+        <PaperHead code="SP-IT0208" title="Antivirus Health Check Form" />
+        <PaperMeta system={`System Antivirus: ${systemName}`} checkDate={lastDayLabel(year, month)} />
+        <table className="paper-table">
+          <thead className="paper-fill-head">
+            <tr>
+              <th>Reported Date</th>
+              <th>Computer Name</th>
+              <th>Incident Description</th>
+              <th>Resolution Date</th>
+              <th>Handled</th>
+              {days.map((d) => (
+                <th key={d.day}>{d.n}</th>
               ))}
-            </Fragment>
-          ))}
-          <tr className="paper-group">
-            <td colSpan={5}>Other Division</td>
-            {days.map((d) => (
-              <td key={d.day}>{avOtherMark(d.day, results)}</td>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((group) => (
+              <Fragment key={group.divisionId}>
+                <tr className="paper-group">
+                  <td colSpan={5}>{group.divisionName}</td>
+                  <td colSpan={days.length} className="paper-fill-day" />
+                </tr>
+                {group.issues.map((issue) => (
+                  <tr key={issue.id}>
+                    <td>{fmt(issue.reportedOn)}</td>
+                    <td>{issue.computerName}</td>
+                    <td className="paper-left">{issue.description}</td>
+                    <td>{fmt(issue.resolvedOn)}</td>
+                    <td>{issue.handledBy}</td>
+                    {days.map((d) => (
+                      <td key={d.day}>{avIssueMark(issue, d.day, results)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </Fragment>
             ))}
-          </tr>
-          <tr className="paper-fill-note">
-            <td>
-              <strong>Notes</strong>
-            </td>
-            <td colSpan={4 + days.length} className="paper-left">
-              Monthly Data Storage Maintenance Plan: Good Status: &quot;✓&quot;, Failure: &quot;✗&quot;
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <SignBlock left="IT Department" right="Implementation Personnel" />
-    </section>
+            <tr className="paper-group">
+              <td colSpan={5}>Other Division</td>
+              {days.map((d) => (
+                <td key={d.day}>{avOtherMark(d.day, results)}</td>
+              ))}
+            </tr>
+            <tr className="paper-fill-note">
+              <td>
+                <strong>Notes</strong>
+              </td>
+              <td colSpan={4 + days.length} className="paper-left">
+                Monthly Data Storage Maintenance Plan: Good Status: &quot;✓&quot;, Failure: &quot;✗&quot;
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <SignBlock left="IT Department" right="Implementation Personnel" />
+      </section>
+    </PaperFit>
   );
 }
 
@@ -352,54 +385,56 @@ export function IncidentPaper({ incident }: { incident: IncidentContent }) {
   const rows = incident.kind === 'backup' ? [...incident.backupDetails, ...Array(Math.max(0, 11 - incident.backupDetails.length)).fill(null)] : [];
   const reported = incident.reportedOn ? `${incident.reportedOn.slice(8, 10)}/${incident.reportedOn.slice(5, 7)}/${incident.reportedOn.slice(0, 4)}` : '';
   return (
-    <section className="paper" data-page="a4" aria-label="SP-IT0206">
-      <PaperHead code="SP-IT0206" title="DAILY INCIDENT REPORT FORM" rule />
-      <IncidentInfoTable
-        slots={{
-          reported,
-          detected: stamp(incident.detectedAt),
-          resolved: stamp(incident.resolvedAt),
-          kind: <Options labels={KIND_LABEL} value={incident.kind} />,
-          severity: <Options labels={SEVERITY_LABEL} value={incident.severity} />,
-          description: incident.description,
-          action: incident.correctiveAction,
-          status: <Options labels={STATUS_LABEL} value={incident.status} />,
-        }}
-      />
-      {incident.kind === 'backup' ? (
-        <table className="paper-table paper-form paper-detail">
-          {/* Như mẫu Word: sáu cột Type Backup / Type Data chỉ là ô tick hẹp đánh dấu job lỗi ở
-              đâu; chữ dài (tên job, thông báo lỗi) xuống dòng trong ô, không tràn sang cột bên. */}
-          <colgroup>
-            <col className="paper-col-job" />
-            {Array.from({ length: 6 }, (_, k) => (
-              <col key={k} className="paper-col-tick" />
-            ))}
-            <col className="paper-col-storage" />
-            <col />
-            <col />
-          </colgroup>
-          <BackupDetailHead />
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i}>
-                <td className="paper-left">{row?.jobName ?? ' '}</td>
-                {(['full', 'incr', 'copy'] as const).map((k) => (
-                  <td key={k}>{row?.typeBackup === k ? '✓' : ''}</td>
-                ))}
-                {(['db', 'app', 'filesv'] as const).map((k) => (
-                  <td key={k}>{row?.typeData === k ? '✓' : ''}</td>
-                ))}
-                <td>{row?.storage}</td>
-                <td className="paper-left">{row?.errorMessage}</td>
-                <td className="paper-left">{row?.resolution}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
-      <SignBlock left="Reported By" right="Reviewed and Approved By" joined />
-      <p className="muted small no-print">{t('iso.incident.signNote')}</p>
-    </section>
+    <PaperFit>
+      <section className="paper" data-page="a4" aria-label="SP-IT0206">
+        <PaperHead code="SP-IT0206" title="DAILY INCIDENT REPORT FORM" rule />
+        <IncidentInfoTable
+          slots={{
+            reported,
+            detected: stamp(incident.detectedAt),
+            resolved: stamp(incident.resolvedAt),
+            kind: <Options labels={KIND_LABEL} value={incident.kind} />,
+            severity: <Options labels={SEVERITY_LABEL} value={incident.severity} />,
+            description: incident.description,
+            action: incident.correctiveAction,
+            status: <Options labels={STATUS_LABEL} value={incident.status} />,
+          }}
+        />
+        {incident.kind === 'backup' ? (
+          <table className="paper-table paper-form paper-detail">
+            {/* Như mẫu Word: sáu cột Type Backup / Type Data chỉ là ô tick hẹp đánh dấu job lỗi ở
+                đâu; chữ dài (tên job, thông báo lỗi) xuống dòng trong ô, không tràn sang cột bên. */}
+            <colgroup>
+              <col className="paper-col-job" />
+              {Array.from({ length: 6 }, (_, k) => (
+                <col key={k} className="paper-col-tick" />
+              ))}
+              <col className="paper-col-storage" />
+              <col />
+              <col />
+            </colgroup>
+            <BackupDetailHead />
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i}>
+                  <td className="paper-left">{row?.jobName ?? ' '}</td>
+                  {(['full', 'incr', 'copy'] as const).map((k) => (
+                    <td key={k}>{row?.typeBackup === k ? '✓' : ''}</td>
+                  ))}
+                  {(['db', 'app', 'filesv'] as const).map((k) => (
+                    <td key={k}>{row?.typeData === k ? '✓' : ''}</td>
+                  ))}
+                  <td>{row?.storage}</td>
+                  <td className="paper-left">{row?.errorMessage}</td>
+                  <td className="paper-left">{row?.resolution}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+        <SignBlock left="Reported By" right="Reviewed and Approved By" joined />
+        <p className="muted small no-print">{t('iso.incident.signNote')}</p>
+      </section>
+    </PaperFit>
   );
 }

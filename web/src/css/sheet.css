@@ -492,6 +492,22 @@ button.sheet-mark:focus-visible {
   -webkit-print-color-adjust: exact;
 }
 
+/* Bản giấy vẽ ĐÚNG khổ rồi `PaperFit` thu cả khối vừa khung (iso-paper.tsx). Để trình duyệt tự
+   co thì bảng 0206 trên điện thoại bị bóp đến chồng chữ và lưới 0203 khuất ngày 30–31. */
+.paper-fit {
+  min-width: 0;
+  overflow-x: auto;
+}
+.paper[data-page='a4'] {
+  width: 210mm;
+}
+.paper[data-page='a4l'] {
+  width: 297mm;
+}
+.paper[data-page='a3l'] {
+  width: 420mm;
+}
+
 /* Đầu phiếu như mẫu SP-IT02: logo góc trái, mã phiếu ngay dưới logo, tên phiếu giữa trang (cột
    phải cùng bề rộng cột logo để tên đứng đúng giữa). */
 .paper-head {
@@ -784,5 +800,8 @@ button.sheet-mark:focus-visible {
     border: 0;
     border-radius: 0;
     overflow: visible;
+    /* Giấy là khổ thật: bỏ bề rộng màn hình và hệ số thu của PaperFit. */
+    width: auto;
+    zoom: normal !important;
   }
 }
