@@ -449,6 +449,17 @@
 }
 /* Tab xuống dòng (`wrap`): không cuộn ngang, không mép mờ — mọi tab thấy được, quá ba hàng thì
    cuộn dọc trong khung. */
+.tabs-shell[data-single='true'] {
+  display: none;
+}
+@media (max-width: 480px) {
+  .tabs[data-few='true'] > .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: var(--space-3);
+  }
+}
 .tabs[data-wrap='true'] {
   flex-wrap: wrap;
   overflow-x: visible;

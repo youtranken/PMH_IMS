@@ -150,6 +150,8 @@ export function Tabs({
       /* Chừa chỗ mũi tên ở CẢ HAI mép khi thanh tràn — không chỉ lúc mũi tên đang hiện: đệm bật
          tắt theo mép thì thanh co giãn ngay dưới con trỏ khi vừa cuộn khỏi mép. */
       data-overflow={overflow ? 'true' : undefined}
+      // Một tab thì thanh tab trông như hỏng (PW-C13): CSS ẩn đi, tab vẫn ở DOM để panel giữ tên.
+      data-single={items.length === 1 ? 'true' : undefined}
     >
     {!wrap && edges.start ? (
       <button type="button" className="tabs-arrow" data-side="start" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(-1)}>
@@ -167,6 +169,8 @@ export function Tabs({
       // Có vạch trượt thì CSS bỏ gạch chân riêng của tab đang chọn (không vẽ hai vạch).
       data-ink={ink ? 'true' : undefined}
       data-wrap={wrap ? 'true' : undefined}
+      // Ít tab: màn hẹp chia đều bề ngang thay vì cuộn và cắt chữ tab cuối (PW-C05).
+      data-few={items.length <= 3 ? 'true' : undefined}
     >
       {items.map((item, index) => (
         <Fragment key={item.key}>

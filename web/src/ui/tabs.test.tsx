@@ -267,3 +267,19 @@ describe('Tabs — panel={false}', () => {
     expect(screen.getByRole('tab', { name: 'Xem' })).not.toHaveAttribute('aria-controls');
   });
 });
+
+/** PW-C13 / PW-C05: thanh tab một tab trông như hỏng; ba tab ngắn ở 390px vẫn phải cuộn. */
+describe('Tabs — ít tab', () => {
+  it('một tab: đánh dấu data-single (CSS ẩn thanh), tab vẫn ở DOM cho aria-labelledby', () => {
+    renderWithI18n(<Tabs ariaLabel="Mục" value="a" onChange={() => undefined} items={[{ key: 'a', label: 'Quyền' }]} />);
+    const list = screen.getByRole('tablist', { hidden: true });
+    expect(list.closest('.tabs-shell')).toHaveAttribute('data-single', 'true');
+    expect(document.getElementById('tab-a')).not.toBeNull();
+  });
+  it('≤3 tab: data-few để chia đều ở màn hẹp', () => {
+    renderWithI18n(
+      <Tabs ariaLabel="Mục" value="a" onChange={() => undefined} items={[{ key: 'a', label: 'A' }, { key: 'b', label: 'B' }, { key: 'c', label: 'C' }]} />,
+    );
+    expect(screen.getByRole('tablist')).toHaveAttribute('data-few', 'true');
+  });
+});
