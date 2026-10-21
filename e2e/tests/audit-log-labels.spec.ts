@@ -45,7 +45,7 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
     await expect(link).toBeVisible();
     // UUID không mất: vẫn ở tooltip và có nút chép.
     await expect(link).toHaveAttribute('title', userId);
-    await expect(row.getByRole('button', { name: 'Chép mã đối tượng' })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Sao chép mã đối tượng' })).toBeVisible();
 
     await link.click();
     await expect(page).toHaveURL(/\/admin\/accounts\?q=/);

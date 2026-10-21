@@ -167,7 +167,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const [onlyEmpty, setOnlyEmpty] = useState(false);
   const [grantingScope, setGrantingScope] = useState<ScopeOption | null>(null);
   const [addingFor, setAddingFor] = useState<AccountRow | null>(null);
-  /** Người NHẬN của "Sao chép quyền từ…" — chọn đồng nghiệp nằm trong hộp. */
+  /** Người NHẬN của "Chép quyền từ…" — chọn đồng nghiệp nằm trong hộp. */
   const [copyingFor, setCopyingFor] = useState<AccountRow | null>(null);
   /** Ô / chip đang mở để đặt/gỡ quyền. `rule` null = đang gán mới. */
   const [cell, setCell] = useState<{
@@ -1476,7 +1476,7 @@ function MultiGrantDialog({
 }
 
 /**
- * "Sao chép quyền từ…" — người mới vào tổ thường cần đúng bộ quyền của một đồng nghiệp cùng tổ.
+ * "Chép quyền từ…" — người mới vào tổ thường cần đúng bộ quyền của một đồng nghiệp cùng tổ.
  * Gán tay từng nhóm là chỗ dễ sót một nhóm hoặc chọn nhầm tầng.
  *
  * Chỉ dùng API gán sẵn có (`POST /vault/access`, SA/Admin + step-up) — mỗi nhóm một dòng, một

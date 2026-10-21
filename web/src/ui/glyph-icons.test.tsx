@@ -65,8 +65,8 @@ describe('Hình nhỏ trên nút là SVG, không phải ký tự', () => {
   /* Nút chép không dùng ký tự ⧉ / ✓: mỗi phông vẽ một kiểu, có phông không có glyph đó (Q-20). */
   it('nút chép vẽ SVG (CopyIcon), bấm xong đổi sang CheckIcon — không ký tự nào', async () => {
     vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn(() => Promise.resolve()) } });
-    renderWithI18n(<CopyButton value="10.0.0.1" label="Chép IP" />);
-    const button = screen.getByRole('button', { name: 'Chép IP' });
+    renderWithI18n(<CopyButton value="10.0.0.1" label="Sao chép IP" />);
+    const button = screen.getByRole('button', { name: 'Sao chép IP' });
     expect(button.textContent).toBe('');
     expect(button.querySelector('svg.glyph-copy')).not.toBeNull();
     await userEvent.click(button);

@@ -217,7 +217,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     sql(`UPDATE device SET access_points = jsonb_build_array(jsonb_build_object('kind', 'ssh', 'address', '10.0.0.1;id', 'port', NULL)) WHERE id = '${id}'`);
     await page.goto(`/devices/${id}`);
     await expect(page.getByText('10.0.0.1;id')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Chép lệnh' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Sao chép lệnh' })).toHaveCount(0);
     await expect(page.locator('code')).toHaveCount(0);
   });
 

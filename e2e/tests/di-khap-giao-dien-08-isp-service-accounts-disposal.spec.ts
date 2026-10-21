@@ -513,7 +513,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ĐÚNG BỘ NÚT ĐẦU TRANG (khuôn C, Q-27):
-     *   - "Chép IP WAN <ip>" và "Chép số hợp đồng" ở dải 4 ô (mỗi IP WAN một nút — Q-20),
+     *   - "Sao chép IP WAN <ip>" và "Sao chép số hợp đồng" ở dải 4 ô (mỗi IP WAN một nút — Q-20),
      *   - "Sửa hồ sơ" + ⋯ ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04),
      *   - "Bổ sung n ô còn thiếu" ở đầu khối Thông số (tab Tổng quan mở sẵn): hồ sơ này chưa khai site.
      * Mã hồ sơ CỐ Ý không có nút chép — nó là tiêu đề, bôi đen chép như mọi chữ khác. Tập hợp
@@ -521,14 +521,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await nameByRole(main, 'button'),
-      'Đầu trang hồ sơ đường truyền: Chép IP WAN · Chép số hợp đồng (dải 4 ô) · Sửa hồ sơ · menu ⋯ · Bổ sung ô thiếu',
+      'Đầu trang hồ sơ đường truyền: Sao chép IP WAN · Sao chép số hợp đồng (dải 4 ô) · Sửa hồ sơ · menu ⋯ · Bổ sung ô thiếu',
     ).toEqual(
       sortVi([
         'Bổ sung 1 ô còn thiếu',
-        'Chép IP WAN 203.113.99.9',
+        'Sao chép IP WAN 203.113.99.9',
         'Sửa hồ sơ',
         `Thao tác với ${itemCode}`,
-        'Chép số hợp đồng',
+        'Sao chép số hợp đồng',
         // UX-E26: dòng "Tạo … · sửa lần cuối …" dưới dải 4 ô, bấm mở tab Lịch sử.
         lastEditButton(),
       ]),
@@ -807,7 +807,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    *
    * ĐỎ KHI: menu dòng thiếu/thừa mục ở một trong hai trạng thái; cột Thao tác lọt vào màn của
    * Thành viên; trang hồ sơ thiếu/thừa nút (chép, "Sửa hồ sơ", ba chấm đổi theo trạng thái); hoặc
-   * nút "Chép tên đăng nhập" rơi mất.
+   * nút "Sao chép tên đăng nhập" rơi mất.
    */
   test('Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ có Chép · Sửa hồ sơ · ba chấm, Thành viên không thấy ba chấm', async ({
     page,
@@ -922,11 +922,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await nameByRole(page.getByRole('main'), 'button'),
-      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ, ba chấm, Bổ sung ô thiếu ở khối Thông tin — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
+      'Hồ sơ tài khoản dịch vụ của SA: Sao chép tên đăng nhập, Sửa hồ sơ, ba chấm, Bổ sung ô thiếu ở khối Thông tin — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
     ).toEqual(
       sortVi([
         'Bổ sung 2 ô còn thiếu',
-        'Chép tên đăng nhập',
+        'Sao chép tên đăng nhập',
         'Sửa hồ sơ',
         `Thao tác với ${activeCode}`,
         'Cất vào két',

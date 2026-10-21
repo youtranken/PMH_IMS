@@ -102,7 +102,7 @@ describe('Màn Nhật ký', () => {
     const link = await screen.findByRole('link', { name: /PC-KT-01/ });
     expect(link).toHaveAttribute('href', '/devices/abc');
     expect(link).toHaveAttribute('title', ROW.objectId);
-    expect(screen.getByRole('button', { name: 'Chép mã đối tượng' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sao chép mã đối tượng' })).toBeInTheDocument();
     // Xem két tô màu cảnh báo — nhãn nằm trong huy hiệu `warn`.
     expect(screen.getByText('Xem mật khẩu trong két')).toHaveClass('badge', 'warn');
   });

@@ -476,8 +476,8 @@ test.describe('Đường truyền — nhiều IP WAN', () => {
 
     await row.getByRole('link', { name: code, exact: true }).click();
     const main = page.getByRole('main');
-    await expect(main.getByRole('button', { name: `Chép IP WAN ${ipA}` })).toBeVisible();
-    await expect(main.getByRole('button', { name: `Chép IP WAN ${ipB}` })).toBeVisible();
+    await expect(main.getByRole('button', { name: `Sao chép IP WAN ${ipA}` })).toBeVisible();
+    await expect(main.getByRole('button', { name: `Sao chép IP WAN ${ipB}` })).toBeVisible();
   });
 
   test('đường hỏng qua API: dải và IP trùng trong cùng đường bị chặn đúng mã lỗi', async ({ page }) => {

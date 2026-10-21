@@ -503,11 +503,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     );
     // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày; nó điền sẵn hôm nay nên có nút "Xóa ngày".
     // Nút chính mang đúng tên việc: "Cấp IP".
-    // "Chép Mask": khối "Cấu hình cho máy" — thứ người cắm máy gõ vào card mạng.
+    // "Sao chép Mask": khối "Cấu hình cho máy" — thứ người cắm máy gõ vào card mạng.
     await expectHandles(
       assign,
       'button',
-      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP', 'Chép Mask'],
+      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP', 'Sao chép Mask'],
       'Hộp "Cấp IP"',
     );
 

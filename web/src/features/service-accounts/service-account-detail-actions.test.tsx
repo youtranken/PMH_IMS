@@ -116,7 +116,7 @@ describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
     renderAs('sa');
     const strip = await screen.findByRole('group', { name: 'Tóm tắt tài khoản' });
     expect(strip).toHaveTextContent('Tên đăng nhậpketoan');
-    expect(screen.getByRole('button', { name: 'Chép tên đăng nhập' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sao chép tên đăng nhập' })).toBeInTheDocument();
     // VPN để trống dải IP là mở cho mọi IP — huy hiệu nằm ở ô thứ tư.
     expect(strip).toHaveTextContent('Mọi IP');
     // Chưa có người phụ trách: ô vẫn đứng, ghi "chưa khai".

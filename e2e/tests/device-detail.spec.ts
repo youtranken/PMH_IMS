@@ -80,7 +80,7 @@ test.describe('Trang chi tiết thiết bị', () => {
        dòng S/N dưới tiêu đề. */
     const quick = page.getByRole('tabpanel');
     await expect(quick.getByText(`FOC-${code}`, { exact: true })).toBeVisible();
-    await expect(quick.getByRole('button', { name: 'Chép serial' })).toBeVisible();
+    await expect(quick.getByRole('button', { name: 'Sao chép serial' })).toBeVisible();
     await expect(page.getByText(`FOC-${code}`, { exact: true })).toHaveCount(1);
 
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();

@@ -87,8 +87,8 @@ describe('Hộp Xem két, bước giá trị — ngăn Mã 2 lớp', () => {
   it('có nút chép khóa và chép mã hiện tại', () => {
     renderTotp();
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('button', { name: 'Chép khóa bí mật' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Chép mã hiện tại' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Sao chép khóa bí mật' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Sao chép mã hiện tại' })).toBeInTheDocument();
   });
 
   it('vẫn tự ẩn sau đúng số giây như mọi ngăn', () => {
