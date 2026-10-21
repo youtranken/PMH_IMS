@@ -350,44 +350,46 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               </button>
             )}
             <ThemeSwitch />
+            {/* Câu đọc số đếm của badge menu (đích `aria-describedby`) nằm TRONG landmark: để
+                ngoài mọi landmark thì axe báo `region` ở mọi màn (AX-03). */}
+            {pendingApprovals > 0 ? (
+              <span id={PENDING_APPROVALS_ID} className="sr-only">
+                {t('approvals.navBadge', { count: pendingApprovals })}
+              </span>
+            ) : null}
+            {overdue > 0 ? (
+              <span id={OVERDUE_ID} className="sr-only">
+                {t('expiry.navBadge', { count: overdue })}
+              </span>
+            ) : null}
+            {diagramReviews > 0 ? (
+              <span id={DIAGRAM_REVIEWS_ID} className="sr-only">
+                {t('diagrams.reviewQueue.navBadge', { count: diagramReviews })}
+              </span>
+            ) : null}
+            {failedMail > 0 ? (
+              <span id={FAILED_MAIL_ID} className="sr-only">
+                {t('failedMail.navBadge', { count: failedMail })}
+              </span>
+            ) : null}
+            {isoTodo.count > 0 ? (
+              <span id={ISO_TODO_ID} className="sr-only">
+                {t('iso.navBadge', { count: isoTodo.count })}
+              </span>
+            ) : null}
+            {isoTodo.periods > 0 ? (
+              <span id={ISO_PERIODS_ID} className="sr-only">
+                {t('iso.navBadgePeriods', { count: isoTodo.periods })}
+              </span>
+            ) : null}
+            {isoTodo.unlinked > 0 ? (
+              <span id={ISO_UNLINKED_ID} className="sr-only">
+                {t('iso.navBadgeUnlinked', { count: isoTodo.unlinked })}
+              </span>
+            ) : null}
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
           <CommandPalette me={me} />
-          {pendingApprovals > 0 ? (
-            <span id={PENDING_APPROVALS_ID} className="sr-only">
-              {t('approvals.navBadge', { count: pendingApprovals })}
-            </span>
-          ) : null}
-          {overdue > 0 ? (
-            <span id={OVERDUE_ID} className="sr-only">
-              {t('expiry.navBadge', { count: overdue })}
-            </span>
-          ) : null}
-          {diagramReviews > 0 ? (
-            <span id={DIAGRAM_REVIEWS_ID} className="sr-only">
-              {t('diagrams.reviewQueue.navBadge', { count: diagramReviews })}
-            </span>
-          ) : null}
-          {failedMail > 0 ? (
-            <span id={FAILED_MAIL_ID} className="sr-only">
-              {t('failedMail.navBadge', { count: failedMail })}
-            </span>
-          ) : null}
-          {isoTodo.count > 0 ? (
-            <span id={ISO_TODO_ID} className="sr-only">
-              {t('iso.navBadge', { count: isoTodo.count })}
-            </span>
-          ) : null}
-          {isoTodo.periods > 0 ? (
-            <span id={ISO_PERIODS_ID} className="sr-only">
-              {t('iso.navBadgePeriods', { count: isoTodo.periods })}
-            </span>
-          ) : null}
-          {isoTodo.unlinked > 0 ? (
-            <span id={ISO_UNLINKED_ID} className="sr-only">
-              {t('iso.navBadgeUnlinked', { count: isoTodo.unlinked })}
-            </span>
-          ) : null}
           {/*
             `inert` khi drawer đang mở ở màn hẹp — nội dung trang thôi nhận chuột,
             tiêu điểm và trình đọc màn hình.

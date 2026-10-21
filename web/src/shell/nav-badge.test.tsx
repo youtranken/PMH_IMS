@@ -67,6 +67,8 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     const link = within(nav).getByRole('link', { name: 'Duyệt mở két' });
     expect(await within(link).findByText('2')).toBeInTheDocument();
     expect(link).toHaveAccessibleDescription('2 Yêu cầu chờ duyệt');
+    // AX-03: câu mô tả nằm trong một landmark (banner), không trôi ngoài mọi landmark.
+    expect(screen.getByText('2 Yêu cầu chờ duyệt').closest('header, nav, main')).not.toBeNull();
   });
 
   it('không có gì chờ → không vẽ badge (số 0 không nói thêm gì)', async () => {
