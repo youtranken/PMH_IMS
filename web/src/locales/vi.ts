@@ -4523,7 +4523,7 @@ export default {
       subtitle: 'Mỗi sự cố một phiếu',
       add: 'Lập 0206',
       needIncident: 'Ô ✗ chưa có phiếu 0206',
-      filters: 'Lọc phiếu sự cố',
+      search: 'Tìm số phiếu, mô tả, job / máy',
       year: 'Năm',
       month: 'Tháng',
       allMonths: 'Tất cả các tháng',
