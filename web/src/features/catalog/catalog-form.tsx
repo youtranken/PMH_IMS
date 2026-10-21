@@ -330,6 +330,7 @@ export function CatalogForm({
           <Field
             label={t('catalog.code')}
             required
+            size="s"
             htmlFor="catalog-code"
             hint={
               cabinetNo !== null

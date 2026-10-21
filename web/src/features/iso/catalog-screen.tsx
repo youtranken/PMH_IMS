@@ -303,7 +303,7 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
           <Field label={t('iso.field.jobName')} required htmlFor="iso-job-name" error={check.error('name')}>
             <input id="iso-job-name" className="inp mono" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label={t('iso.catalog.no')} required htmlFor="iso-job-no" error={check.error('no')}>
+          <Field label={t('iso.catalog.no')} required size="xs" htmlFor="iso-job-no" error={check.error('no')}>
             <input id="iso-job-no" className="inp" inputMode="numeric" value={no} onChange={(e) => setNo(e.target.value)} />
           </Field>
           <Field label={t('iso.catalog.trackedFrom')} required hint={t('iso.catalog.trackedFromHint')} htmlFor="iso-job-from">

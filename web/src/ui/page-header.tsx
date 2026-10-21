@@ -131,9 +131,15 @@ export function Field({
   htmlFor,
   span,
   tip,
+  size,
   children,
 }: {
   label: string;
+  /**
+   * Bề ngang ô theo độ dài NỘI DUNG (FM-16), không theo ô lưới: `xs` ~8 ký tự (số thứ tự, VLAN,
+   * U), `s` ~18 ký tự (mã, cổng). Bỏ trống = rộng hết ô lưới như cũ.
+   */
+  size?: 'xs' | 's';
   /**
    * Ô bắt buộc — vẽ dấu `*` và, với `Select`/`Combobox`, kéo theo `aria-required`/`required`.
    *
@@ -228,7 +234,7 @@ export function Field({
   );
 
   return (
-    <div className={`field${span ? ` span-${span}` : ''}`}>
+    <div className={`field${span ? ` span-${span}` : ''}`} data-size={size}>
       {/* Nút (i) đứng NGOÀI `<label>`: nằm trong thì tên của nút lọt vào tên trợ năng của ô
           ("Serial Giải thích: Serial"), `getByLabel('Serial', { exact: true })` hết khớp. */}
       {tip ? (

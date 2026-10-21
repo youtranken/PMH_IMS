@@ -196,6 +196,7 @@ export function SubnetForm({
 
         <Field
           label={t('ipam.vlan')}
+          size="xs"
           hint={t('ipam.vlanHint')}
           htmlFor="subnet-vlan"
           error={check.error('vlan')}

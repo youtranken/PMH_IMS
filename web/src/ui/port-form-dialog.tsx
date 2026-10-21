@@ -430,7 +430,7 @@ export function PortFormDialog({
             ]}
           />
         </Field>
-        <Field label={t('ports.vlan')} hint={t('ports.vlanHint')} htmlFor="port-vlan">
+        <Field label={t('ports.vlan')} hint={t('ports.vlanHint')} size="xs" htmlFor="port-vlan">
           <input id="port-vlan" className="inp mono" placeholder={t('ports.phVlan')} value={vlan} onChange={(e) => setVlan(e.target.value)} />
         </Field>
 
