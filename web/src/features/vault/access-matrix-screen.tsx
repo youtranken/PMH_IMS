@@ -484,6 +484,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('access.title')}
+        titleTip={t('access.defaultDenied')}
         actions={
           <button type="button" className="btn" onClick={() => setChecking(true)}>
             {t('access.check')}
@@ -533,12 +534,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           </label>
         </FilterBar>
 
-        {/* Mặc định-không-có-quyền và dòng tổng là MỘT khối thông tin: tách hai thì câu chú thích
-            trông như chữ lạc, và cỡ chữ lộn thứ bậc. Dòng tổng chỉ hiện khi CẢ BA truy vấn xong
-            và không lỗi — thiếu một cái là mọi con số ở đây thành số bịa. */}
-        <div className="alert info access-intro">
-          <p>{t('access.defaultDenied')}</p>
-          {!loading && !failed ? (
+        {/* Băng chỉ giữ dòng tổng (PW-C12): luật mặc-định-không-có-quyền đã nằm ở nút (i) cạnh tiêu
+            đề. Dòng tổng chỉ hiện khi CẢ BA truy vấn xong và không lỗi — thiếu một cái là mọi con
+            số ở đây thành số bịa. */}
+        {!loading && !failed ? (
+          <div className="alert info access-intro">
             <p>
               {t('access.summaryMain', {
                 people: members.length,
@@ -564,8 +564,8 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                 t('access.summaryEmpty', { count: emptyScopes })
               )}
             </p>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {content}
 

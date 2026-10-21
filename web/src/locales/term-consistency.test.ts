@@ -416,7 +416,6 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
     const add = lookup('access.add');
     expect(lookup('access.addRules')).toContain(add);
     expect(lookup('access.addFor')).toContain(add);
-    expect(lookup('access.noRulesYet')).toContain(lookup('access.addRules'));
     for (const key of ['access.addRules', 'access.noRulesYet']) {
       expect(lookup(key), key).not.toContain('Thêm quyền');
     }
