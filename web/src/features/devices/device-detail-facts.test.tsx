@@ -53,4 +53,14 @@ describe('Chi tiết thiết bị — mỗi thông tin nói một lần', () => 
     expect(within(spec).queryByText('Phòng ban')).toBeNull();
     expect(within(spec).getByText('Ngày mua')).toBeInTheDocument();
   });
+
+  // PW-A27: cùng thứ tự tab với phần mềm / đường truyền / TK dịch vụ.
+  it('tab: Két sắt đứng trước Giấy tờ, Lịch sử cuối', async () => {
+    renderDeviceDetail();
+    const tabs = (await screen.findAllByRole('tab')).map((tab) => tab.textContent ?? '');
+    const at = (name: string) => tabs.findIndex((label) => label.startsWith(name));
+    expect(at('Két sắt')).toBeGreaterThan(-1);
+    expect(at('Két sắt')).toBeLessThan(at('Giấy tờ'));
+    expect(at('Lịch sử')).toBe(tabs.length - 1);
+  });
 });

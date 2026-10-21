@@ -283,16 +283,17 @@ export function DeviceDetail({ me }: { me: Me }) {
         ? ((panels.data ?? []).find((panel) => panel.key === "software")?.items.length ?? 0)
         : undefined,
     },
-    {
-      key: "attachments",
-      label: t("devices.tabAttachments"),
-      count: counts.files,
-    },
+    // Một thứ tự cho mọi trang chi tiết (PW-A27): Tổng quan · (tab riêng) · Két sắt · Giấy tờ · Lịch sử.
     // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
     // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
     ...(canVault
       ? [{ key: "vault", label: t("vault.tab"), count: counts.secrets }]
       : []),
+    {
+      key: "attachments",
+      label: t("devices.tabAttachments"),
+      count: counts.files,
+    },
     { key: "history", label: t("devices.tabHistory") },
   ];
   const safeTab = useVisibleTab(
