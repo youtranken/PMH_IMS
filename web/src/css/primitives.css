@@ -1871,18 +1871,6 @@ button.tree-summary:hover:not(:disabled) {
   color: var(--ink-2);
   font-size: var(--fs-xs);
 }
-/* Thêm KHU (con của gốc) khác thêm ô trong khu: viền dày hơn để hai nút cạnh nhau không trông như một. */
-.dmap-add-area > button {
-  border-width: 2px;
-}
-.dmap-add-area {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.dmap-add-area p {
-  margin: 0;
-}
 .dmap-presentations .form-section-title {
   margin: 0 0 var(--space-3);
 }

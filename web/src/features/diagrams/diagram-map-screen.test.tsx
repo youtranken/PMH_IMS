@@ -450,7 +450,7 @@ describe('Panel bản vẽ đang chọn', () => {
     await user.keyboard('{Escape}');
     renderScreen('/diagrams?node=r1', ME);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));
-    expect(await menuNames()).toEqual(['Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ', 'Xóa hẳn']);
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con', 'Đổi tên / chuyển chỗ', 'Lưu trữ', 'Xóa hẳn']);
   });
 
   it('Xóa hẳn: gõ đúng tên mới bật nút; gửi tên lên server', async () => {
@@ -480,12 +480,14 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(kt).toHaveTextContent('4 Bản nháp');
   });
 
-  it('hai nút thêm cạnh nhau nói rõ đích: "+ Bản vẽ con vào <khu>" và "+ Khu mới trong <gốc>"', async () => {
+  // PW-B22: một từ "bản vẽ con" cho mọi lối thêm; không còn ô "+ Khu mới" kề ô thêm của khu cuối.
+  it('ô thêm trong khu nói rõ đích; gốc đã có khu không còn ô "+ Khu mới"', async () => {
     routeFetch({});
     renderScreen('/diagrams');
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     expect(within(map).getByRole('button', { name: 'Thêm bản vẽ con vào "Tầng 1 E2E"' })).toHaveTextContent('+ Bản vẽ con vào Tầng 1 E2E');
-    expect(within(map).getByRole('button', { name: 'Thêm bản vẽ con vào "Toàn công ty E2E"' })).toHaveTextContent('+ Khu mới trong Toàn công ty E2E');
+    expect(within(map).queryByRole('button', { name: 'Thêm bản vẽ con vào "Toàn công ty E2E"' })).toBeNull();
+    expect(within(map).queryByText(/Khu mới/)).toBeNull();
   });
 
   it('"+ Bản vẽ con" trên khu mở hộp thêm con đúng bản cha', async () => {

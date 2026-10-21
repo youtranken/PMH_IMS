@@ -155,13 +155,6 @@ export function DiagramMapView({ map, nodes, selected, filter, now, onSelect, on
                   </ul>
                 </li>
               ))}
-              {/* Nút này đứng cạnh nút thêm của khu cuối: chữ phải nói ĐÍCH, không thì bấm nhầm là bản vẽ
-                  nằm sai nhánh. */}
-              <li className="dmap-add dmap-add-area">
-                <button type="button" aria-label={t('diagrams.addChildOf', { name: root.node.name })} onClick={() => onAddChild(root.node)}>
-                  {t('diagrams.map.addArea', { name: root.node.name })}
-                </button>
-              </li>
             </ul>
           )}
         </section>
