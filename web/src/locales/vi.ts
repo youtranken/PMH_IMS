@@ -18,6 +18,9 @@ export default {
        người vận hành IMS và thứ cần gửi kèm. */
     serverError:
       'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.',
+    serverErrorSa:
+      'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, xem log của dịch vụ api trên máy chủ theo mốc giờ ở "Chi tiết kỹ thuật".',
+    loadErrorTitle: 'Không tải được',
     retry: 'Thử lại',
     techDetails: 'Chi tiết kỹ thuật',
     techStatus: 'HTTP {{status}}',

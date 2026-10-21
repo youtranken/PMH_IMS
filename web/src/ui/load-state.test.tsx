@@ -122,3 +122,46 @@ describe('ScreenError', () => {
     expect(reload.parentElement).toHaveClass('error-actions');
   });
 });
+
+/** ST-04: khối lỗi tải — câu dài đậm đỏ, "Thử lại" không nổi, không tự thử lại khi mạng về. */
+describe('LoadError — dễ đọc, tự thử lại', () => {
+  it('tiêu đề ngắn + nút Thử lại là nút chính', () => {
+    renderWithI18n(<LoadError error={new ApiError(502, null)} onRetry={vi.fn()} />);
+    expect(screen.getByText('Không tải được')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Thử lại' })).toHaveClass('primary');
+  });
+  it('mạng về (online) hoặc quay lại tab (focus) thì tự gọi onRetry', () => {
+    const onRetry = vi.fn();
+    renderWithI18n(<LoadError error={new TypeError('Failed to fetch')} onRetry={onRetry} />);
+    window.dispatchEvent(new Event('online'));
+    window.dispatchEvent(new Event('focus'));
+    expect(onRetry).toHaveBeenCalledTimes(2);
+  });
+  it('403 thì không tự thử lại (bấm bao nhiêu cũng 403)', () => {
+    const onRetry = vi.fn();
+    renderWithI18n(<LoadError error={new ApiError(403, null)} onRetry={onRetry} />);
+    window.dispatchEvent(new Event('online'));
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+});
+
+describe('LoadError — câu theo vai', () => {
+  it('SA xem lỗi 5xx: không bảo "gửi cho Super Admin" (chính họ)', async () => {
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { render } = await import('@testing-library/react');
+    const { I18nextProvider } = await import('react-i18next');
+    const i18n = (await import('@/lib/i18n')).default;
+    const { ME_KEY } = await import('@/lib/me');
+    const qc = new QueryClient();
+    qc.setQueryData(ME_KEY, { role: 'sa' });
+    render(
+      <QueryClientProvider client={qc}>
+        <I18nextProvider i18n={i18n}>
+          <LoadError error={new ApiError(502, null)} onRetry={vi.fn()} />
+        </I18nextProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/cho Super Admin/)).toBeNull();
+    expect(screen.getByText(/xem log của dịch vụ api/)).toBeInTheDocument();
+  });
+});

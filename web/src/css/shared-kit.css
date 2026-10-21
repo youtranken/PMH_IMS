@@ -2363,10 +2363,16 @@ html[data-motion='off'] .spinner {
   flex-direction: column;
   gap: var(--space-4);
 }
-.load-error-text {
+/* Tiêu đề ngắn đỏ đậm, câu giải thích chữ thường (ST-04): cả câu dài đậm đỏ thì khó đọc và
+   át mất nút Thử lại. */
+.load-error-title {
   margin: 0;
   color: var(--danger-strong);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
+}
+.load-error-text {
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
 }
 .load-error-actions button {
   min-height: 40px;
