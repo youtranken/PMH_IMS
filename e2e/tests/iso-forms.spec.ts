@@ -368,7 +368,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
 
     await page.goto(`/iso/incidents/${id}`);
     await expect(page.getByRole('heading', { name: `Phiếu ${code}` })).toBeVisible();
-    await expect(page.getByText('Kỳ của phiếu đang chờ Super Admin / Quản trị duyệt — chỉ xem.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Kỳ đang chờ duyệt · chỉ xem.', { exact: false })).toBeVisible();
     await expect(page.getByLabel('Chọn file để đính kèm')).toHaveCount(0);
     const res = await api(page, 'PATCH', `/api/v1/iso/incidents/${id}`, { ...content, description: 'E2E sửa khi chờ duyệt' });
     expect(res.status()).toBe(409);
