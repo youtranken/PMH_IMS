@@ -117,7 +117,7 @@ export function RackMoveDialog({
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()} title={t(declare ? 'diagrams.rack.declareTitle' : 'diagrams.rack.moveTitle')} maxWidth={460} initialFocus="first-field" footer={footer}>
       <p role="status">{t(declare ? 'diagrams.rack.declareSummary' : 'diagrams.rack.moveSummary', { code: item.code, from, to, u: valid ? u : '?', size: item.uSize })}</p>
       <p className="muted small">
-        {declare ? t('diagrams.rack.declareHint', { code: item.code }) : <>{t('diagrams.rack.moveHint')} {revert ? t('diagrams.rack.moveHintRevert') : null}</>}
+        {declare ? t('diagrams.rack.declareHint') : <>{t('diagrams.rack.moveHint')} {revert ? t('diagrams.rack.moveHintRevert') : null}</>}
       </p>
       {full ? (
         <p className="alert warn" role="alert">
