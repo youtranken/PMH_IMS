@@ -22,6 +22,9 @@ import { ISO_KEY, useDivisions, useIsoWrite, useJobs, useOwners } from './iso-ap
 import { canWriteForm, lineStorage, pointsError } from './iso-rules';
 import type { Division, FormOwners, IsoPerson, Job, JobLine } from './iso-types';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { MobileCardList } from '@/ui/data-table';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 type Tab = 'jobs' | 'divisions' | 'owners';
 const TABS: Tab[] = ['jobs', 'divisions', 'owners'];
@@ -90,6 +93,28 @@ function JobsTab({ me }: { me: Me }) {
   const fail = (err: unknown) => toast({ message: errorMessage(err), tone: 'error' });
   const list = jobs.data ?? [];
 
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
+  const jobStatus = (job: Job) =>
+    job.stoppedOn ? (
+      <span className="badge muted">{t('iso.catalog.stoppedOn', { day: formatDate(job.stoppedOn) })}</span>
+    ) : (
+      <span className="badge ok">{t('iso.catalog.live')}</span>
+    );
+  const jobActions = (job: Job) => (
+    <RowActions
+      label={t('common.actionsOf', { subject: job.name })}
+      primary={{ label: t('common.edit'), ariaLabel: t('common.editOf', { subject: job.name }), onClick: () => setEditing(job) }}
+      items={
+        job.stoppedOn
+          ? [{ key: 'resume', label: t('iso.catalog.resume'), ok: true, onSelect: () => write.mutate({ id: job.id, path: 'resume' }, { onError: fail }) }]
+          : [
+              { key: 'up', label: t('iso.catalog.moveUp'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'up' } }, { onError: fail }) },
+              { key: 'down', label: t('iso.catalog.moveDown'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'down' } }, { onError: fail }) },
+              { key: 'stop', label: t('iso.catalog.stop'), warn: true, onSelect: () => setStopping(job) },
+            ]
+      }
+    />
+  );
   return (
     <section>
       <div className="sheet-toolbar">
@@ -118,6 +143,21 @@ function JobsTab({ me }: { me: Me }) {
         <LoadError error={jobs.error} onRetry={() => void jobs.refetch()} />
       ) : list.length === 0 ? (
         <EmptyState title={t('iso.catalog.noJobs')} hint={t('iso.catalog.noJobsHint')} />
+      ) : narrow ? (
+        /* ≤600px: thẻ "1 · PMH-Twin" + trạng thái + một dòng đối tượng con, thay thẻ 8 dòng
+           nhãn ~390px mỗi job (PW-B31). */
+        <MobileCardList
+          rows={list}
+          rowKey={(job) => job.id}
+          card={{
+            title: (job) => `${job.no} · ${job.name}`,
+            badge: (job) => jobStatus(job),
+            actions: canWrite ? (job) => jobActions(job) : undefined,
+            subtitle: (job) => job.lines.map((line) => line.label).filter(Boolean).join(' · ') || null,
+            meta: (job) => `${t('iso.catalog.trackedFrom')} ${formatDate(job.trackedFrom)}`,
+          }}
+          rowClassName={(job) => (job.stoppedOn ? 'row-muted' : '')}
+        />
       ) : (
         <div className="table-wrap">
           <table className="table table-stack">
@@ -150,30 +190,8 @@ function JobsTab({ me }: { me: Me }) {
                     <LineStack lines={job.lines} text={(l) => pointsText(l.pointsCloud, l.storageCloud)} />
                   </td>
                   <td data-label={t('iso.catalog.trackedFrom')}>{formatDate(job.trackedFrom)}</td>
-                  <td data-label={t('iso.catalog.status')}>
-                    {job.stoppedOn ? (
-                      <span className="badge muted">{t('iso.catalog.stoppedOn', { day: formatDate(job.stoppedOn) })}</span>
-                    ) : (
-                      <span className="badge ok">{t('iso.catalog.live')}</span>
-                    )}
-                  </td>
-                  {canWrite ? (
-                    <td data-label={t('common.actions')}>
-                      <RowActions
-                      label={t('common.actionsOf', { subject: job.name })}
-                      primary={{ label: t('common.edit'), ariaLabel: t('common.editOf', { subject: job.name }), onClick: () => setEditing(job) }}
-                      items={
-                        job.stoppedOn
-                          ? [{ key: 'resume', label: t('iso.catalog.resume'), ok: true, onSelect: () => write.mutate({ id: job.id, path: 'resume' }, { onError: fail }) }]
-                          : [
-                              { key: 'up', label: t('iso.catalog.moveUp'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'up' } }, { onError: fail }) },
-                              { key: 'down', label: t('iso.catalog.moveDown'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'down' } }, { onError: fail }) },
-                              { key: 'stop', label: t('iso.catalog.stop'), warn: true, onSelect: () => setStopping(job) },
-                            ]
-                      }
-                      />
-                    </td>
-                  ) : null}
+                  <td data-label={t('iso.catalog.status')}>{jobStatus(job)}</td>
+                  {canWrite ? <td data-label={t('common.actions')}>{jobActions(job)}</td> : null}
                 </tr>
               ))}
             </tbody>
