@@ -526,7 +526,7 @@ export default {
     totpReEnrollContinue: 'Tiếp tục',
     totpEnrolled: 'Đã bật xác thực 2 lớp.',
     totpReEnrolled: 'Đã chuyển xác thực 2 lớp sang điện thoại mới.',
-    sessionsTitle: 'Phiên đăng nhập của tôi',
+    sessionsTitle: 'Phiên đang mở của tôi',
     sessionsHint: 'Các máy và trình duyệt đang đăng nhập bằng tài khoản này.',
     sessionCurrent: 'Máy này',
     sessionLastSeen: 'Hoạt động lần cuối {{time}}',

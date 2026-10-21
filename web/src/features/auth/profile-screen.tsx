@@ -13,6 +13,7 @@ import { PageHeader } from '@/ui/page-header';
 import { SessionList, type SessionItem } from '@/ui/session-list';
 import { ThemeChoice } from '@/ui/theme-choice';
 import { MotionChoice } from '@/ui/motion-choice';
+import { InfoTip } from '@/ui/info-tip';
 import { useToast } from '@/ui/toast';
 import { ChangePasswordForm } from './change-password-form';
 import { TotpEnrollDialog } from './totp-enroll-dialog';
@@ -70,7 +71,9 @@ export function ProfileScreen({ me }: { me: Me }) {
           <dt>{t('profile.role')}</dt>
           <dd>{t(roleKey)}</dd>
         </dl>
-        <p className="muted">{t('profile.infoHint')}</p>
+        {/* Super Admin đổi được tên / vai của chính mình — bảo họ "liên hệ Super Admin" là tự mâu
+            thuẫn (PW-C22). */}
+        {me.role === 'sa' ? null : <p className="muted">{t('profile.infoHint')}</p>}
       </section>
 
       <section className="card profile-card" aria-labelledby="profile-password">
@@ -112,9 +115,12 @@ export function ProfileScreen({ me }: { me: Me }) {
       <section className="card profile-card" aria-labelledby="profile-appearance">
         <h2 id="profile-appearance">{t('profile.appearanceTitle')}</h2>
         <ThemeChoice label={t('profile.appearanceTitle')} />
-        <h3>{t('profile.motionTitle')}</h3>
+        {/* Giải thích vào (i): ba dòng chữ nhỏ luôn hiện mà hầu như không ai cần (PW-C23). */}
+        <div className="page-header-title">
+          <h3>{t('profile.motionTitle')}</h3>
+          <InfoTip subject={t('profile.motionTitle')}>{t('profile.motionHint')}</InfoTip>
+        </div>
         <MotionChoice />
-        <p className="muted field-hint">{t('profile.motionHint')}</p>
       </section>
 
       {passwordOpen ? (
