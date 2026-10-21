@@ -191,7 +191,6 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
     }
   };
 
-  const missedDays = [...new Set(data.summary.missed.map((m) => m.day))];
 
   return (
     <>
@@ -203,12 +202,20 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
             {data.today.slice(0, 7) === monthKey(data.year, data.month) ? (
               <KpiTile value={data.summary.todayDone} label={t('iso.backup.todayDone', { total: data.summary.todayTotal, day: shortDay(data.today) })} />
             ) : null}
-            <KpiTile value={data.summary.missed.length} tone="warn" label={t('iso.backup.missed')} />
+            {/* Bấm ô số là tới ô bỏ sót đầu tiên trên lưới (PW-B17) — thay dòng liệt kê ngày nói
+                lại đúng con số này. */}
+            <KpiTile
+              value={data.summary.missed.length}
+              tone="warn"
+              label={t('iso.backup.missed')}
+              onClick={
+                data.summary.missed.length > 0
+                  ? () => scrollRef.current?.querySelector<HTMLButtonElement>('button.sheet-mark[data-state="missed"]')?.focus()
+                  : undefined
+              }
+            />
             <KpiTile value={data.summary.unlinkedFails.length} tone="danger" label={t('iso.backup.unlinked')} />
           </KpiStrip>
-          {missedDays.length > 0 ? (
-            <p className="muted small">{t('iso.backup.missedDays', { days: missedDays.map(shortDay).join(', ') })}</p>
-          ) : null}
           {editable && data.summary.unlinkedFails.length > 0 ? (
             <ul className="sheet-checks" aria-label={t('iso.backup.unlinked')}>
               {data.summary.unlinkedFails.map((c) => (

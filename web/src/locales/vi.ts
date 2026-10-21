@@ -4380,7 +4380,6 @@ export default {
       todayDone: 'ô hôm nay {{day}} đã đánh / {{total}}',
       missed: 'ô bỏ sót ở ngày đã qua',
       unlinked: 'ô ✗ chưa có phiếu 0206',
-      missedDays: 'Ngày còn ô bỏ sót: {{days}}',
       createIncident: 'Lập 0206',
       markedFail: 'Đã đánh ✗ · {{name}} · {{day}}',
       howTo: 'Bấm ô: trống → ✓ → ✗ → trống. Phím: 1/V = ✓, 2/X = ✗, Delete = trống, mũi tên đi giữa các ô, Enter trên ô ✗ = lập 0206. Ô ✗ đã có phiếu: bấm để mở phiếu.',
