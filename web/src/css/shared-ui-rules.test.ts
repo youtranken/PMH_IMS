@@ -568,3 +568,13 @@ describe('trình xem sơ đồ vẽ trên giấy sáng như trình vẽ (ui/diag
     expect(tokenBlock('dark').get('--diagram-watermark')).toBe(tokenBlock('light').get('--diagram-watermark'));
   });
 });
+
+// PW-A33: hạch bản đồ quan hệ — nền mặt + viền thương hiệu, không gradient trang trí.
+describe('relation-map.css — hạch', () => {
+  it('.rmap-hub nền var(--surface), viền var(--primary), không var(--grad)', () => {
+    const body = rule('relation-map.css', '.rmap-hub')!.body;
+    expect(declValue(body, 'background')).toBe('var(--surface)');
+    expect(declValue(body, 'border')).toBe('2px solid var(--primary)');
+    expect(body).not.toContain('var(--grad)');
+  });
+});

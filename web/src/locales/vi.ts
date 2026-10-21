@@ -266,9 +266,9 @@ export default {
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
   relationMap: {
     title: 'Bản đồ quan hệ',
-    legendOk: 'bình thường',
-    legendWarn: 'cần để mắt',
-    legendCut: 'sẽ bị gỡ khi thanh lý',
+    legendOk: 'Bình thường',
+    legendWarn: 'Cần kiểm tra',
+    legendCut: 'Sẽ gỡ khi thanh lý',
     missing: 'Chưa gắn: {{list}}.',
     alone:
       'Máy này không giữ IP, luật NAT, cổng, license, đường truyền hay giấy tờ nào. ' +
