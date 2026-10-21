@@ -1356,6 +1356,13 @@ Chủ dự án duyệt mockup bố cục ngày 21/10/2026 và cho làm toàn b�
   ô và chia đều như Q-24, nhưng không đủ chỗ (điện thoại, phiếu 0206 có 5 lựa chọn) thì xuống hàng
   thành lưới các ô bằng nhau, thay vì cuộn ngang làm mất lựa chọn cuối ("Other") và cắt chữ ("In
   Pro…"). Dải nút LỌC trên thanh công cụ vẫn cuộn ngang như cũ.
+- **Bỏ "Dòng thời gian" của bản vẽ** (đổi một phần FR-040, UX-E03). Thanh trượt "bản chính thức
+  hiệu lực ngày X" là cách xem thứ ba cho cùng một câu hỏi: danh sách "Đã phát hành · n" và hộp
+  Phiên bản đã trả lời ngày nào bản nào. Phiên bản, so sánh, khôi phục của FR-040 giữ nguyên.
+- **Bỏ "Trình chiếu" cây bản vẽ** (đổi một phần FR-046, UX-E04). Ít dùng và dễ lẫn với "Bản trình
+  bày". Tìm, chỉ đường, lớp, điện thoại chỉ xem của FR-046 giữ nguyên.
+- **Bỏ ô "Tra IP hoặc máy…" ở màn Địa chỉ IP** (UX-E19). Trùng Tìm nhanh (Ctrl+K, cùng API, cùng
+  đích — tra được cả IP trống). Ô "Lọc trong dải" chỉ đường khi gõ đủ một IP của dải khác.
 
 ### Q-09 · Tài liệu
 
