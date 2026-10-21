@@ -446,7 +446,7 @@ function RuleForm({
           );
         }}
       >
-        {check.summary ? <div className="span-2">{check.summary}</div> : null}
+        {check.summary}
         <Field label={t('digest.name')} required htmlFor="rule-name" error={check.error('name')}>
           <input
             id="rule-name"

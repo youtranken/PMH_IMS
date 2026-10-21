@@ -228,6 +228,12 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--space-6) var(--space-7);
 }
+/* Dòng tóm tắt lỗi và khung báo lỗi máy chủ nằm trong lưới thì chiếm TRỌN hàng (FM-02): chiếm
+   một ô là đẩy lệch mọi ô sau nó sang cột bên. */
+.form-grid > .alert,
+.form-grid > .form-summary {
+  grid-column: 1 / -1;
+}
 
 /* ─── `data-columns` PHẢI có tác dụng ────────────────────────────────────────────────────
    `FormSection columns={n}` và mọi `<div class="form-grid" data-columns={1}>` viết ra thuộc

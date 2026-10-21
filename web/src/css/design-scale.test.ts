@@ -108,3 +108,11 @@ describe('Nút icon theo --h-ctl-sm', () => {
     expect(px(tokenValue(touch, 'h-ctl-sm'))).toBeGreaterThanOrEqual(40);
   });
 });
+
+/** FM-02: dòng tóm tắt lỗi / khung báo lỗi chen vào lưới form chiếm MỘT ô, đẩy lệch các ô sau. */
+describe('Khung báo trong lưới form chiếm trọn hàng', () => {
+  it('.form-grid > .alert / .form-summary: grid-column 1 / -1', () => {
+    const form = css('form-layout.css');
+    expect(form).toMatch(/\.form-grid > \.alert[^{]*\{[^}]*grid-column:\s*1 \/ -1/);
+  });
+});
