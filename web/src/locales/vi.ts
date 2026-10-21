@@ -298,6 +298,8 @@ export default {
     unknownShort: 'Chưa đọc được',
   },
   common: {
+    createdAt: 'Tạo {{date}}',
+    lastEditBy: 'sửa lần cuối {{date}} bởi {{actor}}',
     actorSystem: 'Hệ thống',
     save: 'Lưu',
     /* Nhãn nút trong lúc lượt GHI đang bay. "Đang tải…" (`loading`) là câu của lượt ĐỌC — đặt
@@ -1952,8 +1954,6 @@ export default {
     statusCurrent: '{{status}} (hiện tại)',
     retiredBy: 'Thanh lý lúc {{date}} bởi {{actor}}',
     retiredCleaned: 'đã gỡ IP, NAT, license và đường truyền của máy',
-    createdAt: 'Tạo {{date}}',
-    lastEditBy: 'sửa lần cuối {{date}} bởi {{actor}}',
     managementIp: 'IP quản trị',
     photoCol: 'Ảnh',
     photoOf: 'Ảnh {{code}}',

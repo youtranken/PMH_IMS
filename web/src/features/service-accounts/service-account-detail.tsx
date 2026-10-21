@@ -34,6 +34,7 @@ import {
   type ServiceAccountHistoryRow,
   type ServiceAccountRow,
 } from "./service-account-types";
+import { RecordStamp } from "@/ui/record-stamp";
 
 /**
  * Trang hồ sơ một tài khoản dịch vụ.
@@ -76,9 +77,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       apiFetch<ServiceAccountHistoryRow[]>(
         `/api/v1/service-accounts/${id}/history`,
       ),
-    // Tài khoản đã vô hiệu hóa thì băng rôn đầu trang phải nói ai, lúc nào, vì sao — câu đó
-    // chỉ nằm trong sổ lịch sử, nên hỏi sổ ngay cả khi chưa mở tab.
-    enabled: tab === "history" || account.data?.status === "disabled",
+    // Hỏi sổ ngay khi mở trang: dòng "sửa lần cuối … bởi …" dưới dải 4 ô cần lượt mới nhất (UX-E26).
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["service-accounts"] });
@@ -255,6 +254,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
               },
         ]}
       />
+      <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />
 
       <DetailLayout>
 

@@ -53,6 +53,7 @@ import {
   screenOfKind,
   type SoftwareScreenKey,
 } from "@/lib/software-screens";
+import { RecordStamp } from "@/ui/record-stamp";
 
 /**
  * Trang chi tiết hồ sơ phần mềm — dùng chung cho bốn màn của Q-22, `screen` là màn của route.
@@ -122,7 +123,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
     queryKey: ["software", id, "history"],
     queryFn: () =>
       apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
-    enabled: tab === "history",
+    // Hỏi sổ ngay khi mở trang: dòng "sửa lần cuối … bởi …" dưới dải 4 ô cần lượt mới nhất (UX-E26).
   });
 
   /* Cùng khoá cache với tab Máy đang dùng (`LicenseAssignmentsPanel`): mở hộp Gia hạn sau khi
@@ -391,6 +392,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               },
         ]}
       />
+      <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />
 
       <DetailLayout
         /* Không còn "Thẻ định danh" (Q-27 bổ sung): trạng thái ở đầu trang, hạn và ghế ở dải 4 ô.

@@ -64,7 +64,7 @@ import {
   type DeviceStatus,
 } from "@/lib/device-types";
 import { PATHS } from "@/lib/routes";
-import { actorLabel } from '@/ui/actor';
+import { RecordStamp } from "@/ui/record-stamp";
 
 type HeldKey = "ipam" | "ports" | "nat" | "isp" | "software" | "vault" | "attachments";
 
@@ -850,24 +850,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                   <span className="muted">{t("detail.notDeclared")}</span>
                 )}
               </div>
-              {/* Hồ sơ cũ hay mới — người đọc cần biết trước khi tin số liệu. */}
-              <p className="rail-foot">
-                {t("devices.createdAt", { date: formatDate(item.createdAt) })}
-                {lastEdit
-                  ? (
-                      <>
-                        {" · "}
-                        {/* Tên người như mọi chỗ khác (sơ đồ, lịch sử, phiên bản); email để khi rê chuột (T-09). */}
-                        <span title={lastEdit.actor}>
-                          {t("devices.lastEditBy", {
-                            date: formatDate(lastEdit.createdAt),
-                            actor: actorLabel(lastEdit.actor, lastEdit.actorName, t).text,
-                          })}
-                        </span>
-                      </>
-                    )
-                  : null}
-              </p>
+              <RecordStamp createdAt={item.createdAt} last={lastEdit} onOpenHistory={() => setTab("history")} />
             </RailCard>
           </>
         }
