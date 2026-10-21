@@ -50,7 +50,8 @@ describe('useStepUpRetry — phạm vi lấy từ server', () => {
      + 6 ô + Hủy); phạm vi két giữ hộp xác thực đầy đủ. */
   it.each([
     ['diagram', 'Mở bản vẽ E2E'],
-    ['vault', 'Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.'],
+    // Hộp két qua hook luôn có `purpose` nên không kèm câu phạm vi (UX-E38) — dấu hiệu là câu việc.
+    ['vault', 'Mở bản vẽ E2E'],
   ] as const)('server đòi phạm vi %s → hộp hỏi đúng phạm vi, gửi đúng phạm vi, chạy lại', async (scope, note) => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(200, { status: 'stepped-up', scope, graceMinutes: 4 })));
     vi.stubGlobal('fetch', fetchMock);
@@ -88,8 +89,8 @@ describe('useStepUpRetry — phạm vi lấy từ server', () => {
       .mockResolvedValueOnce('ok');
     renderWithI18n(<Harness action={action} />);
     await userEvent.click(screen.getByRole('button', { name: 'Chạy' }));
-    expect(
-      await screen.findByText('Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.'),
-    ).toBeInTheDocument();
+    // Phạm vi két = hộp xác thực đầy đủ (không phải hộp nhỏ "để mở sơ đồ").
+    expect(await screen.findByText('Mở bản vẽ E2E')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' })).toBeNull();
   });
 });

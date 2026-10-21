@@ -61,7 +61,7 @@ describe('Danh mục → Model thiết bị (Q-26)', () => {
     mockFetch();
     renderPanel('member');
     const row = (await screen.findByText('C9300-48P')).closest('tr')!;
-    expect(screen.getByText(/sửa, xóa, đổi ảnh model là việc của Super Admin \/ Quản trị/)).toBeInTheDocument();
+    expect(screen.getByText('Sửa, xóa, đổi ảnh model do Super Admin / Quản trị làm.')).toBeInTheDocument();
     await userEvent.setup().click(within(row).getByRole('button', { name: 'Việc với model C9300-48P' }));
     expect(screen.queryByRole('menuitem', { name: 'Sửa' })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: 'Xóa' })).toBeNull();

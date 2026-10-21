@@ -110,6 +110,15 @@ describe('StepUpDialog — phạm vi két / sơ đồ', () => {
     expect(screen.getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeInTheDocument();
   });
 
+  // UX-E38: hộp đã nói việc cụ thể (gán quyền, đổi thiết bị xác thực…) thì câu phạm vi mã là nhiễu.
+  it('có `purpose` → không kèm câu phạm vi mã', () => {
+    renderWithI18n(
+      <StepUpDialog csrfToken="t" scope="vault" purpose="Nhập mã 6 số để xác nhận gán quyền két." onClose={vi.fn()} onDone={vi.fn()} />,
+    );
+    expect(screen.getByText('Nhập mã 6 số để xác nhận gán quyền két.')).toBeInTheDocument();
+    expect(screen.queryByText(/^Mã này /)).toBeNull();
+  });
+
   it('phạm vi két nói rõ mã không mở sơ đồ', () => {
     renderWithI18n(<StepUpDialog csrfToken="t" scope="vault" onClose={vi.fn()} onDone={vi.fn()} />);
     expect(screen.getByText('Mã này mở két và các thao tác cần mã, không mở phần xem sơ đồ.')).toBeInTheDocument();
