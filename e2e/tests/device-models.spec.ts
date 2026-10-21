@@ -180,7 +180,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await form.getByRole('group', { name: 'U trống:' }).getByRole('button', { name: 'U2–U12' }).click();
     // Truy cập quản trị: Web 10.0.1.1:8443.
     await openFold(form, 'Truy cập quản trị');
-    await form.getByRole('button', { name: '+ Thêm đường truy cập' }).click();
+    await form.getByRole('button', { name: '+ Đường truy cập' }).click();
     await form.getByRole('textbox', { name: 'Địa chỉ 1' }).fill('10.0.1.1');
     await form.getByRole('textbox', { name: 'Cổng 1' }).fill('8443');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
@@ -256,7 +256,7 @@ test.describe('Model thiết bị (Q-26)', () => {
     await openModelsTab(page);
     await page.getByRole('button', { name: 'Thêm model', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Thêm model thiết bị' });
-    await dialog.getByRole('button', { name: '+ Thêm nhóm cổng' }).click();
+    await dialog.getByRole('button', { name: '+ Nhóm cổng' }).click();
     await dialog.getByRole('textbox', { name: 'Mẫu tên cổng 1' }).fill('Port[8-1]');
     await expect(dialog.getByText('Dải [8-1] phải từ số nhỏ tới số lớn.')).toBeVisible();
   });

@@ -224,14 +224,14 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                     row.original.status === 'active'
                       ? {
                           key: 'disable',
-                          label: t('serviceAccounts.disable'),
+                          label: t('serviceAccounts.disableMenu'),
                           onSelect: () =>
                             setSwitching({ row: row.original, next: 'disabled' }),
                           warn: true,
                         }
                       : {
                           key: 'enable',
-                          label: t('serviceAccounts.enable'),
+                          label: t('serviceAccounts.enableMenu'),
                           onSelect: () =>
                             setSwitching({ row: row.original, next: 'active' }),
                           ok: true,

@@ -25,7 +25,7 @@ export function deviceMenuItems(
   if (retired) {
     return [
       ...(handlers.onReopen
-        ? [{ key: 'reopen', label: t('devices.reopen'), onSelect: handlers.onReopen, ok: true }]
+        ? [{ key: 'reopen', label: t('devices.changeStatusMenu'), onSelect: handlers.onReopen, ok: true }]
         : []),
       { key: 'clone', label: t('devices.clone'), onSelect: handlers.onClone },
     ];
@@ -34,9 +34,9 @@ export function deviceMenuItems(
     ...(handlers.onEdit
       ? [{ key: 'edit', label: t('devices.edit'), onSelect: handlers.onEdit }]
       : []),
-    { key: 'status', label: t('devices.changeStatus'), onSelect: handlers.onStatus },
+    { key: 'status', label: t('devices.changeStatusMenu'), onSelect: handlers.onStatus },
     { key: 'clone', label: t('devices.clone'), onSelect: handlers.onClone },
-    { key: 'retire', label: t('devices.retire'), onSelect: handlers.onRetire, danger: true },
+    { key: 'retire', label: t('devices.retireMenu'), onSelect: handlers.onRetire, danger: true },
   ];
 }
 

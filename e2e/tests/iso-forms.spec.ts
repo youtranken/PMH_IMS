@@ -100,11 +100,11 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await firstLogin(page, E2E_SA);
     const name = `E2E-FS-${uniqueStamp()}`;
     await page.goto('/iso/catalog');
-    await page.getByRole('button', { name: '+ Thêm job' }).click();
+    await page.getByRole('button', { name: '+ Job' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('textbox', { name: /Name Job Backup/ }).fill(name);
     await dialog.getByRole('textbox', { name: 'Đối tượng con 1' }).fill('OS');
-    await dialog.getByRole('button', { name: '+ Thêm đối tượng con' }).click();
+    await dialog.getByRole('button', { name: '+ Đối tượng con' }).click();
     await dialog.getByRole('textbox', { name: 'Đối tượng con 2' }).fill('Volume_E');
     // Points chỉ nhận số; Storage location tự ghi theo Points, không phải ô nhập.
     await dialog.getByRole('textbox', { name: 'Points NAS 1' }).fill('c');
