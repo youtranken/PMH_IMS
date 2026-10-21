@@ -98,7 +98,7 @@ describe('Trang tổng Két sắt', () => {
 
   it('tìm không ra: có nút "Xoá tìm kiếm", không gợi ý bỏ lọc khi không bật lọc nào', async () => {
     renderHome('/vault?q=khong-co-gi');
-    expect(await screen.findByText('Không có hồ sơ nào khớp bộ lọc')).toBeInTheDocument();
+    expect(await screen.findByText('Không có hồ sơ nào khớp bộ lọc.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Xóa bộ lọc' })).toBeInTheDocument();
     expect(screen.queryByText(/bỏ bớt bộ lọc loại/)).not.toBeInTheDocument();
     // Dòng tổng kết "0 hồ sơ · 0 ngăn" thừa ngay trên khối rỗng.

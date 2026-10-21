@@ -241,7 +241,7 @@ describe('Thanh trượt thời gian', () => {
     fireEvent.change(await screen.findByRole('slider', { name: 'Chọn ngày' }), { target: { value: '0' } });
     expect(where).toBe('/diagrams/g1?at=2026-08-31');
     // Màn (và hộp thanh trượt) báo chưa có; không tải nội dung nào cho ngày đó.
-    expect((await screen.findAllByText('Chưa có bản chính thức vào ngày này')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Chưa có bản chính thức vào ngày này.')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeNull();
   });
 });

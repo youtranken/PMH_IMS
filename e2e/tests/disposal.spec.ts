@@ -114,7 +114,7 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
   ]).then(([event]) => event);
   expect(download.suggestedFilename()).toBe('kho-thanh-ly.xlsx');
   await page.goto('/disposal?from=2000-01-01&to=2000-01-31');
-  await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc')).toBeVisible();
+  await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc.')).toBeVisible();
   await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).first().click();
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
 

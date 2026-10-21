@@ -320,7 +320,7 @@ test.describe('Sơ đồ mạng — thanh trượt thời gian', () => {
     expect(Number(sql(`SELECT count(*) FROM audit_log WHERE object_id = '${id}' AND action = 'diagram.viewed' AND detail->>'versionId' = '${v1.id}'`))).toBeGreaterThan(0);
 
     await page.getByRole('slider', { name: 'Chọn ngày' }).fill('0');
-    await expect(page.getByText('Chưa có bản chính thức vào ngày này').first()).toBeVisible();
+    await expect(page.getByText('Chưa có bản chính thức vào ngày này.').first()).toBeVisible();
     await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toHaveCount(0);
   });
 });
