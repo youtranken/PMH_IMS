@@ -24,7 +24,7 @@ export interface FailedMail {
 export const FAILED_MAIL_KEY = ['outbox-failed'] as const;
 
 /** Topic outbox → tên loại thư. Topic chưa có tên thì hiện nguyên mã: thư lạ vẫn phải thấy được. */
-const TOPIC_KEY: Record<string, string> = {
+export const FAILED_MAIL_TOPIC_KEY: Record<string, string> = {
   'expiry.digest': 'failedMail.topics.expiryDigest',
   'approval.requested': 'failedMail.topics.approvalRequested',
   'approval.reminder': 'failedMail.topics.approvalReminder',
@@ -38,6 +38,9 @@ const TOPIC_KEY: Record<string, string> = {
   'account.mfa.reset': 'failedMail.topics.mfaReset',
   'auth.totp.reenrolled': 'failedMail.topics.totpReenrolled',
   'diagram.drift': 'failedMail.topics.diagramDrift',
+  'break_glass.code': 'failedMail.topics.breakGlassCode',
+  'iso.reminder': 'failedMail.topics.isoReminder',
+  'iso.period.event': 'failedMail.topics.isoPeriodEvent',
 };
 
 /**
@@ -53,7 +56,7 @@ export function FailedMailScreen({ me }: { me: Me }) {
     queryKey: FAILED_MAIL_KEY,
     queryFn: () => apiFetch<{ total: number; items: FailedMail[] }>('/api/v1/admin/outbox/failed'),
   });
-  const topicLabel = (topic: string) => (TOPIC_KEY[topic] ? t(TOPIC_KEY[topic]) : topic);
+  const topicLabel = (topic: string) => (FAILED_MAIL_TOPIC_KEY[topic] ? t(FAILED_MAIL_TOPIC_KEY[topic]) : topic);
 
   const columns = useMemo<ColumnDef<FailedMail, unknown>[]>(() => {
     const requeue = async (row: FailedMail) => {

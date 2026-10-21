@@ -4800,6 +4800,9 @@ export default {
       mfaReset: 'Thư cài lại mã 2 lớp',
       totpReenrolled: 'Thư báo cài lại mã 2 lớp',
       diagramDrift: 'Thư báo sơ đồ lệch kho',
+      breakGlassCode: 'Thư mang mã duyệt mở két',
+      isoReminder: 'Thư nhắc phiếu ISO',
+      isoPeriodEvent: 'Thư báo kỳ phiếu ISO',
     },
   },
   settings: {
