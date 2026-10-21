@@ -5,9 +5,11 @@ import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
+import { foldSearch } from '@/lib/search-fold';
 import type { Me } from '@/lib/me';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
 import { Dialog } from '@/ui/dialog';
+import { FilterBar } from '@/ui/filter-bar';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
@@ -183,10 +185,29 @@ export function SettingsScreen({ me }: { me: Me }) {
     queryFn: () => apiFetch<SettingRow[]>('/api/v1/admin/settings'),
   });
 
-  const rows = useMemo(() => (list.data ?? []).filter((row) => row.group === group), [list.data, group]);
+  /* Ô tìm (UX-E21): ~60 tham số / 11 nhóm — gõ là tìm trên MỌI nhóm theo nhãn, mô tả, khóa (không
+     dấu); ô trống thì về nhóm đang chọn. Không lên URL: chỉ là lối tắt trong một lượt sửa. */
+  const [q, setQ] = useState('');
+  const needle = foldSearch(q.trim());
+  const rows = useMemo(
+    () =>
+      (list.data ?? []).filter((row) =>
+        needle
+          ? [TEXT[row.name] ? t(TEXT[row.name][0]) : '', TEXT[row.name] ? t(TEXT[row.name][1]) : '', row.key].some((text) =>
+              foldSearch(text).includes(needle),
+            )
+          : row.group === group,
+      ),
+    [list.data, group, needle, t],
+  );
+  /* Số tham số đang khác mặc định của từng nhóm — menu nói nhóm nào đã có người chỉnh. */
+  const customised = (key: Group) =>
+    (list.data ?? []).filter((row) => row.group === key && toDraft(row.value) !== toDraft(row.defaultValue)).length;
   const draftOf = (row: SettingRow) => drafts[row.key] ?? toDraft(row.value);
-  const changed = rows.filter((row) => draftOf(row).trim() !== toDraft(row.value));
-  const checks = new Map(rows.map((row) => [row.key, checkDraft(row, draftOf(row))]));
+  /* Trên MỌI tham số, không chỉ phần đang hiện: sửa xong rồi gõ tìm thì thanh Lưu vẫn còn. */
+  const all = list.data ?? [];
+  const changed = all.filter((row) => draftOf(row).trim() !== toDraft(row.value));
+  const checks = new Map(all.map((row) => [row.key, checkDraft(row, draftOf(row))]));
   const invalid = changed.some((row) => checks.get(row.key)?.reason);
 
   const labelOf = (row: SettingRow) => (TEXT[row.name] ? t(TEXT[row.name][0]) : row.key);
@@ -291,6 +312,7 @@ export function SettingsScreen({ me }: { me: Me }) {
       ) : (
         <div className="settings-layout">
           <nav aria-label={t('settings.groupsNav')} className="settings-nav">
+            <FilterBar search={q} onSearchChange={setQ} searchPlaceholder={t('settings.search')} />
             <ul>
               {GROUPS.map((g) => (
                 <li key={g.key}>
@@ -298,10 +320,14 @@ export function SettingsScreen({ me }: { me: Me }) {
                     type="button"
                     /* Đổi khu ngay trên trang, không sang trang khác: nút bật/tắt, không
                        `aria-current="page"` (giá trị đó dành cho link điều hướng). */
-                    aria-pressed={g.key === group}
-                    onClick={() => askSwitch(g.key)}
+                    aria-pressed={!needle && g.key === group}
+                    onClick={() => {
+                      setQ('');
+                      askSwitch(g.key);
+                    }}
                   >
                     {t(g.label)}
+                    {customised(g.key) > 0 ? <span className="seg-count">{customised(g.key)}</span> : null}
                   </button>
                 </li>
               ))}
@@ -309,7 +335,10 @@ export function SettingsScreen({ me }: { me: Me }) {
           </nav>
 
           <section className="card settings-panel" aria-labelledby="settings-group-title">
-            <h2 id="settings-group-title">{t(GROUPS.find((g) => g.key === group)?.label ?? '')}</h2>
+            <h2 id="settings-group-title">
+              {needle ? t('settings.searchTitle', { q: q.trim() }) : t(GROUPS.find((g) => g.key === group)?.label ?? '')}
+            </h2>
+            {needle && rows.length === 0 ? <p className="muted">{t('settings.searchNone')}</p> : null}
             {rows.map((row) => {
               const id = `setting-${row.key.replace(/\W/g, '-')}`;
               const check = checks.get(row.key) ?? checkDraft(row, draftOf(row));

@@ -222,6 +222,27 @@ describe('Màn Tham số hệ thống', () => {
     expect(screen.queryByText(/login\.rate_limit_per_ip/)).not.toBeInTheDocument();
   });
 
+  // UX-E21: ~63 tham số / 11 nhóm, không có ô tìm; menu nhóm không cho biết nhóm nào đã đổi.
+  it('ô "Tìm tham số" tìm trên mọi nhóm theo nhãn (không dấu); xóa ô thì về nhóm đang chọn', async () => {
+    renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    const search = screen.getByRole('searchbox', { name: 'Tìm tham số' });
+    await userEvent.type(search, 'an han');
+    expect(await screen.findByRole('heading', { name: 'Tham số khớp "an han"' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toBeNull();
+    expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
+    await userEvent.clear(search);
+    expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toBeInTheDocument();
+  });
+
+  it('menu nhóm đếm số tham số đang khác mặc định', async () => {
+    renderAt('/admin/settings', () => jsonResponse(200, ROWS.map((row) => (row.key === 'login.rate_limit_per_ip' ? { ...row, value: 30 } : row))));
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    const nav = screen.getByRole('navigation', { name: /nhóm/i });
+    expect(within(nav).getByRole('button', { name: /^Đăng nhập/ })).toHaveTextContent(/1$/);
+    expect(within(nav).getByRole('button', { name: /^Phần mềm/ })).not.toHaveTextContent(/\d$/);
+  });
+
   it('?group=software mở đúng nhóm; 0 = tắt có cảnh báo', async () => {
     renderAt('/admin/settings?group=software');
     const input = await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm');
