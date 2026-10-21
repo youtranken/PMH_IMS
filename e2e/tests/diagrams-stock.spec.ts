@@ -539,7 +539,7 @@ test.describe('Sơ đồ mạng — Thiết bị kho', () => {
     await searchAndWaitForFilter(page, typeName);
     await rowAction(page, new RegExp(typeName), 'Sửa');
     const form = page.getByRole('dialog', { name: new RegExp(typeName) });
-    await form.getByLabel('Chọn tệp SVG biểu tượng').setInputFiles({ name: 'icon-e2e.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(evil) });
+    await form.getByLabel('Chọn file SVG biểu tượng').setInputFiles({ name: 'icon-e2e.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(evil) });
     await expect(form.getByText(/không nhận/)).toBeVisible();
 
     const other = await (await browser.newContext()).newPage();

@@ -974,8 +974,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeDisabled();
     await expect(
       importDialog.getByText(
-        'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
-        'khai trong Danh mục trước — hệ thống không tự tạo.',
+        'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải có ' +
+        'sẵn trong Danh mục.',
       ),
       'Hộp nhập phải tự nói ra điều kiện tiên quyết, không để người dùng đoán',
     ).toBeVisible();

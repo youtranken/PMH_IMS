@@ -294,6 +294,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                                       void askConfirm({
                                         title: t('common.titleOf', { action: t('common.delete'), subject: issue.computerName }),
                                         message: t('iso.av.deleteConfirm', { name: issue.computerName, day: shortDay(issue.reportedOn) }),
+                                        confirmLabel: t('common.delete'),
                                         danger: true,
                                       }).then((ok) => {
                                         if (ok) removeIssue.mutate({ id: issue.id }, { onError: fail });

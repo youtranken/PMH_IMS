@@ -194,7 +194,7 @@ describe('CatalogForm — loại thiết bị: hình trên sơ đồ mạng', ()
     stubShapes();
     renderForm('device_type', TYPE);
     await screen.findByRole('button', { name: 'Hình trên sơ đồ mạng' });
-    expect(screen.queryByLabelText('Chọn tệp SVG biểu tượng')).toBeNull();
+    expect(screen.queryByLabelText('Chọn file SVG biểu tượng')).toBeNull();
   });
 
   it('SA tải SVG: server từ chối (có script) → lý do hiện ngay dưới ô', async () => {
@@ -208,7 +208,7 @@ describe('CatalogForm — loại thiết bị: hình trên sơ đồ mạng', ()
       </ToastProvider>,
     );
     const file = new File(['<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'], 'icon.svg', { type: 'image/svg+xml' });
-    await user.upload(await screen.findByLabelText('Chọn tệp SVG biểu tượng'), file);
+    await user.upload(await screen.findByLabelText('Chọn file SVG biểu tượng'), file);
     expect(await screen.findByText('Biểu tượng có <script> — không nhận.')).toBeInTheDocument();
   });
 });
