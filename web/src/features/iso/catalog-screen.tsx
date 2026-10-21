@@ -49,6 +49,7 @@ export function CatalogScreen({ me }: { me: Me }) {
       <PageHeader
         title={t('nav.isoCatalog')}
         subtitle={t('iso.catalog.subtitle')}
+        titleTip={t('iso.catalog.subtitleTip')}
         actions={
           <>
             {sees0203 ? <Link to={PATHS.isoBackup}>{t('nav.isoBackup')}</Link> : null}

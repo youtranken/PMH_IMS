@@ -3213,7 +3213,7 @@ export default {
     removed: 'Đã gỡ luật NAT.',
     empty: 'Chưa có luật NAT nào.',
     emptyHint: 'Mở cổng trên router thì ghi vào đây để sau này tra được.',
-    search: 'Tìm theo cổng, IP, người dùng hoặc lý do…',
+    search: 'Tìm cổng, IP, người dùng',
     site: 'Site',
     allSites: 'Tất cả site',
     router: 'Router',
@@ -4397,7 +4397,7 @@ export default {
       fillDay: 'Đánh ✓ mọi ô trống ngày {{day}}',
       filled: 'Đã đánh ✓ {{count}} ô ngày {{day}}.',
       noJobs: 'Tháng này chưa có job nào đang theo dõi.',
-      note: 'Note trên bản in: Planned Monthly Data Storage Maintenance: Successful "✓", Failed "✗". Ô xám là ngoài thời gian theo dõi của job.',
+      note: 'Ghi chú trên bản in: Planned Monthly Data Storage Maintenance: Successful "✓", Failed "✗". Ô xám là ngoài thời gian theo dõi của job.',
     },
     /** Tên ô in trên mẫu SP-IT02xx — giữ đúng chữ tiếng Anh của mẫu giấy. */
     field: {
@@ -4490,7 +4490,7 @@ export default {
       edit: 'Sửa phiếu',
       openPage: 'Mở trang phiếu ›',
       openShort: 'Mở phiếu',
-      noWriteHint: 'Bạn chỉ xem phiếu này: phiếu gắn ô của phiếu 0203 / 0208 mà bạn không phụ trách. Người phụ trách hoặc Super Admin / Quản trị sửa được.',
+      noWriteHint: 'Chỉ xem — bạn không phụ trách phiếu này.',
       periodOf: 'Tính vào kỳ {{period}}',
       lockedSubtitle: 'Thuộc kỳ {{period}} · đã khóa theo kỳ',
       lockedHint: 'Phiếu đã khóa theo kỳ đã chốt — chỉ xem, in và tải bản ký.',
@@ -4530,7 +4530,7 @@ export default {
       detailRequired: 'Sự cố Backup phải có ít nhất một dòng Detail Error Backup.',
     },
     incidents: {
-      subtitle: 'Một sự cố một phiếu, kể cả khi kéo sang tháng sau. Số phiếu chỉ để tra trên IMS, không in lên giấy.',
+      subtitle: 'Mỗi sự cố một phiếu',
       add: 'Lập 0206',
       needIncident: 'Ô ✗ chưa có phiếu 0206',
       filters: 'Lọc phiếu sự cố',
@@ -4596,7 +4596,7 @@ export default {
       inProgress: '{{count}} Phiếu 0206 còn In Progress — không chặn gửi chốt',
     },
     periods: {
-      subtitle: 'Mỗi tháng một kỳ cho mỗi phiếu. Gửi chốt → Super Admin / Quản trị duyệt → khóa → in, ký, scan và tải lên.',
+      subtitle: 'Gửi chốt → duyệt → in, ký, tải bản ký',
       kpiPending: 'kỳ đang chờ duyệt',
       kpiReopen: 'yêu cầu mở lại chờ duyệt',
       kpiSigned: 'kỳ chờ tải bản ký',
@@ -4632,7 +4632,8 @@ export default {
       signedHint: 'PDF, JPG hoặc PNG đã scan. Kỳ Hoàn tất khi có bản ký của kỳ và của mọi 0206 thuộc kỳ.',
     },
     catalog: {
-      subtitle: 'Job backup, bộ phận và người phụ trách. Thêm, sửa hay ngừng ở đây chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ nguyên danh sách lúc chốt.',
+      subtitle: 'Job backup, bộ phận và người phụ trách',
+      subtitleTip: 'Thêm, sửa hay ngừng ở đây chỉ áp cho kỳ chưa chốt; kỳ đã chốt giữ nguyên danh sách lúc chốt.',
       tabs: 'Danh sách',
       tabJobs: 'Job backup · 0203',
       tabDivisions: 'Bộ phận · 0208',
@@ -4685,7 +4686,7 @@ export default {
       divisionSaved: 'Đã lưu bộ phận.',
       inUse: 'Đang dùng',
       notInUse: 'Ngừng dùng',
-      ownersHint: 'Người phụ trách nhận mail nhắc và là người duy nhất (cùng Super Admin / Quản trị) được tick, ghi issue và gửi chốt phiếu đó. Thành viên khác chỉ xem. Chỉ Super Admin / Quản trị sửa được mục này.',
+      ownersHint: 'Người phụ trách nhận mail nhắc và ghi phiếu. Thành viên khác chỉ xem.',
       form: 'Loại phiếu',
       primary: 'Phụ trách chính',
       backup: 'Dự phòng',

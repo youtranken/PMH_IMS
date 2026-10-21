@@ -798,7 +798,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(chips.getByRole('button', { name: /^Đang mở/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(chips.getByRole('button', { name: /^Đã gỡ/ })).toHaveAttribute('aria-pressed', 'false');
     await expect(
-      page.getByRole('searchbox', { name: 'Tìm theo cổng, IP, người dùng hoặc lý do…' }),
+      page.getByRole('searchbox', { name: 'Tìm cổng, IP, người dùng' }),
       'ô tìm phải mang tên trợ năng = chính dòng gợi ý của nó',
     ).toBeVisible();
 
