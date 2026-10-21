@@ -240,7 +240,7 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
     expect(screen.getByRole('button', { name: 'Nhập mã ở két' })).toBeInTheDocument();
   });
 
-  it('đã duyệt, chưa xem: chỉ đường "mở lại <đối tượng>, bấm Xem, nhập mã 6 số" + nút Mở két', async () => {
+  it('đã duyệt, chưa xem: chỉ đường "mở <đối tượng>, bấm Xem ở ngăn cần mở" + nút Mở két (TX-07)', async () => {
     mockApi({
       ...ROW,
       state: 'approved',
@@ -251,7 +251,7 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
     });
     renderDetail(MEMBER);
     expect(
-      await screen.findByText(/Đã duyệt\. Mở lại SW-CORE-01 · Switch lõi tầng 3 · HCM, bấm "Xem"/),
+      await screen.findByText(/Đã được duyệt — mở SW-CORE-01 · Switch lõi tầng 3 · HCM, bấm "Xem" ở ngăn cần mở/),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mở két' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();

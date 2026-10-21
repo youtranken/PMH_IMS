@@ -72,7 +72,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Két chưa có ngăn nào.')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
     const vaultForm = page.getByRole('dialog');
     await vaultForm.getByRole('textbox', { name: 'Tên gọi' }).fill(`mk-email-E2E-${stamp}`);
     await vaultForm.getByLabel('Giá trị').fill('MatKhau#2026');

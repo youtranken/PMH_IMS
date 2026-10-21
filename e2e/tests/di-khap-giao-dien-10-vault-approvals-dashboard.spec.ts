@@ -419,7 +419,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .toBeVisible();
 
     // Lọc CỘT về đúng họ "Phần mềm & dịch vụ có hạn" — danh sách cố định, so được nguyên văn.
-    await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
+    await page.getByRole('button', { name: 'Phạm vi' }).click();
     await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
 
     /*
@@ -608,7 +608,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * thái hiện tại cho phép, chứ không phải một khuôn cứng vẽ sẵn mọi ô rồi để trống.
      */
     await expect(
-      panel.getByText('Người quyết', { exact: true }),
+      panel.getByText('Người duyệt', { exact: true }),
       'phiếu đang treo thì chưa có ai quyết — hiện ô đó ra là nói dối',
     ).toHaveCount(0);
     await expect(
@@ -770,11 +770,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   /*
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * Ba hộp thoại đứng ngay cửa két — Cất mật khẩu/khóa, Xác nhận danh tính, Hiện secret — và cả ba
+   * Ba hộp thoại đứng ngay cửa két — Cất vào két, Xác nhận danh tính, Hiện secret — và cả ba
    * đều đã có bài kiểm ĐƯỜNG ĐI (`vault.spec.ts`, `vault-reveal.spec.ts`,
    * `vault-write-stepup-ui.spec.ts`). Không bài nào trong đó mở hộp ra rồi ĐẾM xem bên trong
    * có ô nào. Nghĩa là:
-   *   - Một ô thứ năm mọc thêm vào hộp "Cất mật khẩu/khóa" (một ô "dán từ file", một ô "gửi mail
+   *   - Một ô thứ năm mọc thêm vào hộp "Cất vào két" (một ô "dán từ file", một ô "gửi mail
    *     cho") sẽ đi qua sạch sẽ.
    *   - Ô "Giá trị" đổi từ `type=password` sang `type=text` — mật khẩu hiện nguyên trên màn
    *     lúc gõ — không làm đỏ gì cả, vì mọi bài đều `fill()` được như nhau.
@@ -787,7 +787,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * Đi vào bằng popup của `/vault` chứ không bằng tab của trang chi tiết: đó là cửa của phòng
    * này, và `VaultPanel` nhúng trong popup phải cư xử y hệt bản nhúng ở trang chi tiết (AD-15).
    */
-  test('Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
+  test('Bên trong hộp Cất vào két, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, totpSecret);
@@ -809,19 +809,19 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "CẤT SECRET": có ô nào, ô nào bắt buộc ---------- */
 
-    await popup.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
-    const form = page.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await popup.getByRole('button', { name: 'Cất vào két' }).click();
+    const form = page.getByRole('dialog', { name: 'Cất vào két' });
     await expect(form).toBeVisible();
 
     expect(
       await textboxLabels(form),
-      'hộp "Cất mật khẩu/khóa" phải có ĐÚNG bốn ô chữ. Một ô thứ năm ở đây là một quyết định về nơi ' +
+      'hộp "Cất vào két" phải có ĐÚNG bốn ô chữ. Một ô thứ năm ở đây là một quyết định về nơi ' +
         'chứa bí mật, không phải một cải tiến giao diện',
     ).toEqual(['Tên gọi', 'Tên đăng nhập', 'Giá trị', 'Ghi chú']);
 
     expect(
       await selectLabels(form),
-      'hộp "Cất mật khẩu/khóa" phải có ĐÚNG một ô chọn: Loại',
+      'hộp "Cất vào két" phải có ĐÚNG một ô chọn: Loại',
     ).toEqual(['Loại']);
 
     /*
@@ -1160,7 +1160,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.goto('/admin/vault-access?view=matrix');
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
-    await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
+    await page.getByRole('button', { name: 'Phạm vi' }).click();
     await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
     await grid.getByRole('button', { name: 'Gán "Phần mềm: License" cho nhiều người' }).click();
 
@@ -1277,9 +1277,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         .getByRole('button', { name: `Mở két của ${deviceCode}` })
         .click();
       const popup = page.getByRole('dialog', { name: new RegExp(`^Két sắt — ${deviceCode}`) });
-      await popup.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+      await popup.getByRole('button', { name: 'Cất vào két' }).click();
 
-      const form = page.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+      const form = page.getByRole('dialog', { name: 'Cất vào két' });
       await expect(form).toBeVisible();
       // Gõ sẵn một thứ vào form: đó chính là thứ người dùng mất khi hộp bị đóng oan.
       await form.getByLabel('Tên gọi').fill(`admin web E2E ${stamp}`);

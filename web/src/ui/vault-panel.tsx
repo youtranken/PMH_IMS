@@ -195,7 +195,7 @@ export function VaultPanel({
   ownerId: string;
   me: Me;
   canEdit?: boolean;
-  /** Mã hồ sơ chủ — tiêu đề hộp "Cất mật khẩu/khóa — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
+  /** Mã hồ sơ chủ — tiêu đề hộp "Cất vào két — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
   ownerLabel?: string;
   /**
    * Hồ sơ đã khóa (thanh lý): két chỉ còn để đọc, câu rỗng không mời "cất vào đây" nữa (DEV-057).
@@ -393,16 +393,11 @@ export function VaultPanel({
       return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
     if (!allowed) {
       return (
+        // Một câu + người cần liên hệ (TX-04): câu giữa và nhãn "Liên hệ:" cũ nói lại cùng ý
+        // lần hai, lần ba ("Liên hệ: Liên hệ Super Admin…").
         <EmptyState
           title={t('vault.noPermissionTitle')}
-          hint={t('vault.noPermission')}
-          action={
-            contact.data?.contact ? (
-              <span>
-                <strong>{t('auth.supportContactLabel')}:</strong> {contact.data.contact}
-              </span>
-            ) : undefined
-          }
+          action={contact.data?.contact ? <span>{contact.data.contact}</span> : undefined}
         />
       );
     }

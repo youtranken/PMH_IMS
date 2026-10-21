@@ -311,7 +311,7 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền' }));
     expect(await screen.findByText('Nhập mã 6 số để xác nhận cấp quyền két.')).toBeInTheDocument();
     await userEvent.type(codeInput(), '123456');
-    expect(await screen.findByText('Đã gán 2 nhóm.')).toBeInTheDocument();
+    expect(await screen.findByText('Đã gán 2 phạm vi.')).toBeInTheDocument();
     expect(writes.filter((write) => write.method === 'POST')).toHaveLength(3);
   });
 });

@@ -179,7 +179,7 @@ export class BreakGlassController {
               ? 'Đã duyệt · hết hiệu lực'
               : (BG_STATE_LABEL[r.state] ?? r.state),
         },
-        { header: 'Người quyết', width: 28, value: (r) => r.decidedBy ?? '' },
+        { header: 'Người duyệt', width: 28, value: (r) => r.decidedBy ?? '' },
         { header: 'Ghi chú quyết', width: 36, value: (r) => r.decisionNote ?? '' },
         /**
          * Ngày giờ ghi thành CHUỖI theo múi giờ ứng dụng, không đưa `Date` thô vào ô.

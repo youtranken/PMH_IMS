@@ -119,12 +119,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('VaultPanel — hộp Cất mật khẩu/khóa khóa lại khi đang ghi', () => {
+describe('VaultPanel — hộp Cất vào két khóa lại khi đang ghi', () => {
   it('đang cất: nút Hủy mờ đi VÀ không đóng được hộp', async () => {
     mockApi(WHITELIST, []);
     renderPanel();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất vào két' }));
     await userEvent.type(screen.getByLabelText(/Tên gọi/), 'admin web');
     await userEvent.type(screen.getByLabelText(/Giá trị/), 'Sup3r#Secret');
     await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
@@ -372,7 +372,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     renderPanel({ ...ME, role: 'member' });
     expect(await screen.findAllByText('Cần duyệt')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Xin mở két' })).toHaveLength(1);
-    expect(screen.getByText(/cần được duyệt trước khi xem \(2 ngăn\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Két cần duyệt mới xem được \(2 ngăn\)/)).toBeInTheDocument();
   });
 
   it('lần xin gần nhất bị từ chối → nói ra cùng ghi chú của người duyệt, ngay trên nút xin', async () => {
@@ -413,8 +413,8 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
   it('ô Giá trị che mặc định; "Hiện" để xem lại; "Tạo ngẫu nhiên" điền giá trị mạnh và hiện ra', async () => {
     mockApi(WHITELIST, [SECRET]);
     renderPanel();
-    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
-    const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất vào két' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cất vào két' });
     const value = within(dialog).getByLabelText(/^Giá trị/);
     expect(value).toHaveAttribute('type', 'password');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Hiện' }));
@@ -807,7 +807,7 @@ describe('VaultPanel — ngoài danh sách (VLT-056)', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPanel({ ...ME, role: 'member' });
-    expect(await screen.findByText('Bạn chưa có quyền xem két này')).toBeInTheDocument();
+    expect(await screen.findByText('Bạn chưa có quyền xem két này.')).toBeInTheDocument();
     expect(await screen.findByText(/Anh Tùng IT — 0909 000 111/)).toBeInTheDocument();
   });
 });
@@ -837,9 +837,9 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
     renderWith({});
     expect(await screen.findByRole('heading', { name: 'Ngăn két' })).toBeInTheDocument();
     expect(await screen.findByText('Két chưa có ngăn nào.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Cất mật khẩu/khóa' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cất vào két' }));
     expect(
-      await screen.findByRole('dialog', { name: 'Cất mật khẩu/khóa — SW-CORE-01' }),
+      await screen.findByRole('dialog', { name: 'Cất vào két — SW-CORE-01' }),
     ).toBeInTheDocument();
   });
 
@@ -848,7 +848,7 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
     expect(await screen.findByText('Két chưa có ngăn nào.')).toBeInTheDocument();
     expect(screen.getByText(/Hồ sơ đã khóa/)).toBeInTheDocument();
     expect(screen.queryByText(/cất vào đây/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cất vào két' })).toBeNull();
   });
 
   /*
@@ -868,7 +868,7 @@ describe('VaultPanel — thanh công cụ, tiêu đề hộp, câu rỗng (DEV-0
     );
     expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Thao tác với/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Cất mật khẩu/khóa' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cất vào két' })).toBeNull();
   });
 });
 
@@ -882,8 +882,8 @@ describe('VaultPanel — ghi chú không được chứa mật khẩu', () => {
   }
 
   async function openCreate() {
-    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
-    const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất vào két' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cất vào két' });
     await userEvent.type(within(dialog).getByLabelText(/Tên gọi/), 'admin web');
     await userEvent.type(within(dialog).getByLabelText(/^Giá trị/), 'Sup3r#Secret');
     return dialog;
@@ -989,8 +989,8 @@ describe('VaultPanel — lỗi máy chủ không đứng lại sau khi đổi lo
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPanel();
-    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
-    const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất vào két' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cất vào két' });
     await userEvent.type(within(dialog).getByLabelText(/Tên gọi/), 'otp');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Loại' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Mã 2 lớp' }));

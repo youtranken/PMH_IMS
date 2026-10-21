@@ -1144,7 +1144,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
     ).toBeVisible();
     await expect(
-      panel.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
+      panel.getByRole('button', { name: 'Cất vào két' }),
       'SA phải có cửa ghi vào két ngay tại hồ sơ máy',
     ).toBeVisible();
     await expect(panel.getByText('Két chưa có ngăn nào.')).toBeVisible();

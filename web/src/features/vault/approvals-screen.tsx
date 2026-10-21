@@ -389,7 +389,12 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     : "approvals.emptyMine",
               )}
               hint={
-                tab === "pending" ? t("approvals.emptyPendingHint") : undefined
+                tab === "pending"
+                  ? t("approvals.emptyPendingHint")
+                  : tab === "mine"
+                    ? // PW-C19: Thành viên mở màn trống không biết xin ở đâu — chỉ đường ngay đây.
+                      t("approvals.emptyMineHint")
+                    : undefined
               }
             />
             {/* Người trực mở màn lúc 2 giờ sáng cần biết danh sách có tươi không. */}

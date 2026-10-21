@@ -220,6 +220,6 @@ describe('Bảng điều khiển', () => {
     );
     renderBoard();
     const block = (await screen.findByRole('heading', { name: 'Yêu cầu mở két của tôi' })).closest('section')!;
-    expect(within(block).getAllByText(/đã duyệt — mở két, bấm "Xem"/)).toHaveLength(1);
+    expect(within(block).getAllByText(/đã được duyệt — bấm "Xem" ở ngăn cần mở/)).toHaveLength(1);
   });
 });

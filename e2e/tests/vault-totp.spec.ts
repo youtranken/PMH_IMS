@@ -91,7 +91,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
     const form = page.getByRole('dialog', { name: /Cất mật khẩu\/khóa/ });
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('button', { name: 'Loại' }).click();

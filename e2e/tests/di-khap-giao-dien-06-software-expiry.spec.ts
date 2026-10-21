@@ -861,7 +861,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Tab Két sắt phải nói ngay nó là gì — key KHÔNG nằm trong hồ sơ phần mềm',
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Cất mật khẩu/khóa', exact: true }),
+      page.getByRole('button', { name: 'Cất vào két', exact: true }),
       'SA phải cất được secret ngay tại hồ sơ',
     ).toHaveCount(1);
     await expect(

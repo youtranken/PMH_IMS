@@ -293,7 +293,7 @@ test.describe('SEC-20 · ghi chú két không lộ mật khẩu', () => {
 
     // Form báo ngay tại ô và không gửi — không phải qua mã 6 số rồi mới biết.
     await page.goto(`/devices/${deviceId}?tab=vault`);
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(`E2E form ${stamp}`);
     await form.getByRole('textbox', { name: 'Giá trị', exact: true }).fill(value);

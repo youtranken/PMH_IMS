@@ -95,7 +95,7 @@ export class IsoMailContent implements OnModuleInit {
 
     const decidedBy = request.decidedBy ? await this.nameOf(request.decidedBy) : 'Super Admin / Quản trị';
     const noteRows = request.decisionNote ? [{ label: 'Ghi chú', value: request.decisionNote }] : [];
-    const common = { to: [request.requester], rows: [{ label: 'Kỳ', value: label }, { label: 'Người quyết', value: decidedBy }, ...noteRows] };
+    const common = { to: [request.requester], rows: [{ label: 'Kỳ', value: label }, { label: 'Người duyệt', value: decidedBy }, ...noteRows] };
     switch (event) {
       case 'close_approved':
         return {

@@ -91,8 +91,8 @@ function renderPanel() {
 const writes = (calls: Call[]) => calls.filter((call) => call.method !== 'GET');
 
 async function openCreate(kind: string) {
-  await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
-  const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+  await userEvent.click(await screen.findByRole('button', { name: 'Cất vào két' }));
+  const dialog = screen.getByRole('dialog', { name: 'Cất vào két' });
   await userEvent.type(within(dialog).getByLabelText(/Tên gọi/), `E2E ${kind}`);
   if (kind !== 'Mật khẩu') {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Loại' }));

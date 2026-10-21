@@ -213,7 +213,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    *
    * Bài này đi trọn cung đường của một Thành viên đứng trước két: nhìn, đọc, xin, và thấy
    * trạng thái đổi sang "Đang chờ duyệt". Nó đỏ khi `canEdit` của `VaultPanel` bị nới lỏng
-   * (nút "Cất mật khẩu/khóa" hoặc menu ba chấm hiện ra), khi panel im lặng thay vì nói tầng, hoặc
+   * (nút "Cất vào két" hoặc menu ba chấm hiện ra), khi panel im lặng thay vì nói tầng, hoặc
    * khi hộp xin quyền gửi xong mà giao diện không đổi trạng thái — cái cuối là kiểu hỏng
    * khiến người dùng bấm gửi ba lần rồi đi hỏi tay.
    */
@@ -281,12 +281,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'phải THẤY tên gọi — không biết trong két có gì thì xin quyền cũng không biết xin cái gì',
     ).toBeVisible();
     await expect(
-      page.getByText(/cần được duyệt trước khi xem/i),
+      page.getByText(/cần duyệt mới xem được/i),
       'panel phải nói rõ tầng của người đang xem, không để họ bấm rồi bị từ chối mà không hiểu vì sao',
     ).toBeVisible();
 
     await expect(
-      page.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
+      page.getByRole('button', { name: 'Cất vào két' }),
       'Member không ghi được vào két — bày nút ra là hứa một việc mà API sẽ từ chối bằng 403',
     ).toHaveCount(0);
     /*

@@ -582,7 +582,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
             'Tab Két sắt phải mở ra panel két, không phải khoảng trắng',
           ).toBeVisible();
           await expect(
-            main.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
+            main.getByRole('button', { name: 'Cất vào két' }),
             'SA cất được mật khẩu PPPoE của đường truyền — nút phải có mặt',
           ).toBeVisible();
         },
@@ -929,7 +929,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Chép tên đăng nhập',
         'Sửa hồ sơ',
         `Thao tác với ${activeCode}`,
-        'Cất mật khẩu/khóa',
+        'Cất vào két',
         // UX-E26: dòng "Tạo … · sửa lần cuối …" dưới dải 4 ô.
         lastEditButton(),
       ]),

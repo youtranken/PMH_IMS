@@ -2860,11 +2860,10 @@ export default {
     intro: 'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
     // Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu kiểu "chỉ Quản trị xem
     // được" vừa sai vừa làm người đọc thôi không đi hỏi nữa.
-    noPermission: 'Bạn không có quyền trên đối tượng này. Cần thì nhờ Quản trị gán quyền.',
     /* Thuật ngữ két: "két" là nơi chứa của một hồ sơ, "ngăn" là một mật khẩu/khóa trong két.
        Không dùng chữ "secret" trên giao diện; "Xoá vĩnh viễn" để không trùng "Thu hồi sớm" của
        break-glass (cắt quyền tạm, không mất dữ liệu). */
-    add: 'Cất mật khẩu/khóa',
+    add: 'Cất vào két',
     edit: 'Sửa thông tin',
     /* Chữ "Đổi …" theo loại ngăn (Q-20): nói đúng thứ đang đổi. Menu, tiêu đề hộp, nút lưu,
        câu hỏi mã 6 số và thông báo dùng cùng một bộ — thêm loại ngăn thì thêm đủ ba khóa. */
@@ -2877,10 +2876,10 @@ export default {
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
-    noPermissionTitle: 'Bạn chưa có quyền xem két này',
+    noPermissionTitle: 'Bạn chưa có quyền xem két này.',
     needsApproval: 'Cần duyệt',
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
-    requestBlock: 'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin mở cả két, có hạn giờ.',
+    requestBlock: 'Két cần duyệt mới xem được ({{count}} ngăn).',
     /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
        ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
     changedCol: 'Đổi lần cuối',
@@ -3018,7 +3017,7 @@ export default {
     codeResent: 'Đã gửi mã mới tới {{name}}. Mã cũ không còn dùng được.',
     codeApproved: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở.',
     /* Đã duyệt, chưa xem lần nào: lần xem đầu gắn quyền vào phiên đang xem. */
-    approvedReady: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở và nhập mã 6 số.',
+    approvedReady: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở.',
     approvedReadyLeft: 'Quyền còn {{left}} (tới {{until}}), tính từ lúc duyệt.',
     approvedReadyNote: 'Lần xem đầu gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
     /* Q-15: quyền gắn với phiên — nằm ở `title` của dòng quyền đang chạy. */
@@ -3898,7 +3897,7 @@ export default {
     confirmGrantTitle: 'Gán quyền két?',
     /* Nêu đích danh ba thứ mà bấm nhầm một ô trên lưới là sai hết cả ba. */
     confirmGrant:
-      'Gán cho {{member}} tầng "{{tier}}" trên nhóm "{{scope}}"? Họ sẽ xem được mật khẩu của mọi hồ sơ thuộc nhóm này.',
+      'Gán cho {{member}} tầng "{{tier}}" trên phạm vi "{{scope}}"? Họ sẽ xem được mật khẩu của mọi hồ sơ thuộc phạm vi này.',
     removed: 'Đã gỡ quyền.',
     remove: 'Gỡ',
     stepUpGrant: 'Nhập mã 6 số để xác nhận cấp quyền két.',
@@ -3911,8 +3910,8 @@ export default {
     note: 'Ghi chú',
     // Lưới: hàng = người, cột = nhóm đối tượng.
     person: 'Người',
-    columnFilter: 'Nhóm đối tượng',
-    allFamilies: 'Tất cả nhóm',
+    columnFilter: 'Phạm vi',
+    allFamilies: 'Tất cả phạm vi',
     scope_device_site: 'Thiết bị theo site',
     scope_device_type: 'Thiết bị theo loại',
     deviceUnionTip:
@@ -3927,10 +3926,10 @@ export default {
     cellLabel: '{{member}} — {{scope}}: {{tier}}',
     addPeopleTo: 'Gán "{{scope}}" cho nhiều người',
     grantedByLine: 'Người gán: {{actor}}',
-    summaryMain: '{{people}} Tài khoản · {{rules}} Dòng quyền · {{scopes}} Nhóm đối tượng, trong đó',
-    summaryEmpty: '{{count}} nhóm chưa gán cho ai',
-    onlyEmpty: 'Chỉ nhóm chưa ai được gán',
-    noScopes: 'Không có nhóm đối tượng nào khớp',
+    summaryMain: '{{people}} Tài khoản · {{rules}} Dòng quyền · {{scopes}} Phạm vi, trong đó',
+    summaryEmpty: '{{count}} phạm vi chưa gán cho ai',
+    onlyEmpty: 'Chỉ phạm vi chưa ai được gán',
+    noScopes: 'Không có phạm vi nào khớp',
     grantScopeTitle: 'Gán "{{scope}}" cho người dùng',
     people: 'Chọn người',
     noMembers: 'Chưa có tài khoản Thành viên nào. Quản trị và Super Admin không cần gán ở đây.',
@@ -3949,28 +3948,28 @@ export default {
     copySource: 'Đồng nghiệp',
     copyPickSource: 'Chọn đồng nghiệp',
     copySourceOption: '{{name}} ({{count}} quyền)',
-    copyHint: 'Người nhận được đúng các nhóm và đúng tầng của đồng nghiệp. Nhóm người nhận đã có thì giữ nguyên.',
+    copyHint: 'Người nhận được đúng các phạm vi và đúng tầng của đồng nghiệp. Phạm vi người nhận đã có thì giữ nguyên.',
     copyNeedSource: 'Chọn một đồng nghiệp để sao chép.',
-    copyWillGrant: 'Sẽ gán {{count}} nhóm:',
-    copyAlreadyHas: 'Bỏ qua {{count}} nhóm người này đã có:',
-    copyNothing: 'Không còn nhóm nào để sao chép — người này đã có mọi nhóm của đồng nghiệp.',
+    copyWillGrant: 'Sẽ gán {{count}} phạm vi:',
+    copyAlreadyHas: 'Bỏ qua {{count}} phạm vi người này đã có:',
+    copyNothing: 'Không còn phạm vi nào để sao chép — người này đã có mọi phạm vi của đồng nghiệp.',
     copyNoColleague: 'Chưa có thành viên nào khác được gán quyền để sao chép.',
     confirmCopy:
-      'Gán cho {{member}} {{count}} nhóm quyền két giống {{source}}, giữ nguyên tầng? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các nhóm này.',
+      'Gán cho {{member}} {{count}} phạm vi quyền két giống {{source}}, giữ nguyên tầng? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các phạm vi này.',
     copyNote: 'Sao chép từ {{source}}',
-    copyDone: 'Đã sao chép {{count}} nhóm từ {{source}}.',
+    copyDone: 'Đã sao chép {{count}} phạm vi từ {{source}}.',
     noRulesYet: 'Chưa có quyền nào: người này không xem, không xin được mật khẩu. Bấm "+ Gán quyền" để gán.',
     roleHolders: 'Có toàn quyền theo vai ({{count}})',
-    pickScopes: 'Chọn ít nhất một nhóm.',
-    allScopesGranted: 'Người này đã có quyền trên mọi nhóm. Đổi tầng một nhóm thì bấm vào nhóm đó.',
+    pickScopes: 'Chọn ít nhất một phạm vi.',
+    allScopesGranted: 'Người này đã có quyền trên mọi phạm vi. Đổi tầng một phạm vi thì bấm vào phạm vi đó.',
     confirmGrantMany:
-      'Gán cho {{member}} tầng "{{tier}}" trên {{count}} nhóm? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các nhóm này.',
+      'Gán cho {{member}} tầng "{{tier}}" trên {{count}} phạm vi? Họ sẽ xem hoặc xin được mật khẩu của mọi hồ sơ thuộc các phạm vi này.',
     willGrantScopes: 'Bấm Lưu sẽ tạo {{count}} dòng quyền, cùng tầng và cùng ghi chú.',
-    grantedScopes: 'Đã gán {{count}} nhóm.',
+    grantedScopes: 'Đã gán {{count}} phạm vi.',
     clearSearch: 'Xóa tìm kiếm',
     addFor: 'Gán quyền cho {{member}}',
     showDisabled: 'Hiện cả tài khoản đã vô hiệu hóa ({{count}})',
-    consequence_whitelist: 'Tầng "Xem thẳng": người này xem được mật khẩu của mọi hồ sơ thuộc nhóm, không cần ai duyệt.',
+    consequence_whitelist: 'Tầng "Xem thẳng": người này xem được mật khẩu của mọi hồ sơ thuộc phạm vi, không cần ai duyệt.',
     consequence_needs_approval: 'Tầng "Cần duyệt": người này phải xin mở két và nhập mã duyệt mới xem được.',
     grantedByAt: 'Gán bởi {{actor}} · {{date}}.',
     ruleHistory: 'Lịch sử của dòng quyền này',
@@ -3987,9 +3986,9 @@ export default {
     checkNeedInput: 'Chọn người và gõ mã hồ sơ cần kiểm.',
     checkNotFound: 'Không tìm thấy hồ sơ mã "{{code}}" ở loại này.',
     checkResult: '{{member}} trên {{record}}: {{tier}}.',
-    checkRelated: 'Các dòng quyền của người này thuộc nhóm liên quan:',
-    checkNoRelated: 'Người này không có dòng quyền nào thuộc nhóm liên quan — mặc định là không có quyền.',
-    checkGroups: 'Hồ sơ này thuộc nhóm: {{groups}}.',
+    checkRelated: 'Các dòng quyền của người này thuộc phạm vi liên quan:',
+    checkNoRelated: 'Người này không có dòng quyền nào thuộc phạm vi liên quan — mặc định là không có quyền.',
+    checkGroups: 'Hồ sơ này thuộc phạm vi: {{groups}}.',
     checkBecause: 'Vì dòng quyền: {{scope}} · {{tier}}.',
     checkAlsoMatched: 'Còn {{count}} dòng khớp khác nhưng hẹp hơn.',
   },
@@ -4037,6 +4036,7 @@ export default {
     filterTo: 'Xin đến ngày',
     // Tab "Yêu cầu của tôi" có câu rỗng riêng, không mượn thông điệp của Nhật ký.
     emptyMine: 'Bạn chưa gửi yêu cầu nào.',
+    emptyMineHint: 'Xin mở ở tab Két sắt của hồ sơ cần xem.',
     // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` (đủ bốn loại), không khai lẻ ở đây —
     // thiếu một loại là yêu cầu cho loại đó in ra chính cái khóa.
     subject: 'Đối tượng',
@@ -4044,7 +4044,7 @@ export default {
     asked: 'Mở trong',
     hours: '{{hours}} giờ',
     hoursUnknown: 'Không ghi số giờ',
-    decidedBy: 'Người quyết',
+    decidedBy: 'Người duyệt',
     expiresAt: 'Hết hạn',
     alreadyOver: 'Đã qua hạn — quyền đã tự cắt.',
     deny: 'Từ chối',
@@ -4097,7 +4097,7 @@ export default {
     finalCancelled: 'Người xin đã rút yêu cầu.',
     finalPendingExpired: 'Quá hạn chờ mà không ai duyệt nên yêu cầu đã tự hết hạn. Cần thì gửi yêu cầu mới.',
     /* Q-15: được duyệt thì lần xem đầu (qua mã 6 số) gắn quyền vào phiên đang xem. */
-    readyToView: 'Đã duyệt. Mở lại {{subject}}, bấm "Xem" rồi nhập mã 6 số.',
+    readyToView: 'Đã được duyệt — mở {{subject}}, bấm "Xem" ở ngăn cần mở.',
     ownRequest: 'Cần người khác duyệt',
     ownRequestHint: 'Không tự duyệt mở két cho chính mình được, cần người thứ hai.',
     cancel: 'Rút yêu cầu',
@@ -4737,7 +4737,7 @@ export default {
     by: 'quyết bởi {{who}}',
     validUntil: 'hiệu lực đến {{time}}',
     sentAt: 'gửi lúc {{time}}',
-    readyToView: 'đã duyệt — mở két, bấm "Xem"',
+    readyToView: 'đã được duyệt — bấm "Xem" ở ngăn cần mở',
     myRequests: 'Yêu cầu mở két của tôi',
     blockError: 'Không tải được khối này. Các khối còn lại vẫn đúng.',
 
