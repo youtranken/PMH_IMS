@@ -1101,7 +1101,7 @@ export function DeviceDetail({ me }: { me: Me }) {
 
       {assigningIp ? (
         <DeviceIpAssign
-          device={{ id: item.id, code: item.code }}
+          device={{ id: item.id, code: item.code, assignedTo: item.assignedTo, department: item.department }}
           change={!!firstIp}
           csrfToken={me.csrfToken}
           onClose={() => setAssigningIp(false)}

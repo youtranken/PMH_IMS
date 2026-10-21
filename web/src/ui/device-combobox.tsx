@@ -12,6 +12,14 @@ export interface DeviceOption {
   name: string;
   siteCode?: string | null;
   deviceTypeId?: string | null;
+  /** Người dùng / phòng ban của máy — ô chọn máy của hộp Cấp IP điền sẵn theo nó (LF-04). */
+  assignedTo?: string | null;
+  department?: string | null;
+}
+
+/** "Chị Lan — Kế toán": người dùng / phòng ban của một máy, ghép một dòng cho ô "Người dùng / phòng ban". */
+export function deviceOwnerText(device: { assignedTo?: string | null; department?: string | null }): string {
+  return [device.assignedTo, device.department].filter((part) => part && part.trim()).join(' — ');
 }
 
 /** Số máy mỗi lượt gợi ý — một con số cho mọi ô chọn máy, gõ thêm để thu hẹp. */

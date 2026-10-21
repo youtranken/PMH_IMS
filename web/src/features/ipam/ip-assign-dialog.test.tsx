@@ -24,6 +24,14 @@ function mockFetch() {
       if (url.startsWith('/api/v1/catalog')) {
         return Promise.resolve(jsonResponse(200, { departments: [] }));
       }
+      if (url.startsWith('/api/v1/devices?')) {
+        return Promise.resolve(
+          jsonResponse(200, {
+            items: [{ id: 'dev-9', code: 'PC-E2E-9', name: 'Máy kế toán', assignedTo: 'Chị Lan', department: 'Kế toán' }],
+            total: 1,
+          }),
+        );
+      }
       return Promise.resolve(jsonResponse(200, {}));
     }),
   );
@@ -94,6 +102,16 @@ describe('Hộp "Cấp IP" dùng chung', () => {
       expect.stringContaining('Chọn thiết bị hoặc nhập người/phòng ban dùng IP này.'),
     );
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
+  // LF-04: chọn máy thì ô người dùng theo máy — chỉ khi ô còn trống.
+  it('chọn máy → ô "Người dùng / phòng ban" điền theo máy', async () => {
+    mockFetch();
+    renderDialog(null);
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('combobox', { name: 'Thiết bị' }), 'PC-E2E');
+    await user.click(await screen.findByRole('option', { name: /PC-E2E-9/ }));
+    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Chị Lan — Kế toán');
   });
 
   it('ô trống: gửi POST addresses kèm ngày cấp, ghi chú và lý do', async () => {

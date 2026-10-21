@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import { deviceOwnerText } from '@/ui/device-combobox';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
@@ -30,7 +31,7 @@ export function DeviceIpAssign({
   onClose,
   onDone,
 }: {
-  device: { id: string; code: string };
+  device: { id: string; code: string; assignedTo?: string | null; department?: string | null };
   change?: boolean;
   csrfToken: string;
   onClose: () => void;
@@ -100,6 +101,7 @@ export function DeviceIpAssign({
         record={chosen.record}
         network={{ cidr: subnet.cidr, gateway: subnet.gateway, vlan: subnet.vlan }}
         initialDevice={{ deviceId: device.id, term: device.code }}
+        initialUsedBy={deviceOwnerText(device)}
         replacing={
           current
             ? { id: current.id, address: current.address, usedBy: current.usedBy, note: current.note }
