@@ -1113,6 +1113,7 @@ export default {
       stepUpEdit: 'Nhập mã 6 số để sửa phiên bản của bản vẽ "{{name}}".',
       noVersionTitle: 'Bản vẽ chưa có nội dung',
       noVersionHint: 'Chuyển sang tab Sửa, vẽ rồi bấm Lưu.',
+      drawOnDesktop: 'Vẽ trên máy tính.',
       noPreviewTitle: 'Phiên bản #{{seq}} chưa có ảnh xem',
       noPreviewHint: 'Bản này được dựng tự động từ kho (dựng lại mặt tủ / dựng nháp từ sơ đồ cổng) — mở tab Sửa rồi bấm Lưu để tạo ảnh xem.',
       viewingOld: 'Đang xem phiên bản #{{seq}} ({{at}}).',

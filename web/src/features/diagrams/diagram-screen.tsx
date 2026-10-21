@@ -461,10 +461,12 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   } else if (!content.data.version?.svg) {
     // Phiên bản dựng tự động (dựng lại mặt tủ / dựng nháp) có nội dung nhưng chưa có ảnh xem.
     const seq = content.data.version?.seq;
+    // Điện thoại không có tab Sửa (Q-23): câu "mở tab Sửa…" chỉ một lối không tồn tại (PW-B19).
+    const drawHint = narrow ? t('diagrams.screen.drawOnDesktop') : null;
     body = seq ? (
-      <EmptyState title={t('diagrams.screen.noPreviewTitle', { seq })} hint={t('diagrams.screen.noPreviewHint')} />
+      <EmptyState title={t('diagrams.screen.noPreviewTitle', { seq })} hint={drawHint ?? t('diagrams.screen.noPreviewHint')} />
     ) : (
-      <EmptyState title={t('diagrams.screen.noVersionTitle')} hint={t('diagrams.screen.noVersionHint')} />
+      <EmptyState title={t('diagrams.screen.noVersionTitle')} hint={drawHint ?? t('diagrams.screen.noVersionHint')} />
     );
   } else {
     const version = content.data.version;

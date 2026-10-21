@@ -261,6 +261,25 @@ describe('Lưu khi không có gì đổi (Q-23 05/10)', () => {
   });
 });
 
+// PW-B19: ở điện thoại không có tab Sửa — câu "Chuyển sang tab Sửa…" chỉ một lối không tồn tại.
+describe('Điện thoại: bản vẽ trống không bảo mở tab Sửa', () => {
+  afterEach(() => narrow(false));
+
+  it('chưa có nội dung → "Vẽ trên máy tính." thay "Chuyển sang tab Sửa…"', async () => {
+    narrow(true);
+    const empty = { ...ROOT, status: 'draft' as const, latestVersion: null, officialVersionId: null };
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: empty, version: null }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, empty),
+    });
+    renderScreen('/diagrams/d1');
+    expect(await screen.findByText('Bản vẽ chưa có nội dung')).toBeInTheDocument();
+    expect(screen.getByText('Vẽ trên máy tính.')).toBeInTheDocument();
+    expect(screen.queryByText(/tab Sửa/)).toBeNull();
+  });
+});
+
 describe('Phiên bản dựng tự động chưa có ảnh xem (Dựng lại mặt tủ / Dựng nháp từ sơ đồ cổng)', () => {
   const built = { id: 'v4', seq: 4, summary: 'Dựng lại mặt tủ R1', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
 
