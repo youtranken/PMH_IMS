@@ -33,6 +33,7 @@ import {
   type IncidentSeverity,
   type IncidentStatus,
 } from './iso-types';
+import { TimeInput } from '@/ui/time-input';
 
 const TYPE_BACKUP_LABEL: Record<NonNullable<BackupDetail['typeBackup']>, string> = { full: 'Full', incr: 'Incr', copy: 'Copy' };
 /** Nơi lưu backup — cùng hai giá trị "Storage location" của 0203. */
@@ -410,7 +411,7 @@ function IncidentForm({
             <Field label={t('iso.field.detectionTime')} required hint={period ? t('iso.incident.periodOf', { period }) : undefined} htmlFor="iso-inc-detect" error={check.error('detectedAt')}>
               <div className="iso-when">
                 <DatePicker id="iso-inc-detect" value={draft.detectDate} max={today} onChange={(v) => set('detectDate', v)} />
-                <input type="time" className="inp" aria-label={t('iso.incident.detectHour')} value={draft.detectTime} onChange={(e) => set('detectTime', e.target.value)} />
+                <TimeInput aria-label={t('iso.incident.detectHour')} value={draft.detectTime} onChange={(v) => set('detectTime', v)} />
               </div>
             </Field>
             <Field
@@ -429,13 +430,11 @@ function IncidentForm({
                   clearable
                   onChange={(v) => set('resolveDate', v)}
                 />
-                <input
-                  type="time"
-                  className="inp"
+                <TimeInput
                   aria-label={t('iso.incident.resolveHour')}
                   disabled={inProgress}
                   value={inProgress ? '' : draft.resolveTime}
-                  onChange={(e) => set('resolveTime', e.target.value)}
+                  onChange={(v) => set('resolveTime', v)}
                 />
               </div>
             </Field>
