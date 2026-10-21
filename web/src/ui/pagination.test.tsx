@@ -84,3 +84,10 @@ describe('Pagination — số lớn có dấu ngăn nghìn (TB-03)', () => {
     expect(screen.getByText(/1–20 trên 28\.805/)).toBeInTheDocument();
   });
 });
+
+describe('Pagination — số trang cũng có dấu ngăn nghìn', () => {
+  it('"Trang 1/1.441"', () => {
+    renderWithI18n(<Pagination page={1} limit={20} total={28805} onPageChange={vi.fn()} />);
+    expect(screen.getByText(/Trang 1\/1\.441/)).toBeInTheDocument();
+  });
+});

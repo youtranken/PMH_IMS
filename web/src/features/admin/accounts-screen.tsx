@@ -180,12 +180,6 @@ const STATUS_TONE: Record<AccountStatus, string> = {
  * KHÔNG dùng đỏ / cam: hai màu đó là lỗi và cảnh báo — "Super Admin" đỏ cạnh "Còn 1 ngày" đỏ
  * đọc thành tài khoản đang có vấn đề.
  */
-const ROLE_TONE: Record<Me['role'], string> = {
-  sa: 'brand',
-  admin: 'info',
-  member: 'muted',
-};
-
 const DEFAULT_LIMIT = 20;
 
 interface AccountFilters extends Record<string, string> {
@@ -616,7 +610,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         header: t('accounts.role'),
         cell: ({ row }) => (
           <>
-            <span className={`badge plain ${ROLE_TONE[row.original.role]}`}>
+            <span className="tag">
               {roleLabel(row.original.role, t)}
             </span>
             {row.original.role === 'member' && groupName(row.original.featureGroupId) ? (
@@ -686,7 +680,7 @@ export function AccountsScreen({ me }: { me: Me }) {
   const mobileCard: MobileCard<AccountRow> = {
     title: (row) => row.fullName,
     badge: (row) => (
-      <span className={`badge plain ${ROLE_TONE[row.role]}`}>{roleLabel(row.role, t)}</span>
+      <span className="tag">{roleLabel(row.role, t)}</span>
     ),
     actions: (row) => (
       <RowActions
@@ -942,7 +936,7 @@ export function AccountsScreen({ me }: { me: Me }) {
             {
               label: t('accounts.role'),
               value: (
-                <span className={`badge plain ${ROLE_TONE[detailFor.role]}`}>
+                <span className="tag">
                   {roleLabel(detailFor.role, t)}
                 </span>
               ),

@@ -91,3 +91,20 @@ describe('Bo góc 4 / 6 / 8 / 12', () => {
     expect(px(tokenValue(rootBlock(), name))).toBe(value);
   });
 });
+
+/**
+ * DS-06/PW-C15: nút icon (⋮ 27px ×200 dòng, đóng hộp 28px, xóa ngày 18px, (i) 21px) quá nhỏ cho
+ * ngón tay. Tất cả lấy cỡ từ --h-ctl-sm, token này tự lên 40px ở màn cảm ứng / hẹp.
+ */
+describe('Nút icon theo --h-ctl-sm', () => {
+  const all = ['table.css', 'form-layout.css', 'primitives.css', 'detail-tabs.css'].map(css).join('\n');
+  it.each(['.row-actions .kebab', '.sheet-close', '.caret-btn', '.copy-btn', 'button.btn-x', '.info-tip-btn'])('%s', (sel) => {
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const body = all.match(new RegExp(`(^|\\n)${esc}\\s*\\{([^}]*)\\}`))?.[2] ?? '';
+    expect(body).toMatch(/(min-)?height:\s*var\(--h-ctl-sm\)/);
+  });
+  it('màn cảm ứng / hẹp: --h-ctl-sm ≥ 40px', () => {
+    const touch = tokens.match(/@media[^{]*pointer:\s*coarse[^{]*\{\s*:root\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(px(tokenValue(touch, 'h-ctl-sm'))).toBeGreaterThanOrEqual(40);
+  });
+});

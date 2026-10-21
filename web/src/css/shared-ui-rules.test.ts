@@ -363,7 +363,7 @@ describe('bố cục khối dùng chung', () => {
   it.each(['tr:last-child', 'tr:nth-child(even)'])('luật dòng bảng `%s` không rò vào bảng con trong khu bung', (part) => {
     const rules = cssRules('table.css').filter((r) => r.selector.startsWith('table.table') && r.selector.includes(part));
     expect(rules.length).toBeGreaterThan(0);
-    for (const r of rules) expect(r.selector).toMatch(/^table\.table > tbody > tr[^ ]* > td$/);
+    for (const r of rules) expect(r.selector).toMatch(/^table\.table(\.table-stack)? > tbody > tr[^ ]*( > td)?$/);
   });
 
   it('thanh lọc ≤600px: ô chọn / ô ngày chia đều hai cột thay cho bề ngang tối thiểu lởm chởm', () => {

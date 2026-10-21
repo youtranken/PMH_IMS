@@ -43,8 +43,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-6);
-  border-radius: calc(var(--r) - 3px);
+  /* Khung = mục + 2×(đệm 4 + viền 1) → cả dải cao đúng --h-ctl như ô chọn đứng cạnh (DS-16). */
+  min-height: calc(var(--h-ctl) - 10px);
+  padding: 0 var(--space-6);
+  border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--ink-2);
@@ -75,7 +77,9 @@
   box-shadow: var(--shadow-sm);
 }
 .segmented label:has(input:focus-visible) {
-  box-shadow: var(--ring);
+  /* Khung cuộn ngang cắt mất outline vẽ ra ngoài, nên vẽ vào trong. */
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 /*
  * Trong ô FORM, dải nút trải hết bề ngang ô và các nút chia đều (Q-24): cỡ-theo-chữ làm hai nút
@@ -102,10 +106,13 @@
 /* Bản dùng NÚT: chọn MỘT trong nhiều là `ui/segmented-radio.tsx` (role radio + `aria-checked`,
    mũi tên đi trong nhóm); nút bật/tắt độc lập giữ `aria-pressed`. Hai dạng cùng một vẻ ngoài. */
 .segmented button {
-  padding: var(--space-2) var(--space-6);
+  /* Như `.segmented label`: mục + khung = --h-ctl. Không đặt thì luật nút chung (--h-ctl) đẩy cả
+     dải lên 46px. */
+  min-height: calc(var(--h-ctl) - 10px);
+  padding: 0 var(--space-6);
   border: none;
   background: none;
-  border-radius: calc(var(--r) - 3px);
+  border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--ink-2);
@@ -123,7 +130,8 @@
   box-shadow: var(--shadow-sm);
 }
 .segmented button:focus-visible {
-  box-shadow: var(--ring);
+  /* Khung cuộn ngang cắt mất outline vẽ ra ngoài, nên vẽ vào trong. */
+  outline-offset: -2px;
 }
 /* Tối: `--surface` TỐI HƠN `--surface-2` của rãnh, nên nút đang bật chìm xuống thay vì nổi
    lên và gần như không khác nút thường. Tô nền nhấn + viền để trạng thái bật đọc được. */
@@ -334,7 +342,9 @@ input[list]::-webkit-calendar-picker-indicator {
   display: inline-flex;
   align-items: center;
   width: 100%;
-  padding: var(--space-4) 2rem var(--space-4) var(--space-5);
+  /* Cao đúng --h-ctl như ô nhập và nút cạnh nó (DS-02); đệm dọc 0 để chiều cao do token quyết. */
+  min-height: var(--h-ctl);
+  padding: 0 2rem 0 var(--space-5);
   border: 1px solid var(--field-border);
   border-radius: var(--r);
   background: var(--surface);
@@ -768,7 +778,7 @@ input.switch:focus-visible {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: var(--primary-tint);
   color: var(--primary-ink);
   font-size: var(--fs-2xs);
   line-height: 1;
@@ -855,8 +865,8 @@ input.switch:focus-visible {
 .sheet-close {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   padding: 0;
   border: none;
   background: transparent;
@@ -901,12 +911,14 @@ input.switch:focus-visible {
   display: inline-flex;
   flex: 0 0 auto;
 }
-/* Hình vẽ 16px, vùng bấm 24px (WCAG 2.5.8) — nhỏ hơn thì trên điện thoại chạm trượt sang nhãn. */
+/* Hình vẽ 16px, vùng bấm --h-ctl-sm (28 / 40 khi cảm ứng). Lề âm theo chiều dọc để nút cao hơn
+   dòng nhãn mà không đẩy hàng nhãn cao lên. */
 .info-tip-btn {
   display: inline-grid;
   place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
+  margin-block: calc((var(--h-ctl-sm) - 20px) / -2);
   padding: 0;
   border: none;
   border-radius: 50%;

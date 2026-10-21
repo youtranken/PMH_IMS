@@ -31,7 +31,7 @@ describe('khối dính trong trang không chui vào dải topbar', () => {
   it.each(stickyTop.filter((rule) => !OWN_SCROLLER.has(rule.selector)))(
     '$file $selector: top tính từ dưới topbar 56px',
     ({ top }) => {
-      expect(top).toMatch(/56px/);
+      expect(top).toMatch(/56px|var\(--topbar-h\)/);
     },
   );
 });

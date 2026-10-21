@@ -172,6 +172,7 @@
      hẹp lên 44px — vùng chạm tối thiểu. */
   --h-ctl-sm: 28px;
   --h-ctl: 36px;
+  --topbar-h: 56px;
   /* Mã hồ sơ ở đầu trang chi tiết. Phải lớn hơn tiêu đề trang DANH SÁCH (--fs-2xl) — nhỏ hơn
      thì đi từ danh sách vào chi tiết tiêu đề NHỎ LẠI, tức cấp bậc ngược. */
   --fs-3xl: 28px;
@@ -181,6 +182,10 @@
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
   /* Bóng mép của dải nút cuộn ngang (`.segmented`): báo "còn nút khuất bên này". */
   --scroll-edge: rgba(16, 24, 40, 0.16);
+  /* Pha từ token gốc (DS-27): đặt ở đây để `color-mix()` ngoài tokens.css bị cổng hex chặn. */
+  --warn-tint: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
+  --danger-tint: color-mix(in srgb, var(--danger) 22%, transparent);
+  --primary-tint: color-mix(in srgb, var(--primary) 16%, transparent);
   --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.05);
   --shadow-lg: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
     0 8px 20px -12px rgba(16, 24, 40, 0.2);
@@ -193,7 +198,6 @@
   /* Vệt mờ ở mép khung cuộn ngang còn nội dung khuất (`ui/scroll-x.tsx`). */
   --edge-fade: rgba(16, 24, 40, 0.16);
   /* Bóng của khối nổi tách khỏi luồng trang (toast vòng đời, menu thao tác dòng). */
-  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.18);
   /* Nút trên dải header gradient của lịch: mực tối --on-brand trên nền trắng mờ. Header giữ
      gradient sáng ở cả hai theme nên cặp dark giữ nguyên giá trị. */
   --on-brand-veil: rgba(255, 255, 255, 0.28);
@@ -292,7 +296,7 @@
        màu ô của mẫu gốc SP-IT02 (Excel 0203/0208, Word 0206) — người ký so bản in với mẫu ISO. */
     --paper-bg:#ffffff;
     --paper-fill-head:#f8cbad; --paper-fill-note:#fff2cc; --paper-fill-group:#e2efda;
-    --paper-fill-day:#dde6f4; --paper-band:#8eaadb; --paper-band-ink:#ffffff;
+    --paper-fill-day:#dde6f4; --paper-band:#8eaadb; --paper-band-ink:#1f231c;
     --diagram-icon-fill:#cfd6dd; --diagram-icon-stroke:#4f6f9f;
     /* Giấy của trình xem sơ đồ: trình vẽ draw.io nhúng luôn chạy giấy sáng, nên trình xem cũng sáng
        ở cả hai theme — bản vẽ trông y hệt lúc Sửa (nét đen draw.io không chìm vào nền tối). */
@@ -348,6 +352,9 @@ html[data-theme='dark'] {
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   /* Nền tối: bóng ĐEN đậm hơn, không lấy `--ink` (sáng) — sáng thì thành quầng loé chứ không phải bóng. */
   --scroll-edge: rgba(0, 0, 0, 0.55);
+  --warn-tint: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
+  --danger-tint: color-mix(in srgb, var(--danger) 22%, transparent);
+  --primary-tint: color-mix(in srgb, var(--primary) 16%, transparent);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
     0 8px 20px -12px rgba(0, 0, 0, 0.5);
@@ -358,7 +365,6 @@ html[data-theme='dark'] {
   /* Nền tối: vệt phải thuần đen và đậm hơn mới thấy được trên mặt bảng tối. */
   --edge-fade: rgba(0, 0, 0, 0.55);
   /* Nền tối nuốt bóng nhạt: phải đậm hơn mới tách khối nổi khỏi trang. */
-  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.55);
   --on-brand-veil: rgba(255, 255, 255, 0.28);
   --on-brand-veil-soft: rgba(255, 255, 255, 0.18);
   --on-brand-press: rgba(0, 0, 0, 0.4);
@@ -410,7 +416,7 @@ html[data-theme='dark'] {
     --paper-cable-warn:#ca8a04; --paper-cable-danger:#c0392b; --paper-ink:#1f231c;
     --paper-bg:#ffffff;
     --paper-fill-head:#f8cbad; --paper-fill-note:#fff2cc; --paper-fill-group:#e2efda;
-    --paper-fill-day:#dde6f4; --paper-band:#8eaadb; --paper-band-ink:#ffffff;
+    --paper-fill-day:#dde6f4; --paper-band:#8eaadb; --paper-band-ink:#1f231c;
     --diagram-icon-fill:#cfd6dd; --diagram-icon-stroke:#4f6f9f;
     --diagram-paper:#ffffff;
     --map-banner:#24382c; --map-banner-ink:#eaf3ee; --map-banner-ink-2:#a9bbaf;

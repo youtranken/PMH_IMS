@@ -127,9 +127,9 @@
 .copy-btn {
   display: inline-grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  /* `button` chung có đệm ngang 0.85rem: trong ô 28px vùng nội dung thành âm và hình tràn
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
+  /* `button` chung có đệm ngang: trong ô vuông nhỏ vùng nội dung thành âm và hình tràn
      sang phải, lệch tâm. Ô vuông thì không cần đệm — `place-items` tự canh giữa. */
   padding: 0;
   line-height: 0;
@@ -258,7 +258,6 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: var(--space-9);
-  box-shadow: var(--shadow-sm);
 }
 /* Là `<h2>` (khu có tên cho trình đọc màn hình) — nên phải dập lề mặc định của thẻ
    tiêu đề, nếu không thẻ định danh tự dưng thụt xuống một khoảng so với cột bên trái. */
@@ -526,7 +525,8 @@
   /* Container flex để `.tab-count` canh giữa theo chữ, không nhảy baseline. */
   display: inline-flex;
   align-items: center;
-  padding: var(--space-3) var(--space-7);
+  min-height: calc(var(--h-ctl) + 4px);
+  padding: 0 var(--space-7);
   border: none;
   border-bottom: 2px solid transparent;
   background: none;
@@ -606,7 +606,6 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-8);
 }
 /* Chỉ một ô tìm: ô nằm thẳng trên nền, không khung thẻ (FilterBar tự gắn `is-bare`). */
@@ -959,7 +958,6 @@ html[data-motion='off'] .skeleton {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-sm);
 }
 .fact {
   display: flex;

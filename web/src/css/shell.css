@@ -150,7 +150,7 @@
   color: var(--danger);
 }
 .sb-foot .sb-act.danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  background: var(--danger-tint);
   color: var(--danger);
 }
 /* Menu tài khoản: nhãn nhóm "Giao diện", ô dấu chọn cố định bề rộng để ba lựa chọn thẳng hàng. */

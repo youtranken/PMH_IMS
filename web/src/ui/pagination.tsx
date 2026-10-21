@@ -95,7 +95,7 @@ export function Pagination({
         <Chevron direction="left" />
       </button>
       <span className="pager-page">
-        {t('common.page')} {page}/{lastPage}
+        {t('common.page')} {formatCount(page)}/{formatCount(lastPage)}
       </span>
       {pages.length > 0 ? (
         <ol className="pager-pages">
@@ -116,7 +116,7 @@ export function Pagination({
                     if (item !== page) onPageChange(item);
                   }}
                 >
-                  {item}
+                  {formatCount(item)}
                 </button>
               </li>
             ),
@@ -172,7 +172,7 @@ function PageJump({ lastPage, onJump }: { lastPage: number; onJump: (page: numbe
         value={value}
         onChange={(event) => setValue(event.target.value)}
       />
-      <button type="submit" className="btn sm" aria-label={t('pagination.jumpGoLabel')}>
+      <button type="submit" className="btn" aria-label={t('pagination.jumpGoLabel')}>
         {t('pagination.jumpGo')}
       </button>
     </form>

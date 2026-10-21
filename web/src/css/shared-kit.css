@@ -1505,7 +1505,8 @@ html[data-motion='off'] .kpi:hover { transform: none; }
 .sticky-action-bar.compact .sticky-action-note { margin-right: auto; }
 .sticky-action-bar.compact .sticky-action-buttons > .btn {
   flex: 0 0 auto;
-  min-height: 0;
+  /* `min-height: 0` cũ thả nút về cao theo đệm (0 sau khi đệm dọc về 0) → nút 20px. */
+  min-height: var(--h-ctl-sm);
 }
 @media (max-width: 680px) {
   /* Điện thoại: tràn sát hai mép như thanh công cụ, không phải một thẻ lơ lửng. */
@@ -1695,7 +1696,7 @@ table.access-grid thead .access-row-head {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 2.375rem;
+  min-height: var(--h-ctl);
   padding: 0 var(--space-6);
   border: 1px solid var(--border-2);
   border-radius: 999px;

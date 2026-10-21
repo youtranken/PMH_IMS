@@ -9,12 +9,12 @@
   all: unset;
   cursor: pointer;
   color: var(--ink-2);
-  /* Ô bấm VUÔNG 28px, không phải một con chữ: ký tự › cỡ --fs-xs với padding 2px thì vùng
+  /* Ô bấm VUÔNG --h-ctl-sm, không phải một con chữ: ký tự › cỡ --fs-xs với padding 2px thì vùng
      bấm chưa tới 12px, trượt tay là bấm trúng link mã thiết bị ngay bên cạnh. */
   display: inline-grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   font-size: var(--fs-md);
   border-radius: 6px;
 }
@@ -890,8 +890,8 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 button.btn-x {
   display: inline-grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   padding: 0;
   flex: none;
   background: transparent;
@@ -2025,7 +2025,7 @@ button.tree-summary:hover:not(:disabled) {
 }
 /* Nền nhạt màu cảnh báo: khu NHÁP là chỗ có việc phải quyết (phát hành hay bỏ). */
 .dpanel-drafts {
-  background: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
+  background: var(--warn-tint);
 }
 .dpanel-section-head {
   display: flex;
@@ -2219,8 +2219,8 @@ button.tree-summary:hover:not(:disabled) {
 }
 .dmap-add-inline > button {
   width: auto;
-  min-height: 0;
-  padding: 0 var(--space-6);
+  /* Chữ dài xuống dòng: đệm dọc nhỏ để hai dòng không dính viền; một dòng vẫn cao --h-ctl. */
+  padding: var(--space-2) var(--space-6);
 }
 
 /* Mặt cổng của thiết bị (`features/devices/port-face.tsx`): mỗi cổng một ô; đang dùng / trống khác

@@ -4,7 +4,16 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+}
+/* Bảng vừa bề ngang (TableWrap đặt `data-fit`): `clip` không tạo vùng cuộn, nên tiêu đề cột
+   dính được vào trang ngay dưới topbar (TB-02). Bảng rộng hơn khung giữ `auto` để cuộn ngang. */
+.table-wrap[data-fit] {
+  overflow-x: clip;
+}
+.table-wrap[data-fit] > table.table > thead th {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 2;
 }
 table.table {
   width: 100%;
@@ -14,7 +23,7 @@ table.table {
 table.table thead th {
   text-align: left;
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   /* --ink, không --ink-2: tiêu đề cột là chỗ mắt bám để đọc bảng — xám nhạt thì lẫn vào dữ
@@ -81,6 +90,11 @@ table.table > tbody > tr > td {
 }
 table.table > tbody > tr:nth-child(even) > td {
   background: var(--row-alt);
+}
+/* Số và ngày đều bề rộng chữ số ở MỌI ô, không chỉ ô `.mono` (DS-26): cột ngày / số lượng thẳng
+   hàng dọc. */
+table.table td {
+  font-variant-numeric: tabular-nums;
 }
 /* Ô mono trống chỉ còn dấu "—": vẽ bằng font mono thì nó ngắn lại thành "–", đứng cạnh "—"
    của cột thường là hai dấu gạch khác nhau cho cùng một nghĩa "chưa khai". */
@@ -306,14 +320,15 @@ table.table tbody tr.row-suspended td:first-child {
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-md);
   line-height: 1;
-  /* Vùng bấm đủ ngón tay chạm trúng (WCAG 2.5.8) — ba chấm vẽ ra chỉ rộng chừng 10px. */
-  min-width: 2rem;
-  min-height: 1.9rem;
+  /* Vùng bấm đủ ngón tay chạm trúng (WCAG 2.5.8) — ba chấm vẽ ra chỉ rộng chừng 10px. Theo
+     --h-ctl-sm nên tự lên 40px ở màn cảm ứng (DS-06). */
+  min-width: var(--h-ctl-sm);
+  min-height: var(--h-ctl-sm);
 }
 /* Ô giữ chỗ bằng nút ⋮ cho dòng không có menu — cột thao tác thẳng hàng. */
 .kebab-slot {
   display: inline-block;
-  min-width: 2rem;
+  min-width: var(--h-ctl-sm);
 }
 .row-actions .kebab[aria-expanded='true'] {
   background: var(--muted-soft);
@@ -343,7 +358,7 @@ table.table tbody tr.row-suspended td:first-child {
     var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-pop);
 }
 .row-actions-menu button {
   display: flex;
@@ -626,6 +641,14 @@ table.table td.col-name {
   table.table-stack td.col-name {
     min-width: 0;
   }
+  /* Bảng gập thẻ: dòng là lưới có khe, chỉ tô ô thì sọc chẵn thành từng mảng xám rời (TB-08).
+     Tô cả dòng để khe cùng màu; trạng thái tới hạn cũng lên dòng. */
+  table.table.table-stack > tbody > tr:nth-child(even) {
+    background: var(--row-alt);
+  }
+  table.table.table-stack > tbody > tr.due-today {
+    background: var(--warn-soft);
+  }
 }
 
 /* --- Cột dính khi bảng cuộn ngang (DataTable `stickyActions` / meta.sticky) ----------
@@ -698,7 +721,6 @@ table.table .col-sticky-end::after {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 /* Tiêu đề nhóm (`groupBy` của `DataTable`/`MobileCardList`): "Hôm nay", "Tháng 10/2026". */

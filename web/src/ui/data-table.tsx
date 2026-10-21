@@ -172,6 +172,8 @@ export function TableWrap({ children }: { children: ReactNode }) {
       className="table-wrap"
       data-more-start={edges.start ? 'true' : undefined}
       data-more-end={edges.end ? 'true' : undefined}
+      // Vừa bề ngang = không cuộn ngang: CSS đổi khung sang `clip` để tiêu đề cột dính trang.
+      data-fit={!edges.start && !edges.end ? 'true' : undefined}
     >
       {children}
     </div>
