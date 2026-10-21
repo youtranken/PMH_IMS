@@ -1302,37 +1302,45 @@ function BlockedNow() {
     refetchInterval: 60_000,
   });
   const rows = Array.isArray(blocked.data) ? blocked.data : [];
+  const blockedColumns: ColumnDef<BlockedRow, unknown>[] = [
+    {
+      id: 'account',
+      header: t('accounts.blockedAccount'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span title={row.original.email ?? undefined}>{row.original.fullName ?? row.original.email ?? row.original.userId}</span>
+      ),
+    },
+    { id: 'ip', header: t('accounts.lockoutIp'), enableSorting: false, meta: { className: 'mono' }, cell: ({ row }) => row.original.ip },
+    { id: 'attempts', header: t('accounts.lockoutAttempts'), enableSorting: false, cell: ({ row }) => row.original.failedAttempts },
+    {
+      id: 'until',
+      header: t('accounts.lockoutUntil'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="badge warn">{formatDateTime(row.original.lockedUntil)}</span>,
+    },
+    { id: 'last', header: t('accounts.lockoutLastFail'), enableSorting: false, cell: ({ row }) => formatDateTime(row.original.updatedAt) },
+  ];
   if (rows.length === 0) return null;
   return (
     <section className="card account-blocked">
       <h2 className="form-section-title">{t('accounts.blockedNowTitle', { count: rows.length })}</h2>
       <p className="muted small">{t('accounts.blockedNowHint')}</p>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('accounts.blockedAccount')}</th>
-              <th>{t('accounts.lockoutIp')}</th>
-              <th>{t('accounts.lockoutAttempts')}</th>
-              <th>{t('accounts.lockoutUntil')}</th>
-              <th>{t('accounts.lockoutLastFail')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={`${row.userId}-${row.ip}`}>
-                <td title={row.email ?? undefined}>{row.fullName ?? row.email ?? row.userId}</td>
-                <td className="mono">{row.ip}</td>
-                <td>{row.failedAttempts}</td>
-                <td>
-                  <span className="badge warn">{formatDateTime(row.lockedUntil)}</span>
-                </td>
-                <td>{formatDateTime(row.updatedAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* DataTable (TB-14): đúng lúc bị dò mật khẩu thì khối này phải đọc được trên điện thoại —
+          bảng 5 cột cố định thì cuộn ngang. ≤600px thành thẻ "IP · chặn tới … · tài khoản". */}
+      <DataTable
+        data={rows}
+        columns={blockedColumns}
+        emptyText="—"
+        mobileCard={{
+          title: (row) => row.ip,
+          titleIsCode: true,
+          badge: (row) => <span className="badge warn">{formatDateTime(row.lockedUntil)}</span>,
+          subtitle: (row) =>
+            `${row.fullName ?? row.email ?? row.userId} · ${t('accounts.lockoutAttempts')} ${row.failedAttempts}`,
+          meta: (row) => `${t('accounts.lockoutLastFail')} ${formatDateTime(row.updatedAt)}`,
+        }}
+      />
     </section>
   );
 }
