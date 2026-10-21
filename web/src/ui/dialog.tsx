@@ -334,6 +334,16 @@ export function Dialog({
       event.preventDefault();
       return;
     }
+    /*
+     * LF-28: ô gợi ý (combobox) đã gõ chữ mà không có gợi ý nào thì không có popover trong điểm
+     * neo, nên luật trên không bắt — Esc đóng luôn cả hộp, mất hết những gì vừa nhập. Người bấm
+     * Esc ở đó là muốn thoát ô gợi ý, không phải bỏ cả form.
+     */
+    const active = document.activeElement as HTMLInputElement | null;
+    if (active?.getAttribute('role') === 'combobox' && typeof active.value === 'string' && active.value !== '') {
+      event.preventDefault();
+      return;
+    }
     if (!guardUnsaved) return;
     // Radix tự đóng nếu ta không cản; cản rồi tự quyết sau khi hỏi xong.
     event.preventDefault();
@@ -447,7 +457,16 @@ export function Dialog({
           animation trên CHÍNH node này — không có animation đóng ở đây thì cả hộp bị gỡ ngay,
           hiệu ứng đóng của con không kịp chạy (Q-21, overlays.css).
         */}
-        <div className="dialog-viewport" data-state={open ? 'open' : 'closed'}>
+        {/*
+          LF-01: hộp nằm ở portal nên DOM tách khỏi form bên dưới, nhưng sự kiện React vẫn nổi bọt
+          theo cây component — Lưu ở hộp con (Thêm model) nộp luôn form thiết bị chứa nó. Mọi
+          form trong hộp đã chạy handler của mình trước khi tới đây.
+        */}
+        <div
+          className="dialog-viewport"
+          data-state={open ? 'open' : 'closed'}
+          onSubmit={(event) => event.stopPropagation()}
+        >
           <RD.Content
             className={className}
             style={maxWidth ? { maxWidth } : undefined}
