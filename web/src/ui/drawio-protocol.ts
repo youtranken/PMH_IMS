@@ -49,8 +49,10 @@ export type DrawioMode = 'edit' | 'view';
  */
 const DRAWIO_LIBRARIES = 'general;network;rack';
 
-export function drawioUrl(mode: DrawioMode): string {
+/** `theme` = theme của IMS lúc mở khung: tối thì draw.io cũng tối (`dark=1`, PW-B20). */
+export function drawioUrl(mode: DrawioMode, theme: 'light' | 'dark' = 'light'): string {
   const params = new URLSearchParams(COMMON_PARAMS);
+  if (theme === 'dark') params.set('dark', '1');
   if (mode === 'edit') {
     params.set('noExitBtn', '1');
     params.set('saveAndExit', '0');
