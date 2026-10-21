@@ -235,6 +235,18 @@ describe('Dải "Cần làm" và ô tìm', () => {
     expect(found).toHaveAttribute('href', '/diagrams/sv?focus=m1');
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/diagrams/find?q=phong+server'))).toBe(true);
   });
+
+  // ST-07: lọc không ra bản vẽ nào thì cả bản đồ mờ kèm một dòng chữ nhạt — nói rõ và cho nút gỡ.
+  it('tìm không khớp bản vẽ nào: khung rỗng nói từ đã gõ + nút "Xóa bộ lọc"; không bày bản đồ mờ', async () => {
+    routeFetch({ '/api/v1/diagrams/find': () => jsonResponse(200, []) });
+    renderScreen('/diagrams?q=zzzz');
+    expect(await screen.findByText('Không có bản vẽ nào khớp "zzzz".')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Bản đồ bản vẽ' })).toBeNull();
+    expect(screen.queryByText(/Đang lọc: 0/)).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Xóa bộ lọc' }));
+    expect(location).not.toContain('q=');
+    expect(await screen.findByRole('region', { name: 'Bản đồ bản vẽ' })).toBeInTheDocument();
+  });
 });
 
 describe('Panel bản vẽ đang chọn', () => {

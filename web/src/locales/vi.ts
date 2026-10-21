@@ -857,6 +857,8 @@ export default {
     updated: 'Đã lưu "{{name}}".',
     actionsOf: 'Thao tác với {{name}}',
     emptyTitle: 'Chưa có bản vẽ nào.',
+    emptySearch: 'Không có bản vẽ nào khớp "{{q}}".',
+    emptyFiltered: 'Không có bản vẽ nào khớp bộ lọc.',
     emptyHint: 'Bấm "Thêm bản vẽ" để tạo gốc cây (thường là Tổng công ty).',
     titleTip: 'Mỗi bản vẽ là một nút trên cây. Xem cây không cần mã; mở nội dung một bản vẽ thì nhập mã 6 số sơ đồ (nhập một lần, không phải nhập lại mỗi lần mở).',
     stepsLabel: 'Các bước bắt đầu',

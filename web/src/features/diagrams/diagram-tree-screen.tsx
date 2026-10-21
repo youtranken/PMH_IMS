@@ -196,6 +196,9 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
     const filtering = filterActive(filter);
     const matched = filtering ? all.filter((n) => nodeMatches(n, filter)).length : 0;
     const q = filter.q.trim();
+    // Lọc không ra bản vẽ nào: bản đồ toàn ô mờ không nói được gì — khung rỗng kèm nút gỡ (ST-07).
+    const noneMatch = filtering && matched === 0;
+    const clearFilter = () => update({ todo: null, q: null });
     body = (
       <>
         <div className="dmap-toolbar">
@@ -230,10 +233,10 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
             </button>
           ) : null}
         </div>
-        {filtering ? (
+        {filtering && !noneMatch ? (
           <p className="dmap-filtering" role="status">
             {t('diagrams.map.filtering', { count: matched })}{' '}
-            <button type="button" className="linkbtn" onClick={() => update({ todo: null, q: null })}>
+            <button type="button" className="linkbtn" onClick={clearFilter}>
               {t('diagrams.map.clearFilter')}
             </button>
           </p>
@@ -266,7 +269,16 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
         <div className="dmap-layout">
           <div className="dmap-main">
             {crumbs.length > 0 ? <Crumbs crumbs={crumbs} label={t('diagrams.map.breadcrumb')} /> : null}
-            {view === 'list' ? (
+            {noneMatch ? (
+              <EmptyState
+                title={q ? t('diagrams.emptySearch', { q }) : t('diagrams.emptyFiltered')}
+                action={
+                  <button type="button" className="btn" onClick={clearFilter}>
+                    {t('diagrams.map.clearFilter')}
+                  </button>
+                }
+              />
+            ) : view === 'list' ? (
               <DiagramListView nodes={all} selected={selected} filter={filter} onSelect={select} />
             ) : (
               <DiagramMapView
