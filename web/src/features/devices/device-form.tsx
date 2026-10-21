@@ -35,6 +35,7 @@ import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
 import { DeviceModelField } from './device-model-field';
 import { ACCESS_KINDS, type AccessPoint } from './device-access';
 import { CodeInput, IpInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface FormState {
   code: string;
@@ -163,6 +164,7 @@ export function DeviceForm({
   // Ảnh chụp lúc mở form: khối gập nào đã có giá trị thì mở sẵn (sửa, nhân bản).
   const [initial] = useState(form);
   const [error, setError] = useSubmitError([form]);
+  const server = useServerFieldErrors([form]);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();
@@ -358,7 +360,7 @@ export function DeviceForm({
       },
       onError: (err) => {
         if (errorCode(err) === 'DEVICE_RACK_U_TAKEN') setRackServerError(errorMessage(err));
-        else setError(errorMessage(err));
+        else if (!server.claim(err, { DEVICE_CODE_TAKEN: 'device-code' })) setError(errorMessage(err));
       },
     });
   };
@@ -461,7 +463,7 @@ export function DeviceForm({
               <img src={modelFront} alt={t('devices.modelPreviewAlt', { model: model?.model ?? '' })} />
             </div>
           ) : null}
-          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
+          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code') ?? server.error('device-code')}>
             <CodeInput
               caps
               ref={codeRef}
@@ -521,7 +523,7 @@ export function DeviceForm({
               options={activeOptions(
                 lists.data?.sites,
                 device?.siteId,
-                siteFormLabel,
+                (site) => siteFormLabel(site),
               )}
               failed={lists.isError}
               onChange={(value) => set('siteId', value)}

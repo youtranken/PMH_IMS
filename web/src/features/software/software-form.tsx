@@ -40,6 +40,7 @@ import {
   type SoftwareScreenKey,
 } from '@/lib/software-screens';
 import { CodeInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface FormState {
   code: string;
@@ -131,6 +132,7 @@ export function SoftwareForm({
   const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(row, kinds[0], batchFrom));
   const [error, setError] = useSubmitError([form]);
+  const server = useServerFieldErrors([form]);
   // Giấy tờ chọn kèm lúc THÊM MỚI (AD-15). Hồ sơ đang sửa thì đã có tab Giấy tờ ở trang
   // chi tiết — bày thêm một ô chọn ở đây chỉ làm người ta tưởng danh sách cũ biến mất.
   const draft = useAttachmentDraft();
@@ -377,7 +379,9 @@ export function SoftwareForm({
                   onSaved({ id, assign });
                 })();
               },
-              onError: (err) => setError(errorMessage(err)),
+              onError: (err) => {
+                if (!server.claim(err, { SOFTWARE_CODE_TAKEN: 'sw-code' })) setError(errorMessage(err));
+              },
             },
           );
         }}
@@ -443,7 +447,7 @@ export function SoftwareForm({
               onChange={(e) => set('name', e.target.value)}
             />
           </Field>
-          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code')}>
+          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code') ?? server.error('sw-code')}>
             <CodeInput
               caps
               id="sw-code"

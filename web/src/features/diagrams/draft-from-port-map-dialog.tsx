@@ -104,7 +104,7 @@ export function DraftFromPortMapDialog({
               value={siteId}
               onChange={setSiteId}
               ariaLabel={t('diagrams.cable.draftSite')}
-              options={activeOptions(lists.data?.sites, null, siteFormLabel)}
+              options={activeOptions(lists.data?.sites, null, (site) => siteFormLabel(site))}
             />
           </Field>
         ) : (

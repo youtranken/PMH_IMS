@@ -26,6 +26,7 @@ import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
 import { CodeInput, IpInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 const WAN_ISSUE_KEY: Record<Exclude<WanIpIssue, null>, string> = {
   range: 'isp.wanIpRange',
@@ -86,6 +87,7 @@ export function IspForm({
   );
   const [query, setQuery] = useState(row?.deviceCode ?? '');
   const [error, setError] = useSubmitError([form, device]);
+  const server = useServerFieldErrors([form, device]);
   // Bản scan hợp đồng ISP đi kèm ngay lúc khai đường mới (AD-15 — cùng khối với thiết bị và
   // phần mềm). Sửa đường thì tab "Giấy tờ" ở trang chi tiết mới là chỗ xem cả danh sách.
   const draft = useAttachmentDraft();
@@ -228,7 +230,9 @@ export function IspForm({
                   onSaved();
                 })();
               },
-              onError: (err) => setError(errorMessage(err)),
+              onError: (err) => {
+                if (!server.claim(err, { ISP_CODE_TAKEN: 'isp-code' })) setError(errorMessage(err));
+              },
             },
           );
         }}
@@ -247,7 +251,7 @@ export function IspForm({
         ) : null}
         {check.summary}
         <FormSection title={t('isp.tabProfile')} columns={4}>
-          <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code')}>
+          <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code') ?? server.error('isp-code')}>
             <CodeInput
               caps
               id="isp-code"
@@ -374,7 +378,7 @@ export function IspForm({
               options={activeOptions(
                 lists.data?.sites,
                 row?.siteId,
-                siteFormLabel,
+                (site) => siteFormLabel(site),
               )}
               onChange={(value) => set('siteId', value)}
             />

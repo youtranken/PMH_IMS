@@ -29,6 +29,7 @@ import {
   type ServiceAccountStatus,
 } from './service-account-types';
 import { CodeInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface FormState {
   code: string;
@@ -88,6 +89,7 @@ export function ServiceAccountForm({
   const departments = useDepartments();
   const [form, setForm] = useState<FormState>(() => initialState(row));
   const [error, setError] = useSubmitError([form]);
+  const server = useServerFieldErrors([form]);
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /*
@@ -254,7 +256,9 @@ export function ServiceAccountForm({
                   }
                 })();
               },
-              onError: (err) => setError(errorMessage(err)),
+              onError: (err) => {
+                if (!server.claim(err, { SERVICE_ACCOUNT_CODE_TAKEN: 'sa-code' })) setError(errorMessage(err));
+              },
             },
           );
         }}
@@ -318,6 +322,7 @@ export function ServiceAccountForm({
               nói trước hậu quả ngay khi nó bị đổi. */}
           <Field
             label={t('serviceAccounts.code')}
+            error={server.error('sa-code')}
             hint={
               row
                 ? form.code.trim() !== row.code

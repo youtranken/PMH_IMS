@@ -287,7 +287,7 @@ export function DiagramNodeDialog({
                 failed={lists.isError}
                 options={[
                   { value: NONE, label: t('diagrams.form.none') },
-                  ...activeOptions(lists.data?.sites, node?.siteId, siteFormLabel),
+                  ...activeOptions(lists.data?.sites, node?.siteId, (site) => siteFormLabel(site)),
                 ]}
                 onChange={(value) => setForm({ ...form, siteId: value === NONE ? null : value, cabinetId: null })}
               />

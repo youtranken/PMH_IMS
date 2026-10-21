@@ -253,7 +253,7 @@ export function SubnetForm({
             placeholder={t('ipam.noSite')}
             options={[
               { value: '', label: t('ipam.noSite') },
-              ...activeOptions(lists.data?.sites, subnet?.siteId, siteFormLabel),
+              ...activeOptions(lists.data?.sites, subnet?.siteId, (site) => siteFormLabel(site)),
             ]}
             failed={lists.isError}
           />

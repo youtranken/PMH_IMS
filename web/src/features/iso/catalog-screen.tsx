@@ -21,6 +21,7 @@ import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { ISO_KEY, useDivisions, useIsoWrite, useJobs, useOwners } from './iso-api';
 import { canWriteForm, lineStorage, pointsError } from './iso-rules';
 import type { Division, FormOwners, IsoPerson, Job, JobLine } from './iso-types';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 type Tab = 'jobs' | 'divisions' | 'owners';
 const TABS: Tab[] = ['jobs', 'divisions', 'owners'];
@@ -235,6 +236,7 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
     })) ?? [blankLine()],
   );
   const [error, setError] = useSubmitError([no, name, trackedFrom, lines]);
+  const server = useServerFieldErrors([no, name, trackedFrom, lines]);
   const save = useIsoWrite<void, Job>(me.csrfToken, () => ({
     url: job ? `/api/v1/iso/catalog/jobs/${job.id}` : '/api/v1/iso/catalog/jobs',
     method: job ? 'PATCH' : 'POST',
@@ -290,7 +292,9 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
               toast({ message: t('iso.catalog.jobSaved') });
               onClose();
             },
-            onError: (err) => setError(errorMessage(err)),
+            onError: (err) => {
+              if (!server.claim(err, { ISO_JOB_NO_TAKEN: 'iso-job-no', ISO_JOB_NAME_TAKEN: 'iso-job-name' })) setError(errorMessage(err));
+            },
           });
         }}
       >
@@ -300,10 +304,10 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
           </p>
         ) : null}
         <FormSection columns={3}>
-          <Field label={t('iso.field.jobName')} required htmlFor="iso-job-name" error={check.error('name')}>
+          <Field label={t('iso.field.jobName')} required htmlFor="iso-job-name" error={check.error('name') ?? server.error('iso-job-name')}>
             <input id="iso-job-name" className="inp mono" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label={t('iso.catalog.no')} required size="xs" htmlFor="iso-job-no" error={check.error('no')}>
+          <Field label={t('iso.catalog.no')} required size="xs" htmlFor="iso-job-no" error={check.error('no') ?? server.error('iso-job-no')}>
             <input id="iso-job-no" className="inp" inputMode="numeric" value={no} onChange={(e) => setNo(e.target.value)} />
           </Field>
           <Field label={t('iso.catalog.trackedFrom')} required hint={t('iso.catalog.trackedFromHint')} htmlFor="iso-job-from">

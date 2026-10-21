@@ -13,6 +13,7 @@ import { isEmail } from '@/lib/email';
 import { RoleChoice } from './role-choice';
 import { FeatureGroupSelect } from './account-dialogs';
 import { CodeInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface CreateResult {
   user: { id: string; email: string; fullName: string; role: Me['role'] };
@@ -69,6 +70,7 @@ export function AccountForm({
   // Q-31: '' = Đủ quyền. Chỉ gửi khi vai là Thành viên — SA/Admin luôn đủ quyền.
   const [featureGroupId, setFeatureGroupId] = useState('');
   const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired, featureGroupId]);
+  const server = useServerFieldErrors([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired, featureGroupId]);
 
   const create = useApiMutation<Record<string, unknown>, CreateResult>('/api/v1/accounts', {
     csrfToken,
@@ -156,6 +158,7 @@ export function AccountForm({
               }),
             (err: unknown) => {
               if (isStepUpCancelled(err)) return;
+              if (server.claim(err, { EMAIL_TAKEN: 'acc-email' })) return;
               setError(errorMessage(err, t('accounts.createFailed')));
             },
           );
@@ -182,7 +185,7 @@ export function AccountForm({
           label={t('accounts.email')}
           required
           htmlFor="acc-email"
-          error={check.error('email')}
+          error={check.error('email') ?? server.error('acc-email')}
         >
           {editing ? (
             // Hiện thẳng chữ chứ không phải ô nhập bị khoá: ô khoá thì người dùng còn ngồi

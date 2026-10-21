@@ -319,7 +319,7 @@ export function CatalogForm({
               options={activeOptions(
                 lists.data?.sites,
                 (row as CabinetRow | null)?.siteId,
-                siteFormLabel,
+                (site) => siteFormLabel(site),
               )}
               onChange={pickSite}
             />
