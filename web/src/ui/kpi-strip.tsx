@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Chevron } from '@/ui/chevron';
 import { useCountUp } from '@/ui/use-count-up';
+import { formatCount } from '@/lib/format';
 
 /**
  * Hàng số ở đầu màn — MỘT CON SỐ TO, ĐỌC ĐƯỢC TỪ XA, VÀ BẤM ĐƯỢC.
@@ -91,7 +92,7 @@ export function KpiTile({
   const inner = (
     <>
       <span className="kpi-n">
-        {shown}
+        {formatCount(shown)}
         {incomplete ? '+' : null}
       </span>
       <span className="kpi-l">{label}</span>

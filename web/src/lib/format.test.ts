@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatCount,
   agoParts,
   formatDateTime,
   formatMoney,
@@ -111,5 +112,18 @@ describe('remainingParts', () => {
     [12.7, { hours: 0, minutes: 0, seconds: 12 }],
   ])('%d giây → %j', (seconds, expected) => {
     expect(remainingParts(seconds)).toEqual(expected);
+  });
+});
+
+/** TB-03: số đếm có dấu chấm ngăn nghìn như tiền — "28805 dòng" đọc thành 2.880,5 hay 28 nghìn? */
+describe('formatCount — số đếm dùng chung', () => {
+  it.each([
+    [0, '0'],
+    [999, '999'],
+    [6470, '6.470'],
+    [28805, '28.805'],
+    [1234567, '1.234.567'],
+  ])('%i → %s', (value, expected) => {
+    expect(formatCount(value)).toBe(expected);
   });
 });

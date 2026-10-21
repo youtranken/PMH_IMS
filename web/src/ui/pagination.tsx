@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Chevron } from './chevron';
 import { Select } from './select';
 import { clampPage, lastPageOf, pageWindow } from '@/lib/paging';
+import { formatCount } from '@/lib/format';
 
 /**
  * Phân trang server-side dùng chung (AD-15) — đi cặp với API `{ items, total }`
@@ -58,7 +59,7 @@ export function Pagination({
   return (
     <nav className="pager" aria-label={t('common.page')}>
       <span className="pager-info muted">
-        {from}–{to} {t('common.of')} {total} {t('common.rows')}
+        {formatCount(from)}–{formatCount(to)} {t('common.of')} {formatCount(total)} {t('common.rows')}
       </span>
 
       {onLimitChange ? (

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode,
 import { Chevron } from '@/ui/chevron';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { motionReduced } from '@/lib/motion';
+import { formatCount } from '@/lib/format';
 
 /** Nội dung tab mờ dần vào — bằng `--dur` của tokens.css (Web Animations không đọc biến CSS). */
 const TAB_FADE_MS = 200;
@@ -230,7 +231,7 @@ export function Tabs({
           {item.count ? (
             <>
               {' '}
-              <span className="tab-count">{item.count}</span>
+              <span className="tab-count">{formatCount(item.count)}</span>
             </>
           ) : null}
         </button>

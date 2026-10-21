@@ -77,3 +77,10 @@ describe('Pagination — biến thể gọn', () => {
     expect(screen.getByText(/81–100/)).toBeInTheDocument();
   });
 });
+
+describe('Pagination — số lớn có dấu ngăn nghìn (TB-03)', () => {
+  it('"1–20 trên 28.805 dòng", không phải 28805', () => {
+    renderWithI18n(<Pagination page={1} limit={20} total={28805} onPageChange={vi.fn()} />);
+    expect(screen.getByText(/1–20 trên 28\.805/)).toBeInTheDocument();
+  });
+});
