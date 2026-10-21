@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import { DatePicker, parseTypedDate } from '@/ui/date-picker';
+import { DatePicker, maskDateTyping, parseTypedDate } from '@/ui/date-picker';
 
 function Harness({ initial, onChange }: { initial: string; onChange?: (v: string) => void }) {
   const [value, setValue] = useState(initial);
@@ -139,5 +139,25 @@ describe('DatePicker — gõ tay và tháng mở sẵn', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Ngày sinh' }));
     expect(screen.getByRole('group', { name: /1990/ })).toBeInTheDocument();
+  });
+});
+
+/** FM-28: bàn phím số điện thoại không có "/" — gõ 09102026 phải thấy thành 09/10/2026. */
+describe('maskDateTyping', () => {
+  it.each([
+    ['', '0', '0'],
+    ['0', '09', '09/'],
+    ['09/', '09/1', '09/1'],
+    ['09/1', '09/10', '09/10/'],
+    ['09/10/', '09/10/2', '09/10/2'],
+    ['09/10/', '09/10', '09/10'],
+    ['', '9/', '9/'],
+    ['9/', '9/1', '9/1'],
+    ['9/1', '9/10', '9/10'],
+    // Người quen gõ "/" sau dấu tự chèn: không thành "09//".
+    ['09/', '09//', '09/'],
+    ['09/10/', '09/10//', '09/10/'],
+  ])('%s → gõ thành %s → %s', (prev, next, out) => {
+    expect(maskDateTyping(prev, next)).toBe(out);
   });
 });

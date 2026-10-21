@@ -356,7 +356,7 @@ export function DatePicker({
               placeholder="dd/mm/yyyy"
               value={typed}
               onChange={(event) => {
-                setTyped(event.target.value);
+                setTyped(maskDateTyping(typed, event.target.value));
                 setTypedError(null);
               }}
               onKeyDown={(event) => {
@@ -501,6 +501,17 @@ export function DatePicker({
  * hai số (`90` → 1990, `25` → 2025: mốc 50). Ngày không có thật (31/02) là lỗi, KHÔNG lăn sang
  * tháng sau như `new Date()` vẫn làm. Một hình dạng trả về (web không bật `strict`).
  */
+/**
+ * Gõ ngày bằng bàn phím số (FM-28): bàn phím số điện thoại không có "/", nên vừa đủ hai số ngày
+ * (hoặc "dd/mm") thì tự chèn "/". Chỉ chèn khi VỪA GÕ THÊM; xoá lùi hay người dùng tự gõ "/"
+ * (ngày một chữ số: "9/10/2026") thì để nguyên.
+ */
+export function maskDateTyping(prev: string, next: string): string {
+  if (next.length <= prev.length) return next;
+  if (prev.endsWith('/') && next === `${prev}/`) return prev;
+  return /^\d{2}$/.test(next) || /^\d{2}\/\d{2}$/.test(next) ? `${next}/` : next;
+}
+
 export function parseTypedDate(text: string): {
   value: string | null;
   reason: 'empty' | 'invalid' | null;
