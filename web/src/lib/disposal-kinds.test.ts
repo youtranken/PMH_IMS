@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
-import { disposalDetailText, disposalStatusTone } from './disposal-kinds';
+import { disposalDetailText, disposalItemKindLabel, disposalStatusTone } from './disposal-kinds';
 
 const t = i18n.t.bind(i18n);
 
@@ -43,5 +43,22 @@ describe('disposalStatusTone', () => {
 
   it('trạng thái lạ → muted, không ra class rỗng', () => {
     expect(disposalStatusTone('device', 'la-hoac')).toBe('muted');
+  });
+});
+
+/* PW-A08: tên miền, SSL, hợp đồng bị dán nhãn "Phần mềm" — nhãn phải là tên màn của hồ sơ. */
+describe('disposalItemKindLabel', () => {
+  const t = i18n.t.bind(i18n) as (key: string) => string;
+  it.each([
+    ['software', 'license', 'Phần mềm'],
+    ['software', 'ssl', 'Tên miền & SSL'],
+    ['software', 'domain', 'Tên miền & SSL'],
+    ['software', 'maintenance', 'Hợp đồng bảo trì'],
+    ['software', 'other', 'Dịch vụ có hạn khác'],
+    ['software', null, 'Phần mềm'],
+    ['device', 'Switch', 'Thiết bị'],
+    ['isp', '100 Mbps', 'Đường truyền'],
+  ] as const)('%s / %s → %s', (kind, detail, label) => {
+    expect(disposalItemKindLabel(kind, detail, t)).toBe(label);
   });
 });

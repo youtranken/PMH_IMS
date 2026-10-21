@@ -9,6 +9,7 @@ import {
   DISPOSAL_KIND_KEY as KIND_KEY,
   DISPOSAL_KINDS,
   disposalDetail,
+  disposalItemKindLabel,
   disposalStatusKey,
   disposalStatusTone,
   type DisposalKind,
@@ -300,7 +301,7 @@ export function DisposalScreen() {
                 title: (item) => item.code,
                 titleIsCode: true,
                 href: (item) => LINK[item.kind](item.id),
-                badge: (item) => <span className="badge muted">{t(KIND_KEY[item.kind])}</span>,
+                badge: (item) => <span className="badge muted">{disposalItemKindLabel(item.kind, item.detail, t)}</span>,
                 actions: (item) => (
                   <RowActions
                     label={t('common.actionsOf', { subject: item.code })}
@@ -342,7 +343,7 @@ export function DisposalScreen() {
                         <span className="cell-sub">{item.name}</span>
                       </td>
                       <td data-label={t('disposal.kind')}>
-                        <span>{t(KIND_KEY[item.kind])}</span>
+                        <span>{disposalItemKindLabel(item.kind, item.detail, t)}</span>
                         {/* Tên gốc của trạng thái theo module chủ — thứ cả màn này sinh ra để nói. */}
                         <span className="cell-sub">
                           <span className={`badge ${disposalStatusTone(item.kind, item.status)}`}>
