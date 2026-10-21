@@ -263,7 +263,8 @@ export function DisposalScreen() {
       {/* MỘT băng (PW-A09): hai băng khác kiểu chồng nhau thì mắt bỏ qua cả hai. */}
       <p className="alert info">
         {t('disposal.note')}
-        {truncated.length > 0
+        {/* "Chưa hiện hết" chỉ có nghĩa khi có dòng để xem (TB-24). */}
+        {truncated.length > 0 && rows.length > 0
           ? ` ${t('disposal.truncated', { kinds: truncated.map((key) => t(KIND_KEY[key])).join(', ') })}`
           : null}
       </p>
@@ -344,12 +345,15 @@ export function DisposalScreen() {
                       </td>
                       <td data-label={t('disposal.kind')}>
                         <span>{disposalItemKindLabel(item.kind, item.detail, t)}</span>
-                        {/* Tên gốc của trạng thái theo module chủ — thứ cả màn này sinh ra để nói. */}
-                        <span className="cell-sub">
-                          <span className={`badge ${disposalStatusTone(item.kind, item.status)}`}>
-                            {statusLabel(item.status, t)}
+                        {/* Tên gốc của trạng thái theo module chủ — chỉ khi KHÁC "Đã thanh lý", trạng
+                            thái mặc định của chính kho này (PW-A25); lặp trên mọi dòng thì thành nhiễu. */}
+                        {isPlainDisposed(item.status) ? null : (
+                          <span className="cell-sub">
+                            <span className={`badge ${disposalStatusTone(item.kind, item.status)}`}>
+                              {statusLabel(item.status, t)}
+                            </span>
                           </span>
-                        </span>
+                        )}
                       </td>
                       <td data-label={t('disposal.detail')}>
                         {disposalDetail(item.kind, item.detail, t)}
@@ -386,6 +390,11 @@ export function DisposalScreen() {
       )}
     </>
   );
+}
+
+/** "Đã thanh lý" (thiết bị, phần mềm `retired`; đường truyền `terminated`) — mặc định của kho. */
+function isPlainDisposed(status: string): boolean {
+  return status === 'retired' || status === 'terminated';
 }
 
 /** Trạng thái lạ in nguyên văn — luật đặt tên nằm ở `disposalStatusKey`. */

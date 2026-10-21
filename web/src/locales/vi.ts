@@ -3494,7 +3494,7 @@ export default {
     at: 'Ngày thanh lý',
     by: 'Người thanh lý',
     /* Q-13: hồ sơ phần mềm hết hạn quá ân hạn thì lượt quét tự thanh lý — phải khác hẳn người bấm. */
-    bySystem: 'Hệ thống · tự thanh lý khi quá hạn',
+    bySystem: 'Tự động (quá hạn)',
     period: 'Khoảng thanh lý',
     periodAll: 'Mọi lúc',
     periodMonth: 'Tháng này',

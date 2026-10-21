@@ -174,7 +174,8 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
   const row = page.getByRole('row', { name: new RegExp(cut) });
   await expect(row).toBeVisible();
   await expect(row.getByText('Đường truyền', { exact: true })).toBeVisible();
-  await expect(row.getByText('Đã thanh lý', { exact: true })).toBeVisible();
+  // PW-A25: "Đã thanh lý" là trạng thái mặc định của kho — không lặp thành huy hiệu trên dòng.
+  await expect(row.getByText('Đã thanh lý', { exact: true })).toHaveCount(0);
   await expect(row.getByText('300 Mbps')).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(running) })).toHaveCount(0);
 
