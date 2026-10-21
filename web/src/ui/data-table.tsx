@@ -94,6 +94,8 @@ interface DataTableProps<T> {
    * link thật; thẻ điện thoại dùng làm link. Bấm thường vẫn đi qua `onRowClick` (SPA).
    */
   rowHref?: (row: T) => string;
+  /** Dòng đang được trỏ tới (mở bằng link `?rule=`…): `aria-current="true"` trên dòng / thẻ. */
+  rowCurrent?: (row: T) => boolean;
   /**
    * Có giá trị → thêm cột ▸ để BUNG 1 hàng chi tiết in-context ngay dưới dòng
    * (trang Tài sản). Không truyền → bảng giữ nguyên như cũ (mọi trang khác).
@@ -204,6 +206,7 @@ export function DataTable<T>({
   onSortingChange: controlledOnSortingChange,
   onRowClick,
   rowHref,
+  rowCurrent,
   renderExpanded,
   canExpand,
   expandLabel,
@@ -282,6 +285,7 @@ export function DataTable<T>({
             card={rowHref && !mobileCard.href ? { ...mobileCard, href: rowHref } : mobileCard}
             rowClassName={rowClassName}
             onRowClick={onRowClick}
+            rowCurrent={rowCurrent}
             groupBy={groupBy}
           />
         )}
@@ -460,6 +464,7 @@ export function DataTable<T>({
                           : undefined
                       }
                       style={onRowClick ? { cursor: 'pointer' } : undefined}
+                      aria-current={rowCurrent?.(row.original) ? 'true' : undefined}
                     >
                       {selection && (
                         <td
@@ -569,6 +574,7 @@ export function MobileCardList<T>({
   card,
   rowClassName,
   onRowClick,
+  rowCurrent,
   groupBy,
 }: {
   rows: readonly T[];
@@ -576,6 +582,7 @@ export function MobileCardList<T>({
   card: MobileCard<T>;
   rowClassName?: (row: T) => string;
   onRowClick?: (row: T) => void;
+  rowCurrent?: (row: T) => boolean;
   groupBy?: TableGroupBy<T>;
 }) {
   const item = (row: T, index: number) => (
@@ -585,6 +592,7 @@ export function MobileCardList<T>({
       card={card}
       className={rowClassName?.(row)}
       onRowClick={onRowClick}
+      current={rowCurrent?.(row) ?? false}
     />
   );
   if (!groupBy) return <ul className="list-cards">{rows.map(item)}</ul>;
@@ -627,11 +635,13 @@ function MobileCardItem<T>({
   card,
   className,
   onRowClick,
+  current = false,
 }: {
   row: T;
   card: MobileCard<T>;
   className?: string;
   onRowClick?: (row: T) => void;
+  current?: boolean;
 }) {
   const title = card.title(row);
   /* Tiêu đề xuống tối đa hai dòng rồi "…" (`.list-card-title`): chữ đủ nằm ở `title` khi nó là
@@ -644,7 +654,7 @@ function MobileCardItem<T>({
   const meta = card.meta?.(row);
   const aside = card.aside?.(row);
   return (
-    <li className={['list-card', className].filter(Boolean).join(' ')}>
+    <li className={['list-card', className].filter(Boolean).join(' ')} aria-current={current ? 'true' : undefined}>
       <div className="list-card-top">
         <span className={card.titleIsCode ? 'list-card-title mono' : 'list-card-title'} title={titleText}>
           {href ? (

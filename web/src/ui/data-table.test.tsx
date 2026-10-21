@@ -210,3 +210,13 @@ describe('DataTable — rowHref', () => {
     expect(onRowClick).toHaveBeenCalledWith(DATA[0]);
   });
 });
+
+/** Dòng được trỏ tới bằng link (sổ NAT `?rule=`) mang aria-current — trình đọc màn hình biết đang ở đâu. */
+describe('DataTable — rowCurrent', () => {
+  it('gắn aria-current lên đúng dòng', () => {
+    renderWithI18n(<DataTable data={DATA} columns={COLUMNS} emptyText="—" rowCurrent={(row) => row.name === 'apple'} />);
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows.filter((r) => r.getAttribute('aria-current') === 'true')).toHaveLength(1);
+    expect(within(rows.find((r) => r.getAttribute('aria-current') === 'true')!).getByText('apple')).toBeInTheDocument();
+  });
+});
