@@ -25,13 +25,13 @@ const ROW = {
   status: 'active',
 };
 
-function mockFetch(status: 'active' | 'disabled') {
+function mockFetch(status: 'active' | 'disabled', endDate: string | null = null) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/v1/service-accounts/sa-1') {
-        return Promise.resolve(jsonResponse(200, { ...ROW, status }));
+        return Promise.resolve(jsonResponse(200, { ...ROW, status, endDate }));
       }
       if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, {}));
       return Promise.resolve(jsonResponse(200, []));
@@ -94,6 +94,25 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     await screen.findByRole('heading', { name: /VPN-E2E-01/ });
     expect(screen.queryByRole('button', { name: 'Sửa hồ sơ' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Thao tác với VPN-E2E-01' })).toBeNull();
+  });
+});
+
+// PW-A14: TK dịch vụ có hạn mà muốn gia hạn phải sang màn Sắp hết hạn.
+describe('Trang hồ sơ TKDV — Gia hạn tại chỗ', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('đang dùng, có hạn: nút "Gia hạn" mở hộp gia hạn đúng mã', async () => {
+    mockFetch('active', '2026-12-31');
+    renderAs('sa');
+    await userEvent.click(await screen.findByRole('button', { name: 'Gia hạn' }));
+    expect(await screen.findByRole('dialog', { name: /^Gia hạn — VPN-E2E-01/ })).toBeInTheDocument();
+  });
+
+  it('không có hạn: không có nút Gia hạn', async () => {
+    mockFetch('active', null);
+    renderAs('sa');
+    await screen.findByRole('button', { name: 'Sửa hồ sơ' });
+    expect(screen.queryByRole('button', { name: 'Gia hạn' })).toBeNull();
   });
 });
 
