@@ -272,7 +272,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     await search.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
     await expect(
-      main.getByText(`Không có thiết bị nào khớp “KHONG-CO-MAY-NAO-E2E-${stamp}”.`),
+      main.getByText(`Không có thiết bị nào khớp "KHONG-CO-MAY-NAO-E2E-${stamp}".`),
       'lọc về rỗng phải ra empty-state, không phải bảng trắng',
     ).toBeVisible();
 

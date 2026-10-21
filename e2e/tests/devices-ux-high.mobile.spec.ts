@@ -86,7 +86,7 @@ test.describe('DEV-005 · danh sách thiết bị là thẻ gọn trên điện 
     const keyword = `KHONG-CO-E2E-${uniqueStamp()}`;
     await searchAndWaitForFilter(page, keyword);
     // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009).
-    await expect(page.getByText(`Không có thiết bị nào khớp “${keyword}”.`)).toBeVisible();
+    await expect(page.getByText(`Không có thiết bị nào khớp "${keyword}".`)).toBeVisible();
     await expect(page.getByRole('listitem').filter({ hasText: 'E2E' })).toHaveCount(0);
   });
 });

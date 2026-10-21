@@ -187,7 +187,7 @@ describe('So sánh hai phiên bản (Q-23)', () => {
     await pickMenuItem(user, /^Thao tác với/, 'Phiên bản');
     const dialog = await screen.findByRole('dialog', { name: 'Phiên bản và lịch sử' });
     // Ô tick có lời dặn để làm gì; nút đếm số đã chọn (D-05).
-    expect(within(dialog).getByText('Tick 2 phiên bản rồi bấm So sánh.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Chọn 2 phiên bản rồi bấm So sánh.')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'So sánh (0/2)' })).toBeDisabled();
     await user.click(await within(dialog).findByRole('checkbox', { name: 'Chọn phiên bản #3 để so sánh' }));
     expect(within(dialog).getByRole('button', { name: 'So sánh (1/2)' })).toBeDisabled();

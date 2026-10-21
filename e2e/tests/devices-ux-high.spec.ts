@@ -108,7 +108,7 @@ test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, phòn
     await searchAndWaitForFilter(page, other);
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009): "không khớp", không phải "kho trống".
-    await expect(page.getByText(`Không có thiết bị nào khớp “${other}”.`)).toBeVisible();
+    await expect(page.getByText(`Không có thiết bị nào khớp "${other}".`)).toBeVisible();
   });
 });
 

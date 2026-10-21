@@ -48,7 +48,7 @@ export function PortFormDialog({
   csrfToken: string;
   onClose: () => void;
   /**
-   * `keepOpen`: người dùng chọn "Ghi rồi khai cổng kế tiếp" — hộp đã tự chuẩn bị cổng kế tiếp.
+   * `keepOpen`: người dùng chọn "Lưu rồi khai cổng kế tiếp" — hộp đã tự chuẩn bị cổng kế tiếp.
    * `saved` + `deviceId` (máy giữ bản ghi) để màn sơ đồ chèn nét cho dây vừa khai.
    */
   onSaved: (keepOpen: boolean, saved: PortRow, deviceId: string) => void;

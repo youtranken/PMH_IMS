@@ -397,7 +397,7 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(rows).toHaveLength(4);
     expect(rows[0]).toHaveTextContent('v12');
     expect(rows[0]).toHaveTextContent('Đang dùng');
-    expect(rows[2]).toHaveTextContent('v10 · “Trước khi đổi ISP”');
+    expect(rows[2]).toHaveTextContent('v10 · "Trước khi đổi ISP"');
     const user = userEvent.setup();
     await user.click(within(published).getByRole('button', { name: 'Xem thêm 2 phiên bản cũ' }));
     expect(within(published).getAllByRole('listitem')).toHaveLength(6);
