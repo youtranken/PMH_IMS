@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { PATHS } from '@/lib/routes';
 import { canSee } from '@/lib/features';
 import { DatePicker } from '@/ui/date-picker';
+import { InfoTip } from '@/ui/info-tip';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
@@ -50,12 +50,6 @@ export function CatalogScreen({ me }: { me: Me }) {
         title={t('nav.isoCatalog')}
         subtitle={t('iso.catalog.subtitle')}
         titleTip={t('iso.catalog.subtitleTip')}
-        actions={
-          <>
-            {sees0203 ? <Link to={PATHS.isoBackup}>{t('nav.isoBackup')}</Link> : null}
-            {sees0208 ? <Link to={PATHS.isoAntivirus}>{t('nav.isoAntivirus')}</Link> : null}
-          </>
-        }
       />
       <Tabs
         ariaLabel={t('iso.catalog.tabs')}
@@ -595,7 +589,15 @@ function OwnersTab({ me }: { me: Me }) {
   });
   return (
     <section>
-      <p className="alert info">{t('iso.catalog.ownersHint')}</p>
+      {/* Luật mail nhắc và ghi chú 0206 vào (i) (UX-E06): một câu lặp trên mọi dòng / một dòng
+          bảng chỉ để giải thích thì không phải dữ liệu. */}
+      <p className="alert info">
+        {t('iso.catalog.ownersHint')}{' '}
+        <InfoTip subject={t('iso.catalog.mailTo')}>
+          <p>{t('iso.catalog.mailRule')}</p>
+          <p>{t('iso.catalog.incidentOwnerNote')}</p>
+        </InfoTip>
+      </p>
       {owners.isLoading ? (
         <Loading />
       ) : owners.isError ? (
@@ -608,22 +610,12 @@ function OwnersTab({ me }: { me: Me }) {
                 <th>{t('iso.catalog.form')}</th>
                 <th>{t('iso.catalog.primary')}</th>
                 <th>{t('iso.catalog.backup')}</th>
-                <th>{t('iso.catalog.mailTo')}</th>
-                {manager ? <th className="col-center">{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
               {(owners.data ?? []).map((row) => (
                 <OwnerRow key={row.formType} me={me} row={row} people={people.data ?? []} manager={manager} />
               ))}
-              <tr>
-                <td data-label={t('iso.catalog.form')}>
-                  <strong>0206 · {t('nav.isoIncidents')}</strong>
-                </td>
-                <td colSpan={manager ? 4 : 3} data-label={t('iso.catalog.primary')} className="muted">
-                  {t('iso.catalog.incidentOwnerNote')}
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -637,13 +629,27 @@ function OwnerRow({ me, row, people, manager }: { me: Me; row: FormOwners; peopl
   const toast = useToast();
   const [primary, setPrimary] = useState(row.primary?.id ?? '');
   const [backup, setBackup] = useState(row.backup?.id ?? '');
-  const save = useIsoWrite<void>(me.csrfToken, () => ({
+  const save = useIsoWrite<{ primary: string; backup: string }>(me.csrfToken, (next) => ({
     url: `/api/v1/iso/catalog/owners/${row.formType}`,
     method: 'PUT',
-    body: { primaryUserId: primary || null, backupUserId: backup || null },
+    body: { primaryUserId: next.primary || null, backupUserId: next.backup || null },
   }));
+  /* Đổi người là lưu luôn (PW-B32) — nút Lưu xám trên mỗi dòng thì người ta chọn xong rồi bỏ đi,
+     tưởng đã lưu. Lỗi thì trả ô về giá trị cũ. */
+  const commit = (next: { primary: string; backup: string }) => {
+    const before = { primary, backup };
+    setPrimary(next.primary);
+    setBackup(next.backup);
+    save.mutate(next, {
+      onSuccess: () => toast({ message: t('iso.catalog.ownersSaved', { form: row.formType }) }),
+      onError: (err) => {
+        setPrimary(before.primary);
+        setBackup(before.backup);
+        toast({ message: errorMessage(err), tone: 'error' });
+      },
+    });
+  };
   const options = [{ value: '', label: t('iso.catalog.nobody') }, ...people.map((p) => ({ value: p.id, label: p.fullName, searchText: p.email }))];
-  const changed = primary !== (row.primary?.id ?? '') || backup !== (row.backup?.id ?? '');
   // "0203 · Backup", không "0203 · Theo dõi backup · 0203" (mã lặp đôi, PW-B13).
   const label = row.formType === '0203' ? t('iso.field.tab0203') : t('iso.field.tab0208');
   return (
@@ -653,38 +659,18 @@ function OwnerRow({ me, row, people, manager }: { me: Me; row: FormOwners; peopl
       </td>
       <td data-label={t('iso.catalog.primary')}>
         {manager ? (
-          <Select value={primary} ariaLabel={t('iso.catalog.primaryOf', { form: row.formType })} options={options} searchable onChange={setPrimary} />
+          <Select value={primary} ariaLabel={t('iso.catalog.primaryOf', { form: row.formType })} options={options} searchable disabled={save.isPending} onChange={(value) => commit({ primary: value, backup })} />
         ) : (
           (row.primary?.fullName ?? t('iso.catalog.nobody'))
         )}
       </td>
       <td data-label={t('iso.catalog.backup')}>
         {manager ? (
-          <Select value={backup} ariaLabel={t('iso.catalog.backupOf', { form: row.formType })} options={options} searchable onChange={setBackup} />
+          <Select value={backup} ariaLabel={t('iso.catalog.backupOf', { form: row.formType })} options={options} searchable disabled={save.isPending} onChange={(value) => commit({ primary, backup: value })} />
         ) : (
           (row.backup?.fullName ?? t('iso.catalog.nobody'))
         )}
       </td>
-      <td data-label={t('iso.catalog.mailTo')} className="small">
-        {t('iso.catalog.mailRule')}
-      </td>
-      {manager ? (
-        <td data-label={t('common.actions')}>
-          <button
-            type="button"
-            className="btn sm primary"
-            disabled={!changed || save.isPending}
-            onClick={() =>
-              save.mutate(undefined, {
-                onSuccess: () => toast({ message: t('iso.catalog.ownersSaved', { form: row.formType }) }),
-                onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-              })
-            }
-          >
-            {t('common.save')}
-          </button>
-        </td>
-      ) : null}
     </tr>
   );
 }
