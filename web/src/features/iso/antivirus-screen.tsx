@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { useConfirm } from '@/ui/confirm-provider';
@@ -60,11 +61,17 @@ export function AntivirusScreen({ me }: { me: Me }) {
         title={t('nav.isoAntivirus')}
         subtitle={t('iso.av.subtitle')}
         actions={
-          grid.data ? (
-            <Link className={`linkbtn${grid.data.state === 'open' ? ' primary' : ''}`} to={PATHS.isoReview('0208', key)}>
-              {t('iso.viewForm')}
+          <>
+            {/* Cùng khuôn với 0203 (PW-B15): lối sang danh mục của chính phiếu này. */}
+            <Link className="linkbtn" to={`${PATHS.isoCatalog}?tab=divisions`}>
+              {t('iso.av.divisionsLink')}
             </Link>
-          ) : null
+            {grid.data ? (
+              <Link className={`linkbtn${grid.data.state === 'open' ? ' primary' : ''}`} to={PATHS.isoReview('0208', key)}>
+                {t('iso.viewForm')}
+              </Link>
+            ) : null}
+          </>
         }
       />
       <div className="sheet-toolbar">
@@ -186,16 +193,13 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
       {!open ? <LockedBanner form="0208" year={data.year} month={data.month} state={data.state} /> : null}
       {ownerNotice}
       {editable ? (
-        <section className="card" aria-label={t('iso.av.recordSection')}>
-          <p>
-            <strong>
-              {data.summary.pendingDays.length === 0
-                ? t('iso.av.everyDayRecorded')
-                : data.summary.missedDays.length > 0
-                  ? t(todayPending ? 'iso.av.missedAndToday' : 'iso.av.missedTitle', { count: data.summary.missedDays.length })
-                  : t('iso.av.todayPending')}
-            </strong>
-          </p>
+        <section aria-label={t('iso.av.recordSection')}>
+          {/* Hàng ô số cùng khuôn 0203 (PW-B15) thay một câu đậm tự ghép. */}
+          <KpiStrip>
+            <KpiTile value={data.summary.missedDays.length} tone="warn" label={t('iso.av.missedKpi')} />
+            <KpiTile value={data.summary.unlinkedIssues.length} tone="danger" label={t('iso.av.unlinkedKpi')} />
+          </KpiStrip>
+          {todayPending ? <p className="muted small">{t('iso.av.todayPending')}</p> : null}
           <div className="chip-row">
             {data.summary.missedDays.length > 1 ? (
               <button type="button" className="btn sm" disabled={markingAll || markClear.isPending} onClick={() => void markAllPast()}>

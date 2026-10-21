@@ -4429,10 +4429,10 @@ export default {
     av: {
       subtitle: 'SP-IT0208 · Antivirus Health Check Form',
       recordSection: 'Ghi kết quả',
-      missedTitle: '{{count}} ngày đã qua còn ô bỏ sót',
-      missedAndToday: '{{count}} ngày đã qua còn ô bỏ sót, hôm nay chưa đánh',
       todayPending: 'Hôm nay chưa có kết quả',
-      everyDayRecorded: 'Mọi ngày tới hôm nay đã có kết quả.',
+      missedKpi: 'ngày đã qua còn trống',
+      unlinkedKpi: 'dòng issue chưa có phiếu 0206',
+      divisionsLink: 'Bộ phận ›',
       recordHint: 'Kiểm trên console antivirus. Các bộ phận còn lại không có issue thì bấm ô ngày đó ở dòng Other Division (bấm lại để bỏ). Máy bị issue thì ghi thêm dòng, rồi bấm từng ô của dòng đó: trống → ✓ → ✗ → trống.',
       markAll: '✓ Other Division cho {{count}} ngày còn trống',
       markAllTitle: 'Đánh ✓ Other Division cho các ngày đã qua',
