@@ -431,7 +431,7 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' })).toBeInTheDocument();
   });
 
-  it('menu ⋮ của bản vẽ: Thành viên trình chiếu + thêm con (+ Xóa hẳn bản mình tạo chưa phát hành); SA thêm đổi tên / lưu trữ', async () => {
+  it('menu ⋮ của bản vẽ: Thành viên thêm con (+ Xóa hẳn bản mình tạo chưa phát hành); SA thêm đổi tên / lưu trữ; không còn Trình chiếu (Q-32)', async () => {
     const menuNames = async () =>
       (await screen.findAllByRole('menuitem')).map((el) => {
         const copy = el.cloneNode(true) as HTMLElement;
@@ -442,19 +442,15 @@ describe('Panel bản vẽ đang chọn', () => {
     const view = renderScreen('/diagrams?node=r1', MEMBER);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));
-    // Nhánh chưa có bản chính thức nào: "Trình chiếu" tắt kèm lý do, không mời bấm ra màn trống (D-06).
-    expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Xóa hẳn']);
-    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toBeDisabled();
-    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toHaveTextContent('Nhánh chưa có bản chính thức nào');
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con', 'Xóa hẳn']);
     view.unmount();
     renderScreen('/diagrams?node=lt', MEMBER);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Lễ tân E2E' }));
-    expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con']);
-    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toBeEnabled();
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con']);
     await user.keyboard('{Escape}');
     renderScreen('/diagrams?node=r1', ME);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));
-    expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ', 'Xóa hẳn']);
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ', 'Xóa hẳn']);
   });
 
   it('Xóa hẳn: gõ đúng tên mới bật nút; gửi tên lên server', async () => {

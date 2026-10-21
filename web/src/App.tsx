@@ -75,7 +75,6 @@ const AccessMatrixScreen = lazy(() => import('@/features/vault/access-matrix-scr
 const SettingsScreen = lazy(() => import('@/features/admin/settings-screen').then((m) => ({ default: m.SettingsScreen })));
 const FailedMailScreen = lazy(() => import('@/features/admin/failed-mail-screen').then((m) => ({ default: m.FailedMailScreen })));
 const DiagramScreen = lazy(() => import('@/features/diagrams/diagram-screen').then((m) => ({ default: m.DiagramScreen })));
-const DiagramSlideshow = lazy(() => import('@/features/diagrams/diagram-slideshow').then((m) => ({ default: m.DiagramSlideshow })));
 const DiagramTreeScreen = lazy(() => import('@/features/diagrams/diagram-tree-screen').then((m) => ({ default: m.DiagramTreeScreen })));
 const AntivirusScreen = lazy(() => import('@/features/iso/antivirus-screen').then((m) => ({ default: m.AntivirusScreen })));
 const BackupScreen = lazy(() => import('@/features/iso/backup-screen').then((m) => ({ default: m.BackupScreen })));
@@ -329,7 +328,6 @@ function AppRoutes() {
         {/* Mọi vai — Thành viên cũng vẽ (Q-23), khớp `@Roles` của `diagrams.controller.ts`. */}
         <Route path={PATHS.diagrams} element={<DiagramTreeScreen me={me} />} />
         <Route path={`${PATHS.diagrams}/:id`} element={<DiagramScreen me={me} />} />
-        <Route path={`${PATHS.diagrams}/:id/present`} element={<DiagramSlideshow me={me} />} />
         <Route path={PATHS.serviceAccounts} element={<ServiceAccountsScreen me={me} />} />
         <Route
           path={`${PATHS.serviceAccounts}/:id`}

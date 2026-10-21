@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
@@ -23,14 +23,12 @@ import { useIsNarrow } from '@/ui/use-narrow';
 import { useNow } from '@/ui/use-now';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { TREE_KEY, type DiagramNode, type FoundDevice } from './diagram-api';
-import { slideOrder } from './diagram-tree';
 import { buildMap, canPurge, filterActive, nodeMatches, resolveSelection, TODO_KINDS, todoCounts, type MapFilter, type TodoKind } from './diagram-map';
 import { DiagramArchivedSection, useArchivedDiagrams } from './diagram-archived';
 import { DiagramListView, DiagramMapView } from './diagram-map-view';
 import { DiagramNodeDialog } from './diagram-node-dialog';
 import { DiagramPanel } from './diagram-panel';
 import { canManageNode } from './diagram-presentation';
-import { enterFullscreen } from './diagram-slideshow';
 import { useDiagramPrune } from './use-diagram-prune';
 
 type Editing = { parent: DiagramNode | null } | { node: DiagramNode } | null;
@@ -53,7 +51,6 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const toast = useToast();
   const ask = useConfirm();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const narrow = useIsNarrow();
   const noEditor = useMediaQuery(BREAKPOINTS.editor);
@@ -140,19 +137,6 @@ export function DiagramTreeScreen({ me }: { me: Me }) {
   const actionsOf = (node: DiagramNode): RowAction[] => {
     const items: RowAction[] = [];
     if (node.kind !== 'presentation') {
-      // Nhánh chưa phát hành bản nào thì trình chiếu chỉ ra màn trống: tắt kèm lý do (D-06).
-      const nothingToShow = slideOrder(all, node.id).length === 0;
-      items.push({
-        key: 'present',
-        label: t('diagrams.slideshow.start'),
-        disabled: nothingToShow,
-        hint: nothingToShow ? t('diagrams.slideshow.nothing') : undefined,
-        // Toàn màn hình phải xin ngay trong cú bấm (trình duyệt chặn nếu xin sau khi chuyển trang).
-        onSelect: () => {
-          enterFullscreen();
-          navigate(PATHS.diagramPresent(node.id));
-        },
-      });
       items.push({ key: 'child', label: t('diagrams.addChild'), onSelect: () => setEditing({ parent: node }) });
     }
     if (canManageNode(node, me)) {

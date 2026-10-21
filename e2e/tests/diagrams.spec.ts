@@ -280,7 +280,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
 
     await page.goto(`/diagrams?node=${id}`);
     // Bản do chính Thành viên tạo, chưa phát hành lần nào: người tạo xóa hẳn được (Q-23).
-    expect(await rowActionNames(page, name)).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Xóa hẳn']);
+    expect(await rowActionNames(page, name)).toEqual(['Thêm bản vẽ con', 'Xóa hẳn']);
 
     // Thành viên tạo được bản vẽ con qua giao diện.
     await rowAction(page, name, 'Thêm bản vẽ con');

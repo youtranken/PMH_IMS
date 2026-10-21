@@ -2,17 +2,13 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   diagramBarAction,
   E2E_SA,
-  countAudit,
-  expireStepUp,
-  fillOtp,
   firstLogin,
-  freshTotpCode,
   horizontalOverflow,
   resetCatalog,
   resetDevices,
   resetDiagrams,
   resetUsers,
-  rowAction,
+  rowActionNames,
   stepUpViaApi,
   uniqueStamp,
   writeHeaders,
@@ -235,39 +231,13 @@ test.describe('Sơ đồ mạng — điện thoại, tìm, lớp, chỉ đườn
     await expect(dialog.getByRole('alert')).toHaveText(`Không có đường nối giữa ${net.pc.code} và ${net.lap.code} trong sơ đồ cổng`);
   });
 
-  test('trình chiếu từ cây: tổng → chi tiết, ← → / Esc; hết ân hạn giữa chừng hỏi mã tại chỗ; mỗi trang một dòng diagram.viewed', async ({ page }) => {
-    test.setTimeout(180_000);
+  test('không còn Trình chiếu (UX-E04, Q-32): menu cây không có mục; đường dẫn cũ /present không mở trang chiếu', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const net = await network(page, secret);
-    const viewedFloor = countAudit('diagram.viewed', net.floorId);
-
     await page.goto(`/diagrams?node=${net.coreId}`);
-    await rowAction(page, net.coreName, 'Trình chiếu');
-    const show = page.getByRole('region', { name: 'Trình chiếu sơ đồ' });
-    await expect(show.getByRole('heading', { level: 1, name: net.coreName })).toBeVisible();
-    // Khung chiếu đè lên cả thanh trên của shell: bấm thử vào tên trang không bị phần tử khác chặn.
-    await show.getByRole('heading', { level: 1, name: net.coreName }).click({ trial: true, timeout: 5_000 });
-    await expect(show.getByRole('status', { name: 'Trang đang chiếu' })).toHaveText('Trang 1/2');
-    await expect(show.getByText(net.core.code)).toBeVisible();
-
-    expireStepUp(E2E_SA.email);
-    await page.keyboard.press('ArrowRight');
-    const unlock = page.getByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' });
-    await expect(unlock).toBeVisible();
-    // Hộp modal ẩn phần còn lại khỏi cây trợ năng, nên "không thoát" kiểm bằng đường dẫn.
-    await expect(page).toHaveURL(new RegExp(`/diagrams/${net.coreId}/present$`));
-    await fillOtp(unlock, await freshTotpCode(secret));
-    await expect(show.getByRole('heading', { level: 1, name: net.floorName })).toBeVisible();
-    await expect(show.getByText(net.pc.code)).toBeVisible();
-    await expect(show.getByRole('status', { name: 'Trang đang chiếu' })).toHaveText('Trang 2/2');
-    expect(countAudit('diagram.viewed', net.floorId)).toBe(viewedFloor + 1);
-
-    await page.keyboard.press('ArrowLeft');
-    await expect(show.getByRole('status', { name: 'Trang đang chiếu' })).toHaveText('Trang 1/2');
-    await page.getByRole('button', { name: 'Tiếp →' }).click();
-    await expect(show.getByRole('status', { name: 'Trang đang chiếu' })).toHaveText('Trang 2/2');
-    await page.keyboard.press('Escape');
-    await expect(page).toHaveURL(/\/diagrams$/);
+    expect(await rowActionNames(page, net.coreName)).not.toContain('Trình chiếu');
+    await page.goto(`/diagrams/${net.coreId}/present`);
+    await expect(page.getByRole('region', { name: 'Trình chiếu sơ đồ' })).toHaveCount(0);
   });
 
   test('trạng thái sống chỉ là thiết kế: không có route nhận trạng thái', async ({ page }) => {
