@@ -756,10 +756,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'menu dòng CỦA CHÍNH SA đang đăng nhập: không có Khóa / Vô hiệu / Đặt lại 2 lớp / Đổi vai (API chặn tự làm với mình)',
     ).toEqual(
       sortOrder([
-        // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
-        'Xem chi tiết',
-        'Phiên đang mở',
-        // Nhật ký / Quyền két nằm trong hộp Chi tiết (Q-21), không còn ở menu dòng.
+        // Bấm dòng mở hộp Chi tiết; Phiên đang mở / Nhật ký / Quyền két nằm trong hộp đó
+        // (Q-21, UX-E15), không lặp ở menu dòng.
         'Đặt lại mật khẩu',
         // Hạt giống SA luôn bị bắt 2 lớp (`reset-e2e.mjs`), nên mục bật/tắt đang ở vế "Bỏ".
         'Bỏ bắt buộc 2 lớp khi đăng nhập',
@@ -767,7 +765,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     );
 
     // --- Bên trong hộp "Phiên đang mở". SA đang ngồi đây, nên chắc chắn có ít nhất một phiên.
-    await rowAction(page, saFullName, 'Phiên đang mở');
+    await page.getByRole('row', { name: new RegExp(saFullName) }).getByText(saFullName, { exact: true }).click();
+    await page.getByRole('dialog', { name: saFullName }).getByRole('button', { name: 'Phiên đang mở' }).click();
     const sessionDialog = page.getByRole('dialog', { name: `Phiên đang mở: ${saFullName}` });
     await expect(
       sessionDialog,

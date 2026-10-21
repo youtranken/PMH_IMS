@@ -113,8 +113,9 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     await breakRoute(page, /\/api\/v1\/accounts\/[^/]+\/sessions/);
 
     await page.goto('/admin/accounts');
-    await page.getByRole('button', { name: 'Thao tác với', exact: false }).first().click();
-    await page.getByRole('menuitem', { name: 'Phiên đang mở' }).click();
+    // "Phiên đang mở" ở hộp Chi tiết (bấm dòng), không ở menu ⋮ (UX-E15).
+    await page.getByRole('table').getByRole('row').nth(1).getByRole('cell').first().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Phiên đang mở' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText(LOAD_ERROR)).toBeVisible();

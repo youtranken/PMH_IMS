@@ -9,6 +9,7 @@ import {
   screen,
   userEvent,
   waitFor,
+  within,
 } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
@@ -116,9 +117,7 @@ describe('Màn Tài khoản', () => {
       expect(own).not.toContain(hidden);
     }
     const other = await menuOf(user, 'E2E Thành viên');
-    expect(other).toEqual(
-      expect.arrayContaining(['Khóa', 'Vô hiệu hóa', 'Đổi vai trò…', 'Gỡ tạm chặn']),
-    );
+    expect(other).toEqual(expect.arrayContaining(['Khóa', 'Vô hiệu hóa', 'Đổi vai trò…']));
   });
 
   // Chưa kích hoạt 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.
@@ -146,7 +145,7 @@ describe('Màn Tài khoản', () => {
   });
 
   /* Lối QUAY LẠI (Mở khóa · Bật lại · Gỡ tạm chặn) chữ xanh — nghịch đảo của việc warn/danger. */
-  it('Mở khóa, Bật lại, Gỡ tạm chặn mang lớp ok', async () => {
+  it('Mở khóa, Bật lại mang lớp ok', async () => {
     const rows = [
       ROWS[1],
       { ...ROWS[1], id: 'u-k', fullName: 'E2E Đang khóa', status: 'locked', lockedUntil: null },
@@ -159,9 +158,6 @@ describe('Màn Tài khoản', () => {
     const user = userEvent.setup();
     renderAt('/admin/accounts');
     await screen.findByText('E2E Đang khóa');
-    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Thành viên' }));
-    expect(screen.getByRole('menuitem', { name: 'Gỡ tạm chặn' })).toHaveClass('ok');
-    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Đang khóa' }));
     expect(screen.getByRole('menuitem', { name: 'Mở khóa' })).toHaveClass('ok');
     await user.keyboard('{Escape}');
@@ -244,14 +240,19 @@ describe('Màn Tài khoản', () => {
           );
         }
         if (url.endsWith('/kill-all')) return Promise.resolve(jsonResponse(200, { killed: 1 }));
+        // Hộp Chi tiết (đường vào "Phiên đang mở") hỏi thêm các danh sách này.
+        if (/\/(lockouts|known-devices)$|\/vault\/(access|break-glass\/pending)/.test(url)) return Promise.resolve(jsonResponse(200, []));
+        if (url.includes('/audit')) return Promise.resolve(jsonResponse(200, { items: [], total: 0 }));
         return Promise.resolve(jsonResponse(200, { items: ROWS, total: 2 }));
       }),
     );
     const user = userEvent.setup();
     renderAt('/admin/accounts');
     await screen.findByText('E2E Super Admin');
-    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Super Admin' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Phiên đang mở' }));
+    // "Phiên đang mở" ở hộp Chi tiết (bấm dòng) — không lặp ở menu ⋮ (UX-E15).
+    await user.click(within(screen.getByRole('row', { name: /E2E Super Admin/ })).getByText('E2E Super Admin'));
+    const detail = await screen.findByRole('dialog', { name: 'E2E Super Admin' });
+    await user.click(within(detail).getByRole('button', { name: 'Phiên đang mở' }));
     await user.click(await screen.findByRole('button', { name: 'Đóng tất cả phiên' }));
     const box = await screen.findByRole('checkbox', { name: /Đóng cả phiên bạn đang dùng/ });
     expect(box).not.toBeChecked();
@@ -395,6 +396,8 @@ describe('Màn Tài khoản — mặc định ẩn người đã vô hiệu hóa
     const items = await menuOf(user, 'E2E Thành viên');
     expect(items).not.toContain('Nhật ký thao tác');
     expect(items).not.toContain('Quyền két sắt');
-    expect(items).toEqual(expect.arrayContaining(['Xem chi tiết', 'Phiên đang mở', 'Đặt lại mật khẩu']));
+    expect(items).toContain('Đặt lại mật khẩu');
+    // UX-E15: bấm dòng đã mở Chi tiết; Phiên đang mở / Gỡ tạm chặn nằm trong Chi tiết.
+    for (const dup of ['Xem chi tiết', 'Phiên đang mở', 'Gỡ tạm chặn']) expect(items).not.toContain(dup);
   });
 });

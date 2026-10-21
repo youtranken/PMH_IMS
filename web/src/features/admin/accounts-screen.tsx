@@ -410,18 +410,9 @@ export function AccountsScreen({ me }: { me: Me }) {
 
   const actionsFor = (account: AccountRow): RowAction[] => {
     const self = account.id === me.id;
-    const busy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
-    const temp = tempLockOf(account, now);
     const items: RowAction[] = [
-      { key: 'detail', label: t('accounts.detail'), onSelect: () => setDetailFor(account) },
-      {
-        key: 'sessions',
-        label: t('accounts.sessions'),
-        disabled: busy,
-        onSelect: () => setSessionsFor(account),
-      },
-      /* Đi xem Quyền két / Nhật ký nằm trong hộp Chi tiết (Q-21): menu dòng chỉ còn VIỆC LÀM,
-         đủ ngắn để không phải cuộn trong menu. */
+      /* Bấm dòng đã mở Chi tiết; "Phiên đang mở", "Gỡ tạm chặn", Quyền két, Nhật ký nằm trong hộp
+         Chi tiết (Q-21, UX-E15) — menu dòng chỉ còn VIỆC LÀM không lặp chỗ khác. */
       {
         key: 'reset-password',
         label: t('accounts.resetPassword'),
@@ -429,23 +420,6 @@ export function AccountsScreen({ me }: { me: Me }) {
         onSelect: () => void doResetPassword(account),
       },
     ];
-    if (temp) {
-      items.push({
-        key: 'clear-lockout',
-        label: t('accounts.clearLockout'),
-        ok: true,
-        disabled: setStatus.isPending,
-        onSelect: () =>
-          void confirmThenRun({
-            title: t('common.titleOf', { action: t('accounts.clearLockout'), subject: account.fullName }),
-            message: t('accounts.confirmClearLockout', { name: account.fullName }),
-            danger: false,
-            confirmLabel: t('accounts.clearLockout'),
-            run: () => setStatus.mutateAsync({ id: account.id, status: 'active' }),
-            done: t('accounts.toastClearLockout', { name: account.fullName }),
-          }),
-      });
-    }
     if (!self) {
       items.push(
         {

@@ -2746,7 +2746,6 @@ export default {
     reasonLeft: 'Nghỉ việc',
     reasonLongLeave: 'Nghỉ dài hạn',
     offboardTitle: 'Vô hiệu hóa không tự gỡ những thứ người này đang giữ — kiểm tiếp:',
-    detail: 'Xem chi tiết',
     createdAt: 'Tạo lúc',
     kpiTotal: 'Tài khoản',
     totpLoginRequiredYes: 'Bắt buộc gõ mã khi đăng nhập',
