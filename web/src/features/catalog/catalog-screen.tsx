@@ -467,6 +467,8 @@ export function CatalogScreen({ me }: { me: Me }) {
   /* Điện thoại: Xuất / Nhập vào menu ⋮ như trang chi tiết thiết bị — ba nút một hàng không vừa
      390px, nút Thêm (việc chính) rơi xuống hàng riêng. */
   const narrow = useMediaQuery(BREAKPOINTS.cards);
+  // ≥1024px: 9 tab xuống dòng thay vì cuộn ngang (PW-A17) — ba tab cuối từng phải bấm mũi tên mới thấy.
+  const tabsWrap = !useMediaQuery(BREAKPOINTS.editor);
   const xlsx = useXlsxDownload();
 
   /* Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng, và số mục trên nhãn từng tab
@@ -764,6 +766,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         value={modelTab ? MODEL_TAB : entity}
         onChange={switchTab}
         ariaLabel={t('catalog.title')}
+        wrap={tabsWrap}
       />
 
       {modelTab ? (

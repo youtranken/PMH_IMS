@@ -459,8 +459,6 @@
   padding-left: 0;
   border-left: 0;
 }
-/* Tab xuống dòng (`wrap`): không cuộn ngang, không mép mờ — mọi tab thấy được, quá ba hàng thì
-   cuộn dọc trong khung. */
 .tabs-shell[data-single='true'] {
   display: none;
 }
@@ -472,6 +470,8 @@
     padding-inline: var(--space-3);
   }
 }
+/* Tab xuống dòng (`wrap`): không cuộn ngang, không mép mờ — mọi tab thấy được, quá ba hàng thì
+   cuộn dọc trong khung. */
 .tabs[data-wrap='true'] {
   flex-wrap: wrap;
   overflow-x: visible;

@@ -148,6 +148,14 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(2);
   });
 
+  // PW-A17: 9 tab tràn ngang cả ở 1440 — màn rộng thì xuống dòng, không cuộn.
+  it('màn rộng: hàng tab Danh mục xuống dòng (data-wrap)', async () => {
+    stubFetch();
+    renderAt('/admin/catalog');
+    await screen.findByText('E2E-HCM');
+    expect(screen.getByRole('tablist', { name: 'Danh mục' })).toHaveAttribute('data-wrap', 'true');
+  });
+
   // PW-A23: "Lịch sử" và "Nhật ký thao tác" cùng nằm trong ⋮ — người dùng không phân biệt được.
   it('menu dòng chỉ có "Lịch sử"; link sang Nhật ký thao tác nằm trong hộp Lịch sử', async () => {
     stubFetch();
