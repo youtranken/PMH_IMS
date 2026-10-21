@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { Me } from '@/lib/me';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within, waitFor } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { CatalogScreen } from './catalog-screen';
@@ -36,6 +36,7 @@ function stubFetch() {
         }),
       );
     }
+    if (url.pathname.endsWith('/history')) return Promise.resolve(jsonResponse(200, []));
     if (url.pathname === '/api/v1/catalog/cabinet') {
       return Promise.resolve(jsonResponse(200, { items: [CABINET], total: 1 }));
     }
@@ -147,6 +148,22 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(2);
   });
 
+  // PW-A23: "Lịch sử" và "Nhật ký thao tác" cùng nằm trong ⋮ — người dùng không phân biệt được.
+  it('menu dòng chỉ có "Lịch sử"; link sang Nhật ký thao tác nằm trong hộp Lịch sử', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    renderAt('/admin/catalog');
+    await screen.findByText('E2E-HCM');
+    await user.click(screen.getByRole('button', { name: /Thao tác với E2E-HCM/ }));
+    expect(screen.queryByRole('menuitem', { name: 'Nhật ký thao tác' })).toBeNull();
+    await user.click(screen.getByRole('menuitem', { name: 'Lịch sử' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('link', { name: 'Nhật ký thao tác' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('objectType=site'),
+    );
+  });
+
   /* Q-18: trạng thái "Đã ngừng dùng" đọc ra ngay bằng màu đỏ; lối quay lại "Dùng lại" màu xanh.
      Việc "Ngừng dùng" vẫn là `warn` — đỏ để dành cho việc không đảo được. */
   it('mục đã ngừng dùng: huy hiệu đỏ, "Dùng lại" màu xanh', async () => {
@@ -168,7 +185,7 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(screen.getByRole('menuitem', { name: 'Dùng lại' })).toHaveClass('ok');
   });
 
-  it('cột "Đang dùng ở": số bấm được sang danh sách lọc sẵn; số màn đích không lọc được thì chữ thường', async () => {
+  it('cột "Gắn với": số bấm được sang danh sách lọc sẵn; số màn đích không lọc được thì chữ thường', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = new URL(String(input), 'http://x');
       if (url.pathname === '/api/v1/catalog/site') {
@@ -196,7 +213,9 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(devices).toHaveAttribute('href', '/devices?siteId=s-hcm');
     expect(screen.getByText('1 Dải IP')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '1 Dải IP' })).not.toBeInTheDocument();
-    expect(screen.getByText('Chưa dùng')).toBeInTheDocument();
+    // PW-A16: "Chưa dùng" đứng cạnh "Đang dùng" của cột Trạng thái đọc như mâu thuẫn → "—", cột "Gắn với".
+    expect(screen.queryByText('Chưa dùng')).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Gắn với' })).toBeInTheDocument();
   });
 
   it('mục đang được dùng: "Xóa" bị khóa kèm lý do; mục chưa dùng thì Xóa được', async () => {

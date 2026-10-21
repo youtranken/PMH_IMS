@@ -125,37 +125,37 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Site',
       addButton: 'Thêm site',
-      columns: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Tủ mạng',
       addButton: 'Thêm tủ mạng',
-      columns: ['Mã', 'Thuộc site', 'Vị trí / mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Mã', 'Thuộc site', 'Vị trí / mô tả', 'Số U', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Loại thiết bị',
       addButton: 'Thêm loại thiết bị',
-      columns: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Nhà cung cấp',
       addButton: 'Thêm nhà cung cấp',
-      columns: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Phòng ban',
       addButton: 'Thêm phòng ban',
-      columns: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Mô tả', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
     {
       tab: 'Nhà mạng',
       addButton: 'Thêm nhà mạng',
-      columns: ['Tên', 'Hotline', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Hotline', 'Email / người liên hệ', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
     {
@@ -167,7 +167,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Loại dây',
       addButton: 'Thêm loại dây',
-      columns: ['Tên', 'Màu dây', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Màu dây', 'Mô tả', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
   ];
@@ -529,7 +529,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, siteCode),
       'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Ngừng dùng (cảnh báo) rồi Xóa xếp cuối; Sửa đứng ngoài (Q-18)',
-    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Ngừng dùng', 'Xóa']);
+    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Ngừng dùng', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, siteCode, 'Sửa');
@@ -575,7 +575,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, siteCode),
       'hồ sơ ĐÃ NGỪNG DÙNG mà menu vẫn ghi "Ngừng dùng" thì không còn đường nào dùng lại nó',
-    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Dùng lại', 'Xóa']);
+    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Dùng lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
     await rowAction(page, siteCode, 'Xóa');

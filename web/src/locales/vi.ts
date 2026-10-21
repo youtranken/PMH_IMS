@@ -732,8 +732,8 @@ export default {
     siteAll: 'Tất cả site',
     memberHint: 'Ngừng dùng, xóa và nhập Excel do Quản trị thực hiện.',
     viewDevices: 'Xem thiết bị dùng mục này',
-    usageColumn: 'Đang dùng ở',
-    usageNone: 'Chưa dùng',
+    usageColumn: 'Gắn với',
+    usageNone: '—',
     usage_device: '{{count}} Thiết bị',
     usage_software: '{{count}} Phần mềm',
     usage_cabinet: '{{count}} Tủ mạng',
@@ -747,7 +747,6 @@ export default {
     confirmHidePortMapCount:
       'Tắt "Có port map" cho "{{name}}": máy chưa khai cổng nào trong {{count}} thiết bị loại này ' +
       'sẽ không còn tab Sơ đồ cổng. Máy đã khai cổng giữ nguyên.',
-    auditLog: 'Nhật ký thao tác',
     deactivated: 'Đã ngừng dùng "{{name}}".',
     activated: 'Đã dùng lại "{{name}}".',
     emptyFilteredOnly: 'Không có {{kind}} nào khớp bộ lọc.',

@@ -1,4 +1,5 @@
 import { formatPhone } from '@/lib/phone-format';
+import { AuditLogLink } from '@/ui/audit-log-link';
 import { PhoneLink } from '@/ui/phone-link';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -548,12 +549,6 @@ export function CatalogScreen({ me }: { me: Me }) {
         : []),
       ...(canManage
         ? [
-            {
-              key: 'audit',
-              label: t('catalog.auditLog'),
-              onSelect: () =>
-                navigate(`${PATHS.adminAuditLog}?objectId=${encodeURIComponent(catalogRow.id)}`),
-            },
             ...manageItems(catalogRow, name),
           ]
         : []),
@@ -886,6 +881,7 @@ export function CatalogScreen({ me }: { me: Me }) {
 
       {historyOf ? (
         <CatalogHistoryDialog
+          role={me.role}
           entity={entity}
           id={historyOf.id}
           name={historyOf.name}
@@ -909,11 +905,13 @@ export function CatalogScreen({ me }: { me: Me }) {
 
 /** Sổ thay đổi của một mục — ai đổi địa chỉ site, ai tắt "Có port map" (AD-13, `HistoryPanel`). */
 function CatalogHistoryDialog({
+  role,
   entity,
   id,
   name,
   onClose,
 }: {
+  role: Me['role'];
   entity: CatalogEntity;
   id: string;
   name: string;
@@ -939,10 +937,14 @@ function CatalogHistoryDialog({
       ) : history.isError ? (
         <LoadError error={history.error} onRetry={() => void history.refetch()} />
       ) : (
-        <HistoryPanel
-          entries={toCatalogHistory(history.data ?? [], t, lists.data?.sites)}
-          emptyText={t('catalog.historyEmpty')}
-        />
+        <>
+          {/* Một mục "Lịch sử" trong ⋮ (PW-A23); từ đây sang Nhật ký thao tác nếu cần cả lượt xuất / nhập. */}
+          <AuditLogLink role={role} objectType={entity} objectId={id} />
+          <HistoryPanel
+            entries={toCatalogHistory(history.data ?? [], t, lists.data?.sites)}
+            emptyText={t('catalog.historyEmpty')}
+          />
+        </>
       )}
     </Dialog>
   );
