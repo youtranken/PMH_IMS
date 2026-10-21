@@ -248,6 +248,13 @@ export function DigestRulesPanel({
         <EmptyState
           title={t('digest.empty')}
           hint={t('digest.emptyHint')}
+          action={
+            canEdit ? (
+              <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
+                {t('digest.add')}
+              </button>
+            ) : undefined
+          }
         />
       ) : narrow ? (
         /* ≤600px: thẻ "tên + lịch gửi + người nhận" thay bảng gập 7 dòng nhãn (TB-05). */

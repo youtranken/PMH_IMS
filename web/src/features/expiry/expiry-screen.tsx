@@ -142,6 +142,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const [addingRule, setAddingRule] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const canEditRules = me.role === 'sa' || me.role === 'admin';
+  /* Cùng khóa + cùng hàm với `DigestRulesPanel` nên chỉ đọc cache, không gọi lần hai. Chưa có
+     luật nào thì nút "Thêm luật" chỉ ở khung trống, không lặp ở đầu trang (PW-A30). */
+  const rules = useQuery({
+    queryKey: ['expiry', 'rules'],
+    queryFn: () => apiFetch<unknown[]>('/api/v1/expiry/rules'),
+    enabled: tab === 'rules',
+  });
+  const hasRules = (rules.data?.length ?? 0) > 0;
 
   /*
    * BA BỘ LỌC SỐNG TRÊN THANH ĐỊA CHỈ, KHÔNG TRONG `useState`.
@@ -375,7 +383,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
         title={t('expiry.title')}
         actions={
           tab === 'rules' ? (
-            canEditRules ? (
+            canEditRules && hasRules ? (
               <button type="button" className="btn primary" onClick={() => setAddingRule(true)}>
                 {t('digest.add')}
               </button>

@@ -61,4 +61,21 @@ describe('Sắp hết hạn — cột Thao tác chỉ còn Gia hạn; bấm dòn
     await userEvent.click(within(row).getByText('Bảo hành thiết bị'));
     expect(await screen.findByText('trang thiết bị')).toBeInTheDocument();
   });
+
+  // PW-A30: tab Luật trống — nút "Thêm luật" chỉ ở khung trống, không lặp ở đầu trang.
+  it('tab Luật chưa có luật nào → đúng một nút "Thêm luật"', async () => {
+    stubFetch();
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/expiry']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <ExpiryScreen me={me} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: /Luật gửi báo cáo/ }));
+    expect(await screen.findByText('Chưa có luật gửi báo cáo nào.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Thêm luật' })).toHaveLength(1);
+  });
 });
