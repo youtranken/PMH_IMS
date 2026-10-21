@@ -194,8 +194,12 @@ export function NatScreen({ me }: { me: Me }) {
 
   /** Router có mặt trong sổ — ô lọc chỉ bày thứ lọc ra được. */
   const routers = useMemo(() => {
+    // Hiện "mã — tên" (FM-27): danh mục có hàng trăm router, mã trần khó nhận ra máy nào.
     const seen = new Map<string, string>();
-    for (const rule of all) seen.set(rule.deviceId, rule.deviceCode ?? rule.deviceId);
+    for (const rule of all) {
+      const code = rule.deviceCode ?? rule.deviceId;
+      seen.set(rule.deviceId, rule.deviceName ? `${code} — ${rule.deviceName}` : code);
+    }
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [all]);
 
@@ -484,7 +488,7 @@ export function NatScreen({ me }: { me: Me }) {
           placeholder={t('nat.allRouters')}
           options={[
             { value: '', label: t('nat.allRouters') },
-            ...routers.map(([id, code]) => ({ value: id, label: code })),
+            ...routers.map(([id, label]) => ({ value: id, label })),
           ]}
         />
         <Select

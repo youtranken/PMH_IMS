@@ -143,7 +143,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * Tên TRỢ NĂNG của một tập điều khiển, đúng thứ tự chúng nằm trong DOM.
    *
    * Vì sao không dùng `allInnerTexts()`: một nửa số điều khiển của phòng này KHÔNG có chữ nào
-   * bên trong. Nút mở `Select` hiện nhãn placeholder ("— Chọn loại —") chứ không hiện tên ô;
+   * bên trong. Nút mở `Select` hiện nhãn placeholder ("Chọn loại…") chứ không hiện tên ô;
    * nút lịch chỉ có một cái icon; ô chọn file là `<input type="file">` bị giấu về 1px và mượn
    * tên từ `<label for>` bên cạnh. Người dùng trình đọc màn hình nghe đúng chuỗi mà hàm này
    * trả về — nên đó mới là thứ đáng chốt, không phải chữ vẽ trên màn hình.
@@ -721,7 +721,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     /*
      * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Tất cả loại" —
-     * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
+     * một cái máy phải là một loại cụ thể. Mục "Chọn loại…" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
     const typeInForm = await optionsOf(
@@ -884,7 +884,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveValue('C9200-24P');
     await expect(
       editDialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
-      'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "— Chọn loại —"',
+      'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "Chọn loại…"',
     ).toHaveText('Switch');
     await expect(
       editDialog.getByRole('button', { name: 'Trạng thái', exact: true }),
