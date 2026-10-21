@@ -153,7 +153,7 @@ test.describe('Quyền két sắt — Kiểm tra quyền giải thích "vì sao"
 });
 
 test.describe('Sắp hết hạn — sắp theo cột, ô Chờ tự thanh lý, cửa sổ theo lịch (EX-003/005/011)', () => {
-  test('bấm cột Mục → URL sort=label; chọn "tới hết tháng này" → period=month; có ô Chờ tự thanh lý', async ({
+  test('bấm cột Mục → URL sort=label; chọn "tới ngày…" → period=custom; có ô Chờ tự thanh lý', async ({
     page,
   }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
@@ -169,8 +169,9 @@ test.describe('Sắp hết hạn — sắp theo cột, ô Chờ tự thanh lý, 
     await expect(page).toHaveURL(/sort=label/);
 
     await page.getByRole('button', { name: 'Khoảng thời gian', exact: true }).click();
-    await page.getByRole('option', { name: 'Quá hạn + tới hết tháng này', exact: true }).click();
-    await expect(page).toHaveURL(/period=month/);
+    await page.getByRole('option', { name: 'Quá hạn + tới ngày…', exact: true }).click();
+    await expect(page).toHaveURL(/period=custom/);
+    await expect(page.getByRole('button', { name: 'Tới ngày' })).toBeVisible();
   });
 
   test('đường hỏng: ?sort= lạ và ?state= lạ không làm hỏng danh sách (về mặc định)', async ({ page }) => {

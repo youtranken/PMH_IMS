@@ -109,13 +109,13 @@ test.describe('Bảng điều khiển', () => {
     expect(urgentLine, 'phải hiện nhãn tiếng Việt lấy từ API').toContain('License phần mềm');
     expect(urgentLine, 'không được để lọt mã máy ra cột Loại').not.toMatch(/\blicense\b/);
 
-    // Khối sự cố đọc phiếu 0206 (FR-027 ②): hoặc "không có sự cố", hoặc danh sách số phiếu.
-    const incidents = page.locator('section').filter({ hasText: 'Sự cố · 7 ngày' });
-    await expect(
-      incidents.getByText('7 ngày qua không có sự cố nào.').or(incidents.getByRole('link', { name: /^0206-\d{4}-\d{3}$/ })).first(),
-    ).toBeVisible();
-
-    await expect(page.getByRole('heading', { name: 'Yêu cầu mở két · 7 ngày' })).toBeVisible();
+    // Khối sự cố đọc phiếu 0206 (FR-027 ②): có phiếu thì là danh sách số phiếu; không có thì
+    // không có khối (UX-E05 — ô số 0 ở hàng KPI đã nói).
+    const incidents = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Sự cố · 7 ngày' }) });
+    if ((await incidents.count()) > 0) {
+      await expect(incidents.getByRole('link', { name: /^0206-\d{4}-\d{3}$/ }).first()).toBeVisible();
+    }
+    await expect(page.getByText('7 ngày qua không có sự cố nào.')).toHaveCount(0);
   });
 
   /**
@@ -127,11 +127,11 @@ test.describe('Bảng điều khiển', () => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/');
 
-    const incidents = page.locator('section').filter({ hasText: 'Sự cố · 7 ngày' });
-    await expect(
-      incidents.getByText('7 ngày qua không có sự cố nào.').or(incidents.getByRole('link', { name: /^0206-\d{4}-\d{3}$/ })).first(),
-    ).toBeVisible();
-    await expect(incidents.getByText(/chưa theo dõi/i)).toHaveCount(0);
+    const incidents = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Sự cố · 7 ngày' }) });
+    if ((await incidents.count()) > 0) {
+      await expect(incidents.getByRole('link', { name: /^0206-\d{4}-\d{3}$/ }).first()).toBeVisible();
+    }
+    await expect(page.getByText(/chưa theo dõi/i)).toHaveCount(0);
   });
 
   test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page, browser }) => {
@@ -225,14 +225,16 @@ test.describe('Bảng điều khiển', () => {
      * diện, nếu hạn rơi vào 30 ngày tới, sẽ làm khối này có dữ liệu. Bắt nó phải rỗng là bắt
      * cả cái DB dev phải sạch — điều kiện không đời nào giữ được, và khi vỡ thì báo sai chỗ.
      */
-    await expect(page.getByRole('heading', { name: 'Tổng hợp hết hạn cần xử lý' })).toBeVisible();
+    // Không có mục nào thì không có khối (UX-E05) — kiểm hàng KPI dựng được.
+    await expect(page.getByRole('link', { name: /Đã quá hạn/ })).toBeVisible();
     await expect(
       page.getByText('Không tải được khối này. Các khối còn lại vẫn đúng.'),
     ).toHaveCount(0);
 
-    // Hai khối này thì reset kiểm soát được TRỌN VẸN, nên vẫn bắt đúng chữ trạng thái rỗng —
-    // đó là chỗ thật sự kiểm được nhánh "không có dữ liệu" của BlockCard.
-    await expect(page.getByText('7 ngày qua không ai xin mở két.')).toBeVisible();
+    // Khối này reset kiểm soát được TRỌN VẸN: không ai xin mở két thì KHÔNG có khối, cũng
+    // không có câu trống lặp lại ô số 0 (UX-E05).
+    await expect(page.getByRole('heading', { name: 'Yêu cầu mở két · 7 ngày' })).toHaveCount(0);
+    await expect(page.getByText('7 ngày qua không ai xin mở két.')).toHaveCount(0);
   });
 
   /**

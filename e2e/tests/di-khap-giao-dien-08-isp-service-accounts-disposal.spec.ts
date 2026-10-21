@@ -1095,8 +1095,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Giải thích: Loại',
         'Giải thích: Người phụ trách',
         // Hạn dùng của tài khoản (Q-20).
-        'Hết hạn (tùy chọn)',
-        'Giải thích: Hết hạn (tùy chọn)',
+        'Hết hạn',
+        'Giải thích: Hết hạn',
         'Hiện',
         'Tạo ngẫu nhiên',
         'Chọn file để đính kèm',

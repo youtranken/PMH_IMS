@@ -683,7 +683,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * ĐỎ KHI: thêm/bớt một khối mà quên; một khối rụng khỏi bảng của SA; hoặc một khối chỉ dành
    * cho SA xuất hiện ở bảng của Member.
    */
-  test('Bảng điều khiển: SA thấy đủ sáu khối, Member thiếu đúng hai khối an ninh', async ({
+  test('Bảng điều khiển: mỗi vai thấy đúng khối có dữ liệu, Member không bao giờ thấy hai khối an ninh', async ({
     page,
   }) => {
     // Hai luồng đăng nhập lần đầu đầy đủ (SA rồi Member) trong cùng một bài.
@@ -705,20 +705,33 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         .map((title) => title.replace(/^Dải mạng ≥ \d+%$/, 'Dải mạng ≥ N%'))
         .filter((title) => !/^(Cần bạn duyệt|Yêu cầu mở két của tôi)/.test(title));
 
+    /*
+     * Khối nào hiện tùy dữ liệu (UX-E05: mảng 0 mục không thành khối — ô số 0 ở hàng KPI đã
+     * nói). Nên tập khối mong đợi tính từ CHÍNH phản hồi API của vai đó: khối có dữ liệu thì
+     * phải có mặt; không còn khối nào ngoài sáu tên này.
+     */
+    const TITLE: Record<string, string> = {
+      expiring: 'Tổng hợp hết hạn cần xử lý',
+      subnetLoad: 'Dải mạng ≥ N%',
+      staleSecrets: 'Két lâu chưa đổi',
+      incidents: 'Sự cố · 7 ngày',
+      breakGlass: 'Yêu cầu mở két · 7 ngày',
+      disposed: 'Kho thanh lý · 7 ngày',
+    };
+    const expectedBlocks = async () => {
+      const board = (await (await page.request.get('/api/v1/dashboard')).json()) as Record<
+        string,
+        { available?: boolean; total?: number } | undefined
+      >;
+      return Object.entries(TITLE)
+        .filter(([key]) => (board[key]?.available ?? false) && (board[key]?.total ?? 0) > 0)
+        .map(([, title]) => title);
+    };
     const saBlocks = await blockTitles();
     expect(
       asSet(saBlocks),
-      'SA phải thấy đủ sáu khối — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
-    ).toEqual(
-      asSet([
-        'Tổng hợp hết hạn cần xử lý',
-        'Dải mạng ≥ N%',
-        'Két lâu chưa đổi',
-        'Sự cố · 7 ngày',
-        'Yêu cầu mở két · 7 ngày',
-        'Kho thanh lý · 7 ngày',
-      ]),
-    );
+      'SA thấy đúng các khối đang có dữ liệu — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
+    ).toEqual(asSet(await expectedBlocks()));
 
     // Khối "Sự cố tuần qua" đọc phiếu 0206 thật, không còn câu "chưa theo dõi" của lúc chưa có phiếu.
     await expect(page.getByText(/IMS chưa theo dõi sự cố/), 'phiếu 0206 đã có, khối không được nói "chưa theo dõi"').toHaveCount(0);
@@ -729,38 +742,25 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
-    // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' }),
-      'Member vẫn phải thấy khối "Sắp hết hạn" — cắt theo vai không phải là cắt sạch',
-    ).toBeVisible();
+    // Chờ hàng KPI, để không đếm lúc trang mới dựng được nửa.
+    await expect(page.getByRole('link', { name: /Đã quá hạn/ })).toBeVisible();
 
     const memberBlocks = await blockTitles();
-    expect(
-      asSet(memberBlocks),
-      'Member phải thấy đúng bốn khối không dính bí mật',
-    ).toEqual(
-      asSet([
-        'Tổng hợp hết hạn cần xử lý',
-        'Dải mạng ≥ N%',
-        'Sự cố · 7 ngày',
-        'Kho thanh lý · 7 ngày',
-      ]),
-    );
+    const memberExpected = await expectedBlocks();
+    expect(asSet(memberBlocks), 'Member thấy đúng các khối có dữ liệu của vai mình').toEqual(asSet(memberExpected));
 
     /*
-     * SO HAI TẬP HỢP, không so hai chuỗi.
-     *
-     * Hiệu của chúng phải đúng bằng hai cái tên dưới đây. Viết thành hai lượt
-     * `toHaveCount(0)` thì một khối THỨ BA rò sang Member sẽ không làm đỏ gì cả — mà đó chính
-     * là kiểu rò rỉ bài này sinh ra để chặn.
+     * Hai khối an ninh: server rút gọn theo vai — với Member chúng KHÔNG BAO GIỜ có dữ liệu
+     * (dù SA đang thấy), nên cũng không bao giờ thành khối. Một khối thứ ba rò sang Member sẽ
+     * làm `memberBlocks` lệch `memberExpected` ở trên.
      */
-    const missing = saBlocks.filter((title) => !memberBlocks.includes(title));
+    expect(memberExpected, 'API không được trả dữ liệu hai khối an ninh cho Member').not.toContain('Két lâu chưa đổi');
+    expect(memberExpected).not.toContain('Yêu cầu mở két · 7 ngày');
+    const leaked = memberBlocks.filter((title) => ['Két lâu chưa đổi', 'Yêu cầu mở két · 7 ngày'].includes(title));
     expect(
-      asSet(missing),
-      'Member KHÔNG được thấy hai khối an ninh — và cũng không được thiếu khối nào khác: ' +
-        `SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
-    ).toEqual(asSet(['Két lâu chưa đổi', 'Yêu cầu mở két · 7 ngày']));
+      leaked,
+      `Member KHÔNG được thấy khối an ninh: SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
+    ).toEqual([]);
   });
 
   /* ================================================================== *

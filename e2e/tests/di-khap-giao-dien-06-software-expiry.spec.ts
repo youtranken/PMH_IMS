@@ -224,10 +224,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('row')).toHaveCount(3);
     expect(
       await columnTexts(page),
-      /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
-         1280px với cột Thao tác trong khung. */
+      /* Loại là dòng phụ dưới tên; "Hết hạn" là ngày, trạng thái xuống dòng phụ (TB-13) — để
+         bảng vừa 1280px với cột Thao tác trong khung. */
       'Bảng phần mềm phải có đúng 6 cột này, đúng thứ tự này',
-    ).toEqual(['Mã hồ sơ', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
+    ).toEqual(['Mã hồ sơ', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Hết hạn', 'Thao tác']);
 
     // ===== SẮP XẾP: aria-sort phải lật, VÀ thứ tự dòng phải đảo theo =====
     const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ', exact: true });
@@ -988,16 +988,12 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('button', { name: 'Khoảng thời gian', exact: true }).click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
-      'Sáu mốc cửa sổ ngày + ba mốc theo lịch (EX-003) — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
+      'Bốn mốc cửa sổ ngày + "tới ngày…" (UX-E24) — không cho gõ số tùy ý',
     ).toEqual([
-      'Quá hạn + 7 ngày tới',
       'Quá hạn + 30 ngày tới',
-      'Quá hạn + 60 ngày tới',
       'Quá hạn + 90 ngày tới',
       'Quá hạn + 180 ngày tới',
       'Quá hạn + 365 ngày tới',
-      'Quá hạn + tới hết tháng này',
-      'Quá hạn + tới hết quý này',
       'Quá hạn + tới ngày…',
     ]);
     await page.getByRole('option', { name: 'Quá hạn + 30 ngày tới', exact: true }).click();
@@ -1055,8 +1051,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(warrantyRow, 'Bảo hành sắp hết cũng phải có mặt').toBeVisible();
     await expect(
       warrantyRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }),
-      'Bảo hành do nhà cung cấp quyết — cho lối sang hồ sơ để sửa ngày, không để nút chết',
-    ).toHaveCount(1);
+      'Bảo hành không gia hạn ở đây: ô trống — lối sang hồ sơ là link mã và bấm cả dòng (PW-A20)',
+    ).toHaveCount(0);
     await expect(
       warrantyRow.getByRole('button', { name: 'Gia hạn', exact: true }),
       'Không được bày nút gia hạn cho bảo hành: bấm vào là ăn lỗi EXPIRY_NOT_RENEWABLE',
