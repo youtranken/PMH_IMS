@@ -622,14 +622,16 @@ export function CommandPalette({ me }: { me: Me }) {
       })),
       { list: PATHS.ispLines, key: 'nav.isp' },
       { list: PATHS.serviceAccounts, key: 'nav.serviceAccounts' },
-    ].map(({ list, key }) => ({
-      group,
-      title: t('palette.searchIn', { q, where: t(key) }),
-      sub: '',
-      to: `${list}?q=${encodeURIComponent(q)}`,
-      navKey: key,
-      kind: 'action' as const,
-    }));
+    ]
+      .filter(({ list }) => canSeePath(me, list))
+      .map(({ list, key }) => ({
+        group,
+        title: t('palette.searchIn', { q, where: t(key) }),
+        sub: '',
+        to: `${list}?q=${encodeURIComponent(q)}`,
+        navKey: key,
+        kind: 'action' as const,
+      }));
   }, [q, recent, me, found, searching, anyFailed, t]);
 
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của

@@ -5,14 +5,14 @@ import type { FeatureGroup } from '@/ui/use-feature-groups';
  * Hàng của bảng Nhóm quyền (Q-31), đúng thứ tự mockup đã duyệt. Nhãn dùng lại khóa `nav.*`: tên
  * trên bảng phải là tên SA thấy trên menu.
  */
-export const FEATURE_ROWS: { tick: FeatureTick; labelKey: string; indent: boolean }[] = [
-  { tick: 'overview', labelKey: 'nav.groupOverview', indent: false },
-  { tick: 'assets', labelKey: 'nav.groupAssets', indent: false },
-  { tick: 'network', labelKey: 'nav.groupNetwork', indent: false },
-  { tick: 'iso_0203', labelKey: 'nav.isoBackup', indent: true },
-  { tick: 'iso_0206', labelKey: 'nav.isoIncidents', indent: true },
-  { tick: 'iso_0208', labelKey: 'nav.isoAntivirus', indent: true },
-  { tick: 'break_glass', labelKey: 'nav.approvalsMine', indent: false },
+export const FEATURE_ROWS: { tick: FeatureTick; labelKey: string; underIso: boolean }[] = [
+  { tick: 'overview', labelKey: 'nav.groupOverview', underIso: false },
+  { tick: 'assets', labelKey: 'nav.groupAssets', underIso: false },
+  { tick: 'network', labelKey: 'nav.groupNetwork', underIso: false },
+  { tick: 'iso_0203', labelKey: 'nav.isoBackup', underIso: true },
+  { tick: 'iso_0206', labelKey: 'nav.isoIncidents', underIso: true },
+  { tick: 'iso_0208', labelKey: 'nav.isoAntivirus', underIso: true },
+  { tick: 'break_glass', labelKey: 'nav.approvalsMine', underIso: false },
 ];
 
 type Drafts = Record<string, string[]>;

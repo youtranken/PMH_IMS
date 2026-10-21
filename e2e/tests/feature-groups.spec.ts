@@ -115,9 +115,16 @@ test.describe('Nhóm quyền (Q-31)', () => {
       code: 'FEATURE_HIDDEN',
     });
 
+    // Kho file dùng chung: giấy tờ của thiết bị (Tài sản) cũng bị chặn, không chỉ màn của mảng.
+    expect(await status(page, 'GET', `/api/v1/files?ownerType=device&ownerId=${randomUUID()}`)).toMatchObject({
+      status: 403,
+      code: 'FEATURE_HIDDEN',
+    });
+
     // Vế đối chứng: mảng của nhóm và tra cứu dùng chung (ô chọn thiết bị khi cấp IP) vẫn 200.
     expect((await status(page, 'GET', '/api/v1/ipam/subnets')).status).toBe(200);
     expect((await status(page, 'GET', '/api/v1/devices?page=1&limit=5')).status).toBe(200);
+    expect((await status(page, 'GET', `/api/v1/files?ownerType=subnet&ownerId=${randomUUID()}`)).status).toBe(200);
 
     // Member tự đưa mình về "Đủ quyền" / đọc danh sách nhóm → vai chặn trước nhóm.
     expect(await status(page, 'PUT', `/api/v1/accounts/${memberId()}/feature-group`, { featureGroupId: null })).toMatchObject({ status: 403 });

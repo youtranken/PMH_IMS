@@ -56,6 +56,7 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
   let incidents: IsoIncidentService;
   let periods: IsoPeriodService;
   let files: FilesService;
+  let owners: OwnerExistsRegistry;
   let storage: string;
   const previousDir = process.env.FILE_STORAGE_DIR;
 
@@ -102,7 +103,7 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
     const config = new SystemConfigService(db);
     const users = new UsersApiService(new UsersService(db));
     const kinds = new ApprovalKindRegistry();
-    const owners = new OwnerExistsRegistry();
+    owners = new OwnerExistsRegistry();
     clock = new FixedClock(config);
     files = new FilesService(db, audit, owners, users, config, noopSweep);
     const filesApi = new FilesApiService(files);
@@ -542,6 +543,16 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       await expect(incidents.update(people.owner, fromCell.id, { ...incident(), cells: [] })).rejects.toMatchObject({
         response: { code: 'ISO_INCIDENT_LOCKED' },
       });
+    });
+
+    it('Q-31: bản ký của kỳ 0203 không mở được qua kho file khi nhóm chỉ có 0208', async () => {
+      const { rows } = await scratch.pool.query(`SELECT id FROM iso_period WHERE form_type = '0203' AND year = 2026 AND month = 11`);
+      const periodId = rows[0].id as string;
+      await expect(owners.assertFeatureVisible('iso_period', periodId, ['iso_0208', 'iso'])).rejects.toMatchObject({
+        status: 403,
+        response: { code: 'FEATURE_HIDDEN' },
+      });
+      await owners.assertFeatureVisible('iso_period', periodId, ['iso_0203', 'iso']);
     });
 
     it('bản ký chỉ nhận PDF/ảnh khi đã khoá; có bản ký của kỳ và mọi 0206 thì Hoàn tất', async () => {

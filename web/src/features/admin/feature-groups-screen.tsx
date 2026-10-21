@@ -155,15 +155,15 @@ export function FeatureGroupsScreen({ me }: { me: Me }) {
               <tbody>
                 {FEATURE_ROWS.map((row, index) => (
                   <Fragment key={row.tick}>
-                    {row.indent && !FEATURE_ROWS[index - 1]?.indent ? (
-                      <tr>
+                    {row.underIso && !FEATURE_ROWS[index - 1]?.underIso ? (
+                      <tr className="row-group">
                         <th scope="rowgroup" colSpan={list.length + 1}>
                           {t('nav.groupIso')}
                         </th>
                       </tr>
                     ) : null}
                     <tr>
-                      <th scope="row" style={row.indent ? { paddingLeft: 'var(--space-5)' } : undefined}>
+                      <th scope="row">
                         {t(row.labelKey)}
                       </th>
                       {list.map((group) => {

@@ -8,6 +8,7 @@ import { UsersApiService } from '../users/users.api';
 import { isoFormOwnerTable } from './iso-forms.schema';
 import { ISO_FORM_TYPES, type IsoFormType } from './iso-rules';
 import { hasFeature, type FeatureHolding, type FeatureTick } from '../../common/features';
+import type { Tx } from '../../common/tx';
 
 export interface IsoActor {
   id: string;
@@ -104,13 +105,14 @@ export class IsoAccessService {
   }
 
   /** Q-31: nhóm quyền của người được gán phải có ô tick của phiếu đó. */
-  private async assertOwnersSeeForm(
+  private async assertOwnersSeeFormWithin(
+    tx: Tx,
     formType: IsoFormType,
     people: IsoPerson[],
     ids: (string | null)[],
   ): Promise<void> {
     const chosen = ids.filter((id): id is string => id !== null);
-    const ticks = await this.users.featureTicksByIds(chosen);
+    const ticks = await this.users.featureTicksByIdsWithin(tx, chosen);
     const feature = formFeature(formType);
     const blind = chosen.filter((id) => {
       const own = ticks.get(id) ?? null;
@@ -155,8 +157,8 @@ export class IsoAccessService {
         });
       }
     }
-    await this.assertOwnersSeeForm(formType, people, [input.primaryUserId, input.backupUserId]);
     await this.db.transaction(async (tx) => {
+      await this.assertOwnersSeeFormWithin(tx, formType, people, [input.primaryUserId, input.backupUserId]);
       const [before] = await tx.select().from(isoFormOwnerTable).where(eq(isoFormOwnerTable.formType, formType)).for('update');
       await tx
         .update(isoFormOwnerTable)

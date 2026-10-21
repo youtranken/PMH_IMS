@@ -24,6 +24,11 @@ export type TimelineFilter = '' | 'profile' | 'ipam' | 'software';
 
 export const TIMELINE_FILTERS: TimelineFilter[] = ['', 'profile', 'ipam', 'software'];
 
+/** Nhóm quyền ẩn Mạng (Q-31) thì API bỏ nguồn IP, nên chip IP cũng không hiện. */
+export function timelineFilters(seesNetwork: boolean): TimelineFilter[] {
+  return TIMELINE_FILTERS.filter((key) => key !== 'ipam' || seesNetwork);
+}
+
 export const TIMELINE_FILTER_KEY: Record<TimelineFilter, string> = {
   '': 'devices.timelineAll',
   profile: 'devices.timelineProfile',

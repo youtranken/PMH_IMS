@@ -63,7 +63,7 @@ export class SessionGuard implements CanActivate {
       );
     }
 
-    const user = await this.users.findById(session.userId);
+    const user = await this.users.findForSession(session.userId);
 
     // Đúng mật khẩu nhưng chưa qua TOTP: chỉ vài route được phép (nhập mã / enroll / logout).
     if (session.totpPending) {
@@ -111,10 +111,7 @@ export class SessionGuard implements CanActivate {
     }
 
     // Đọc mỗi request như vai: SA đổi nhóm là có hiệu lực ngay (Q-31).
-    const groupTicks =
-      user.role === 'member' && user.featureGroupId
-        ? await this.users.featureTicksOf(user.featureGroupId)
-        : null;
+    const groupTicks = user.role === 'member' ? user.groupTicks : null;
 
     request.user = {
       id: user.id,

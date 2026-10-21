@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, OnModuleInit } from
 import { OwnerExistsRegistry, type OwnerResolver, type Uploader } from '../../common/owner-exists.registry';
 import type { Tx } from '../../common/tx';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { IsoAccessService } from './iso-access.service';
+import { assertSeesForm, IsoAccessService } from './iso-access.service';
 import { IsoIncidentService } from './iso-incident.service';
 import { IsoPeriodStore, periodLabel } from './iso-period.store';
 import type { IsoFormType } from './iso-rules';
@@ -77,6 +77,12 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
         message: `Phiếu ${incident.code} đã khoá nên không xoá được bản ký. Cần thay thì xin mở lại kỳ của phiếu.`,
       });
     }
+  }
+
+  async assertFeatureVisible(ownerType: string, ownerId: string, features: readonly string[]): Promise<void> {
+    if (ownerType !== 'iso_period') return;
+    const row = await this.periods.findById(ownerId);
+    if (row) assertSeesForm({ features }, row.formType as IsoFormType);
   }
 
   async assertAccepts(ownerType: string, ownerId: string, file: { mime: string; sizeBytes: number }, uploader: Uploader): Promise<void> {

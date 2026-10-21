@@ -8,7 +8,7 @@ const GROUPS = [
 
 describe('Bảng nhóm quyền (Q-31)', () => {
   it('đúng bảy hàng tick theo thứ tự mockup, ba phiếu nằm dưới "Phiếu ISO"', () => {
-    expect(FEATURE_ROWS.map((row) => `${row.tick}${row.indent ? ' (ISO)' : ''}`)).toEqual([
+    expect(FEATURE_ROWS.map((row) => `${row.tick}${row.underIso ? ' (ISO)' : ''}`)).toEqual([
       'overview',
       'assets',
       'network',

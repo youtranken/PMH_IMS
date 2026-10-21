@@ -17,7 +17,7 @@ import type { SweepService } from '../src/modules/queue/sweep.service';
 import { FeatureGroupsService } from '../src/modules/users/feature-groups.service';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, type ScratchDb, waitForLock } from './db';
 
 const TEST_TIMEOUT = 120_000;
 const noopSweep = { register: () => undefined } as unknown as SweepService;
@@ -181,6 +181,53 @@ describe('Q-31 · quản trị nhóm quyền', () => {
     });
   });
 
+  describe('race: người phụ trách và nhóm đổi cùng lúc', () => {
+    /** Chạy `sql` trong một transaction treo; `during` chạy lúc khóa còn giữ, rồi COMMIT. */
+    async function whileHeld<T>(sql: [string, unknown[]], during: () => Promise<T>): Promise<PromiseSettledResult<T>> {
+      const blocker = await scratch.pool.connect();
+      try {
+        await blocker.query('BEGIN');
+        await blocker.query(sql[0], sql[1]);
+        const run = during();
+        void run.catch(() => undefined);
+        await waitForLock(scratch.pool, 10_000);
+        await blocker.query('COMMIT');
+        return (await Promise.allSettled([run]))[0];
+      } finally {
+        blocker.release();
+      }
+    }
+
+    it('gán người phụ trách 0203 lúc SA đang bỏ tick 0203 khỏi nhóm của họ → chờ rồi 400', async () => {
+      const { id } = await groups.create(SA, { name: 'E2E Race tick', features: ['iso_0203', 'assets'] });
+      const member = await user('member', 'E2E Race tick');
+      await groups.assign(SA, member, id);
+      const result = await whileHeld([`UPDATE feature_group SET features = ARRAY['assets'] WHERE id = $1`, [id]], () =>
+        iso.setOwners(SA, '0203', { primaryUserId: member, backupUserId: null }),
+      );
+      expect(result).toMatchObject({ status: 'rejected', reason: { response: { code: 'ISO_OWNER_FEATURE_HIDDEN' } } });
+    }, TEST_TIMEOUT);
+
+    it('gán người phụ trách 0203 lúc SA đang chuyển họ sang nhóm không có 0203 → chờ rồi 400', async () => {
+      const { id } = await groups.create(SA, { name: 'E2E Race nhóm A', features: ['iso_0203'] });
+      const { id: other } = await groups.create(SA, { name: 'E2E Race nhóm B', features: ['assets'] });
+      const member = await user('member', 'E2E Race chuyển');
+      await groups.assign(SA, member, id);
+      const result = await whileHeld([`UPDATE users SET feature_group_id = $2 WHERE id = $1`, [member, other]], () =>
+        iso.setOwners(SA, '0203', { primaryUserId: member, backupUserId: null }),
+      );
+      expect(result).toMatchObject({ status: 'rejected', reason: { response: { code: 'ISO_OWNER_FEATURE_HIDDEN' } } });
+    }, TEST_TIMEOUT);
+
+    it('gán nhóm lúc SA khác đang đổi người đó sang Quản trị → chờ rồi 400, không 500', async () => {
+      const { id } = await groups.create(SA, { name: 'E2E Race vai', features: ['network'] });
+      const member = await user('member', 'E2E Race vai');
+      const result = await whileHeld([`UPDATE users SET role = 'admin' WHERE id = $1`, [member]], () => groups.assign(SA, member, id));
+      expect(result).toMatchObject({ status: 'rejected', reason: { response: { code: 'FEATURE_GROUP_MEMBER_ONLY' } } });
+      expect(await groupOf(member)).toBeNull();
+    }, TEST_TIMEOUT);
+  });
+
   it('tạo tài khoản Member kèm nhóm trong cùng transaction', async () => {
     const { id } = await groups.create(SA, { name: 'E2E Tạo kèm', features: ['overview'] });
     const { user: created } = await accounts.create(SA, {
@@ -201,5 +248,17 @@ describe('Q-31 · quản trị nhóm quyền', () => {
     await groups.assign(SA, member, id);
     await accounts.setRole(SA, member, 'admin');
     expect(await groupOf(member)).toBeNull();
+    // Nhật ký phải nói nhóm bị bỏ, không thì hạ về Member sau đó thấy "Đủ quyền" mà không rõ vì sao.
+    const { rows } = await scratch.pool.query<{ detail: unknown }>(
+      `SELECT detail FROM audit_log WHERE object_id = $1 AND action = 'account.role.changed'`,
+      [member],
+    );
+    expect(rows[0].detail).toEqual({ before: 'member', after: 'admin', featureGroup: { before: id, after: null } });
+  });
+
+  it('PATCH không có tên lẫn ô tick → 400, không ghi nhật ký', async () => {
+    const { id } = await groups.create(SA, { name: 'E2E Rỗng patch', features: ['network'] });
+    await expect(groups.update(SA, id, {})).rejects.toMatchObject({ status: 400, response: { code: 'FEATURE_GROUP_EMPTY_PATCH' } });
+    expect(await auditActions(id)).toEqual(['feature_group.created']);
   });
 });

@@ -42,26 +42,54 @@ export class UsersService {
   }
 
   /**
-   * Ô tick của nhóm quyền (Q-31) — SessionGuard gọi mỗi request. Nhóm không còn (FK RESTRICT nên
-   * không xảy ra) thì trả rỗng: đóng, không mở.
+   * SessionGuard gọi mỗi request: tài khoản + ô tick nhóm quyền (Q-31) trong MỘT câu. `groupTicks`
+   * `null` = chưa gán nhóm. Có nhóm mà không đọc được nhóm (FK RESTRICT nên không xảy ra) thì trả
+   * rỗng: đóng, không mở.
    */
-  async featureTicksOf(groupId: string): Promise<string[]> {
+  async findForSession(id: string): Promise<(UserRecord & { groupTicks: string[] | null }) | null> {
     const rows = await this.db
-      .select({ features: featureGroupTable.features })
-      .from(featureGroupTable)
-      .where(eq(featureGroupTable.id, groupId));
-    return rows[0]?.features ?? [];
-  }
-
-  /** `id → ô tick của nhóm` theo mẻ; `null` = đủ quyền (SA/Admin, Member chưa gán nhóm). */
-  async featureTicksByIds(ids: readonly string[]): Promise<Map<string, string[] | null>> {
-    if (ids.length === 0) return new Map();
-    const rows = await this.db
-      .select({ id: usersTable.id, features: featureGroupTable.features })
+      .select({ user: usersTable, features: featureGroupTable.features })
       .from(usersTable)
       .leftJoin(featureGroupTable, eq(featureGroupTable.id, usersTable.featureGroupId))
-      .where(inArray(usersTable.id, [...ids]));
-    return new Map(rows.map((row) => [row.id, row.features ?? null]));
+      .where(eq(usersTable.id, id));
+    const row = rows[0];
+    if (!row) return null;
+    return { ...strip(toCredentials(row.user)), groupTicks: row.user.featureGroupId ? (row.features ?? []) : null };
+  }
+
+  /**
+   * `id → ô tick của nhóm`; `null` = đủ quyền. Khóa FOR SHARE người rồi nhóm của họ trước khi đọc:
+   * lượt bỏ tick, chuyển nhóm hay đổi vai đang chạy phải xong trước, không thì người phụ trách ISO
+   * được gán theo ô tick sắp mất (Q-31).
+   */
+  async featureTicksByIdsWithin(tx: Tx, ids: readonly string[]): Promise<Map<string, string[] | null>> {
+    if (ids.length === 0) return new Map();
+    const people = await tx
+      .select({ id: usersTable.id, groupId: usersTable.featureGroupId })
+      .from(usersTable)
+      .where(inArray(usersTable.id, [...ids]))
+      .for('share');
+    const groupIds = [...new Set(people.flatMap((p) => (p.groupId ? [p.groupId] : [])))];
+    const groups =
+      groupIds.length === 0
+        ? []
+        : await tx
+            .select({ id: featureGroupTable.id, features: featureGroupTable.features })
+            .from(featureGroupTable)
+            .where(inArray(featureGroupTable.id, groupIds))
+            .for('share');
+    const ticks = new Map(groups.map((g) => [g.id, g.features]));
+    return new Map(people.map((p) => [p.id, p.groupId ? (ticks.get(p.groupId) ?? []) : null]));
+  }
+
+  /** Vai + nhóm hiện tại, khóa FOR UPDATE: đổi nhóm phải thấy vai mới nhất (CHECK chỉ-Member). */
+  async lockRoleAndGroupWithin(tx: Tx, id: string): Promise<{ role: UserRole; featureGroupId: string | null } | null> {
+    const rows = await tx
+      .select({ role: usersTable.role, featureGroupId: usersTable.featureGroupId })
+      .from(usersTable)
+      .where(eq(usersTable.id, id))
+      .for('update');
+    return rows[0] ? { role: rows[0].role as UserRole, featureGroupId: rows[0].featureGroupId } : null;
   }
 
   /**

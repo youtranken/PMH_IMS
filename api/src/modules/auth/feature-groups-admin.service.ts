@@ -57,6 +57,9 @@ export class FeatureGroupsAdminService {
       ...(input.name !== undefined ? { name: cleanName(input.name) } : {}),
       ...(input.features !== undefined ? { features: cleanTicks(input.features) } : {}),
     };
+    if (patch.name === undefined && patch.features === undefined) {
+      throw new BadRequestException({ code: 'FEATURE_GROUP_EMPTY_PATCH', message: 'Không có gì để lưu.' });
+    }
     try {
       await this.db.transaction(async (tx) => {
         const before = await this.requireLocked(tx, id);
@@ -105,16 +108,17 @@ export class FeatureGroupsAdminService {
 
   /** Gán Member vào nhóm; `null` = "Đủ quyền". */
   async assign(actor: Actor, userId: string, groupId: string | null): Promise<void> {
-    const user = await this.users.findById(userId);
-    if (!user) throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Không tìm thấy tài khoản.' });
-    if (user.featureGroupId === groupId) return;
-    if (user.role !== 'member' && groupId !== null) {
-      throw new BadRequestException({
-        code: 'FEATURE_GROUP_MEMBER_ONLY',
-        message: 'Chỉ gán nhóm quyền cho Thành viên. SA và Quản trị luôn đủ quyền.',
-      });
-    }
     await this.db.transaction(async (tx) => {
+      // Đọc dưới khóa: vai đổi giữa chừng thì CHECK chỉ-Member ở DB mới là thứ báo lỗi, ra 500.
+      const user = await this.users.lockRoleAndGroupWithin(tx, userId);
+      if (!user) throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Không tìm thấy tài khoản.' });
+      if (user.featureGroupId === groupId) return;
+      if (user.role !== 'member' && groupId !== null) {
+        throw new BadRequestException({
+          code: 'FEATURE_GROUP_MEMBER_ONLY',
+          message: 'Chỉ gán nhóm quyền cho Thành viên. SA và Quản trị luôn đủ quyền.',
+        });
+      }
       await this.assignWithin(tx, userId, groupId);
       await this.audit.appendWithin(tx, {
         actor: actor.email,

@@ -53,6 +53,9 @@ export function effectiveFeatures(
   return ticks;
 }
 
+/** Câu 403 khi nhóm quyền ẩn mảng — một câu cho mọi nơi chặn, để web hiện đúng một kiểu. */
+export const FEATURE_HIDDEN = { code: 'FEATURE_HIDDEN', message: 'Nhóm quyền của bạn không có mục này.' } as const;
+
 /** Có ít nhất MỘT trong các tính năng `required`. */
 export function hasFeature(
   features: readonly string[] | null,

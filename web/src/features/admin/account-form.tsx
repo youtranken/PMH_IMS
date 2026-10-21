@@ -67,7 +67,7 @@ export function AccountForm({
   const [totpLoginRequired, setTotpLoginRequired] = useState(true);
   // Q-31: '' = Đủ quyền. Chỉ gửi khi vai là Thành viên — SA/Admin luôn đủ quyền.
   const [featureGroupId, setFeatureGroupId] = useState('');
-  const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired]);
+  const [error, setError] = useSubmitError([email, fullName, phone, employeeCode, birthDate, role, totpLoginRequired, featureGroupId]);
 
   const create = useApiMutation<Record<string, unknown>, CreateResult>('/api/v1/accounts', {
     csrfToken,

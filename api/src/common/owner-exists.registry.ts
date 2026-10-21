@@ -100,6 +100,12 @@ export interface OwnerResolver {
    * ai xoá được theo `@Roles` của route thì xoá được.
    */
   assertRemovableWithin?(tx: Tx, ownerType: string, ownerId: string): Promise<void>;
+
+  /**
+   * Q-31, phần mịn hơn bảng `FILE_FEATURES`: chủ thể nào mảng tùy theo hàng (kỳ ISO thuộc một
+   * phiếu cụ thể) thì module chủ ném 403 ở đây. Loại chưa khai thì bảng đã đủ.
+   */
+  assertFeatureVisible?(ownerType: string, ownerId: string, features: readonly string[]): Promise<void>;
 }
 
 @Injectable()
@@ -148,6 +154,11 @@ export class OwnerExistsRegistry {
   /** Luật xoá file riêng của chủ thể; loại chưa khai `assertRemovableWithin` thì đi qua. */
   async assertRemovableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
     await this.resolverFor(ownerType).assertRemovableWithin?.(tx, ownerType, ownerId);
+  }
+
+  /** Q-31: module chủ lọc tiếp theo hàng; loại chưa khai `assertFeatureVisible` thì đi qua. */
+  async assertFeatureVisible(ownerType: string, ownerId: string, features: readonly string[]): Promise<void> {
+    await this.resolverFor(ownerType).assertFeatureVisible?.(ownerType, ownerId, features);
   }
 
   /** Ghi chú của hồ sơ chủ thể, `null` khi loại đó chưa khai `noteOf` hoặc ghi chú trống. */

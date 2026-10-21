@@ -362,7 +362,12 @@ export class AccountsService {
         action: "account.role.changed",
         objectType: "user",
         objectId: userId,
-        detail: { before: user.role, after: role },
+        // Rời vai Member thì `setRoleWithin` bỏ luôn nhóm quyền (Q-31): ghi lại, không thì hạ về
+        // Member sau đó thấy "Đủ quyền" mà nhật ký không nói vì sao.
+        detail:
+          role !== "member" && user.featureGroupId
+            ? { before: user.role, after: role, featureGroup: { before: user.featureGroupId, after: null } }
+            : { before: user.role, after: role },
       });
     });
   }

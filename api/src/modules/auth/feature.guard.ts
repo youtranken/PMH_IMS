@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { hasFeature, type Feature } from '../../common/features';
+import { FEATURE_HIDDEN, hasFeature, type Feature } from '../../common/features';
 import { FEATURE_KEY } from './feature.decorator';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import type { AuthedRequest } from './types';
@@ -30,9 +30,6 @@ export class FeatureGuard implements CanActivate {
     const user = context.switchToHttp().getRequest<AuthedRequest>().user;
     if (user && hasFeature(user.features, declared)) return true;
 
-    throw new ForbiddenException({
-      code: 'FEATURE_HIDDEN',
-      message: 'Nhóm quyền của bạn không có mục này.',
-    });
+    throw new ForbiddenException(FEATURE_HIDDEN);
   }
 }

@@ -44,7 +44,7 @@ import { toHistoryEntries } from "./device-history-entries";
 import {
   mergeDeviceTimeline,
   TIMELINE_FILTER_KEY,
-  TIMELINE_FILTERS,
+  timelineFilters,
   type DeviceTimeline,
   type TimelineFilter,
 } from "./device-timeline";
@@ -1014,7 +1014,7 @@ export function DeviceDetail({ me }: { me: Me }) {
         ) : (
           <>
             <div className="segmented" role="group" aria-label={t("devices.timelineFilter")}>
-              {TIMELINE_FILTERS.map((key) => (
+              {timelineFilters(seesNetwork).map((key) => (
                 <button
                   key={key || "all"}
                   type="button"
@@ -1030,7 +1030,10 @@ export function DeviceDetail({ me }: { me: Me }) {
               <p className="alert" role="status">
                 {t("devices.timelineFailed", {
                   sources: timeline.isError
-                    ? `${t("devices.timelineIp")}, ${t("devices.timelineLicense")}`
+                    ? timelineFilters(seesNetwork)
+                        .filter((key) => key === "ipam" || key === "software")
+                        .map((key) => t(TIMELINE_FILTER_KEY[key]))
+                        .join(", ")
                     : (timeline.data?.failedSources ?? [])
                         .map((source) =>
                           t(TIMELINE_FILTER_KEY[source as "ipam" | "software"] ?? source),

@@ -29,12 +29,12 @@ function stubFetch(devices: unknown[], total = devices.length) {
   );
 }
 
-async function openPalette() {
+async function openPalette(who: Me = me) {
   const user = userEvent.setup();
   renderWithI18n(
     <MemoryRouter>
       <ConfirmProvider>
-        <CommandPalette me={me} />
+        <CommandPalette me={who} />
         <Routes>
           <Route path="*" element={<Where />} />
         </Routes>
@@ -70,6 +70,14 @@ describe('Tìm nhanh — trạng thái trống và không khớp', () => {
     await user.keyboard('{Control>}k{/Control}');
     const recent = screen.getByRole('group', { name: 'Mở gần đây' });
     expect(within(recent).getByRole('option', { name: /SW-CORE-01/ })).toBeInTheDocument();
+  });
+
+  it('nhóm quyền chỉ có Mạng: không khớp gì thì không mời "Tìm trong" các màn Tài sản bị ẩn (Q-31)', async () => {
+    stubFetch([]);
+    const user = await openPalette({ ...me, role: 'member', features: ['network'] } as unknown as Me);
+    await user.type(screen.getByRole('combobox'), 'zzqq');
+    expect(await screen.findByText('Không có hồ sơ nào khớp "zzqq".')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /^Tìm "zzqq" trong/ })).not.toBeInTheDocument();
   });
 
   it('không khớp gì: có lối "Tìm "x" trong Thiết bị" mở danh sách với ô tìm đã điền', async () => {
