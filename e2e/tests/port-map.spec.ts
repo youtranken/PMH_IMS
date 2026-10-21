@@ -54,7 +54,7 @@ test.describe('Port map', () => {
     await page.getByRole('option', { name: new RegExp(serverCode) }).click();
     await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('eth0');
     await form.getByRole('combobox', { name: 'Người dùng' }).fill('phòng Kế toán');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     const row = page.getByRole('row', { name: /Gi1\/0\/12/ });
     await expect(row).toBeVisible();
@@ -99,7 +99,7 @@ test.describe('Port map', () => {
       // Đầu kia là MỘT trong hai: chọn chế độ mô tả tự do trước rồi mới có ô để gõ.
       await form.getByText('Mô tả tự do', { exact: true }).click();
       await form.getByRole('textbox', { name: 'Mô tả đầu kia' }).fill(`lần ${i + 1}`);
-      await form.getByRole('button', { name: 'Lưu' }).click();
+      await form.getByRole('button', { name: 'Lưu', exact: true }).click();
       if (i === 0) await expect(page.getByRole('row', { name: /24/ })).toBeVisible();
     }
 
@@ -136,7 +136,7 @@ test.describe('Port map', () => {
     await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(otherCode);
     await page.getByRole('option', { name: new RegExp(otherCode) }).click();
     await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('1');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form.getByRole('alert')).toContainText(
       `Cổng "ETH0" của thiết bị này đã có cáp nối từ ${switchCode} cổng "Gi1/0/12"`,
     );
@@ -145,7 +145,7 @@ test.describe('Port map', () => {
     await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(switchCode);
     await page.getByRole('option', { name: new RegExp(switchCode) }).click();
     await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('gi1/0/12');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByRole('row', { name: /ETH0/ })).toBeVisible();
   });
 
@@ -188,7 +188,7 @@ test.describe('Port map', () => {
     await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('WAN1');
     await form.getByText('Mô tả tự do', { exact: true }).click();
     await form.getByRole('textbox', { name: 'Mô tả đầu kia' }).fill('uplink nhà mạng');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByRole('row', { name: /WAN1/ })).toBeVisible();
 
     await rowAction(page, 'WAN1', 'Xóa');

@@ -419,7 +419,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .toBeVisible();
 
     // Lọc CỘT về đúng họ "Phần mềm & dịch vụ có hạn" — danh sách cố định, so được nguyên văn.
-    await page.getByRole('button', { name: 'Phạm vi' }).click();
+    await page.getByRole('button', { name: 'Phạm vi', exact: true }).click();
     await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
 
     /*
@@ -1160,7 +1160,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.goto('/admin/vault-access?view=matrix');
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
-    await page.getByRole('button', { name: 'Phạm vi' }).click();
+    await page.getByRole('button', { name: 'Phạm vi', exact: true }).click();
     await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
     await grid.getByRole('button', { name: 'Gán "Phần mềm: License" cho nhiều người' }).click();
 

@@ -858,11 +858,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       (await rowActionNames(page, activeCode)).map(tidyLabel),
       'Tài khoản ĐANG DÙNG: Sửa đứng ngoài (Q-18), menu chỉ còn Ngừng dùng',
-    ).toEqual(['Ngừng dùng']);
+    ).toEqual(['Ngừng dùng…']);
     expect(
       (await rowActionNames(page, disabledCode)).map(tidyLabel),
       'Tài khoản ĐÃ ĐÓNG phải có đường mở lại — thiếu nó là hồ sơ đóng vĩnh viễn với giao diện',
-    ).toEqual(['Dùng lại']);
+    ).toEqual(['Dùng lại…']);
     await expect(page.getByRole('button', { name: `Sửa ${activeCode}` })).toBeVisible();
 
     // Bộ nút và bộ cột đầy đủ của vai SA — thu hẹp còn một dòng cho phần phân trang cố định.

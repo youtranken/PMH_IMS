@@ -356,7 +356,7 @@ test.describe('Kho thiết bị', () => {
     await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row.getByRole('button', { name: `Sửa máy ${code}` })).toBeVisible();
-    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái…', 'Nhân bản', 'Thanh lý…']);
 
     await rowAction(page, code, 'Đổi trạng thái');
     await page.getByRole('button', { name: 'Trạng thái mới' }).click();

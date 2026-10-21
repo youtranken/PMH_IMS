@@ -607,7 +607,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hộp gán không còn ô gõ chữ nào: chi phí, hợp đồng, ghi chú khai bằng nút "Sửa" ở dòng máy',
     ).toHaveCount(0);
     await expect(assign.getByRole('note'), 'Hộp gán nói rõ thông tin ghế khai ở đâu').toContainText(
-      'nút "Sửa" ở dòng của máy đó',
+      '"Sửa" ở dòng máy đó',
     );
 
     await expect(
@@ -1064,7 +1064,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== BÊN TRONG HỘP "GIA HẠN" =====
     await licenseRow.getByRole('button', { name: 'Gia hạn', exact: true }).click();
-    const renew = page.getByRole('dialog', { name: new RegExp(`^Gia hạn ${licenseCode}`) });
+    const renew = page.getByRole('dialog', { name: new RegExp(`^Gia hạn — ${licenseCode}`) });
     await expect(renew, 'Hộp gia hạn phải nói rõ đang gia hạn mục nào').toBeVisible();
 
     /*

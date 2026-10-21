@@ -51,7 +51,7 @@ test.describe('Trang hồ sơ TKDV — thao tác ngay tại chỗ (NET-072)', ()
     const off = page.getByRole('dialog', { name: `Ngừng dùng — ${code}` });
     await off.getByRole('button', { name: 'Ngừng dùng' }).click();
     // Đường hỏng: lý do bắt buộc, báo tiếng Việt dưới ô, không gửi.
-    await expect(off.getByText(/Bắt buộc/)).toBeVisible();
+    await expect(off.getByText(/Chưa nhập/)).toBeVisible();
     await off.getByRole('textbox', { name: /Lý do ngừng dùng/ }).fill('nhân sự đã nghỉ E2E');
     await off.getByRole('button', { name: 'Ngừng dùng' }).click();
     await expect(off).toHaveCount(0);

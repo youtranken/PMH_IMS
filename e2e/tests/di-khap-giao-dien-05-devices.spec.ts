@@ -1070,7 +1070,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         lastEditButton(),
       ]);
     await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' }).getByText('Chưa có IP', { exact: true })).toBeVisible();
-    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái…', 'Nhân bản', 'Thanh lý…']);
 
     /*
      * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 9 dòng, cùng thứ tự; ô trống đứng đúng

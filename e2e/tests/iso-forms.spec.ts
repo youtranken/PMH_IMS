@@ -253,7 +253,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const grid = page.getByRole('table');
     await expect(grid.getByRole('cell', { name: `E2E Division ${stamp}` })).toBeVisible();
     await expect(grid.getByRole('cell', { name: 'Other Division', exact: true })).toBeVisible();
-    await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('button', { name: 'Lập 0206 ›' })).toBeVisible();
+    await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('button', { name: 'Lập 0206' })).toBeVisible();
     // Ô ngày phát hiện luôn ✗, không bấm; ô chưa bấm của ngày đã ✓ Other Division hiện ✓ theo.
     const pc = `E2E-PC-${stamp}`;
     await expect(grid.getByRole('button', { name: new RegExp(`^${pc} ngày 02/03`) })).toHaveCount(0);
