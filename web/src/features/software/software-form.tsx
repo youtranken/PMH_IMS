@@ -39,6 +39,7 @@ import {
   screenOfKind,
   type SoftwareScreenKey,
 } from '@/lib/software-screens';
+import { CodeInput } from '@/ui/code-input';
 
 interface FormState {
   code: string;
@@ -443,9 +444,9 @@ export function SoftwareForm({
             />
           </Field>
           <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code')}>
-            <input
+            <CodeInput
+              caps
               id="sw-code"
-              className="inp mono"
               required
               placeholder={batchFrom ? suggestedCode : codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
               value={form.code}
@@ -561,9 +562,8 @@ export function SoftwareForm({
             </Field>
             {perSeat ? null : (
               <Field label={t('software.contract')} hint={t('software.contractHint')} htmlFor="sw-contract">
-                <input
+                <CodeInput
                   id="sw-contract"
-                  className="inp mono"
                   maxLength={200}
                   value={form.contract}
                   onChange={(e) => set('contract', e.target.value)}

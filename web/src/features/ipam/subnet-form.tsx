@@ -12,6 +12,7 @@ import type { SubnetRow } from './ipam-types';
 import { useIpamSettings } from './ipam-settings';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { IpInput } from '@/ui/code-input';
 
 /**
  * Khai / sửa một dải.
@@ -165,9 +166,9 @@ export function SubnetForm({
           htmlFor="subnet-cidr"
           error={check.error('cidr')}
         >
-          <input
+          <IpInput
+            cidr
             id="subnet-cidr"
-            className="inp mono"
             required
             readOnly={cidrLocked}
             placeholder={t('ipam.phCidr')}
@@ -220,9 +221,8 @@ export function SubnetForm({
           {/* Field chỉ tự nối id/mô tả/lỗi khi có ĐÚNG MỘT đứa con — ở đây có thêm nút gợi ý
               (phải đứng ngay dưới ô Gateway, không trôi sang cột VLAN), nên nối tay theo đúng
               quy ước id của Field. */}
-          <input
+          <IpInput
             id="subnet-gateway"
-            className="inp mono"
             placeholder={t('ipam.phGateway')}
             value={gateway}
             aria-describedby={

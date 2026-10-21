@@ -16,6 +16,7 @@ import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useDepartments } from '@/ui/use-departments';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { CodeInput } from '@/ui/code-input';
 
 type PeerMode = 'device' | 'free';
 
@@ -276,10 +277,9 @@ export function PortFormDialog({
                   ariaLabel={t('ports.port')}
                 />
               ) : (
-                <input
+                <CodeInput
                   ref={labelRef}
                   id="port-label"
-                  className="inp mono"
                   required
                   placeholder={t('ports.phPort')}
                   value={portLabel}
@@ -372,7 +372,7 @@ export function PortFormDialog({
                     ariaLabel={t('ports.peerPort')}
                   />
                 ) : (
-                  <input id="port-peer-port" className="inp mono" value={connectedPort} onChange={(e) => setConnectedPort(e.target.value)} />
+                  <CodeInput id="port-peer-port" value={connectedPort} onChange={(e) => setConnectedPort(e.target.value)} />
                 )}
               </Field>
               {peer && outsideLayout(peerPanel.data, connectedPort) ? (

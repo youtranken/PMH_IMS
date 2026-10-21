@@ -34,6 +34,7 @@ import {
 import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
 import { DeviceModelField } from './device-model-field';
 import { ACCESS_KINDS, type AccessPoint } from './device-access';
+import { CodeInput, IpInput } from '@/ui/code-input';
 
 interface FormState {
   code: string;
@@ -364,9 +365,9 @@ export function DeviceForm({
 
   const serialField = (
     <Field label={t('devices.serial')} htmlFor="device-serial">
-      <input
+      <CodeInput
+        caps
         id="device-serial"
-        className="inp mono"
         value={form.serial}
         onChange={(e) => set('serial', e.target.value)}
       />
@@ -461,10 +462,10 @@ export function DeviceForm({
             </div>
           ) : null}
           <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
-            <input
+            <CodeInput
+              caps
               ref={codeRef}
               id="device-code"
-              className="inp mono"
               required
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
@@ -707,8 +708,7 @@ export function DeviceForm({
                   options={ACCESS_KINDS.map((kind) => ({ value: kind, label: t(`devices.accessKind_${kind}`) }))}
                   onChange={(value) => setAccess(index, { kind: value as AccessPoint['kind'] })}
                 />
-                <input
-                  className="inp mono"
+                <IpInput
                   aria-label={`${t('devices.accessAddress')} ${index + 1}`}
                   placeholder="10.0.1.1"
                   maxLength={200}

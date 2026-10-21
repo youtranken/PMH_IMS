@@ -29,6 +29,7 @@ import {
 import { cabinetNumber, suggestCabinetCode } from './cabinet-code';
 import { deviceUsage } from './catalog-usage';
 import { DeviceTypeDiagramIcon } from './device-type-diagram-icon';
+import { CodeInput } from '@/ui/code-input';
 
 /** `GET /catalog/diagram-shapes` — danh sách hình ĐÓNG, server kiểm đúng danh sách này khi ghi. */
 interface DiagramShapes {
@@ -340,10 +341,10 @@ export function CatalogForm({
             error={fieldError('code')}
           >
             {codeUnlocked ? (
-              <input
+              <CodeInput
+                caps
                 id="catalog-code"
                 name="catalog-code"
-                className="inp mono"
                 required
                 value={form.code}
                 onChange={(e) => {

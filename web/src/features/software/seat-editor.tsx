@@ -4,6 +4,7 @@ import { AttachmentPanel, ATTACHMENT_ACCEPT } from '@/ui/attachment-panel';
 import { useAttachmentDraft, type AttachmentDraft } from '@/ui/attachment-draft';
 import { Dialog } from '@/ui/dialog';
 import { CloseIcon } from '@/ui/glyph-icons';
+import { CodeInput } from '@/ui/code-input';
 
 /** Một dòng ghế đang khai trong form (Q-27). */
 export interface SeatDraftRow {
@@ -60,8 +61,7 @@ export function SeatEditor({
               <tr key={row.seatNo}>
                 <td className="seat-no">{t('software.seatLabel', { n: row.seatNo })}</td>
                 <td>
-                  <input
-                    className="inp mono"
+                  <CodeInput
                     aria-label={t('software.seatContractOf', { n: row.seatNo })}
                     maxLength={200}
                     disabled={disabled}

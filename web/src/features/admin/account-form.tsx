@@ -12,6 +12,7 @@ import { PhoneInput } from '@/ui/phone-input';
 import { isEmail } from '@/lib/email';
 import { RoleChoice } from './role-choice';
 import { FeatureGroupSelect } from './account-dialogs';
+import { CodeInput } from '@/ui/code-input';
 
 interface CreateResult {
   user: { id: string; email: string; fullName: string; role: Me['role'] };
@@ -226,9 +227,9 @@ export function AccountForm({
           hint={t('accounts.employeeCodeHint')}
           htmlFor="acc-emp"
         >
-          <input
+          <CodeInput
+            caps
             id="acc-emp"
-            className="inp mono"
             maxLength={32}
             placeholder={t('accounts.phEmployeeCode')}
             value={employeeCode}

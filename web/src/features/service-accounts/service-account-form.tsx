@@ -28,6 +28,7 @@ import {
   type ServiceAccountRow,
   type ServiceAccountStatus,
 } from './service-account-types';
+import { CodeInput } from '@/ui/code-input';
 
 interface FormState {
   code: string;
@@ -281,9 +282,8 @@ export function ServiceAccountForm({
             htmlFor="sa-login"
             error={check.error('login')}
           >
-            <input
+            <CodeInput
               id="sa-login"
-              className="inp mono"
               required={!form.code.trim()}
               placeholder={t('serviceAccounts.phLogin')}
               value={form.login}
@@ -330,9 +330,9 @@ export function ServiceAccountForm({
             }
             htmlFor="sa-code"
           >
-            <input
+            <CodeInput
+              caps
               id="sa-code"
-              className="inp mono"
               placeholder={t('serviceAccounts.codeAutoPlaceholder')}
               value={form.code}
               onChange={(e) => set('code', e.target.value)}

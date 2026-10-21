@@ -58,6 +58,7 @@ import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from '@/ui/
 import { useConfirm } from '@/ui/confirm-provider';
 import { Pagination } from '@/ui/pagination';
 import { useListUrlState } from '@/ui/use-list-url-state';
+import { IpInput } from '@/ui/code-input';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -1132,9 +1133,8 @@ function NatForm({
               />
             ) : (
               <>
-                <input
+                <IpInput
                   id="nat-internal-ip"
-                  className="inp mono"
                   required
                   placeholder={t('nat.phInternalIp')}
                   value={internalIp}

@@ -34,6 +34,7 @@ import {
 import { useTickQueue } from './use-tick-queue';
 import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
 import type { AntivirusGrid, AvIssue, IncidentCell, TickResult } from './iso-types';
+import { CodeInput } from '@/ui/code-input';
 
 /**
  * Lưới 0208 — Theo dõi antivirus. Dòng issue (một máy × một ngày phát hiện) gom theo bộ phận, chỉ bộ
@@ -519,7 +520,7 @@ function IssueDialog({
             </Field>
           ) : null}
           <Field label={t('iso.field.computerName')} required htmlFor="iso-av-pc" error={check.error('computerName')}>
-            <input id="iso-av-pc" className="inp mono" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
+            <CodeInput id="iso-av-pc" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
           </Field>
           <Field label={t('iso.field.handled')} hint={t('iso.av.handledHint')}>
             {/* Dòng cũ chưa có Handled thì để trống: API không ghi lại khi sửa, hiện tên người đang

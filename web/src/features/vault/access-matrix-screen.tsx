@@ -26,6 +26,7 @@ import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
+import { CodeInput } from '@/ui/code-input';
 
 /** Phải khớp `SCOPE_TYPES` bên API (`access-tier.ts`) và CHECK ở tầng DB. */
 type ScopeType =
@@ -1792,9 +1793,9 @@ function CheckAccessDialog({
           />
         </Field>
         <Field label={t('access.checkCode')} htmlFor="access-check-code">
-          <input
+          <CodeInput
+            caps
             id="access-check-code"
-            className="inp mono"
             value={code}
             placeholder={t('access.checkCodePlaceholder')}
             onChange={(event) => setCode(event.target.value)}

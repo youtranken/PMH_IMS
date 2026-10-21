@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { CodeInput } from '@/ui/code-input';
 
 /** Một nhóm thứ máy đang giữ, đọc từ chính `/panels` + `/ports` — không đoán. */
 export interface RetireGroup {
@@ -170,10 +171,9 @@ export function RetireDialog({
             htmlFor={typedId}
             error={typed.trim().length > 0 && !codeOk ? t('devices.retireTypeCodeMismatch') : null}
           >
-            <input
-              className="mono"
+            <CodeInput
+              caps
               autoComplete="off"
-              spellCheck={false}
               value={typed}
               disabled={busy}
               onChange={(event) => setTyped(event.target.value)}

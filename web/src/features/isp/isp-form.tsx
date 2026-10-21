@@ -25,6 +25,7 @@ import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-err
 import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
+import { CodeInput, IpInput } from '@/ui/code-input';
 
 const WAN_ISSUE_KEY: Record<Exclude<WanIpIssue, null>, string> = {
   range: 'isp.wanIpRange',
@@ -247,9 +248,9 @@ export function IspForm({
         {check.summary}
         <FormSection title={t('isp.tabProfile')} columns={4}>
           <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code')}>
-            <input
+            <CodeInput
+              caps
               id="isp-code"
-              className="inp mono"
               required
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
@@ -313,13 +314,11 @@ export function IspForm({
                 return (
                   <div key={index}>
                     <div className="row" style={{ gap: 'var(--space-2)' }}>
-                      <input
+                      <IpInput
                         id={`isp-wanip-${index}`}
                         ref={(node) => {
                           wanInputs.current[index] = node;
                         }}
-                        className="inp mono"
-                        inputMode="decimal"
                         aria-label={t('isp.wanIpRow', { n: index + 1 })}
                         aria-invalid={issue ? true : undefined}
                         aria-describedby={issue ? `${errorId} isp-wanip-0-hint` : 'isp-wanip-0-hint'}
@@ -436,9 +435,8 @@ export function IspForm({
             />
           </Field>
           <Field label={t('isp.contractNo')} htmlFor="isp-contract">
-            <input
+            <CodeInput
               id="isp-contract"
-              className="inp mono"
               value={form.contractNo}
               onChange={(e) => set('contractNo', e.target.value)}
             />
