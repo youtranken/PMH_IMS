@@ -1,7 +1,6 @@
 import type { PortLink } from '@/lib/port-types';
 import { diagramStatusLabel } from '@/ui/diagram-version';
 import type { PresentationSource } from './diagram-presentation';
-import type { PublicationEvent } from './diagram-timeline';
 
 /** Hình dạng trả về của `api/v1/diagrams` (module `diagrams`, AD-18). */
 
@@ -355,8 +354,6 @@ export interface CommentThread extends CommentRow {
 export interface Publications {
   officialVersionId: string | null;
   publishedVersionIds: string[];
-  /** Mỗi lần phát hành, cũ trước — thanh trượt thời gian. Thiếu → coi như rỗng. */
-  events?: PublicationEvent[];
 }
 
 /** `GET /diagrams/:id/compare?from=&to=` — tô màu theo ô trên ảnh xem của bản `to`. */

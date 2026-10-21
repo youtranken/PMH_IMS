@@ -7,12 +7,9 @@
 export function viewVersionOf(input: {
   mode: 'view' | 'edit';
   explicit: string | null;
-  atDay: string | null;
   official: string | null | undefined;
 }): string | null {
   if (input.mode !== 'view') return null;
   if (input.explicit) return input.explicit;
-  // `?at=` không kèm version = ngày đó chưa có bản chính thức (thanh trượt thời gian).
-  if (input.atDay) return null;
   return input.official ?? null;
 }

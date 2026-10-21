@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
 import { browserDraftBackend, deleteDraft, draftKeyOf, loadDraft, saveDraft } from '@/lib/draft-store';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { BREAKPOINTS } from '@/ui/breakpoints';
@@ -60,8 +60,7 @@ import { PinModeToggle, useDiagramReview } from './diagram-review';
 import { buildLayers, pathOnDrawing } from './diagram-navigation';
 import { DiagramPathTool } from './diagram-path-tool';
 import { DiagramSearch } from './diagram-search';
-import type { PublicationEvent } from './diagram-timeline';
-import { ExportMenu, TimelineMenu } from './diagram-tools';
+import { ExportMenu } from './diagram-tools';
 import { DiagramVersionsDialog } from './diagram-versions-dialog';
 import {
   deviceIdsInXml,
@@ -143,12 +142,10 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const editRequested = params.get('mode') === 'edit';
   const mode: Mode = editRequested && !narrow && !shelved ? 'edit' : 'view';
   const explicitVersion = mode === 'view' ? params.get('version') : null;
-  /* `?compare=<phiên bản trước>` = so sánh tô màu với bản đang xem; `?at=YYYY-MM-DD` = bản chính
-     thức hiệu lực ngày đó (thanh trượt thời gian) — không kèm `version` nghĩa là ngày đó chưa có. */
+  /* `?compare=<phiên bản trước>` = so sánh tô màu với bản đang xem. `?at=` của "Dòng thời gian" cũ
+     (đã bỏ, Q-32) bị bỏ qua: link cũ mở bản chính thức như mọi lối mở khác. */
   const compareFrom = mode === 'view' ? params.get('compare') : null;
-  const atDay = mode === 'view' ? params.get('at') : null;
-  const noOfficialAt = Boolean(atDay) && !explicitVersion;
-  const versionId = viewVersionOf({ mode, explicit: explicitVersion, atDay, official: node.data?.officialVersionId });
+  const versionId = viewVersionOf({ mode, explicit: explicitVersion, official: node.data?.officialVersionId });
   const ask = useConfirm();
   const queryClient = useQueryClient();
   const stepUp = useStepUpRetry(me.csrfToken);
@@ -164,7 +161,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    * (bản vẽ khác)" thì `?focus=<id máy>` chọn sẵn máy đó và bay tới.
    */
   const [focusDeviceId, setFocusDeviceId] = useState<string | null>(() => params.get('focus'));
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [presentationOpen, setPresentationOpen] = useState(false);
   /* "Chỉ đường": kết quả server (sơ đồ cổng); có đường thì tô sáng đè lên tô sáng của máy đang chọn. */
@@ -190,7 +186,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         t('diagrams.screen.stepUpPurpose', { name: node.data?.name ?? '' }),
       );
     },
-    enabled: node.isSuccess && !compareFrom && !noOfficialAt,
+    enabled: node.isSuccess && !compareFrom,
     // Mỗi lần tải nội dung là một dòng `diagram.viewed`: không tự tải lại khi quay lại tab trình duyệt.
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -289,9 +285,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
       setParams({ cell: cellId });
     })();
   };
-  /* Kéo thanh trượt: thay chứ không chồng lịch sử trình duyệt — mỗi nấc kéo không thành một bước "Back". */
-  const pickDay = (day: string, official: PublicationEvent | null) =>
-    setParams(official ? { version: official.versionId, at: day } : { at: day }, { replace: true });
 
   const review = useDiagramReview({
     me,
@@ -382,8 +375,8 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   let exportVersionId: string | null = null;
   let searchTool: ReactNode = null;
   let pathTool: ReactNode = null;
-  /* So sánh chỉ còn nút Phiên bản; ngày chưa có bản chính thức chỉ còn thanh trượt để kéo đi ngày khác. */
-  let toolbar: 'full' | 'compare' | 'timeline' = 'full';
+  /* So sánh chỉ còn nút Phiên bản. */
+  let toolbar: 'full' | 'compare' = 'full';
   let status: ReactNode = (
     <>
       {reviewable ? review.badge : null}
@@ -430,18 +423,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     else if (compare.isError) body = <LoadError error={compare.error} onRetry={() => void compare.refetch()} />;
     else if (!compare.data.to.svg) body = <EmptyState title={t('diagrams.screen.compareNoImage')} />;
     else body = <DiagramViewer svg={compare.data.to.svg} viewer={me} title={t('diagrams.screen.compareTitle')} diff={diff} />;
-  } else if (noOfficialAt && node.data) {
-    toolbar = 'timeline';
-    body = (
-      <EmptyState
-        title={t('diagrams.tools.timelineNone')}
-        action={
-          <button type="button" className="btn primary" onClick={() => setParams({})}>
-            {t('diagrams.screen.backToLatest')}
-          </button>
-        }
-      />
-    );
   } else if (content.isPending) body = <Loading />;
   else if (content.isError) {
     body = isStepUpCancelled(content.error) ? (
@@ -700,9 +681,7 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
         <>
           {status}
           <p className="muted" role="status">
-            {atDay
-              ? t('diagrams.tools.timelineHit', { date: formatDate(atDay), seq: version.seq })
-              : t('diagrams.screen.viewingOld', { seq: version.seq, at: formatDateTime(version.savedAt) })}{' '}
+            {t('diagrams.screen.viewingOld', { seq: version.seq, at: formatDateTime(version.savedAt) })}{' '}
             <button type="button" className="btn sm" onClick={() => setParams({})}>
               {t('diagrams.screen.backToLatest')}
             </button>
@@ -720,25 +699,12 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
    * trạng thái mở ở màn, không bị dựng lại mất giữa chừng.
    */
   const inView = mode === 'view' && toolbar === 'full';
-  const timelineMenu =
-    node.data && toolbar !== 'compare' && mode === 'view' && (toolbar === 'timeline' || content.isSuccess) ? (
-      <TimelineMenu
-        diagram={node.data}
-        run={stepUp.run}
-        day={atDay}
-        onPick={pickDay}
-        open={timelineOpen}
-        onOpenChange={setTimelineOpen}
-        inMenu={toolbar === 'full'}
-      />
-    ) : null;
   const primary = (
     <>
       {inView ? searchTool : null}
       {inView && searchTool ? <InfoTip subject={t('diagrams.nav.search')}>{t('diagrams.help.search')}</InfoTip> : null}
       {inView && reviewActs && review.pinMode ? <PinModeToggle active onToggle={review.togglePinMode} /> : null}
       {inView ? reviewPrimary.map((action) => <BarButton key={action.key} action={action} />) : null}
-      {toolbar === 'timeline' ? timelineMenu : null}
       {toolbar === 'compare' && !narrow ? <BarButton action={versionsAction} /> : null}
     </>
   );
@@ -746,7 +712,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     ? [
         ...reviewMenu,
         ...viewMenu,
-        ...(timelineMenu ? [{ key: 'timeline', label: t('diagrams.tools.timeline'), onSelect: () => setTimelineOpen(true) }] : []),
         ...(narrow ? [] : [versionsAction]),
         ...(!narrow && !shelved && canCreatePresentation(node.data)
           ? [{ key: 'presentation', label: t('diagrams.presentation.create'), onSelect: () => setPresentationOpen(true) }]
@@ -757,7 +722,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
     <>
       {inView && reviewActs ? review.popovers : null}
       {inView ? pathTool : null}
-      {toolbar === 'full' ? timelineMenu : null}
       {node.data && exportVersionId ? (
         <ExportMenu me={me} diagram={node.data} versionId={exportVersionId} run={stepUp.run} open={exportOpen} onOpenChange={setExportOpen} />
       ) : null}

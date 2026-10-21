@@ -311,7 +311,7 @@ describe('Bản đồ — trạng thái duyệt', () => {
 });
 
 describe('Thanh mảnh (Q-23 một dòng, Q-18 việc chính ngoài, còn lại vào ⋮)', () => {
-  it('SA chế độ Xem: chỉ "Phát hành" đứng ngoài; Gửi duyệt, ghim, Kiểm tra khớp, Xuất, Dòng thời gian, Phiên bản nằm trong menu', async () => {
+  it('SA chế độ Xem: chỉ "Phát hành" đứng ngoài; Gửi duyệt, ghim, Kiểm tra khớp, Xuất, Phiên bản nằm trong menu; không còn Dòng thời gian (Q-32)', async () => {
     routeFetch(base(diagram()));
     renderScreen('/diagrams/g1', SA);
     await viewerReady();
@@ -321,8 +321,9 @@ describe('Thanh mảnh (Q-23 một dòng, Q-18 việc chính ngoài, còn lại 
     }
     await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với Tầng 3 E2E' }));
     const items = screen.getAllByRole('menuitem').map((item) => item.getAttribute('aria-label') ?? item.textContent);
-    for (const name of ['Gửi duyệt', 'Ghim bình luận mới', 'Bình luận đã ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Dòng thời gian', 'Phiên bản']) {
+    for (const name of ['Gửi duyệt', 'Ghim bình luận mới', 'Bình luận đã ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Phiên bản']) {
       expect(items.some((label) => label?.startsWith(name))).toBe(true);
     }
+    expect(items.some((label) => label?.startsWith('Dòng thời gian'))).toBe(false);
   });
 });
