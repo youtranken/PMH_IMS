@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
+import { Crumbs, type Crumb } from '@/ui/detail-header';
 import { InfoTip } from '@/ui/info-tip';
 
 /**
@@ -10,8 +11,14 @@ export function PageHeader({
   titleTip,
   subtitle,
   actions,
+  crumbs,
 }: {
   title: string;
+  /**
+   * Màn CON của một màn khác (Xem lại kỳ phiếu…): breadcrumb trên tiêu đề, mục đầu là nút quay
+   * lại — cùng một kiểu với trang chi tiết (PW-B12). Không đặt link "‹ Quay lại" ở cụm nút.
+   */
+  crumbs?: Crumb[];
   /**
    * Câu giải thích "màn này để làm gì" sau nút (i) cạnh tiêu đề — cho màn mà câu ấy chỉ in ở
    * trạng thái rỗng: có dữ liệu rồi thì người mới vào vẫn cần một chỗ đọc được nó.
@@ -24,6 +31,7 @@ export function PageHeader({
   return (
     <header className="page-header">
       <div className="grow">
+        {crumbs ? <Crumbs crumbs={crumbs} /> : null}
         {/* Nút (i) đứng NGOÀI `<h1>`: đặt trong thì tên của tiêu đề thành "… Giải thích: …". */}
         {titleTip ? (
           <div className="page-header-title">

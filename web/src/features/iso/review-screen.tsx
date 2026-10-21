@@ -37,13 +37,11 @@ export function ReviewScreen({ me }: { me: Me }) {
         <PageHeader
           title={t('iso.review.title', { form, month: monthLabel(year, mon) })}
           subtitle={t('iso.review.subtitle')}
+          crumbs={[{ label: t('iso.review.crumbPeriods'), to: PATHS.isoPeriod(form, month) }, { label: t('iso.review.crumbHere') }]}
           actions={
-            <>
-              <Link to={PATHS.isoPeriod(form, month)}>{t('iso.review.backToPeriods')}</Link>
-              <button type="button" className="btn" onClick={() => window.print()}>
-                {t('iso.print')}
-              </button>
-            </>
+            <button type="button" className="btn" onClick={() => window.print()}>
+              {t('iso.print')}
+            </button>
           }
         />
         <Tabs
