@@ -34,6 +34,12 @@ describe('LoadError', () => {
     expect(screen.getByText(/không có quyền/i)).toBeInTheDocument();
   });
 
+  // Thiếu quyền thì bấm lại bao nhiêu lần cũng 403 — nút Thử lại chỉ là hứa hão.
+  it('403 → không có nút Thử lại', () => {
+    renderWithI18n(<LoadError error={new ApiError(403, null)} onRetry={() => {}} />);
+    expect(screen.queryByRole('button', { name: 'Thử lại' })).not.toBeInTheDocument();
+  });
+
   it('mất mạng (không phải ApiError) → nói là không kết nối được máy chủ', () => {
     renderWithI18n(<LoadError error={new TypeError('Failed to fetch')} onRetry={() => {}} />);
     expect(screen.getByText(/Không kết nối được máy chủ/i)).toBeInTheDocument();

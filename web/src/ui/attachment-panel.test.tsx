@@ -111,6 +111,28 @@ describe('AttachmentPanel — quyền xoá theo phiên hiện tại', () => {
     ).toBeInTheDocument();
   });
 
+  /*
+   * Giấy tờ của ISP / TK dịch vụ theo ma trận quyền két: Member không có quyền thì API trả 403.
+   * Bày ô thả file rồi một khung lỗi đỏ có "Thử lại" là bảo người ta làm một việc không bao giờ
+   * thành — chỉ nói một dòng, không ô thả, không khung lỗi.
+   */
+  it('403 khi đọc danh sách → một dòng "chưa có quyền", không ô thả file, không khung lỗi', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          String(url).includes('/auth/me')
+            ? jsonResponse(200, { id: 'u1', email: 'a@pmh.com.vn', role: 'member' })
+            : jsonResponse(403, { code: 'FORBIDDEN', message: 'Bạn không có quyền trên đối tượng này.' }),
+        ),
+      ),
+    );
+    renderPanel();
+    expect(await screen.findByText('Bạn chưa có quyền xem giấy tờ của hồ sơ này.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chọn file để đính kèm')).not.toBeInTheDocument();
+  });
+
   it('Member: không có nút thao tác xoá', async () => {
     vi.stubGlobal('fetch', withMe('member'));
     renderPanel();

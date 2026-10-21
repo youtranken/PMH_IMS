@@ -1966,6 +1966,7 @@ export default {
   attachments: {
     title: 'Giấy tờ đính kèm',
     hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành…',
+    forbidden: 'Bạn chưa có quyền xem giấy tờ của hồ sơ này.',
     hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh…',
     hint_service_account: 'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu.',
     hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP…',

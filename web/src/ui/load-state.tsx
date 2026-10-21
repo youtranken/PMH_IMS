@@ -251,6 +251,7 @@ export function LoadError({ onRetry, error }: { onRetry: () => void; error: unkn
   // Mốc giờ của LƯỢT HỎNG NÀY — chụp một lần, không trôi theo mỗi lượt render.
   const [at] = useState(() => new Date().toISOString());
   const status = error instanceof ApiError ? String(error.status) : t('app.techNoResponse');
+  const forbidden = error instanceof ApiError && error.status === 403;
   const tech = [
     t('app.techStatus', { status }),
     t('app.techTime', { time: formatDateTime(at) }),
@@ -270,11 +271,14 @@ export function LoadError({ onRetry, error }: { onRetry: () => void; error: unkn
       </span>
       <div className="load-error-body">
         <p className="load-error-text">{described.text ?? t(described.key)}</p>
-        <div className="load-error-actions">
-          <button type="button" onClick={onRetry}>
-            {t('app.retry')}
-          </button>
-        </div>
+        {/* Thiếu quyền thì bấm lại bao nhiêu lần cũng 403: không bày nút hứa hão. */}
+        {forbidden ? null : (
+          <div className="load-error-actions">
+            <button type="button" onClick={onRetry}>
+              {t('app.retry')}
+            </button>
+          </div>
+        )}
         <details className="load-error-tech">
           <summary>{t('app.techDetails')}</summary>
           <p>
