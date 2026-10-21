@@ -151,7 +151,8 @@ describe('Tài khoản dịch vụ — cột "Hết hạn" (Q-20)', () => {
     expect(await screen.findByRole('columnheader', { name: 'Hết hạn' })).toBeInTheDocument();
     const rowOf = (code: string) => screen.getAllByRole('row').find((tr) => tr.textContent?.includes(code))!;
     expect(rowOf('SVC-E2E-HAN').textContent).toMatch(/Quá hạn/);
-    expect(rowOf('SVC-E2E-KHONG').textContent).toContain('Không có hạn');
+    // PW-A24: không có hạn → "—" chữ thường, không phải huy hiệu viền chấm trên gần mọi dòng.
+    expect(rowOf('SVC-E2E-KHONG').textContent).not.toContain('Không có hạn');
     expect(rowOf('SVC-E2E-NGUNG').textContent).toContain('Không tính hạn');
     expect(rowOf('SVC-E2E-NGUNG').textContent).not.toMatch(/Quá hạn/);
   });
@@ -173,5 +174,17 @@ describe('Tài khoản dịch vụ — thẻ điện thoại mang huy hiệu h�
     const cardOf = async (code: string) => (await screen.findByText(code)).closest('.list-card')!;
     expect((await cardOf('SVC-E2E-HAN')).textContent).toMatch(/Quá hạn/);
     expect((await cardOf('SVC-E2E-KHONG')).textContent).not.toMatch(/hạn/i);
+  });
+});
+
+/* PW-A24 / TB-16: ba huy hiệu mỗi dòng và hai bộ sắp xếp (tiêu đề cột + ô "Sắp theo") ghi lệch nhau. */
+describe('Tài khoản dịch vụ — dòng gọn, một cách sắp xếp', () => {
+  it('Loại là chữ thường; "Đang dùng" không thành huy hiệu; Tên gọi là cột sắp được; không có ô "Sắp theo"', async () => {
+    stubFetch([{ ...ROW, id: 'a', code: 'SVC-E2E-GON' }]);
+    renderAs('sa');
+    const row = (await screen.findByText('SVC-E2E-GON')).closest('tr')!;
+    expect(row.querySelectorAll('.badge')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Sắp xếp theo Tên tài khoản' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sắp theo' })).toBeNull();
   });
 });
