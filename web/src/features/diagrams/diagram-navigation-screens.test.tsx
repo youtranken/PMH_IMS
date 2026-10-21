@@ -287,7 +287,7 @@ describe('Trình chiếu', () => {
     await user.click(screen.getByRole('button', { name: 'Tiếp →' }));
     expect(await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(await screen.findByText('Nội dung bản vẽ cần mã 2 lớp')).toBeInTheDocument();
+    expect(await screen.findByText('Nội dung bản vẽ cần nhập mã 6 số')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/diagrams/d1/present');
     expect(screen.getByRole('status', { name: 'Trang đang chiếu' })).toHaveTextContent('Trang 2/2');
   });

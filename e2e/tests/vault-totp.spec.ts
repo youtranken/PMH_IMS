@@ -103,7 +103,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     // Vừa nhập mã cho két (`stepUpViaApi`) = còn trong grace: cất không bị hỏi mã (Q-18).
     await expect(page.getByText('Đã lưu vào két.')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Nhập mã 6 số', exact: true })).toHaveCount(0);
 
     const row = page.getByRole('row', { name: new RegExp(label) });
     await expect(row).toContainText('Mã 2 lớp');

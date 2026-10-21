@@ -68,7 +68,7 @@ describe('TotpEnrollDialog', () => {
     await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'mat-khau');
     await user.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
-    const step = await screen.findByRole('region', { name: 'Xác nhận danh tính' });
+    const step = await screen.findByRole('region', { name: 'Nhập mã 6 số' });
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     expect(within(step).getByText(PURPOSE)).toBeInTheDocument();
     expect(screen.queryByText(/xem thông tin bí mật/)).toBeNull();
@@ -95,7 +95,7 @@ describe('TotpEnrollDialog', () => {
     renderDialog('reenroll', onClose);
     await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'mat-khau');
     await user.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-    const step = await screen.findByRole('region', { name: 'Xác nhận danh tính' });
+    const step = await screen.findByRole('region', { name: 'Nhập mã 6 số' });
 
     vi.stubGlobal('AnimationEvent', class {});
     vi.useFakeTimers();

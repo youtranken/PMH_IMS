@@ -15,7 +15,7 @@ test('Nhật ký đọc được ở 390px từ link lọc sẵn, không tràn n
   // Mỗi dòng là thẻ "giờ · nhãn tiếng Việt" (ADM-066) — link lọc sẵn phải ra đúng lượt đăng nhập.
   await expect(
     page
-      .getByRole('button', { name: /· (Đăng nhập|Đúng mật khẩu, chờ mã 2 lớp)/ })
+      .getByRole('button', { name: /· (Đăng nhập|Đúng mật khẩu, chờ mã xác thực)/ })
       .first(),
   ).toBeVisible();
 

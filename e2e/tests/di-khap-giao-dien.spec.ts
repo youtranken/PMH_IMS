@@ -179,8 +179,8 @@ import { fileURLToPath } from 'node:url';
  *     → Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và chỉ có nút Từ chối
  * [x] Bảng điều khiển: SA đủ sáu khối, Member THIẾU đúng hai khối an ninh
  *     → Bảng điều khiển: SA thấy đủ sáu khối, Member thiếu đúng hai khối an ninh
- * [x] Hộp Cất vào két · Xác nhận danh tính · Hiện secret
- *     → Bên trong hộp Cất vào két, hộp Xác nhận danh tính và hộp Hiện secret
+ * [x] Hộp Cất vào két · Nhập mã 6 số · Hiện secret
+ *     → Bên trong hộp Cất vào két, hộp Nhập mã 6 số và hộp Hiện secret
  * [x] Hộp Từ chối · gán quyền hàng loạt
  *     → Bên trong hộp Từ chối và hộp gán quyền hàng loạt
  * [x] Esc lúc menu ô chọn đang mở chỉ đóng MENU (canh bản vá `ui/dialog.tsx`)

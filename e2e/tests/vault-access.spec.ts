@@ -105,7 +105,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await confirmAction(page);
 
-    const ask = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    const ask = page.getByRole('dialog', { name: 'Nhập mã 6 số', exact: true });
     await expect(ask).toBeVisible();
     await expect(ask).toContainText('Nhập mã 6 số để xác nhận cấp quyền két.');
     await fillOtp(ask, await freshTotpCode(totpSecret));

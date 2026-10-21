@@ -295,9 +295,9 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     );
     await userEvent.click(screen.getByRole('button', { name: 'Chọn tất cả' }));
     await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
-    const ask = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    const ask = await screen.findByRole('dialog', { name: 'Nhập mã 6 số' });
     await userEvent.click(within(ask).getByRole('button', { name: 'Hủy' }));
-    expect(screen.queryByRole('dialog', { name: 'Xác nhận danh tính' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Nhập mã 6 số' })).toBeNull();
     expect(writes.filter((write) => write.method === 'POST')).toHaveLength(1);
     expect(screen.queryByRole('alert')).toBeNull();
   });

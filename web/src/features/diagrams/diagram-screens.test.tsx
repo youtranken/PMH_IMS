@@ -73,7 +73,7 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
     // Hộp NHỎ (K-04): nói đang mở gì, không đoạn giải thích phạm vi.
     expect(dialog).toHaveTextContent('Nhập mã 6 số để mở bản vẽ "Tổng công ty E2E".');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hủy' }));
-    expect(await screen.findByText('Nội dung bản vẽ cần mã 2 lớp')).toBeInTheDocument();
+    expect(await screen.findByText('Nội dung bản vẽ cần nhập mã 6 số')).toBeInTheDocument();
     // Tên bản vẽ đọc không cần mã — hiện cả khi nội dung còn khoá.
     expect(screen.getByRole('heading', { level: 1, name: 'Tổng công ty E2E' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nhập mã để mở' })).toBeInTheDocument();

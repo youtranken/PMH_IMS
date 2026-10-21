@@ -197,7 +197,7 @@ test.describe('Sơ đồ mạng — cây bản vẽ, phiên bản, mã phạm vi
     await expect(stepUpDialog(page)).toBeVisible();
     // Đóng hộp = không mở; màn nói rõ cần mã và cho mở lại.
     await stepUpDialog(page).getByRole('button', { name: 'Hủy' }).click();
-    await expect(page.getByText('Nội dung bản vẽ cần mã 2 lớp')).toBeVisible();
+    await expect(page.getByText('Nội dung bản vẽ cần nhập mã 6 số')).toBeVisible();
     await page.getByRole('button', { name: 'Nhập mã để mở' }).click();
     await fillOtp(stepUpDialog(page), await freshTotpCode(secret));
     await expect(page.getByText('Bản vẽ chưa có nội dung')).toBeVisible();

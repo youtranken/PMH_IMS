@@ -770,7 +770,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   /*
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * Ba hộp thoại đứng ngay cửa két — Cất vào két, Xác nhận danh tính, Hiện secret — và cả ba
+   * Ba hộp thoại đứng ngay cửa két — Cất vào két, Nhập mã 6 số, Hiện secret — và cả ba
    * đều đã có bài kiểm ĐƯỜNG ĐI (`vault.spec.ts`, `vault-reveal.spec.ts`,
    * `vault-write-stepup-ui.spec.ts`). Không bài nào trong đó mở hộp ra rồi ĐẾM xem bên trong
    * có ô nào. Nghĩa là:
@@ -787,7 +787,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * Đi vào bằng popup của `/vault` chứ không bằng tab của trang chi tiết: đó là cửa của phòng
    * này, và `VaultPanel` nhúng trong popup phải cư xử y hệt bản nhúng ở trang chi tiết (AD-15).
    */
-  test('Bên trong hộp Cất vào két, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
+  test('Bên trong hộp Cất vào két, hộp Nhập mã 6 số và hộp Hiện secret', async ({ page }) => {
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, totpSecret);

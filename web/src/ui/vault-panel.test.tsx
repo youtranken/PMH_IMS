@@ -672,8 +672,8 @@ describe('VaultPanel — Xem két: MỘT hộp nhỏ, mã rồi giá trị (Q-24
 
     const popup = await screen.findByRole('dialog', { name: 'Nhập mã 6 số để xem' });
     expect(within(popup).getByText('admin web')).toBeInTheDocument();
-    // Không còn đoạn giải thích dài của hộp xác thực lại.
-    expect(within(popup).queryByText(/Xác nhận danh tính/)).toBeNull();
+    // Không lồng thêm tiêu đề bước nhập mã (hộp xác thực lại) bên trong hộp xem.
+    expect(within(popup).queryByRole('heading', { name: 'Nhập mã 6 số' })).toBeNull();
     expect(
       within(popup)
         .getAllByRole('button')

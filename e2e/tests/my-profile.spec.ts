@@ -115,7 +115,7 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   await dialog.getByRole('button', { name: 'Tiếp tục' }).click();
 
   // Bước hỏi mã của điện thoại HIỆN TẠI nằm NGAY TRONG hộp này, câu nói đúng việc cài lại.
-  const stepUp = dialog.getByRole('region', { name: 'Xác nhận danh tính' });
+  const stepUp = dialog.getByRole('region', { name: 'Nhập mã 6 số', exact: true });
   await expect(stepUp).toBeVisible();
   await expect(own.getByRole('dialog')).toHaveCount(1);
   await expect(
