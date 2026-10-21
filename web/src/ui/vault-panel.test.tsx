@@ -341,6 +341,26 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     expect(screen.queryByText(/vượt mức tối đa/)).not.toBeInTheDocument();
   });
 
+  // UX-E17: người xin thường xin cùng một người — lần sau chọn sẵn người đó (chỉ khi còn trong danh sách).
+  it('gửi xong thì lần xin sau chọn sẵn người duyệt lần trước', async () => {
+    localStorage.removeItem('ims_bg_approver');
+    const calls = mockFlow(NEEDS_APPROVAL, 4);
+    const view = renderPanel({ ...ME, role: 'member' });
+    await send('4');
+    await screen.findByText(/Đã gửi yêu cầu/);
+    view.unmount();
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối lần hai');
+    await vi.waitFor(() => expect(within(dialog).getByRole('button', { name: /Người duyệt/ })).toHaveTextContent('Cao Thuận'));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
+    await vi.waitFor(() => expect(calls.filter((c) => c.method === 'POST' && c.url.endsWith('/vault/break-glass'))).toHaveLength(2));
+    const second = calls.filter((c) => c.method === 'POST' && c.url.endsWith('/vault/break-glass'))[1];
+    expect(JSON.parse(second.body!)).toMatchObject({ approver: 'sa@pmh.com.vn' });
+    localStorage.removeItem('ims_bg_approver');
+  });
+
   it('đang có phiếu treo → rút được, qua hộp xác nhận', async () => {
     const calls = mockFlow(
       {
@@ -372,7 +392,8 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     renderPanel({ ...ME, role: 'member' });
     expect(await screen.findAllByText('Cần duyệt')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Xin mở két' })).toHaveLength(1);
-    expect(screen.getByText(/Két cần duyệt mới xem được \(2 ngăn\)/)).toBeInTheDocument();
+    // UX-E17: một dòng "Cần duyệt · n Ngăn" cạnh nút, không câu dài.
+    expect(screen.getByText('Cần duyệt · 2 Ngăn')).toBeInTheDocument();
   });
 
   it('lần xin gần nhất bị từ chối → nói ra cùng ghi chú của người duyệt, ngay trên nút xin', async () => {
@@ -572,9 +593,10 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
       grantSecondsLeft: 3600,
     });
     renderPanel({ ...ME, role: 'member' });
-    expect(await screen.findByText(/Đã được duyệt — bấm "Xem"/)).toBeInTheDocument();
-    expect(screen.getByText(/tính từ lúc duyệt/)).toBeInTheDocument();
-    expect(screen.getByText(/Lần xem đầu gắn quyền vào phiên/)).toBeInTheDocument();
+    // UX-E17: MỘT dòng "Đã duyệt · còn h:mm — bấm Xem"; giờ tuyệt đối + câu gắn phiên ở title.
+    const line = await screen.findByText('Đã duyệt · còn 1:00 — bấm Xem ở ngăn cần mở.');
+    expect(line).toHaveAttribute('title', expect.stringMatching(/tính từ lúc duyệt.*Lần xem đầu gắn quyền vào phiên/));
+    expect(screen.queryByText(/Lần xem đầu gắn quyền vào phiên/)).toBeNull();
     expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Xin mở két' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();

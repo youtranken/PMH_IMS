@@ -90,7 +90,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
     await member.setViewportSize({ width: 390, height: 844 });
     await member.goto(`/devices/${deviceId}?tab=vault`);
     await fillOtp(member, await mailedApprovalCode(approvalId), 'Mã duyệt');
-    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    await expect(member.getByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/).first()).toBeVisible();
     expect(await horizontalOverflow(member)).toBeLessThanOrEqual(1);
     await memberCtx.close();
   });

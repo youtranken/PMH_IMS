@@ -2863,7 +2863,7 @@ export default {
     noPermissionTitle: 'Bạn chưa có quyền xem két này.',
     needsApproval: 'Cần duyệt',
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
-    requestBlock: 'Két cần duyệt mới xem được ({{count}} ngăn).',
+    requestBlock: 'Cần duyệt · {{count}} Ngăn',
     /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
        ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
     changedCol: 'Đổi lần cuối',
@@ -2982,9 +2982,6 @@ export default {
     // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem `ui/vault-panel.tsx`.
     cannotReveal: 'Chưa có quyền xem',
     grantUntil: 'Bạn được xem tới {{until}}. Hết giờ là tự cắt.',
-    leftHm: '{{hours}} giờ {{minutes}} phút',
-    leftM: '{{minutes}} phút',
-    leftS: '{{seconds}} giây',
     grantOpen: 'Đang mở két · còn {{left}}',
     grantNoLimit: 'Bạn đang được xem ngăn này, không đặt hạn giờ.',
     tierNote_needs_approval: 'Đối tượng này cần được duyệt trước khi xem. Bấm "Xin mở két".',
@@ -3001,10 +2998,11 @@ export default {
     codeSubmit: 'Xác nhận',
     codeResend: 'Gửi lại mã ({{count}})',
     codeResent: 'Đã gửi mã mới tới {{name}}. Mã cũ không còn dùng được.',
-    codeApproved: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở.',
+    codeApproved: 'Đã duyệt — bấm Xem ở ngăn cần mở.',
     /* Đã duyệt, chưa xem lần nào: lần xem đầu gắn quyền vào phiên đang xem. */
-    approvedReady: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở.',
-    approvedReadyLeft: 'Quyền còn {{left}} (tới {{until}}), tính từ lúc duyệt.',
+    approvedReady: 'Đã duyệt — bấm Xem ở ngăn cần mở.',
+    approvedReadyLeft: 'Đã duyệt · còn {{left}} — bấm Xem ở ngăn cần mở.',
+    approvedReadyUntil: 'Quyền tới {{until}}, tính từ lúc duyệt.',
     approvedReadyNote: 'Lần xem đầu gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
     /* Q-15: quyền gắn với phiên — nằm ở `title` của dòng quyền đang chạy. */
     sessionBound: 'Quyền gắn với phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',

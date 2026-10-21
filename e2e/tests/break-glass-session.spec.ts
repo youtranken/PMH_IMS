@@ -150,7 +150,7 @@ test.describe('Xin mở két — chờ không gắn phiên, quyền gắn phiên
     await pageB.goto(`/devices/${kit.deviceId}?tab=vault`);
     await expect(pageB.getByText(/Đã gửi mã cho/)).toBeVisible();
     await fillOtp(pageB, await mailedApprovalCode(id), 'Mã duyệt');
-    await expect(pageB.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    await expect(pageB.getByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/).first()).toBeVisible();
     expect(stateOf(id)).toBe('approved');
     expect(claimed(id)).toBe(true);
 

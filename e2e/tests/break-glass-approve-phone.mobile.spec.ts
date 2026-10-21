@@ -152,7 +152,7 @@ test.describe('Duyệt break-glass bằng mã, 390px (Q-30)', () => {
     await expect(member.getByText(/Đã gửi mã cho .* · còn \d+:\d{2}/)).toBeVisible();
     expect(await horizontalOverflow(member)).toBeLessThanOrEqual(1);
     await fillOtp(member, mailed, 'Mã duyệt');
-    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    await expect(member.getByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/).first()).toBeVisible();
 
     // Người xin nhận thư kết quả, có nút mở thẳng két của hồ sơ.
     const decided = await waitForMail(`[IMS] Đã duyệt: mở két ${code}`);

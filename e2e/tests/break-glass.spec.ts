@@ -151,7 +151,7 @@ test.describe('Break-glass', () => {
 
     // --- Member, CÙNG phiên đã xin: nhập mã SA đọc cho, rồi xem — mỗi lần xem vẫn gõ TOTP (4.2).
     await fillOtp(member, await mailedApprovalCode(requestId), 'Mã duyệt');
-    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    await expect(member.getByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/).first()).toBeVisible();
     expireStepUp(E2E_MEMBER.email);
 
     await member.getByRole('button', { name: 'Xem' }).click();

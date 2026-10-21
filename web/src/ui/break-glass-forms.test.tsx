@@ -261,7 +261,7 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
       return call;
     });
     expect(JSON.parse(String(post[1]!.body))).toEqual({ code: '012345' });
-    expect(await screen.findByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeInTheDocument();
+    expect(await screen.findByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/)).toBeInTheDocument();
   });
 
   it('sai mã → câu lỗi của server dưới ô, ô được xoá để gõ lại', async () => {
