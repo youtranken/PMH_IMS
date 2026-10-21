@@ -189,6 +189,10 @@ export function Field({
         'aria-invalid':
           (children.props as { 'aria-invalid'?: boolean })['aria-invalid'] ??
           (error ? true : undefined),
+        // Dấu * là aria-hidden, nên "bắt buộc" phải đi bằng thuộc tính của chính ô (FM-08).
+        'aria-required':
+          (children.props as { 'aria-required'?: boolean })['aria-required'] ??
+          (required ? true : undefined),
       })
     : children;
 
@@ -197,7 +201,8 @@ export function Field({
       {label}{' '}
       {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
           đúng nhãn ("Email"), không thành "Email *". Chặn thật nằm ở `useFormErrors` của
-          form (form đặt `noValidate`); `required` trên ô để trình đọc màn hình đọc "bắt buộc". */}
+          form (form đặt `noValidate`); `aria-required` gắn lên ô (cloneElement ở trên) để trình đọc
+          màn hình đọc "bắt buộc". */}
       {/*
         `field-req`, KHÔNG phải `req`.
 

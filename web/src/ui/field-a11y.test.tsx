@@ -170,3 +170,23 @@ describe('Field — nối gợi ý và lỗi vào ô', () => {
     expect(labelOf('Router').getAttribute('aria-describedby')).toBeTruthy();
   });
 });
+
+/** FM-08: 36 ô có dấu * mà trình đọc màn hình không biết là bắt buộc — dấu * là aria-hidden. */
+describe('Field required — ô con mang aria-required', () => {
+  it('input thường', () => {
+    render(
+      <Field label="Mã thiết bị" required>
+        <input />
+      </Field>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Mã thiết bị' })).toHaveAttribute('aria-required', 'true');
+  });
+  it('không required thì không gắn', () => {
+    render(
+      <Field label="Ghi chú">
+        <input />
+      </Field>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).not.toHaveAttribute('aria-required');
+  });
+});
