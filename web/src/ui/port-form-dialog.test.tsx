@@ -130,7 +130,7 @@ describe('PortFormDialog ở màn sơ đồ (device = null)', () => {
       </ToastProvider>,
     );
     const user = userEvent.setup();
-    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ bản ghi' });
+    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ dòng này' });
     const b = screen.getByRole('group', { name: 'Đầu B — đầu kia' });
     // Dải chọn loại đầu nằm TRONG Đầu B, có nhãn.
     expect(within(b).getByRole('radiogroup', { name: 'Đầu kia là' })).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('PortFormDialog ở màn sơ đồ (device = null)', () => {
       </ToastProvider>,
     );
     const user = userEvent.setup();
-    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ bản ghi' });
+    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ dòng này' });
     const b = screen.getByRole('group', { name: 'Đầu B — đầu kia' });
     await user.click(within(a).getByRole('button', { name: 'SW-E2E-01' }));
     await user.type(portInput(), 'Gi1/0/5');

@@ -250,7 +250,7 @@ export class MailConsumer {
         title: 'Yêu cầu mở két đã được duyệt',
         intro:
           `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. ` +
-          'Đăng nhập IMS, mở lại két của đối tượng này và bấm "Xem", nhập mã 6 số.',
+          'Đăng nhập IMS, mở lại két của hồ sơ này và bấm "Xem", nhập mã 6 số.',
         rows: [
           subjectRow,
           { label: 'Được cấp', value: granted ? `${granted} giờ` : '—' },

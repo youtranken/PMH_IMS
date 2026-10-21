@@ -186,7 +186,7 @@ class AssignmentParamDto {
   @IsUUID(undefined, { message: 'Mã hồ sơ không hợp lệ.' })
   id!: string;
 
-  @IsUUID(undefined, { message: 'Mã bản ghi gán không hợp lệ.' })
+  @IsUUID(undefined, { message: 'Mã lượt gán không hợp lệ.' })
   assignmentId!: string;
 }
 
