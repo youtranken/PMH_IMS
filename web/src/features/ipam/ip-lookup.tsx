@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
@@ -7,6 +8,7 @@ import { orDash } from '@/lib/format';
 import { parseIpv4, subnetOf } from '@/lib/ipv4';
 import { PATHS } from '@/lib/routes';
 import { CloseIcon } from '@/ui/glyph-icons';
+import { DataTable } from '@/ui/data-table';
 import { LoadError, Loading } from '@/ui/load-state';
 import type { IpSearchHit, SubnetRow } from './ipam-types';
 
@@ -40,6 +42,51 @@ export function IpLookup({ subnets }: { subnets: SubnetRow[] }) {
     enabled: asked.length >= 2,
   });
 
+
+  /** Bấm một kết quả: đóng khung tra rồi sang dải chứa địa chỉ đó, tô sáng dòng. */
+  const openHit = (hit: IpSearchHit) => {
+    setAsked('');
+    navigate(PATHS.subnetAt(hit.subnetId, hit.address));
+  };
+  const hitColumns: ColumnDef<IpSearchHit>[] = [
+    {
+      id: 'address',
+      header: t('ipam.address'),
+      cell: ({ row: { original: hit } }) => (
+        <Link className="mono" to={PATHS.subnetAt(hit.subnetId, hit.address)} onClick={() => setAsked('')}>
+          {hit.address}
+        </Link>
+      ),
+      accessorFn: (hit) => hit.address,
+    },
+    {
+      id: 'device',
+      header: t('ipam.device'),
+      enableSorting: false,
+      cell: ({ row: { original: hit } }) =>
+        hit.deviceCode ? (
+          <>
+            <span className="mono">{hit.deviceCode}</span>
+            {hit.deviceName ? <span className="cell-sub">{hit.deviceName}</span> : null}
+          </>
+        ) : hit.status === 'free' ? (
+          t('ipam.lookupFree')
+        ) : (
+          '—'
+        ),
+    },
+    { id: 'usedBy', header: t('ipam.usedBy'), enableSorting: false, cell: ({ row }) => orDash(row.original.usedBy) },
+    {
+      id: 'cidr',
+      header: t('ipam.cidr'),
+      enableSorting: false,
+      cell: ({ row: { original: hit } }) => (
+        <>
+          {hit.subnetName} <span className="mono cell-sub">{hit.subnetCidr}</span>
+        </>
+      ),
+    },
+  ];
   return (
     <>
       <form
@@ -125,51 +172,23 @@ export function IpLookup({ subnets }: { subnets: SubnetRow[] }) {
           ) : (hits.data ?? []).length === 0 ? (
             <p className="muted">{t('ipam.lookupEmpty', { q: asked })}</p>
           ) : (
-            <div className="table-wrap">
-              <table className="table table-stack">
-                <thead>
-                  <tr>
-                    <th>{t('ipam.address')}</th>
-                    <th>{t('ipam.device')}</th>
-                    <th>{t('ipam.usedBy')}</th>
-                    <th>{t('ipam.cidr')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(hits.data ?? []).map((hit) => (
-                    <tr key={hit.id}>
-                      <td data-label={t('ipam.address')}>
-                        <Link
-                          className="mono"
-                          to={PATHS.subnetAt(hit.subnetId, hit.address)}
-                          onClick={() => setAsked('')}
-                        >
-                          {hit.address}
-                        </Link>
-                      </td>
-                      <td data-label={t('ipam.device')}>
-                        {hit.deviceCode ? (
-                          <>
-                            <span className="mono">{hit.deviceCode}</span>
-                            {hit.deviceName ? (
-                              <span className="cell-sub">{hit.deviceName}</span>
-                            ) : null}
-                          </>
-                        ) : hit.status === 'free' ? (
-                          t('ipam.lookupFree')
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td data-label={t('ipam.usedBy')}>{orDash(hit.usedBy)}</td>
-                      <td data-label={t('ipam.cidr')}>
-                        {hit.subnetName} <span className="mono cell-sub">{hit.subnetCidr}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={hits.data ?? []}
+              columns={hitColumns}
+              emptyText={t('ipam.lookupEmpty', { q: asked })}
+              stackOnMobile
+              onRowClick={openHit}
+              rowHref={(hit) => PATHS.subnetAt(hit.subnetId, hit.address)}
+              // ≤600px: thẻ "địa chỉ + máy / người dùng + dải" thay bảng gập nhãn–giá trị (TB-05).
+              mobileCard={{
+                title: (hit) => hit.address,
+                titleIsCode: true,
+                subtitle: (hit) =>
+                  [hit.deviceCode, hit.usedBy].filter(Boolean).join(' · ') ||
+                  (hit.status === 'free' ? t('ipam.lookupFree') : null),
+                meta: (hit) => `${hit.subnetName} · ${hit.subnetCidr}`,
+              }}
+            />
           )}
         </section>
       ) : null}
