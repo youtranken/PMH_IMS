@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, between, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Tx } from '../../common/tx';
-import { conflictOnUnique, pgConstraint } from '../../common/sql';
+import { conflictOnUnique, escapeLike, pgConstraint } from '../../common/sql';
 import { isoDateInTz, viDate } from '../../common/today';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
@@ -161,6 +161,27 @@ export class IsoIncidentService {
     }
     if (filters.signed) items = items.filter((i) => i.signedCurrent === (filters.signed === 'yes'));
     return items;
+  }
+
+  /**
+   * Tra số phiếu cho Tìm nhanh (UX-E32): khớp một phần, mới nhất lên đầu. `code` là citext nên LIKE
+   * không phân biệt hoa thường; người gõ `%`/`_` tìm đúng ký tự đó, không thành ký tự đại diện.
+   */
+  async findByCode(q: string, limit: number): Promise<IncidentSummary[]> {
+    return this.db
+      .select({
+        id: isoIncidentTable.id,
+        code: isoIncidentTable.code,
+        kind: isoIncidentTable.kind,
+        severity: isoIncidentTable.severity,
+        status: isoIncidentTable.status,
+        detectedAt: isoIncidentTable.detectedAt,
+        description: isoIncidentTable.description,
+      })
+      .from(isoIncidentTable)
+      .where(sql`${isoIncidentTable.code} LIKE ${`%${escapeLike(q)}%`}`)
+      .orderBy(desc(isoIncidentTable.code))
+      .limit(limit) as Promise<IncidentSummary[]>;
   }
 
   /** Phiếu có Detection Time từ `since` trở đi, mới nhất lên đầu — bản tóm tắt cho trang chủ. */

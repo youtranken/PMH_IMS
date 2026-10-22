@@ -133,6 +133,27 @@ interface IpHit {
   subnetCidr: string;
 }
 
+/** Một luật NAT còn trong sổ — `GET ipam/nat?search=` (cổng, IP nội bộ, người dùng, lý do). */
+interface NatHit {
+  id: string;
+  deviceCode: string | null;
+  protocol: 'tcp' | 'udp' | 'both';
+  externalPorts: string;
+  internalIp: string;
+  internalPort: number;
+  usedBy: string;
+}
+
+/** Một phiếu 0206 khớp số phiếu — `GET iso/incidents/find?search=`. */
+interface IncidentHit {
+  id: string;
+  code: string;
+  description: string;
+}
+
+/** Sổ NAT trả cả danh sách khớp; Tìm nhanh chỉ bày vài dòng, còn lại qua "Xem tất cả". */
+const PALETTE_NAT_LIMIT = 4;
+
 interface SubnetHit {
   id: string;
   name: string;
@@ -295,6 +316,8 @@ export function CommandPalette({ me }: { me: Me }) {
   // Nhóm quyền (Q-31): không hỏi — và không gợi ý — hồ sơ của mảng bị ẩn.
   const assetsOn = enabled && canSee(me, 'assets');
   const networkOn = enabled && canSee(me, 'network');
+  // API nhận số phiếu tối đa 40 ký tự — dài hơn thì không thể là một số phiếu, khỏi hỏi.
+  const isoOn = enabled && q.length <= 40 && canSee(me, 'iso_0206');
 
   const devices = useQuery({
     queryKey: ['palette', 'devices', q],
@@ -331,6 +354,21 @@ export function CommandPalette({ me }: { me: Me }) {
         `/api/v1/service-accounts?page=1&limit=3&search=${encodeURIComponent(q)}`,
       ),
     enabled: assetsOn,
+  });
+
+  /*
+   * Sổ NAT (UX-E32): "cổng 8443 mở cho máy nào" — API tra cổng, IP nội bộ, người dùng, lý do; chỉ
+   * luật còn trong sổ. Mở sổ NAT với `?rule=` để tô đúng dòng. Phiếu 0206: tra số phiếu xuyên năm.
+   */
+  const natRules = useQuery({
+    queryKey: ['palette', 'nat', q],
+    queryFn: () => apiFetch<NatHit[]>(`/api/v1/ipam/nat?search=${encodeURIComponent(q)}`),
+    enabled: networkOn,
+  });
+  const incidents = useQuery({
+    queryKey: ['palette', 'incidents', q],
+    queryFn: () => apiFetch<IncidentHit[]>(`/api/v1/iso/incidents/find?search=${encodeURIComponent(q)}`),
+    enabled: isoOn,
   });
 
   /*
@@ -512,6 +550,9 @@ export function CommandPalette({ me }: { me: Me }) {
     const softwareRows = software.data?.items ?? [];
     const ispRows = isp.data?.items ?? [];
     const accountRows = accounts.data?.items ?? [];
+    const natRows = asArray<NatHit>(natRules.data);
+    const natGroup = t('nav.nat');
+    const incidentGroup = t('nav.isoIncidents');
     return [
       ...(ipFirst ? network : []),
       ...liveFirst(deviceRows).map((row) => ({
@@ -580,6 +621,26 @@ export function CommandPalette({ me }: { me: Me }) {
       ),
       ...diagramHits,
       ...(ipFirst ? [] : network),
+      ...natRows.slice(0, PALETTE_NAT_LIMIT).map((row) => ({
+        group: natGroup,
+        title: t('palette.natTitle', {
+          protocol: row.protocol === 'both' ? t('catalog.protocolBoth') : row.protocol.toUpperCase(),
+          ports: row.externalPorts,
+          ip: row.internalIp,
+          port: row.internalPort,
+        }),
+        sub: [row.deviceCode, row.usedBy].filter(Boolean).join(' · '),
+        to: `${PATHS.nat}?${new URLSearchParams({ rule: row.id }).toString()}`,
+        navKey: 'nav.nat',
+      })),
+      ...more(natGroup, natRows.length, Math.min(natRows.length, PALETTE_NAT_LIMIT), PATHS.nat, 'nav.nat'),
+      ...asArray<IncidentHit>(incidents.data).map((row) => ({
+        group: incidentGroup,
+        title: row.code,
+        sub: row.description,
+        to: PATHS.isoIncident(row.id),
+        navKey: 'nav.isoIncidents',
+      })),
       ...(q.length >= 2 ? commandHits.filter((hit) => foldSearch(hit.title).includes(foldSearch(q))) : []),
       ...navHits,
     ];
@@ -589,6 +650,8 @@ export function CommandPalette({ me }: { me: Me }) {
     software.data,
     isp.data,
     accounts.data,
+    natRules.data,
+    incidents.data,
     ipHits,
     subnetHits,
     diagramHits,
@@ -605,6 +668,8 @@ export function CommandPalette({ me }: { me: Me }) {
       software.isFetching ||
       isp.isFetching ||
       accounts.isFetching ||
+      natRules.isFetching ||
+      incidents.isFetching ||
       ipAddresses.isFetching ||
       subnets.isFetching ||
       diagramTree.isFetching ||
@@ -614,6 +679,8 @@ export function CommandPalette({ me }: { me: Me }) {
     software.isError ||
     isp.isError ||
     accounts.isError ||
+    natRules.isError ||
+    incidents.isError ||
     ipAddresses.isError ||
     subnets.isError ||
     diagramTree.isError ||

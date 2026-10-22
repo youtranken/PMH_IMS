@@ -126,6 +126,13 @@ class IncidentListQuery {
   @IsOptional() @IsIn(['yes', 'no']) signed?: 'yes' | 'no';
 }
 
+/** Tìm nhanh số phiếu 0206 (UX-E32). */
+const INCIDENT_FIND_LIMIT = 5;
+
+class IncidentFindQuery {
+  @IsString() @Length(2, 40) search!: string;
+}
+
 class YearQuery {
   @Type(() => Number) @IsInt() @Min(2000) @Max(2999) year!: number;
 }
@@ -259,6 +266,17 @@ export class IsoFormsController {
   async listIncidents(@Query() query: IncidentListQuery) {
     const [items, unlinked] = await Promise.all([this.incidents.list(query), this.incidents.unlinked({ year: query.year })]);
     return { items, unlinked };
+  }
+
+  /**
+   * Tìm nhanh (Ctrl+K) tra số phiếu 0206 xuyên năm (UX-E32). Đứng TRƯỚC `incidents/:id`: route khai
+   * sau không bao giờ được chọn.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Feature('iso_0206')
+  @Get('incidents/find')
+  findIncidents(@Query() query: IncidentFindQuery) {
+    return this.incidents.findByCode(query.search.trim(), INCIDENT_FIND_LIMIT);
   }
 
   /** Ô ✗ chưa có phiếu của các kỳ còn Đang ghi — khu "gắn thêm ô ✗" của form 0206. */

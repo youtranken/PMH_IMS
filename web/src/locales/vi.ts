@@ -241,6 +241,7 @@ export default {
     groupIp: 'Địa chỉ IP',
     deviceOnDiagram: '{{code}} trên {{diagram}}',
     deviceOnDiagramSub: 'Mở bản vẽ, bay tới máy',
+    natTitle: '{{protocol}} {{ports}} → {{ip}}:{{port}}',
     groupSubnet: 'Dải mạng',
     ipTitle: 'IP {{address}}',
     ipSub: '{{owner}} · {{subnet}}',
