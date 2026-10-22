@@ -44,6 +44,7 @@ import {
 } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { DeviceTypeIcon, deviceTypePhotoSrc } from '@/ui/device-type-icon';
 import { useOpenFromUrl } from '@/ui/use-open-from-url';
 import { useRowSelection } from '@/ui/use-row-selection';
 
@@ -209,7 +210,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         id: 'photo',
         header: t('devices.photoCol'),
         /* Ảnh mặt trước giúp nhận máy bằng mắt (Q-27). Ảnh model thắng ảnh riêng (Q-26); không có
-           ảnh nào thì ghi tên loại cho cột không trống trơn. */
+           ảnh nào thì ảnh / biểu tượng của loại (PW-A18). */
         cell: ({ row }) => <DeviceThumb device={row.original} />,
       },
       {
@@ -655,25 +656,41 @@ export function DevicesScreen({ me }: { me: Me }) {
   );
 }
 
-/** Ảnh nhỏ ở cột Ảnh: ảnh model (Q-26 thắng), không thì ảnh riêng của máy, không thì tên loại. */
+/**
+ * Ảnh nhỏ ở cột Ảnh: ảnh model (Q-26 thắng), không thì ảnh riêng của máy, không thì ảnh riêng của
+ * loại, không thì biểu tượng của loại (PW-A18) — tên loại ở `title` (rê chuột) và tên cho trình đọc
+ * màn hình, không in chữ 12px chật trong ô.
+ */
 function DeviceThumb({ device }: { device: DeviceRow }) {
   const { t } = useTranslation();
+  const lists = useCatalogLists();
+  const type = lists.data?.deviceTypes.find((item) => item.id === device.deviceTypeId);
   /* Ảnh hỏng (tệp đã xoá, server lỗi) thì về ô chữ loại — không để lại một khối nền tối trơn. Nhớ
      ĐÚNG URL đã hỏng chứ không một cờ chung: ảnh mới (model vừa có ảnh, phiên bản đổi) thì thử lại. */
   const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
-  const wanted =
+  const own =
     device.deviceModelId && device.modelPhotoVersion
       ? deviceModelPhotoSrc(device.deviceModelId, device.modelPhotoVersion)
       : device.photoFrontFileId
         ? devicePhotoSrc(device.id, 'front', device.photoFrontFileId)
         : null;
-  const src = wanted && wanted !== brokenSrc ? wanted : null;
+  const typePhoto = type?.photoFileId ? deviceTypePhotoSrc(device.deviceTypeId, type.photoFileId) : null;
+  const src = own && own !== brokenSrc ? own : typePhoto && typePhoto !== brokenSrc ? typePhoto : null;
+  const isOwn = src !== null && src === own;
   return (
     <span className={src ? 'cell-thumb' : 'cell-thumb is-empty'} data-testid="device-thumb">
       {src ? (
-        <img src={src} alt={t('devices.photoOf', { code: device.code })} loading="lazy" onError={() => setBrokenSrc(src)} />
+        <img
+          src={src}
+          alt={isOwn ? t('devices.photoOf', { code: device.code }) : device.deviceTypeName}
+          title={isOwn ? undefined : device.deviceTypeName}
+          loading="lazy"
+          onError={() => setBrokenSrc(src)}
+        />
       ) : (
-        device.deviceTypeName
+        <span role="img" aria-label={device.deviceTypeName} title={device.deviceTypeName} className="cell-thumb-icon">
+          <DeviceTypeIcon icon={type?.icon} />
+        </span>
       )}
     </span>
   );

@@ -175,6 +175,7 @@ export const ACTION_KEY: Record<string, string> = {
   'iso_antivirus.issue_deleted': 'audit.actions.isoAntivirusIssueDeleted',
   'iso_incident.created': 'audit.actions.isoIncidentCreated',
   'iso_incident.updated': 'audit.actions.isoIncidentUpdated',
+  'iso_incident.exported': 'audit.actions.isoIncidentExported',
   'iso_period.submitted': 'audit.actions.isoPeriodSubmitted',
   'iso_period.approved': 'audit.actions.isoPeriodApproved',
   'iso_period.returned': 'audit.actions.isoPeriodReturned',

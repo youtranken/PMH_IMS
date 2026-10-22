@@ -14,8 +14,9 @@ import {
 /**
  * NET-037: rule NAT đã gỡ phải TRA LẠI ĐƯỢC — hộp Gỡ hứa điều đó.
  *
- * Mặc định sổ chỉ bày rule còn trong sổ; chip "Đã gỡ" bày thêm rule đã gỡ, gạch ngang, kèm
- * "Đã gỡ dd/mm/yyyy · bởi … · lý do", và chỉ còn thao tác Lịch sử.
+ * Mặc định sổ chỉ bày rule còn trong sổ; chip "Đã gỡ" bày thêm rule đã gỡ, gạch ngang, huy hiệu
+ * ngắn "Đã gỡ" (ngày · người · lý do ở title, UX-E40), và chỉ còn thao tác Lịch sử. Chip nằm
+ * trên URL nên tải lại trang vẫn giữ.
  */
 
 test.beforeEach(() => {
@@ -105,7 +106,12 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
     await chips.getByRole('button', { name: /^Đã gỡ/ }).click();
     await expect(row).toBeVisible();
-    await expect(row.getByText(/Đã gỡ \d{2}\/\d{2}\/\d{4} · .* · dịch vụ đã ngừng E2E/)).toBeVisible();
+    const badge = row.getByText('Đã gỡ', { exact: true });
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveAttribute('title', /\d{2}\/\d{2}\/\d{4} · .* · dịch vụ đã ngừng E2E/);
+    await expect(page, 'chip trạng thái nằm trên URL').toHaveURL(/states=open%2Cvoided|states=open,voided/);
+    await page.reload();
+    await expect(row, 'tải lại trang vẫn giữ chip "Đã gỡ"').toBeVisible();
     expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử', 'Sao chép link']);
     // Rule đã gỡ chỉ còn để tra: không có nút Sửa đứng ngoài.
     await expect(row.getByRole('button', { name: /^Sửa / })).toHaveCount(0);

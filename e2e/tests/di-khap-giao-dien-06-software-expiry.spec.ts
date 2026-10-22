@@ -1223,9 +1223,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     await expect(
       add.getByRole('textbox'),
-      'Form luật có đúng 3 ô gõ chữ: Tên luật · Trong vòng (ngày) · Người nhận',
-    ).toHaveCount(3);
-    for (const name of ['Tên luật', 'Trong vòng (ngày)', 'Người nhận']) {
+      'Form luật có đúng 2 ô gõ chữ: Tên luật · Người nhận (Trong vòng chọn theo nấc)',
+    ).toHaveCount(2);
+    await expect(
+      add.getByRole('radiogroup', { name: 'Trong vòng', exact: true }).getByRole('radio'),
+      'Trong vòng là 5 nấc 7/14/30/60/90 ngày (UX-E40)',
+    ).toHaveCount(5);
+    for (const name of ['Tên luật', 'Người nhận']) {
       await expect(
         add.getByRole('textbox', { name, exact: true }),
         `Form luật phải có đúng một ô "${name}"`,
@@ -1359,9 +1363,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Danh sách người nhận cũ phải nằm sẵn trong ô — mở ra trống là bấm Lưu một phát mất hết',
     ).toHaveValue('sep@pmh.com.vn');
     await expect(
-      edit.getByRole('textbox', { name: 'Trong vòng (ngày)', exact: true }),
-      'Số ngày cũ phải nằm sẵn trong ô',
-    ).toHaveValue('45');
+      edit.getByRole('radiogroup', { name: 'Trong vòng', exact: true }).getByRole('radio', { name: '45 ngày' }),
+      'Số ngày cũ ngoài nấc phải được giữ và chọn sẵn',
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
       edit.getByRole('checkbox', { name: 'Chứng chỉ SSL', exact: true }),
       'Loại đang theo dõi phải được tick sẵn',

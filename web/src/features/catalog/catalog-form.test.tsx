@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import type { CatalogEntity, CatalogRow } from '@/lib/catalog-types';
@@ -210,6 +210,76 @@ describe('CatalogForm — loại thiết bị: hình trên sơ đồ mạng', ()
     const file = new File(['<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'], 'icon.svg', { type: 'image/svg+xml' });
     await user.upload(await screen.findByLabelText('Chọn file SVG biểu tượng'), file);
     expect(await screen.findByText('Biểu tượng có <script> — không nhận.')).toBeInTheDocument();
+  });
+});
+
+/** PW-A18 (Q-33): loại thiết bị chọn biểu tượng giao diện hoặc tải ảnh riêng. */
+describe('CatalogForm — loại thiết bị: biểu tượng và ảnh', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const TYPE = {
+    id: 't-1', name: 'Switch E2E', hasPortMap: true, isRouter: false, description: null, diagramShape: null,
+    icon: 'switch', photoFileId: null, active: true,
+  } as CatalogRow;
+
+  function stub(save?: (url: string, init?: RequestInit) => Response) {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method && init.method !== 'GET' && save) return Promise.resolve(save(url, init));
+      if (url.includes('/diagram-shapes')) return Promise.resolve(jsonResponse(200, { shapes: [] }));
+      if (url.includes('/diagram-icon')) return Promise.resolve(jsonResponse(200, { svg: null }));
+      return Promise.resolve(jsonResponse(200, LISTS));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('ô "Biểu tượng" chọn một trong danh sách đóng (có "Chung"); Lưu gửi icon, "Chung" gửi null', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    stub((_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return jsonResponse(200, TYPE);
+    });
+    const user = userEvent.setup();
+    renderForm('device_type', TYPE);
+    const group = await screen.findByRole('radiogroup', { name: 'Biểu tượng' });
+    expect(within(group).getByRole('radio', { name: 'Switch' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(within(group).getByRole('radio', { name: 'Router' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toMatchObject({ icon: 'router' });
+  });
+
+  it('ảnh riêng: chỉ hiện khi được phép; tải ảnh rồi gán cho loại', async () => {
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    stub((url, init) => {
+      calls.push({ url, method: String(init?.method), body: init?.body });
+      if (url === '/api/v1/files') return jsonResponse(201, { id: 'f-1' });
+      return jsonResponse(200, { photoFileId: 'f-1' });
+    });
+    const user = userEvent.setup();
+    const { unmount } = renderForm('device_type', TYPE);
+    await screen.findByRole('radiogroup', { name: 'Biểu tượng' });
+    expect(screen.queryByLabelText('Chọn ảnh riêng của loại')).toBeNull();
+    unmount();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <CatalogForm entity="device_type" row={TYPE} csrfToken="t" onClose={vi.fn()} onSaved={vi.fn()} canSetPhoto />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'anh.png', { type: 'image/png' });
+    await user.upload(await screen.findByLabelText('Chọn ảnh riêng của loại'), file);
+    await waitFor(() => expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      'POST /api/v1/files',
+      'PUT /api/v1/catalog/device-types/t-1/photo',
+    ]));
+    expect(JSON.parse(String(calls[1].body))).toEqual({ fileId: 'f-1' });
+    expect(await screen.findByRole('img', { name: 'Ảnh riêng của Switch E2E' })).toHaveAttribute(
+      'src',
+      '/api/v1/catalog/device-types/t-1/photo?v=f-1',
+    );
   });
 });
 

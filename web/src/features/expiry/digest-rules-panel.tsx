@@ -13,6 +13,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/schedule-picker';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
@@ -20,9 +21,11 @@ import { MobileCardList } from '@/ui/data-table';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 
-/** Khoảng hợp lệ của "Trong vòng (ngày)" — cùng mốc xa nhất của bộ lọc màn Sắp hết hạn. */
-const WITHIN_MIN = 1;
-const WITHIN_MAX = 365;
+/**
+ * Nấc "Trong vòng" (UX-E40, Q-33): chọn một nấc thay vì gõ số. Luật cũ lưu số ngoài nấc (API vẫn
+ * nhận 1–365) thì số đó được thêm làm một nấc để mở Sửa rồi Lưu không âm thầm đổi phạm vi luật.
+ */
+const WITHIN_STEPS = [7, 14, 30, 60, 90];
 
 interface DigestRule {
   id: string;
@@ -374,7 +377,10 @@ function RuleForm({
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState(rule?.name ?? '');
-  const [withinDays, setWithinDays] = useState(String(rule?.withinDays ?? 30));
+  const [within, setWithin] = useState(rule?.withinDays ?? 30);
+  const withinSteps = WITHIN_STEPS.includes(rule?.withinDays ?? 30)
+    ? WITHIN_STEPS
+    : [...WITHIN_STEPS, rule?.withinDays ?? 30].sort((a, b) => a - b);
   const [recipients, setRecipients] = useState((rule?.recipients ?? []).join(', '));
   const [selected, setSelected] = useState<string[]>(rule?.kinds ?? []);
   const [active, setActive] = useState(rule?.active ?? true);
@@ -384,7 +390,7 @@ function RuleForm({
     weekday: rule?.weekday ?? 1,
     dayOfMonth: rule?.dayOfMonth ?? 1,
   });
-  const [error, setError] = useSubmitError([name, withinDays, recipients, selected, active, schedule]);
+  const [error, setError] = useSubmitError([name, within, recipients, selected, active, schedule]);
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
     rule ? `/api/v1/expiry/rules/${rule.id}` : '/api/v1/expiry/rules',
@@ -398,12 +404,8 @@ function RuleForm({
   const suggestions = recipientSuggestions(otherRules, meEmail, recipients);
   const addRecipient = (email: string) =>
     setRecipients((current) => (current.trim() ? `${current.trim().replace(/[,;]$/, '')}, ${email}` : email));
-  const within = /^\d+$/.test(withinDays.trim()) ? Number(withinDays.trim()) : NaN;
   const check = useFormErrors({
     name: !name.trim() && t('digest.nameRequired'),
-    withinDays:
-      !(within >= WITHIN_MIN && within <= WITHIN_MAX) &&
-      t('digest.withinInvalid', { min: WITHIN_MIN, max: WITHIN_MAX }),
     recipients:
       emails.length === 0
         ? t('digest.recipientsRequired')
@@ -476,18 +478,15 @@ function RuleForm({
           />
         </Field>
 
-        <Field
-          label={t('digest.withinDays')}
-          hint={t('digest.withinHint', { min: WITHIN_MIN, max: WITHIN_MAX })}
-          htmlFor="rule-within"
-          error={check.error('withinDays')}
-        >
-          <input
-            id="rule-within"
-            className="inp"
-            inputMode="numeric"
-            value={withinDays}
-            onChange={(e) => setWithinDays(e.target.value)}
+        <Field label={t('digest.withinDays')}>
+          <SegmentedRadio
+            label={t('digest.withinDays')}
+            options={withinSteps.map((days) => ({
+              value: String(days),
+              label: t('digest.withinStep', { days }),
+            }))}
+            value={String(within)}
+            onChange={(value) => setWithin(Number(value))}
           />
         </Field>
 

@@ -9,6 +9,7 @@ import { foldSearch } from '@/lib/search-fold';
 import { FilterBar } from '@/ui/filter-bar';
 import { DataTable } from '@/ui/data-table';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { PageHeader } from '@/ui/page-header';
 import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
@@ -55,6 +56,9 @@ export function IncidentsScreen({ me }: { me: Me }) {
   if (source) query.set('source', source);
   if (signed) query.set('signed', signed);
   const list = useIncidentList(query.toString());
+  // File xuất = bảng đang xem: ô tìm lọc tại chỗ nên gửi kèm để server lọc y như vậy (FR-028).
+  const exportQuery = new URLSearchParams(query);
+  if (q.trim()) exportQuery.set('q', q.trim());
   const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
 
   // Link sâu cũ `/iso/incidents/new?cell=…` (mail, dấu trang) về đây với `?new=1`: mở hộp lập
@@ -146,9 +150,15 @@ export function IncidentsScreen({ me }: { me: Me }) {
         title={t('nav.isoIncidents')}
         subtitle={t('iso.incidents.subtitle')}
         actions={
-          <button type="button" className="btn primary" onClick={() => setDialog({ cell: null })}>
-            {t('iso.incidents.add')}
-          </button>
+          <>
+            <ExportXlsxButton
+              url={`/api/v1/iso/incidents/export.xlsx?${exportQuery.toString()}`}
+              fileName={`phieu-0206-${year}.xlsx`}
+            />
+            <button type="button" className="btn primary" onClick={() => setDialog({ cell: null })}>
+              {t('iso.incidents.add')}
+            </button>
+          </>
         }
       />
       {unlinked.length > 0 ? <UnlinkedList cells={unlinked} onCreate={(cell) => setDialog({ cell })} /> : null}

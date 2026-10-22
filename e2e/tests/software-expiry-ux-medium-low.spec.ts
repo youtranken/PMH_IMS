@@ -309,7 +309,7 @@ test.describe('Sắp hết hạn', () => {
     expect((await download).suggestedFilename()).toBe('da-gia-han.xlsx');
   });
 
-  test('EX-017/EX-018/EX-025: "Thêm luật" ở đầu trang; số ngày và email sai bị báo tại ô', async ({
+  test('EX-017/EX-018/EX-025: "Thêm luật" ở đầu trang; email sai bị báo tại ô', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -320,13 +320,10 @@ test.describe('Sắp hết hạn', () => {
     await page.getByRole('button', { name: 'Thêm luật', exact: true }).first().click();
     const form = page.getByRole('dialog', { name: 'Thêm luật' });
     await form.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`Luật E2E ${uniqueStamp()}`);
-    const within = form.getByRole('textbox', { name: 'Trong vòng (ngày)', exact: true });
-    await within.fill('45 ngày');
     const recipients = form.getByRole('textbox', { name: 'Người nhận', exact: true });
     await recipients.fill('sep@pmh.com.vn, khong-phai-email');
     await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
-    await expect(within).toHaveAccessibleDescription(/Nhập số ngày từ 1 tới 365/);
     await expect(recipients).toHaveAccessibleDescription(/Email chưa đúng dạng: khong-phai-email/);
     await expect(form, 'Lưu hỏng thì hộp ở lại').toBeVisible();
   });

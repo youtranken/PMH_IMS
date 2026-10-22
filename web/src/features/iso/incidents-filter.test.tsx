@@ -41,4 +41,28 @@ describe('Danh sách 0206 — FilterBar chung có ô tìm', () => {
     expect(screen.queryByText('0206-2026-005')).toBeNull();
     expect(screen.getByRole('radiogroup', { name: 'Thuộc phiếu' })).toBeInTheDocument();
   });
+
+  // UX-E31 (Q-33): xuất danh sách năm đang xem, đúng bộ lọc + ô tìm.
+  it('"Xuất Excel" gọi /iso/incidents/export.xlsx kèm năm, bộ lọc và ô tìm', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(jsonResponse(200, String(input).startsWith('/api/v1/iso/incidents?') ? { items: ITEMS, unlinked: [] } : [])),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/iso/incidents?year=2025&kind=backup&q=vss']}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <IncidentsScreen me={SA} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    await screen.findAllByText('0206-2026-004');
+    await userEvent.click(screen.getByRole('button', { name: /Xuất Excel/ }));
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.map(([u]) => String(u))).toContain(
+        '/api/v1/iso/incidents/export.xlsx?year=2025&kind=backup&q=vss',
+      ),
+    );
+  });
 });

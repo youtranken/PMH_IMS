@@ -4,9 +4,12 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  NotFoundException,
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -15,6 +18,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -50,6 +56,8 @@ import { CatalogUsageRegistry } from '../../common/catalog-usage.registry';
 import { IsPhone } from '../../common/phone';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DIAGRAM_SHAPES, DIAGRAM_SHAPE_OTHER } from './diagram-shapes';
+import { DEVICE_TYPE_ICONS } from './device-type-icons';
+import { DeviceTypePhotoService } from './device-type-photo.service';
 import { FeatureFree } from '../auth/feature.decorator';
 
 export class CatalogBodyDto {
@@ -66,6 +74,11 @@ export class CatalogBodyDto {
   @IsOptional()
   @IsIn(DIAGRAM_SHAPES.map((shape) => shape.key), { message: 'Hình trên sơ đồ không có trong danh sách cho phép.' })
   diagramShape?: string | null;
+  /** Biểu tượng trên giao diện (PW-A18), danh sách đóng `DEVICE_TYPE_ICONS`; `null` = biểu tượng chung. */
+  @ValidateIf((_o, v) => v !== null)
+  @IsOptional()
+  @IsIn([...DEVICE_TYPE_ICONS], { message: 'Biểu tượng không có trong danh sách cho phép.' })
+  icon?: string | null;
   @IsOptional() @IsString() @Length(0, 200) @NoSecretText('Cung cấp gì') supplies?: string;
   @IsOptional() @IsPhone(40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
@@ -90,6 +103,13 @@ class DiagramIconDto {
   @IsString() @MaxLength(1024 * 1024, { message: 'Biểu tượng SVG quá lớn.' }) svg!: string;
 }
 
+class DeviceTypePhotoDto {
+  /** Tệp ảnh đã tải lên cho chính loại này (`files`, `ownerType = 'device_type'`); `null` = bỏ ảnh. */
+  @ValidateIf((_o, v) => v !== null)
+  @IsUUID(undefined, { message: 'Mã tệp ảnh không hợp lệ.' })
+  fileId!: string | null;
+}
+
 class DeviceTypeIdParamDto {
   @IsUUID(undefined, { message: 'Mã loại thiết bị không hợp lệ.' })
   id!: string;
@@ -97,6 +117,15 @@ class DeviceTypeIdParamDto {
 
 class ActiveDto {
   @IsBoolean() active!: boolean;
+}
+
+/** Trần một lượt = cỡ trang lớn nhất của bảng: chỉ chọn được dòng đang thấy. */
+class BulkActiveDto extends ActiveDto {
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Chọn ít nhất một mục.' })
+  @ArrayMaxSize(200, { message: 'Mỗi lượt đổi tối đa 200 mục.' })
+  @IsUUID(undefined, { each: true, message: 'Mã mục danh mục không hợp lệ.' })
+  ids!: string[];
 }
 
 class EntityParamDto {
@@ -139,6 +168,7 @@ export class CatalogController {
     private readonly excel: ExcelExportService,
     private readonly usage: CatalogUsageRegistry,
     private readonly config: SystemConfigService,
+    private readonly typePhotos: DeviceTypePhotoService,
   ) {}
 
   /**
@@ -149,6 +179,38 @@ export class CatalogController {
   @Get('diagram-shapes')
   diagramShapes() {
     return { shapes: DIAGRAM_SHAPES, other: DIAGRAM_SHAPE_OTHER };
+  }
+
+  /** Danh sách biểu tượng giao diện cho ô "Biểu tượng" của loại thiết bị (PW-A18). */
+  @Roles('sa', 'admin', 'member')
+  @Get('device-type-icons')
+  deviceTypeIcons() {
+    return { icons: DEVICE_TYPE_ICONS };
+  }
+
+  /**
+   * Ảnh riêng của loại, đã thu nhỏ — khung ảnh trống của thiết bị (PW-A18). `?v=<id tệp>` chỉ để
+   * trình duyệt bỏ bản đệm khi ảnh đổi.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('device-types/:id/photo')
+  async deviceTypePhoto(@Param() params: DeviceTypeIdParamDto, @Res() res: Response) {
+    const image = await this.typePhotos.preview(params.id);
+    if (!image) throw new NotFoundException({ code: 'DEVICE_TYPE_PHOTO_NOT_FOUND', message: 'Loại này chưa có ảnh riêng.' });
+    res.setHeader('Content-Type', image.mime);
+    res.setHeader('Content-Length', String(image.bytes.length));
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.end(image.bytes);
+  }
+
+  /** Chọn / bỏ ảnh riêng — cùng quyền với Ngừng dùng (SA/Admin): ảnh hiện ở mọi máy thuộc loại. */
+  @Roles('sa', 'admin')
+  @Put('device-types/:id/photo')
+  @Audited('catalog.updated', 'catalog', { writtenByService: true })
+  async setDeviceTypePhoto(@Param() params: DeviceTypeIdParamDto, @Body() body: DeviceTypePhotoDto, @Req() req: AuthedRequest) {
+    await this.typePhotos.setPhoto(actor(req), params.id, body.fileId);
+    return { photoFileId: body.fileId };
   }
 
   /** SVG đã lọc của một loại — màn Danh mục hiện xem trước bằng `<img>` (không chèn vào DOM). */
@@ -309,6 +371,20 @@ export class CatalogController {
   ) {
     await this.catalog.setActive(actor(req), params.entity, params.id, body.active);
     return { active: body.active };
+  }
+
+  /** UX-E25: ẩn / hiện nhiều mục — cùng quyền với ẩn / hiện từng mục. */
+  @Roles('sa', 'admin')
+  @Post(':entity/bulk-active')
+  @HttpCode(200)
+  @Audited('catalog.active.changed', 'catalog', { writtenByService: true })
+  async setActiveMany(
+    @Param() params: EntityParamDto,
+    @Body() body: BulkActiveDto,
+    @Req() req: AuthedRequest,
+  ) {
+    const changed = await this.catalog.setActiveMany(actor(req), params.entity, body.ids, body.active);
+    return { changed, active: body.active };
   }
 
   @Roles('sa', 'admin')
