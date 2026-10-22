@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { ServiceAccountsScreen } from './service-accounts-screen';
@@ -186,5 +186,20 @@ describe('Tài khoản dịch vụ — dòng gọn, một cách sắp xếp', ()
     expect(row.querySelectorAll('.badge')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Sắp xếp theo Tên tài khoản' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sắp theo' })).toBeNull();
+  });
+});
+
+// UX-E30: nhập dữ liệu thật trước go-live không phải gõ tay từng tài khoản.
+describe('Tài khoản dịch vụ — Nhập từ Excel', () => {
+  it('SA/Admin có "Nhập từ Excel": mở hộp có file mẫu; Thành viên không có nút', async () => {
+    stubFetch([]);
+    const view = renderAs('sa');
+    await userEvent.click(await screen.findByRole('button', { name: 'Nhập từ Excel' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nhập tài khoản dịch vụ từ Excel' });
+    expect(within(dialog).getByRole('button', { name: /Tải file mẫu/ })).toBeInTheDocument();
+    view.unmount();
+    renderAs('member');
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('button', { name: 'Nhập từ Excel' })).toBeNull();
   });
 });

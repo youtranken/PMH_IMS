@@ -24,6 +24,7 @@ import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-opti
 import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
+import { ExcelImportDialog } from '@/ui/excel-import-dialog';
 import { ServiceAccountForm } from './service-account-form';
 import { ServiceAccountStatusDialog } from './service-account-status-dialog';
 import {
@@ -92,6 +93,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<ServiceAccountRow | null>(null);
   /** Hồ sơ đang chờ đổi trạng thái, kèm chiều đổi — cùng một hộp cho cả đóng lẫn mở lại. */
   const [switching, setSwitching] = useState<{
@@ -273,9 +275,15 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               fileName="tai-khoan-dich-vu.xlsx"
             />
             {canEdit ? (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('serviceAccounts.add')}
-              </button>
+              <>
+                {/* Nhập chỉ trên máy tính như Thiết bị: bảng đối chiếu rộng (UX-E30). */}
+                <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
+                  {t('serviceAccounts.importExcel')}
+                </button>
+                <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                  {t('serviceAccounts.add')}
+                </button>
+              </>
             ) : null}
           </>
         }
@@ -406,6 +414,22 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         </>
       )}
 
+      {importing ? (
+        <ExcelImportDialog
+          base="/api/v1/service-accounts"
+          title={t('serviceAccounts.importTitle')}
+          hint={t('serviceAccounts.importHint')}
+          group={t('serviceAccounts.title')}
+          fileStem="tai-khoan-dich-vu"
+          templateLabel={t('serviceAccounts.downloadTemplate')}
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
+          }}
+        />
+      ) : null}
       {creating ? (
         <ServiceAccountForm
           row={null}

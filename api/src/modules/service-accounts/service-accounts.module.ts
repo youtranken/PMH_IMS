@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { ExcelImportService } from '../../common/excel/excel-import.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExpiryModule } from '../expiry/expiry.module';
 import { UsersModule } from '../users/users.module';
 import { ServiceAccountController } from './service-account.controller';
 import { ServiceAccountService } from './service-account.service';
+import { ServiceAccountImportService } from './service-account-import.service';
 import { ServiceAccountOwnerResolver } from './service-account-owner-resolver';
 import { ServiceAccountAuditLabeler } from './service-account-audit-labeler';
 import { ServiceAccountsApiService } from './service-accounts.api';
@@ -26,6 +28,8 @@ import { ServiceAccountExpirySource } from './service-account-expiry-source';
     ServiceAccountCatalogUsage,
     ServiceAccountExpirySource,
     ExcelExportService,
+    ExcelImportService,
+    ServiceAccountImportService,
   ],
   exports: [ServiceAccountsApiService],
 })
