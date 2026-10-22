@@ -1,7 +1,7 @@
 import { SecretDueSub } from '@/ui/secret-due';
 import { useSecretDue } from '@/ui/use-secret-due';
 import { PhoneLink } from '@/ui/phone-link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +27,7 @@ import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { CopyButton } from '@/ui/copy-button';
 import { RowActions } from '@/ui/row-actions';
+import { useOpenFromUrl } from '@/ui/use-open-from-url';
 import { ispMenuItems } from './isp-status-menu';
 
 
@@ -87,6 +88,8 @@ export function IspScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
+  useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [editing, setEditing] = useState<IspRow | null>(null);
   const navigate = useNavigate();
 

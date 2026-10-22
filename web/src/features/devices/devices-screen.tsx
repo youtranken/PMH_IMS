@@ -43,6 +43,7 @@ import {
 } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { useOpenFromUrl } from '@/ui/use-open-from-url';
 
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
@@ -101,6 +102,8 @@ export function DevicesScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
+  useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
   const [cloning, setCloning] = useState<DeviceRow | null>(null);

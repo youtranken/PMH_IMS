@@ -26,6 +26,7 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { RenewDialog } from '@/ui/renew-dialog';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { useOpenFromUrl } from '@/ui/use-open-from-url';
 import { RestoreDialog } from './software-restore-dialog';
 import { AssignDialog } from './assign-dialog';
 import { SoftwareForm } from './software-form';
@@ -133,6 +134,8 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
+  useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
   const navigate = useNavigate();
   /** "Mua thêm đợt mới" (Q-27): hồ sơ mới điền sẵn theo đợt này. */

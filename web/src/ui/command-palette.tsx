@@ -55,6 +55,17 @@ interface Hit {
   status?: string;
 }
 
+/**
+ * Lệnh "Thêm …" (UX-E32): mở thẳng form của màn qua `?new=1` (`useOpenFromUrl`). Ẩn theo vai và
+ * nhóm quyền bằng chính luật của màn đích (`canSeePath`) — không giữ danh sách quyền thứ hai.
+ */
+const COMMANDS: { key: string; path: string; navKey: string }[] = [
+  { key: 'palette.cmdAddDevice', path: PATHS.devices, navKey: 'nav.devices' },
+  { key: 'palette.cmdAddSoftware', path: PATHS.software, navKey: SOFTWARE_SCREENS.software.navKey },
+  { key: 'palette.cmdAddIsp', path: PATHS.ispLines, navKey: 'nav.isp' },
+  { key: 'palette.cmdNewIncident', path: PATHS.isoIncidents, navKey: 'nav.isoIncidents' },
+];
+
 /** Hồ sơ vừa mở gần đây — chỉ đường dẫn, mã và tên; không bao giờ có bí mật. */
 const RECENT_LIMIT = 5;
 function recentKey(email: string): string {
@@ -444,6 +455,19 @@ export function CommandPalette({ me }: { me: Me }) {
       }));
   }, [enabled, subnets.data, q, ipFirst, t]);
 
+  const commandHits = useMemo<Hit[]>(
+    () =>
+      COMMANDS.filter((command) => canSeePath(me, command.path)).map((command) => ({
+        group: t('palette.groupCommands'),
+        title: t(command.key),
+        sub: '',
+        to: `${command.path}?new=1`,
+        navKey: command.navKey,
+        kind: 'action' as const,
+      })),
+    [me, t],
+  );
+
   /** Màn hình cũng tìm được — gõ "nat" là nhảy thẳng sang Sổ NAT, khỏi rê chuột xuống sidebar. */
   const navHits = useMemo<Hit[]>(() => {
     if (q.length < 2) return [];
@@ -556,6 +580,7 @@ export function CommandPalette({ me }: { me: Me }) {
       ),
       ...diagramHits,
       ...(ipFirst ? [] : network),
+      ...(q.length >= 2 ? commandHits.filter((hit) => foldSearch(hit.title).includes(foldSearch(q))) : []),
       ...navHits,
     ];
   }, [
@@ -569,6 +594,7 @@ export function CommandPalette({ me }: { me: Me }) {
     diagramHits,
     ipFirst,
     navHits,
+    commandHits,
     q,
     t,
   ]);
@@ -609,6 +635,7 @@ export function CommandPalette({ me }: { me: Me }) {
         ...recent
           .filter((hit) => canSeePath(me, hit.to.split('?')[0]))
           .map((hit) => ({ ...hit, group: recentGroup })),
+        ...commandHits,
         ...visibleGroups(me)
           .flatMap((group) => group.items)
           .map((item) => ({
@@ -643,7 +670,7 @@ export function CommandPalette({ me }: { me: Me }) {
         navKey: key,
         kind: 'action' as const,
       }));
-  }, [q, recent, me, found, searching, anyFailed, t]);
+  }, [q, recent, me, found, searching, anyFailed, commandHits, t]);
 
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của
      từ khoá CŨ ngay khi kết quả mới về — người dùng gõ từ mới mà con trỏ đứng ở dòng 8. */
