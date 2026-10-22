@@ -22,6 +22,8 @@ import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { isoDateInTz, viDate } from '../../common/today';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
+import { summarize, type ImportAction, type ImportSummary } from '../../common/import-plan';
+import type { SoftwareParsedRow } from './software-import';
 import {
   autoRetireOn,
   effectiveSoftwareStatus,
@@ -333,14 +335,22 @@ export class SoftwareService {
 
   async create(actor: string, input: SoftwareInputShape): Promise<SoftwareRecord> {
     const values = await this.prepare(input, null);
-    return this.db.transaction(async (tx) => {
-      const created = await this.insertWithin(tx, values);
-      await this.recordWithin(tx, actor, created.id, 'created', {
-        code: { before: null, after: created.code },
-      });
-      await this.syncSeatsWithin(tx, actor, created, input.seats);
-      return created;
+    return this.db.transaction((tx) => this.createRowWithin(tx, actor, values, input.seats));
+  }
+
+  /** Lõi ghi của Thêm — form và file nhập (UX-E30) đi chung một đường. */
+  private async createRowWithin(
+    tx: Tx,
+    actor: string,
+    values: Record<string, unknown>,
+    seats: SoftwareInputShape['seats'],
+  ): Promise<SoftwareRecord> {
+    const created = await this.insertWithin(tx, values);
+    await this.recordWithin(tx, actor, created.id, 'created', {
+      code: { before: null, after: created.code },
     });
+    await this.syncSeatsWithin(tx, actor, created, seats);
+    return created;
   }
 
   async update(
@@ -365,24 +375,149 @@ export class SoftwareService {
     // Chỉ sửa hợp đồng / ghi chú của ghế thì hàng `software` không đổi gì, vẫn phải đi tiếp.
     if (!hasChanges(changes) && input.seats === undefined) return toRecord(before);
 
-    return this.db.transaction(async (tx) => {
-      // `prepare` tính lại trạng thái theo hạn từ ảnh chụp ngoài transaction: một lượt thanh
-      // lý commit vào giữa sẽ bị tính đè thành "Đang dùng".
-      await this.requireUnchangedWithin(tx, before);
-      await this.requireSeatsFitWithin(tx, before, values);
-      const updated = hasChanges(changes) ? await this.updateWithin(tx, id, values) : toRecord(before);
-      if (hasChanges(changes)) await this.recordWithin(tx, actor, id, 'updated', changes);
-      if (values.status === 'retired' && before.status !== 'retired') {
-        await this.releaseAllSeatsWithin(tx, actor, id);
+    return this.db.transaction((tx) => this.updateRowWithin(tx, actor, before, values, changes, input.seats));
+  }
+
+  /**
+   * Lõi ghi của Sửa — form và file nhập đi chung một đường. `before` là ảnh chụp LÚC ĐỐI CHIẾU
+   * (form: lúc đọc trước khi ghi; file: lúc dựng bảng đối chiếu) — khác bản đang khoá là có người
+   * sửa xen vào, huỷ chứ không ghi đè.
+   */
+  private async updateRowWithin(
+    tx: Tx,
+    actor: string,
+    before: typeof softwareTable.$inferSelect,
+    values: Record<string, unknown>,
+    changes: RecordChanges,
+    seats: SoftwareInputShape['seats'],
+  ): Promise<SoftwareRecord> {
+    const id = before.id;
+    // `prepare` tính lại trạng thái theo hạn từ ảnh chụp ngoài transaction: một lượt thanh
+    // lý commit vào giữa sẽ bị tính đè thành "Đang dùng".
+    await this.requireUnchangedWithin(tx, before);
+    await this.requireSeatsFitWithin(tx, before, values);
+    const updated = hasChanges(changes) ? await this.updateWithin(tx, id, values) : toRecord(before);
+    if (hasChanges(changes)) await this.recordWithin(tx, actor, id, 'updated', changes);
+    if (values.status === 'retired' && before.status !== 'retired') {
+      await this.releaseAllSeatsWithin(tx, actor, id);
+    }
+    const seatsChanged = await this.syncSeatsWithin(tx, actor, updated, seats);
+    // Chỉ đổi ghế thì hàng `software` chưa được ghi: vẫn đẩy `updated_at` để "sửa lần cuối"
+    // đúng và `requireUnchangedWithin` của lượt ghi chen giữa nhận ra.
+    if (seatsChanged && !hasChanges(changes)) {
+      await tx.update(softwareTable).set({ updatedAt: new Date() }).where(eq(softwareTable.id, id));
+    }
+    return updated;
+  }
+
+  /**
+   * Đối chiếu các dòng đọc từ file (UX-E30) — KHÔNG ghi gì. Nhà cung cấp trong file là TÊN, dịch
+   * ra id; rồi mỗi dòng đi qua ĐÚNG `prepare()` của form (cùng luật khôi phục hồ sơ đã thanh lý).
+   * Trùng mã = sửa (chỉ cột có mặt), không trùng = thêm.
+   */
+  async planImport(parsed: SoftwareParsedRow[]): Promise<SoftwareImportPlan> {
+    const [existing, lists] = await Promise.all([
+      this.db.select().from(softwareTable),
+      this.catalog.lists({ includeInactive: true }),
+    ]);
+    const key = (text: string) => text.trim().toLowerCase();
+    const byCode = new Map(existing.map((row) => [key(row.code), row]));
+    const vendors = new Map(lists.vendors.map((vendor) => [key(vendor.name), vendor.id]));
+    const seen = new Map<string, number>();
+    const rows: SoftwareImportRow[] = [];
+    for (const item of parsed) {
+      const label = item.cells?.code?.trim() || `Dòng ${item.rowNumber}`;
+      const error = (message: string): SoftwareImportRow => ({ rowNumber: item.rowNumber, sheet: item.sheet, label, action: 'error', message });
+      if (!item.cells) {
+        rows.push(error(item.error ?? 'Dòng không đọc được.'));
+        continue;
       }
-      const seatsChanged = await this.syncSeatsWithin(tx, actor, updated, input.seats);
-      // Chỉ đổi ghế thì hàng `software` chưa được ghi: vẫn đẩy `updated_at` để "sửa lần cuối"
-      // đúng và `requireUnchangedWithin` của lượt ghi chen giữa nhận ra.
-      if (seatsChanged && !hasChanges(changes)) {
-        await tx.update(softwareTable).set({ updatedAt: new Date() }).where(eq(softwareTable.id, id));
+      const cells = item.cells;
+      const code = cells.code?.trim() ?? '';
+      if (!code) {
+        rows.push(error('Thiếu cột "Mã hồ sơ".'));
+        continue;
       }
-      return updated;
+      const first = seen.get(key(code));
+      if (first !== undefined) {
+        rows.push(error(`Mã "${code}" trùng với dòng ${first} trong file.`));
+        continue;
+      }
+      seen.set(key(code), item.rowNumber);
+      const before = byCode.get(key(code));
+      if (!before && !cells.kind) {
+        rows.push(error('Thiếu cột "Loại" (Chứng chỉ SSL hay Tên miền…).'));
+        continue;
+      }
+      let vendorId: string | null | undefined;
+      if (cells.vendor !== undefined) {
+        vendorId = cells.vendor.trim() === '' ? null : vendors.get(key(cells.vendor));
+        if (vendorId === undefined) {
+          rows.push(error(`Nhà cung cấp "${cells.vendor.trim()}" không có trong danh mục.`));
+          continue;
+        }
+      }
+      const input: SoftwareInputShape = {
+        code,
+        name: cells.name,
+        kind: cells.kind,
+        vendorId,
+        seatTotal: cells.seatTotal,
+        startDate: cells.startDate,
+        endDate: cells.endDate,
+        note: cells.note,
+        websites: cells.websites,
+      };
+      try {
+        const values = await this.prepare(input, before?.id ?? null);
+        if (!before) {
+          rows.push({ rowNumber: item.rowNumber, sheet: item.sheet, label: code, action: 'create', values });
+          continue;
+        }
+        const changes: RecordChanges = {
+          ...diffRecord(TRACKED, before, values),
+          ...websitesChange(before.websites, values.websites as string[] | undefined),
+        };
+        rows.push(
+          hasChanges(changes)
+            ? { rowNumber: item.rowNumber, sheet: item.sheet, label: code, action: 'update', before, values, changes }
+            : { rowNumber: item.rowNumber, sheet: item.sheet, label: code, action: 'unchanged' },
+        );
+      } catch (err) {
+        if (err instanceof BadRequestException) {
+          const body = err.getResponse() as { message?: string };
+          rows.push(error(body.message ?? err.message));
+          continue;
+        }
+        throw err;
+      }
+    }
+    return { rows, summary: summarize(rows) };
+  }
+
+  /**
+   * Ghi một lượt đối chiếu SẠCH lỗi: MỘT transaction cho cả file; mỗi hồ sơ đi qua đúng lõi ghi của
+   * form (lịch sử + nhật ký, chặn bớt ghế dưới số máy đang dùng), cộng một dòng nhật ký tổng.
+   */
+  async commitImportWithin(tx: Tx, actor: string, plan: SoftwareImportPlan): Promise<{ created: number; updated: number }> {
+    let created = 0;
+    let updated = 0;
+    for (const row of plan.rows) {
+      if (row.action === 'create' && row.values) {
+        await this.createRowWithin(tx, actor, row.values, undefined);
+        created += 1;
+      } else if (row.action === 'update' && row.values && row.before && row.changes) {
+        await this.updateRowWithin(tx, actor, row.before, row.values, row.changes, undefined);
+        updated += 1;
+      }
+    }
+    await this.audit.appendWithin(tx, {
+      actor,
+      action: 'software.imported',
+      objectType: 'software',
+      detail: { created, updated, unchanged: plan.summary.unchanged, totalRows: plan.rows.length },
     });
+    return { created, updated };
   }
 
   /**
@@ -978,6 +1113,24 @@ function websitesChange(before: string[], after: string[] | undefined): RecordCh
   const from = before.join(', ');
   const to = after.join(', ');
   return from === to ? {} : { websites: { before: from || null, after: to || null } };
+}
+
+export interface SoftwareImportRow {
+  rowNumber: number;
+  /** Sheet của dòng (file Phần mềm có thể có bốn sheet) — file "dòng lỗi" ghi lại đúng sheet. */
+  sheet: string;
+  label: string;
+  action: ImportAction;
+  message?: string;
+  /** Ảnh chụp lúc đối chiếu — lượt ghi hỏi lại "có ai sửa xen vào không". */
+  before?: typeof softwareTable.$inferSelect;
+  values?: Record<string, unknown>;
+  changes?: RecordChanges;
+}
+
+export interface SoftwareImportPlan {
+  rows: SoftwareImportRow[];
+  summary: ImportSummary;
 }
 
 function toRecord(row: typeof softwareTable.$inferSelect): SoftwareRecord {

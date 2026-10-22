@@ -98,6 +98,7 @@ export const ACTION_KEY: Record<string, string> = {
   'expiry.renewals_exported': 'audit.actions.expiryRenewalsExported',
   'service_account.imported': 'audit.actions.serviceAccountImported',
   'isp.imported': 'audit.actions.ispImported',
+  'software.imported': 'audit.actions.softwareImported',
   'disposal.exported': 'audit.actions.disposalExported',
   'expiry.renewed': 'audit.actions.expiryRenewed',
   'expiry.digest.sent': 'audit.actions.expiryDigestSent',

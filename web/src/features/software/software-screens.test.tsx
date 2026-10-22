@@ -266,3 +266,20 @@ describe('Bốn màn phần mềm — chip Xóa lọc', () => {
     expect(screen.queryByRole('button', { name: /^Xóa lọc/ })).toBeNull();
   });
 });
+
+// UX-E30: nhập dữ liệu thật trước go-live — bốn màn, file mẫu đúng loại của màn.
+describe('Phần mềm — Nhập từ Excel', () => {
+  it.each([
+    ['software', '/software', 'Nhập phần mềm từ Excel', 'license'],
+    ['domains', '/domains', 'Nhập tên miền & SSL từ Excel', 'domain,ssl'],
+  ] as const)('%s: nút "Nhập từ Excel" mở hộp; file mẫu hỏi đúng ?kind=', async (screenKey, at, title, kinds) => {
+    const urls = mockFetch();
+    renderList(screenKey, at);
+    await userEvent.click(await screen.findByRole('button', { name: 'Nhập từ Excel' }));
+    const dialog = await screen.findByRole('dialog', { name: title });
+    await userEvent.click(within(dialog).getByRole('button', { name: /Tải file mẫu/ }));
+    await vi.waitFor(() => expect(urls.some((url) => url.startsWith('/api/v1/software/template?'))).toBe(true));
+    const template = urls.find((url) => url.startsWith('/api/v1/software/template?'))!;
+    expect(new URLSearchParams(template.split('?')[1]).get('kind')).toBe(kinds);
+  });
+});

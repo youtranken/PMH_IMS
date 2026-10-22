@@ -9,7 +9,10 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { Type } from 'class-transformer';
 import {
@@ -33,12 +36,12 @@ import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
-import { sendXlsx } from '../../common/excel/xlsx-http';
+import { requireXlsx, sendXlsx, XLSX_UPLOAD_LIMIT } from '../../common/excel/xlsx-http';
+import { SoftwareImportService } from './software-import.service';
+import { softwareExportColumns } from './software-import';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import {
-  KIND_LABEL,
-  STATUS_LABEL,
   LICENSE_MODELS,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
@@ -211,6 +214,7 @@ export class SoftwareController {
     private readonly excel: ExcelExportService,
     private readonly users: UsersApiService,
     private readonly config: SystemConfigService,
+    private readonly imports: SoftwareImportService,
   ) {}
 
   /**
@@ -294,28 +298,45 @@ export class SoftwareController {
       filter,
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
-    // Mỗi màn chỉ xuất cột của loại nó (Q-22) — xem `softwareExportShape`.
+    // Mỗi màn chỉ xuất cột của loại nó (Q-22) — xem `softwareExportShape`. Cùng bộ cột với
+    // file mẫu của Nhập (UX-E30).
     const shape = softwareExportShape(filter.kinds);
-    type Row = (typeof rows)[number];
-    const columns: { header: string; width: number; value: (r: Row) => string }[] = [
-      { header: 'Mã hồ sơ', width: 20, value: (r) => r.code },
-      { header: 'Tên', width: 32, value: (r) => r.name },
-      { header: 'Loại', width: 16, value: (r) => KIND_LABEL[r.kind] },
-      { header: 'Nhà cung cấp', width: 22, value: (r) => r.vendorName ?? '' },
-      ...(shape.seats
-        ? [{ header: 'Ghế dùng/tổng', width: 14, value: (r: Row) => seatText(r) }]
-        : []),
-      { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
-      { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
-      { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
-      // Q-22: một hồ sơ = các tên miền dùng chung một ngày hết hạn — cùng danh sách với hồ sơ.
-      ...(shape.websites
-        ? [{ header: 'Tên miền', width: 36, value: (r: Row) => (r.websites ?? []).join(', ') }]
-        : []),
-      { header: 'Ghi chú', width: 40, value: (r) => r.note ?? '' },
-    ];
-    const buffer = await this.excel.build({ sheetName: shape.sheetName, columns, rows });
+    const buffer = await this.excel.build({ sheetName: shape.sheetName, columns: softwareExportColumns(shape), rows });
     sendXlsx(res, buffer, shape.fileName);
+  }
+
+  /**
+   * Nhập từ Excel (UX-E30). ĐẶT TRƯỚC `@Get(':id')` như file Xuất. Cùng vai với Thêm / Sửa tay.
+   * File mẫu theo `?kind=` của màn (Q-22): đúng sheet + cột file Xuất của màn đó.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('template')
+  async template(@Query() query: SoftwareExportQueryDto, @Res() res: Response) {
+    const { buffer, fileName } = await this.imports.template(softwareKindsQuery(query.kind));
+    sendXlsx(res, buffer, fileName);
+  }
+
+  /** Bảng đối chiếu — KHÔNG ghi gì. */
+  @Roles('sa', 'admin', 'member')
+  @Post('import/preview')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  previewImport(@UploadedFile() file: Express.Multer.File | undefined) {
+    return this.imports.preview(requireXlsx(file));
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-phan-mem.xlsx');
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('import/commit')
+  @Audited('software.imported', 'software', { writtenByService: true })
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  commitImport(@UploadedFile() file: Express.Multer.File | undefined, @Req() req: AuthedRequest) {
+    return this.imports.commit(actor(req), requireXlsx(file));
   }
 
   /**
@@ -475,7 +496,3 @@ function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
-function seatText(row: { seatTotal: number | null; seatUsed: number | null }): string {
-  if (row.seatTotal === null) return '';
-  return `${row.seatUsed ?? 0}/${row.seatTotal}`;
-}

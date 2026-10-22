@@ -15,6 +15,7 @@ import { SoftwareAuditLabeler } from './software-audit-labeler';
 import { IspLineController } from './isp-line.controller';
 import { IspLineService } from './isp-line.service';
 import { IspImportService } from './isp-import.service';
+import { SoftwareImportService } from './software-import.service';
 import { LicenseAssignmentService } from './license-assignment.service';
 import { SoftwareDevicePanel } from './software-device-panel';
 import { LicenseDeviceTimeline } from './license-device-timeline';
@@ -35,6 +36,7 @@ import { SoftwareCatalogUsage } from './software-catalog-usage';
     ExcelExportService,
     ExcelImportService,
     IspImportService,
+    SoftwareImportService,
     SoftwareService,
     LicenseAssignmentService,
     IspLineService,

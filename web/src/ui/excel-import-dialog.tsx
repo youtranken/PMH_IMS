@@ -21,6 +21,7 @@ export function ExcelImportDialog({
   group,
   fileStem,
   templateLabel,
+  templateQuery,
   csrfToken,
   onClose,
   onImported,
@@ -34,6 +35,8 @@ export function ExcelImportDialog({
   /** Gốc tên file: `mau-<stem>.xlsx`, `dong-loi-<stem>.xlsx`. */
   fileStem: string;
   templateLabel: string;
+  /** Query của file mẫu (vd `kind=license` — bốn màn Phần mềm dùng chung `base`). */
+  templateQuery?: string;
   csrfToken: string;
   onClose: () => void;
   onImported: () => void;
@@ -50,7 +53,7 @@ export function ExcelImportDialog({
       mapRow={(row) => ({ group, rowNumber: row.rowNumber, action: row.action, label: row.label, message: row.message })}
       onClose={onClose}
       onImported={onImported}
-      template={<ExportXlsxButton url={`${base}/template`} fileName={`mau-${fileStem}.xlsx`} label={templateLabel} link />}
+      template={<ExportXlsxButton url={`${base}/template${templateQuery ? `?${templateQuery}` : ''}`} fileName={`mau-${fileStem}.xlsx`} label={templateLabel} link />}
     />
   );
 }

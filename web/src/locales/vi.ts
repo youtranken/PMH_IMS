@@ -2100,6 +2100,10 @@ export default {
     done: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',
   },
   software: {
+    importExcel: 'Nhập từ Excel',
+    importTitle: 'Nhập phần mềm từ Excel',
+    importHint: 'Dùng file mẫu hoặc file vừa Xuất Excel của màn này. Nhà cung cấp ghi theo tên đã có trong Danh mục; trùng mã thì sửa (chỉ cột có trong file). Trạng thái không đổi qua file.',
+    downloadTemplate: 'Tải file mẫu',
     title: 'Phần mềm',
     subtitle: 'License phần mềm, số ghế và máy đang cài',
     colCode: 'Mã hồ sơ',
@@ -2263,6 +2267,7 @@ export default {
    */
   softwareScreens: {
     domains: {
+      importTitle: 'Nhập tên miền & SSL từ Excel',
       title: 'Tên miền & SSL',
       subtitle: 'Tên miền và chứng chỉ SSL — mỗi hồ sơ là các tên miền dùng chung một ngày hết hạn',
       add: 'Thêm tên miền / SSL',
@@ -2271,6 +2276,7 @@ export default {
       search: 'Tìm theo mã, tên, tên miền hoặc ghi chú',
     },
     maintenance: {
+      importTitle: 'Nhập hợp đồng bảo trì từ Excel',
       title: 'Hợp đồng bảo trì',
       subtitle: 'Hợp đồng bảo trì, hỗ trợ kỹ thuật và ngày gia hạn',
       add: 'Thêm hợp đồng bảo trì',
@@ -2279,6 +2285,7 @@ export default {
       search: 'Tìm theo mã, tên hoặc ghi chú',
     },
     services: {
+      importTitle: 'Nhập dịch vụ có hạn từ Excel',
       title: 'Dịch vụ có hạn khác',
       subtitle: 'Thuê bao, dịch vụ đám mây và mọi thứ có ngày hết hạn khác',
       add: 'Thêm dịch vụ có hạn',
@@ -3687,6 +3694,7 @@ export default {
       expiryRenewalsExported: 'Xuất danh sách đã gia hạn',
       serviceAccountImported: 'Nhập tài khoản dịch vụ từ Excel',
       ispImported: 'Nhập đường truyền từ Excel',
+      softwareImported: 'Nhập phần mềm từ Excel',
       disposalExported: 'Xuất kho thanh lý',
       expiryRenewed: 'Gia hạn',
       expiryDigestSent: 'Gửi email tổng hợp hạn',

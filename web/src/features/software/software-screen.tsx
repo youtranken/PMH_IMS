@@ -27,6 +27,7 @@ import { useToast } from '@/ui/toast';
 import { RenewDialog } from '@/ui/renew-dialog';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { useOpenFromUrl } from '@/ui/use-open-from-url';
+import { ExcelImportDialog } from '@/ui/excel-import-dialog';
 import { RestoreDialog } from './software-restore-dialog';
 import { AssignDialog } from './assign-dialog';
 import { SoftwareForm } from './software-form';
@@ -134,6 +135,7 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
   useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
@@ -295,6 +297,10 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
                 .join('&')}`}
               fileName={spec.exportFile}
             />
+          {/* Nhập chỉ trên máy tính như Thiết bị: bảng đối chiếu rộng (UX-E30). */}
+          <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
+            {t('software.importExcel')}
+          </button>
           <button type="button" className="btn primary" onClick={() => setCreating(true)}>
             {t(spec.addKey)}
           </button>
@@ -462,6 +468,23 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         </>
       )}
 
+      {importing ? (
+        <ExcelImportDialog
+          base="/api/v1/software"
+          title={t(spec.importTitleKey)}
+          hint={t('software.importHint')}
+          group={t(spec.titleKey)}
+          fileStem={spec.exportFile.replace(/\.xlsx$/, '')}
+          templateLabel={t('software.downloadTemplate')}
+          templateQuery={`kind=${spec.kinds.join(',')}`}
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['software'] });
+          }}
+        />
+      ) : null}
       {creating || batching ? (
         <SoftwareForm
           row={null}
