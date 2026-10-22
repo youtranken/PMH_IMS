@@ -363,8 +363,11 @@ test.describe('Bảng điều khiển', () => {
     await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toBeVisible();
   });
 
-  /** Khối "Tổng hợp kho thanh lý" — đọc qua `disposal.api`, không tự gộp ba module lại lần nữa. */
-  test('thiết bị vừa thanh lý hiện ngay ở khối kho thanh lý', async ({ page }) => {
+  /**
+   * Ô số "Vừa thanh lý" — đọc qua `disposal.api`, không tự gộp ba module lại lần nữa. Không còn
+   * khối danh sách (Q-33): ô số dẫn sang Kho thanh lý.
+   */
+  test('thiết bị vừa thanh lý làm tăng ô số "Vừa thanh lý", ô dẫn sang Kho thanh lý', async ({ page }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -381,10 +384,11 @@ test.describe('Bảng điều khiển', () => {
     });
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
 
+    const disposedTotal = async () =>
+      ((await (await page.request.get('/api/v1/dashboard')).json()) as { disposed: { total: number } }).disposed.total;
+    const before = await disposedTotal();
     await page.goto('/');
-    const block = page.locator('section').filter({ hasText: 'Kho thanh lý · 7 ngày' });
-    // Chưa thanh lý thì chưa được có mặt — nếu không, bài dưới xanh vì lý do khác.
-    await expect(block.getByRole('link', { name: code })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).toHaveCount(0);
 
     expect(
       (
@@ -395,9 +399,12 @@ test.describe('Bảng điều khiển', () => {
       ).status(),
     ).toBe(200);
 
+    expect(await disposedTotal()).toBe(before + 1);
     await page.goto('/');
-    await expect(block.getByRole('link', { name: code })).toBeVisible();
-    await expect(block.getByText('Máy bàn cũ')).toBeVisible();
+    const tile = page.getByRole('link', { name: /Vừa thanh lý · 7 ngày/ });
+    await expect(tile).toContainText(String(before + 1));
+    await tile.click();
+    await expect(page).toHaveURL(/\/disposal/);
   });
 });
 

@@ -237,7 +237,6 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       { label: 'Xem toàn bộ danh sách hạn', path: '/expiry', heading: /^Sắp hết hạn$/ },
       { label: 'Xem toàn bộ dải mạng', path: '/ip-addresses', heading: /^Địa chỉ IP$/ },
       { label: 'Xem toàn bộ két sắt', path: '/vault', heading: /^Két sắt$/ },
-      { label: 'Xem toàn bộ kho thanh lý', path: '/disposal', heading: /^Kho thanh lý$/ },
     ];
 
     const walked: string[] = [];

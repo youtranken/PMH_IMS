@@ -737,7 +737,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /*
      * Khối nào hiện tùy dữ liệu (UX-E05: mảng 0 mục không thành khối — ô số 0 ở hàng KPI đã
      * nói). Nên tập khối mong đợi tính từ CHÍNH phản hồi API của vai đó: khối có dữ liệu thì
-     * phải có mặt; không còn khối nào ngoài sáu tên này.
+     * phải có mặt; không còn khối nào ngoài năm tên này.
      */
     const TITLE: Record<string, string> = {
       expiring: 'Tổng hợp hết hạn cần xử lý',
@@ -745,7 +745,6 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       staleSecrets: 'Két lâu chưa đổi',
       incidents: 'Sự cố · 7 ngày',
       breakGlass: 'Yêu cầu mở két · 7 ngày',
-      disposed: 'Kho thanh lý · 7 ngày',
     };
     const expectedBlocks = async () => {
       const board = (await (await page.request.get('/api/v1/dashboard')).json()) as Record<

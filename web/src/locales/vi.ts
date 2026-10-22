@@ -4746,8 +4746,6 @@ export default {
     secretCount: '{{count}} Ngăn',
     staleSince: 'Đổi lần cuối {{date}} · {{days}} ngày trước',
 
-    disposed: 'Kho thanh lý · 7 ngày',
-    seeAllDisposed: 'Xem toàn bộ kho thanh lý',
     /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */
     needsYou: 'Cần bạn duyệt ({{count}})',
     isoNeedsYou: 'Phiếu ISO cần bạn duyệt ({{count}})',
