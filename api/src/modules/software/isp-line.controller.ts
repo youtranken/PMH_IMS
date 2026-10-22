@@ -8,7 +8,10 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import {
   ArrayMaxSize,
@@ -27,15 +30,16 @@ import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
-import { ExcelExportService, type ExportColumn } from '../../common/excel/excel-export.service';
-import { sendXlsx } from '../../common/excel/xlsx-http';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { ISP_EXPORT_COLUMNS } from './isp-import';
+import { requireXlsx, sendXlsx, XLSX_UPLOAD_LIMIT } from '../../common/excel/xlsx-http';
+import { IspImportService } from './isp-import.service';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import {
   ISP_SORT_DEFAULT,
   ISP_SORT_KEYS,
   ISP_STATUSES,
-  type IspLineListItem,
   IspLineService,
   type IspStatus,
 } from './isp-line.service';
@@ -103,6 +107,7 @@ export class IspLineController {
     private readonly users: UsersApiService,
     private readonly devices: DevicesApiService,
     private readonly catalog: CatalogApiService,
+    private readonly imports: IspImportService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -152,6 +157,39 @@ export class IspLineController {
       rows,
     });
     sendXlsx(res, buffer, 'duong-truyen.xlsx');
+  }
+
+  /**
+   * Nhập từ Excel (UX-E30). ĐẶT TRƯỚC `@Get(':id')` như file Xuất. Cùng vai với Thêm / Sửa tay:
+   * file là một lối thêm / sửa nữa, không rộng quyền hơn form.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('template')
+  async template(@Res() res: Response) {
+    sendXlsx(res, await this.imports.template(), 'mau-duong-truyen.xlsx');
+  }
+
+  /** Bảng đối chiếu — KHÔNG ghi gì. */
+  @Roles('sa', 'admin', 'member')
+  @Post('import/preview')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  previewImport(@UploadedFile() file: Express.Multer.File | undefined) {
+    return this.imports.preview(requireXlsx(file));
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-duong-truyen.xlsx');
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('import/commit')
+  @Audited('isp.imported', 'isp_line', { writtenByService: true })
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  commitImport(@UploadedFile() file: Express.Multer.File | undefined, @Req() req: AuthedRequest) {
+    return this.imports.commit(actor(req), requireXlsx(file));
   }
 
   @Roles('sa', 'admin', 'member')
@@ -207,28 +245,3 @@ function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
-/** Cùng chữ với màn `/isp-lines` (`isp.status*` trong `web/src/locales/vi.ts`). */
-const ISP_STATUS_LABEL: Record<string, string> = {
-  active: 'Đang dùng',
-  suspended: 'Tạm ngưng',
-  terminated: 'Đã thanh lý',
-};
-
-/**
- * Bộ cột file Excel đường truyền. "Tốc độ gói cước" chứ không "Băng thông" (Q-04): đó là tốc độ
- * của gói cước line này, không phải thuộc tính của nhà mạng.
- */
-export const ISP_EXPORT_COLUMNS: ExportColumn<IspLineListItem>[] = [
-  { header: 'Mã', width: 18, value: (r) => r.code },
-  { header: 'Nhà mạng', width: 22, value: (r) => r.provider },
-  { header: 'Tốc độ gói cước', width: 16, value: (r) => r.bandwidth ?? '' },
-  // Mọi IP của đường trong MỘT ô (Q-20): một đường vẫn là một dòng, lọc/đếm theo dòng không lệch.
-  { header: 'IP WAN', width: 24, value: (r) => r.wanIps.join(', ') },
-  { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },
-  { header: 'Thiết bị', width: 18, value: (r) => r.deviceCode ?? '' },
-  { header: 'Hotline', width: 16, value: (r) => r.hotline ?? '' },
-  { header: 'Số hợp đồng', width: 20, value: (r) => r.contractNo ?? '' },
-  { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
-  { header: 'Trạng thái', width: 16, value: (r) => ISP_STATUS_LABEL[r.status] ?? r.status },
-  { header: 'Ghi chú', width: 30, value: (r) => r.note ?? '' },
-];

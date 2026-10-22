@@ -28,6 +28,7 @@ import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { CopyButton } from '@/ui/copy-button';
 import { RowActions } from '@/ui/row-actions';
 import { useOpenFromUrl } from '@/ui/use-open-from-url';
+import { ExcelImportDialog } from '@/ui/excel-import-dialog';
 import { ispMenuItems } from './isp-status-menu';
 
 
@@ -88,6 +89,7 @@ export function IspScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
   useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [editing, setEditing] = useState<IspRow | null>(null);
@@ -254,6 +256,10 @@ export function IspScreen({ me }: { me: Me }) {
                 .join('&')}`}
               fileName="duong-truyen.xlsx"
             />
+            {/* Nhập chỉ trên máy tính như Thiết bị: bảng đối chiếu rộng (UX-E30). */}
+            <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
+              {t('isp.importExcel')}
+            </button>
             <button type="button" className="btn primary" onClick={() => setCreating(true)}>
               {t('isp.add')}
             </button>
@@ -395,6 +401,22 @@ export function IspScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {importing ? (
+        <ExcelImportDialog
+          base="/api/v1/isp-lines"
+          title={t('isp.importTitle')}
+          hint={t('isp.importHint')}
+          group={t('isp.title')}
+          fileStem="duong-truyen"
+          templateLabel={t('isp.downloadTemplate')}
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['isp'] });
+          }}
+        />
+      ) : null}
       {creating ? (
         <IspForm
           row={null}

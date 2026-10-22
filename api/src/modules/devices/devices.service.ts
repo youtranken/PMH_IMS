@@ -184,6 +184,17 @@ export class DevicesService {
     return new Map(decorated.map((item) => [item.id, item]));
   }
 
+  /** Mã (không phân biệt hoa thường, bỏ khoảng trắng thừa) → id, kể cả máy đã thanh lý. */
+  async idsByCodes(codes: string[]): Promise<Map<string, string>> {
+    const keys = [...new Set(codes.map((code) => code.trim().toLowerCase()).filter(Boolean))];
+    if (keys.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: deviceTable.id, code: deviceTable.code })
+      .from(deviceTable)
+      .where(inArray(sql`lower(${deviceTable.code})`, keys));
+    return new Map(rows.map((row) => [row.code.trim().toLowerCase(), row.id]));
+  }
+
   /**
    * Thiết bị có bảo hành hết trong [from, to] — cỗ máy expiry (3.4) hỏi qua provider.
    * Thiết bị đã thanh lý thì thôi không nhắc: bảo hành của đồ bỏ đi không ai đi đòi.

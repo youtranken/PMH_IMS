@@ -1,16 +1,5 @@
-import {
-  cellText,
-  isBlankRow,
-  isExampleRow,
-  normalizeKey,
-  parseDateCell,
-  pickCell,
-  stripDiacritics,
-  unreadableFieldError,
-  type ParsedSheets,
-} from '../../common/import-plan';
-import { secretTextMessage } from '../../common/no-secret-text';
-import { textLooksLikeSecret } from '../../common/note-secret';
+import { cellText, pickCell, stripDiacritics, type ParsedSheets } from '../../common/import-plan';
+import { findSheet, importableRows, readImportFields, type ImportField } from '../../common/import-fields';
 import type { ExportColumn } from '../../common/excel/excel-export.service';
 import type { ServiceAccountKind } from './service-account-rules';
 import type { ServiceAccountInput, ServiceAccountRecord } from './service-account.types';
@@ -47,10 +36,10 @@ export interface ServiceAccountParsedRow {
   error?: string;
 }
 
-type TextKey = Exclude<keyof ServiceAccountImportInput, 'kind' | 'endDate'>;
+type FieldKey = Exclude<keyof ServiceAccountImportInput, 'kind'>;
 
-/** Cột chữ: nhãn = tiêu đề của file Xuất; trần độ dài và cột chặn mật khẩu = DTO của form. */
-const TEXT_FIELDS: { key: TextKey; label: string; max: number; noSecret?: boolean }[] = [
+/** Nhãn = tiêu đề của file Xuất; trần độ dài và cột chặn mật khẩu = DTO của form. */
+const FIELDS: ImportField<FieldKey>[] = [
   { key: 'code', label: 'Mã', max: 64 },
   { key: 'name', label: 'Tên', max: 160 },
   { key: 'login', label: 'Tên đăng nhập', max: 160 },
@@ -59,6 +48,7 @@ const TEXT_FIELDS: { key: TextKey; label: string; max: number; noSecret?: boolea
   { key: 'groupName', label: 'Nhóm VPN', max: 120 },
   { key: 'allowedIps', label: 'Dải IP được phép', max: 2000 },
   { key: 'note', label: 'Ghi chú', max: 2000, noSecret: true },
+  { key: 'endDate', label: 'Hết hạn', kind: 'date' },
 ];
 
 /** Nhãn loại của file Xuất ("Dùng chung", "VPN"), nhận cả mã máy. */
@@ -76,45 +66,18 @@ function kindOf(text: string): ServiceAccountKind | null {
  * đường bắt ghi lý do. `null` = file không có sheet đúng tên.
  */
 export function parseServiceAccountSheet(sheets: ParsedSheets): ServiceAccountParsedRow[] | null {
-  const name = Object.keys(sheets).find((sheet) => normalizeKey(sheet) === normalizeKey(SERVICE_ACCOUNT_SHEET));
-  if (name === undefined) return null;
-  const out: ServiceAccountParsedRow[] = [];
-  for (const row of sheets[name]) {
-    if (isBlankRow(row.cells) || isExampleRow(row.cells)) continue;
-    const fail = (error: string) => out.push({ rowNumber: row.rowNumber, error });
-    const unreadable = unreadableFieldError(row, [
-      ...TEXT_FIELDS.map((field) => ({ label: field.label, aliases: [normalizeKey(field.label)] })),
-      { label: 'Loại', aliases: ['loại'] },
-      { label: 'Hết hạn', aliases: ['hết hạn'] },
-    ]);
-    if (unreadable) {
-      fail(unreadable);
-      continue;
-    }
-    const input: ServiceAccountImportInput = {};
-    let error: string | null = null;
-    for (const field of TEXT_FIELDS) {
-      const raw = pickCell(row.cells, [normalizeKey(field.label)]);
-      if (raw === undefined) continue;
-      const text = cellText(raw);
-      if (text.length > field.max) error ??= `Cột "${field.label}" dài quá ${field.max} ký tự.`;
-      else if (field.noSecret && textLooksLikeSecret(text)) error ??= secretTextMessage(`Cột "${field.label}"`);
-      else input[field.key] = text;
-    }
+  const rows = findSheet(sheets, SERVICE_ACCOUNT_SHEET);
+  if (rows === undefined) return null;
+  return importableRows(rows).map((row): ServiceAccountParsedRow => {
+    const read = readImportFields(row, FIELDS);
+    if (read.error) return { rowNumber: row.rowNumber, error: read.error };
+    const input = read.cells as ServiceAccountImportInput;
     const kindRaw = pickCell(row.cells, ['loại']);
     if (kindRaw !== undefined && cellText(kindRaw) !== '') {
       const kind = kindOf(kindRaw);
-      if (kind) input.kind = kind;
-      else error ??= `Cột "Loại": "${cellText(kindRaw)}" không phải "Dùng chung" hay "VPN".`;
+      if (!kind) return { rowNumber: row.rowNumber, error: `Cột "Loại": "${cellText(kindRaw)}" không phải "Dùng chung" hay "VPN".` };
+      input.kind = kind;
     }
-    const endRaw = pickCell(row.cells, ['hết hạn']);
-    if (endRaw !== undefined) {
-      const end = parseDateCell(endRaw);
-      if (end.ok) input.endDate = end.value ?? '';
-      else error ??= 'Cột "Hết hạn" không phải ngày có thật (YYYY-MM-DD hoặc dd/mm/yyyy).';
-    }
-    if (error) fail(error);
-    else out.push({ rowNumber: row.rowNumber, input });
-  }
-  return out;
+    return { rowNumber: row.rowNumber, input };
+  });
 }

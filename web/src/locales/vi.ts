@@ -2367,6 +2367,10 @@ export default {
     quickPickTruncated: 'Chỉ lấy {{count}} máy đầu — gõ tên cụ thể hơn.',
   },
   isp: {
+    importExcel: 'Nhập từ Excel',
+    importTitle: 'Nhập đường truyền từ Excel',
+    importHint: 'Dùng file mẫu hoặc file vừa Xuất Excel. Nhà mạng, site, thiết bị ghi theo tên / mã đã có trong Danh mục và kho; trùng mã thì sửa (chỉ cột có trong file).',
+    downloadTemplate: 'Tải file mẫu',
     title: 'Đường truyền',
     copyWanIp: 'Sao chép IP WAN',
     add: 'Thêm đường truyền',
@@ -3682,6 +3686,7 @@ export default {
       expiryExported: 'Xuất danh sách sắp hết hạn',
       expiryRenewalsExported: 'Xuất danh sách đã gia hạn',
       serviceAccountImported: 'Nhập tài khoản dịch vụ từ Excel',
+      ispImported: 'Nhập đường truyền từ Excel',
       disposalExported: 'Xuất kho thanh lý',
       expiryRenewed: 'Gia hạn',
       expiryDigestSent: 'Gửi email tổng hợp hạn',
