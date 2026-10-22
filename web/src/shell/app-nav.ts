@@ -23,11 +23,11 @@ export interface NavGroup {
   labelKey: string;
   items: NavItem[];
   /**
-   * Tiêu đề nhóm thành nút khép/mở, mặc định khép. Chỉ cho nhóm ít dùng hằng ngày: menu của SA
-   * dài hơn màn laptop 768–900px, và cuộn sidebar để tìm "Thiết bị" là cái giá trả mỗi ngày
-   * cho vài mục quản trị mở mỗi tuần một lần (Q-18).
+   * Mọi nhóm đều khép/mở được (Q-33); cờ này chỉ chọn mặc định là khép. Chỉ cho nhóm ít dùng
+   * hằng ngày: menu của SA dài hơn màn laptop 768–900px, và cuộn sidebar để tìm "Thiết bị" là cái
+   * giá trả mỗi ngày cho vài mục quản trị mở mỗi tuần một lần (Q-18).
    */
-  collapsible?: boolean;
+  defaultClosed?: boolean;
 }
 
 /**
@@ -85,7 +85,7 @@ export const navGroups: NavGroup[] = [
      * nhóm hiện số việc cần làm. Mọi vai thấy: Member không phụ trách vẫn xem phiếu, API chặn ghi.
      */
     labelKey: 'nav.groupIso',
-    collapsible: true,
+    defaultClosed: true,
     items: [
       { key: 'nav.isoBackup', shortKey: 'nav.isoBackupShort', to: PATHS.isoBackup },
       { key: 'nav.isoAntivirus', shortKey: 'nav.isoAntivirusShort', to: PATHS.isoAntivirus },
@@ -111,7 +111,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     labelKey: 'nav.groupAdmin',
-    collapsible: true,
+    defaultClosed: true,
     items: [
       { key: 'nav.accounts', to: PATHS.adminAccounts, roles: ['sa'] },
       // Nhóm quyền của Thành viên (Q-31) — chỉ SA, khớp `@Roles('sa')` của API.
