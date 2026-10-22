@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, within } from '@/test/test-utils';
@@ -105,8 +105,35 @@ describe('Kho thanh lý', () => {
     renderWith([], [DEVICE, SERVICE_ACCOUNT]);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với TK-E2E-01' }));
     // UX-E14: một mục — "Mở hồ sơ" cạnh nó là hai mục cùng một đích.
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Mở hồ sơ để dùng lại']);
-    expect(screen.getByRole('menuitem', { name: 'Mở hồ sơ để dùng lại' })).toHaveClass('ok');
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Dùng lại…']);
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toHaveClass('ok');
+  });
+
+  it('thiết bị: "Dùng lại…" tới trang hồ sơ với hộp Dùng lại mở sẵn (?action=reuse)', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(jsonResponse(200, { items: [DEVICE], total: 1, counts: COUNTS, truncated: [] })),
+      ),
+    );
+    function Where() {
+      const location = useLocation();
+      return <p>{`at ${location.pathname}${location.search}`}</p>;
+    }
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/disposal']}>
+        <ToastProvider>
+          <Routes>
+            <Route path="/disposal" element={<DisposalScreen />} />
+            <Route path="*" element={<Where />} />
+          </Routes>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Thao tác với PC-E2E-01' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Dùng lại…' }));
+    expect(await screen.findByText('at /devices/d1?action=reuse')).toBeTruthy();
   });
 
   it('phần mềm: "Khôi phục…" tô ok, không có lối dùng lại riêng', async () => {

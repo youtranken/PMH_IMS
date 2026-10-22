@@ -69,12 +69,12 @@ describe('Cột Thao tác của danh sách thiết bị (Q-18)', () => {
     expect(handlers.onClone).toHaveBeenCalledTimes(1);
   });
 
-  it('đường hỏng: máy đã thanh lý thì Sửa tắt, menu chỉ còn Đổi trạng thái · Nhân bản (Q-20)', async () => {
+  it('đường hỏng: máy đã thanh lý thì Sửa tắt, menu chỉ còn Dùng lại… · Nhân bản (Q-33)', async () => {
     const handlers = setup('retired');
     expect(screen.getByRole('button', { name: 'Sửa máy PC-01' })).toBeDisabled();
-    expect(await menuNames()).toEqual(['Đổi trạng thái…', 'Nhân bản']);
-    expect(screen.getByRole('menuitem', { name: 'Đổi trạng thái…' })).toHaveClass('ok');
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi trạng thái…' }));
+    expect(await menuNames()).toEqual(['Dùng lại…', 'Nhân bản']);
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toHaveClass('ok');
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Dùng lại…' }));
     expect(handlers.onStatus).toHaveBeenCalledTimes(1);
     expect(handlers.onRetire).not.toHaveBeenCalled();
   });
@@ -94,7 +94,7 @@ describe('deviceMenuItems — bộ việc dùng chung của trang chi tiết', (
     expect(keys).toEqual(['edit', 'status', 'clone', 'retire']);
   });
 
-  it('máy đã thanh lý, nút "Đổi trạng thái" đã ở ngoài: menu chỉ còn Nhân bản', () => {
+  it('máy đã thanh lý, nút "Dùng lại…" đã ở ngoài: menu chỉ còn Nhân bản', () => {
     const keys = deviceMenuItems(t, true, {
       onEdit: noop,
       onStatus: noop,
