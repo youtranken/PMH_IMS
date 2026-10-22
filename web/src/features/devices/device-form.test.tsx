@@ -124,15 +124,15 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(screen.getByRole('button', { name: 'Site' })).toHaveTextContent(/KHO-CU.*\(ngừng dùng\)/);
   });
 
-  it('sửa: "giấy tờ lưu ngay" nằm trong nút (i) cạnh tiêu đề khu, không phải băng cảnh báo', async () => {
+  // UX-E20: ảnh và giấy tờ ghi thẳng, trùng tab Giấy tờ / khu "Hình dùng trên sơ đồ" — form Sửa
+  // chỉ còn một dòng chỉ đường.
+  it('sửa: không có khu Ảnh và giấy tờ, chỉ một dòng chỉ sang tab Giấy tờ', async () => {
     mockFetch();
     renderForm({ id: 'd1', code: 'PC-01', name: 'Máy', deviceTypeId: 't-on', status: 'in_use' } as DeviceRow);
-    const user = userEvent.setup();
-    expect(screen.queryByText(/có hiệu lực ngay/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }));
-    expect(
-      await screen.findByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Giấy tờ · quản lý ở tab Giấy tờ$/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Ảnh và giấy tờ/ })).toBeNull();
+    expect(screen.queryByLabelText('Chọn file để đính kèm')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Mặt trước' })).toBeNull();
   });
 
   /* Vị trí U trong tủ: hai ô chỉ hiện khi đã chọn tủ; bỏ tủ thì gửi U rỗng. */

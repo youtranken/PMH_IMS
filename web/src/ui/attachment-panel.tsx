@@ -81,6 +81,29 @@ function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) {
 }
 
 /**
+ * Một dòng thay cho panel giấy tờ trong form SỬA (UX-E20): "3 Giấy tờ · quản lý ở tab Giấy tờ".
+ *
+ * Panel ghi thẳng lúc bấm, không nằm trong lượt Lưu của form — đặt trong hộp có nút Hủy là
+ * một lời hứa sai, và trùng tab Giấy tờ của trang chi tiết. Chưa đọc được số thì không in số:
+ * "0 Giấy tờ" khi thật ra chưa biết là khẳng định sai.
+ */
+export function AttachmentTabNote({
+  ownerType,
+  ownerId,
+}: {
+  ownerType: AttachmentOwnerType;
+  ownerId: string;
+}) {
+  const { t } = useTranslation();
+  const count = useOwnerAttachments(ownerType, ownerId).data?.length;
+  return (
+    <p className="muted small">
+      {count === undefined ? t('attachments.inTabUnknown') : t('attachments.inTab', { count })}
+    </p>
+  );
+}
+
+/**
  * Panel giấy tờ đính kèm dùng chung (AD-15, FR-002).
  *
  * Gắn vào BẤT KỲ chủ thể nào qua cặp `ownerType`/`ownerId` — thiết bị, phiếu ISO, sự cố.

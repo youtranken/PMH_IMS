@@ -1804,7 +1804,6 @@ export default {
     lookModelSaved: 'Đã đặt ảnh cho mọi máy model {{model}}.',
     photoSectionTitle: 'Ảnh thiết bị',
     photoSectionHint: 'Không bắt buộc. Ảnh hiện trên sơ đồ thay cho biểu tượng loại.',
-    photoLiveTip: 'Ô ảnh ghi THẲNG: tải lên hay bỏ ảnh là có hiệu lực ngay, không chờ nút Lưu của hộp này.',
     photoDraftSaved: 'Đã đặt ảnh cho máy {{code}}.',
     photoDraftFailed: 'Đã thêm máy {{code}} nhưng chưa đặt được ảnh ({{reason}}). Mở hồ sơ máy → "Hình dùng trên sơ đồ" để tải lại.',
     photoRetry: 'Mở hồ sơ đặt lại ảnh',
@@ -1966,6 +1965,8 @@ export default {
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
+    inTab: '{{count}} Giấy tờ · quản lý ở tab Giấy tờ',
+    inTabUnknown: 'Giấy tờ · quản lý ở tab Giấy tờ',
     hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành…',
     forbidden: 'Bạn chưa có quyền xem giấy tờ của hồ sơ này.',
     hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh…',

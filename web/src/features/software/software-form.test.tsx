@@ -120,14 +120,13 @@ describe('Form hồ sơ phần mềm', () => {
     expect(group).toHaveClass('segmented');
   });
 
-  it('SỬA: lời nhắc "lưu ngay" của giấy tờ nằm sau nút (i) cạnh tiêu đề khu', async () => {
+  // UX-E20: panel giấy tờ ghi thẳng, trùng tab Giấy tờ — form Sửa chỉ còn một dòng chỉ đường.
+  it('SỬA: không nhúng panel giấy tờ, chỉ một dòng chỉ sang tab Giấy tờ', async () => {
     mockFetch();
     render(ROW);
-    expect(screen.queryByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.')).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }));
-    expect(
-      screen.getByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Giấy tờ · quản lý ở tab Giấy tờ$/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Chọn file để đính kèm')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' })).toBeNull();
   });
 });
 
