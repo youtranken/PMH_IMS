@@ -168,6 +168,10 @@ test.describe('Q-22 · Hợp đồng bảo trì', () => {
       'href',
       '/maintenance',
     );
+    // PW-A10: hợp đồng không còn tab Tổng quan — Ghi chú, Số hợp đồng ở dải tóm tắt.
+    await expect(page.getByRole('tab', { name: /^Giấy tờ/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Tổng quan' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Tóm tắt hồ sơ' }).getByText('Số hợp đồng', { exact: true })).toBeVisible();
     const saved = await page.request.get(`/api/v1/software?search=${encodeURIComponent(code)}&kind=maintenance`);
     expect(((await saved.json()) as { total: number }).total).toBe(1);
   });

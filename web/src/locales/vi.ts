@@ -2146,6 +2146,8 @@ export default {
     sectionSeatsContract: 'Ghế và hợp đồng',
     sectionNoteFiles: 'Ghi chú',
     contract: 'Số hợp đồng / PO',
+    /* Ô 3 của hợp đồng / dịch vụ: không có PO theo đợt mua như license. */
+    contractNumber: 'Số hợp đồng',
     contractHint: 'Dùng chung cho mọi ghế của đợt mua này.',
     perSeat: 'Mỗi ghế có hợp đồng, giấy tờ và ghi chú riêng',
     perSeatOff: 'Không tick: mọi ghế dùng chung số hợp đồng, ghi chú và giấy tờ của hồ sơ.',
@@ -2209,8 +2211,8 @@ export default {
     infoTitle: 'Thông tin',
     fillBlanks: 'Bổ sung {{count}} ô còn thiếu',
     termRange: '{{from}} → {{to}}',
+    termFrom: 'Từ {{from}}',
     siteCount: '{{count}} Tên miền',
-    fileCount: '{{count}} Giấy tờ',
     notePerSeat: 'Riêng từng ghế — xem ở Sửa hồ sơ',
     tabHistory: 'Lịch sử',
     renew: 'Gia hạn',
