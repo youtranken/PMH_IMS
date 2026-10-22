@@ -758,7 +758,7 @@ export function DeviceForm({
         </FoldSection>
 
         {/* Ảnh và giấy tờ (không bắt buộc) chỉ chọn ở THÊM MỚI: giữ ở trình duyệt tới lúc máy có
-            id rồi mới đẩy lên. SỬA chỉ còn một dòng chỉ sang tab Giấy tờ (UX-E20): ảnh và giấy tờ
+            id rồi mới đẩy lên. SỬA chỉ có một dòng chỉ sang tab Giấy tờ (UX-E20): ảnh và giấy tờ
             của máy đã có ghi thẳng lúc bấm, không thuộc lượt Lưu của hộp này — ảnh sửa ở khu
             "Hình dùng trên sơ đồ" của trang chi tiết. */}
         {device ? (

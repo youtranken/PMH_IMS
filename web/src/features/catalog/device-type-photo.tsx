@@ -14,6 +14,9 @@ import { useToast } from '@/ui/toast';
  * Tải lên kho tệp dùng chung (`files`, `ownerType = 'device_type'`: cùng trần cỡ, kiểm định dạng
  * theo nội dung, trần điểm ảnh) rồi gán cho loại; server chỉ nhận ảnh của CHÍNH loại này và đưa
  * ảnh cũ vào thùng rác. Chỉ SA / Quản trị (server chặn vai khác).
+ *
+ * Ghi NGAY khi chọn tệp, không chờ nút Lưu của form — cùng cách với biểu tượng sơ đồ đứng ngay
+ * trên (`DeviceTypeDiagramIcon`); dòng gợi ý nói rõ điều đó để Hủy không bị hiểu là bỏ ảnh.
  */
 export function DeviceTypePhoto({
   typeId,
@@ -51,7 +54,13 @@ export function DeviceTypePhoto({
     setBusy(true);
     try {
       const saved = await uploadFile<{ id: string }>('/api/v1/files', file, csrfToken, { ownerType: 'device_type', ownerId: typeId });
-      await assign(saved.id);
+      try {
+        await assign(saved.id);
+      } catch (err) {
+        // Gán hỏng thì tệp vừa tải không thuộc chỗ nào — loại không có màn Giấy tờ để tự dọn.
+        await apiFetch(`/api/v1/files/${saved.id}`, { method: 'DELETE', csrfToken }).catch(() => undefined);
+        throw err;
+      }
       toast({ tone: 'ok', message: t('catalog.typePhotoSaved', { name: typeName }) });
     } catch (err) {
       setError(errorMessage(err));

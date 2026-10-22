@@ -281,6 +281,29 @@ describe('CatalogForm — loại thiết bị: biểu tượng và ảnh', () =>
       '/api/v1/catalog/device-types/t-1/photo?v=f-1',
     );
   });
+
+  // Gán hỏng thì tệp vừa tải không thuộc chỗ nào (loại không có màn Giấy tờ): xoá ngay.
+  it('ảnh riêng: gán hỏng thì xoá tệp vừa tải và báo lỗi', async () => {
+    const calls: string[] = [];
+    stub((url, init) => {
+      calls.push(`${String(init?.method)} ${url}`);
+      if (url === '/api/v1/files') return jsonResponse(201, { id: 'f-2' });
+      if (url.endsWith('/photo')) return jsonResponse(500, { message: 'Lỗi máy chủ' });
+      return jsonResponse(200, {});
+    });
+    const user = userEvent.setup();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <CatalogForm entity="device_type" row={TYPE} csrfToken="t" onClose={vi.fn()} onSaved={vi.fn()} canSetPhoto />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'anh.png', { type: 'image/png' });
+    await user.upload(await screen.findByLabelText('Chọn ảnh riêng của loại'), file);
+    await waitFor(() => expect(calls).toContain('DELETE /api/v1/files/f-2'));
+    expect(screen.queryByRole('img', { name: 'Ảnh riêng của Switch E2E' })).toBeNull();
+  });
 });
 
 /** Loại dây (Q-23): màu chọn từ bảng ô màu token — không có ô nhập mã màu. */

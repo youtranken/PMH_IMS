@@ -143,6 +143,41 @@ describe('Màn Tài khoản', () => {
     expect(within(dialog).queryByLabelText('Nhóm quyền')).toBeNull();
   });
 
+  // Vai ghi xong mà bước nhóm hỏng: bấm Lưu lại chỉ gửi lại nhóm, không đổi lại vai đã đổi.
+  it('Vai trò & nhóm quyền: nhóm hỏng sau khi đổi vai — Lưu lại không gửi lại vai', async () => {
+    const admin = { ...ROWS[1], id: 'u-ad', fullName: 'E2E Quản trị', role: 'admin', lockedUntil: null, featureGroupId: null };
+    const calls: string[] = [];
+    let groupFails = 1;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (init?.method && init.method !== 'GET') calls.push(url);
+        if (url.endsWith('/u-ad/role')) return Promise.resolve(jsonResponse(200, {}));
+        if (url.endsWith('/u-ad/feature-group')) {
+          if (groupFails-- > 0) return Promise.resolve(jsonResponse(500, { message: 'Lỗi máy chủ' }));
+          return Promise.resolve(jsonResponse(200, {}));
+        }
+        if (url.startsWith('/api/v1/feature-groups')) return Promise.resolve(jsonResponse(200, [{ id: 'g1', name: 'Nhóm Kho' }]));
+        return Promise.resolve(jsonResponse(200, { items: [ROWS[0], admin], total: 2 }));
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Quản trị');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Quản trị' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Vai trò & nhóm quyền…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Vai trò & nhóm quyền: E2E Quản trị' });
+    await user.click(within(dialog).getByRole('radio', { name: /^Thành viên/ }));
+    await user.click(within(dialog).getByLabelText('Nhóm quyền'));
+    await user.click(await screen.findByRole('option', { name: 'Nhóm Kho' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dialog).findByRole('alert')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.filter((u) => u.endsWith('/feature-group'))).toHaveLength(2));
+    expect(calls.filter((u) => u.endsWith('/role'))).toHaveLength(1);
+  });
+
   // Chưa kích hoạt 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.
   it('"Đặt lại xác thực 2 lớp" tắt kèm lý do khi người đó chưa kích hoạt', async () => {
     stubFetch();

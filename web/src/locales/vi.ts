@@ -769,7 +769,7 @@ export default {
     typeIconHint: 'Hiện ở khung ảnh của máy chưa có ảnh thật.',
     typeIconGeneric: 'Chung',
     typePhoto: 'Ảnh riêng của loại',
-    typePhotoHint: 'Ảnh JPG / PNG thay biểu tượng ở mọi máy loại này chưa có ảnh.',
+    typePhotoHint: 'Ảnh JPG / PNG thay biểu tượng ở mọi máy loại này chưa có ảnh. Lưu ngay khi chọn tệp.',
     typePhotoNone: 'Chưa có ảnh — dùng biểu tượng.',
     typePhotoUploadLabel: 'Chọn ảnh riêng của loại',
     typePhotoPreview: 'Ảnh riêng của {{name}}',

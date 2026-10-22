@@ -666,8 +666,9 @@ function DeviceThumb({ device }: { device: DeviceRow }) {
   const lists = useCatalogLists();
   const type = lists.data?.deviceTypes.find((item) => item.id === device.deviceTypeId);
   /* Ảnh hỏng (tệp đã xoá, server lỗi) thì về ô chữ loại — không để lại một khối nền tối trơn. Nhớ
-     ĐÚNG URL đã hỏng chứ không một cờ chung: ảnh mới (model vừa có ảnh, phiên bản đổi) thì thử lại. */
-  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+     ĐÚNG các URL đã hỏng chứ không một cờ chung: ảnh mới (model vừa có ảnh, phiên bản đổi) thì thử
+     lại. Phải là TẬP: chỉ nhớ một URL thì hai ảnh cùng hỏng sẽ đổi qua lại mãi. */
+  const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
   const own =
     device.deviceModelId && device.modelPhotoVersion
       ? deviceModelPhotoSrc(device.deviceModelId, device.modelPhotoVersion)
@@ -675,7 +676,7 @@ function DeviceThumb({ device }: { device: DeviceRow }) {
         ? devicePhotoSrc(device.id, 'front', device.photoFrontFileId)
         : null;
   const typePhoto = type?.photoFileId ? deviceTypePhotoSrc(device.deviceTypeId, type.photoFileId) : null;
-  const src = own && own !== brokenSrc ? own : typePhoto && typePhoto !== brokenSrc ? typePhoto : null;
+  const src = [own, typePhoto].find((url): url is string => url !== null && !broken.has(url)) ?? null;
   const isOwn = src !== null && src === own;
   return (
     <span className={src ? 'cell-thumb' : 'cell-thumb is-empty'} data-testid="device-thumb">
@@ -685,7 +686,7 @@ function DeviceThumb({ device }: { device: DeviceRow }) {
           alt={isOwn ? t('devices.photoOf', { code: device.code }) : device.deviceTypeName}
           title={isOwn ? undefined : device.deviceTypeName}
           loading="lazy"
-          onError={() => setBrokenSrc(src)}
+          onError={() => setBroken((prev) => new Set(prev).add(src))}
         />
       ) : (
         <span role="img" aria-label={device.deviceTypeName} title={device.deviceTypeName} className="cell-thumb-icon">

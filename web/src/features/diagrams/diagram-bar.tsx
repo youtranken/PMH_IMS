@@ -133,8 +133,8 @@ export function BarButton({ action }: { action: BarAction }) {
         type="button"
         className={className}
         disabled={action.disabled || Boolean(action.disabledReason)}
+        title={help}
         {...reason.buttonProps}
-        title={action.disabledReason ? undefined : help}
         onClick={action.onSelect}
       >
         {action.label}

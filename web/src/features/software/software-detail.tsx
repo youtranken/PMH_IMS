@@ -158,8 +158,8 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
    */
   const counts = useTabCounts("software", id, me);
   const tabItems = [
-    /* Hợp đồng / dịch vụ (PW-A10): tab Tổng quan chỉ còn Ghi chú, nay nằm ở dải tóm tắt — bỏ tab.
-       Hồ sơ chưa về thì vẫn để, cùng lý do với tab "Máy đang dùng" bên dưới. */
+    /* Hợp đồng / dịch vụ (PW-A10): mọi thông tin, kể cả Ghi chú, nằm ở dải tóm tắt nên không có
+       tab Hồ sơ. Hồ sơ chưa về thì vẫn để, cùng lý do với tab "Máy đang dùng" bên dưới. */
     ...(software.data && isContractKind(software.data.kind)
       ? []
       : [{ key: "profile", label: t("software.tabProfile") }]),
@@ -198,6 +198,8 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
     tab,
     tabItems.map((entry) => entry.key),
     setTab,
+    // Link cũ `?tab=profile` của hợp đồng: kẹp về tab mở sẵn của loại, không về tab đã không còn.
+    defaultTab(software.data?.kind),
   );
 
   if (software.isLoading) return <Loading />;
@@ -370,7 +372,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                 />
               </>
             ) : item.startDate ? (
-              /* Không có hạn: ngày bắt đầu ở đây, vì hợp đồng / dịch vụ không còn tab Tổng quan. */
+              /* Không có hạn: ngày bắt đầu ở đây, vì hợp đồng / dịch vụ không có tab Hồ sơ để ghi nó. */
               t("software.termFrom", { from: formatDate(item.startDate) })
             ) : null,
           },
@@ -396,7 +398,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             : supportsWebsites(item.kind)
               ? /* Ô Giấy tờ trùng tab Giấy tờ (PW-A11) — tên miền / SSL dùng ô này cho số hợp đồng. */
                 { key: "contract", label: t("software.contract"), value: item.contract }
-              : /* Ghi chú thay ô Giấy tờ (trùng số trên tab Giấy tờ, PW-A11): tab Tổng quan đã bỏ. */
+              : /* Ghi chú thay ô Giấy tờ (trùng số trên tab Giấy tờ, PW-A11): hợp đồng không có tab Hồ sơ. */
                 { key: "note", label: t("software.note"), value: item.note },
         ]}
       />

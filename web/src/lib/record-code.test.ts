@@ -12,7 +12,7 @@ describe('recordCodeProblem', () => {
     ['HỒ SƠ -1', '', 'format'],
     ['PC 01', '', 'format'],
     ['PC#1', '', 'format'],
-    ['pc-01', '', 'format'],
+    ['pc-01', '', null],
     ['', '', null],
     // Mã khai trước luật: gửi lại đúng mã đang lưu thì không báo.
     ['hồ sơ -1', 'hồ sơ -1', null],

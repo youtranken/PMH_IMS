@@ -124,6 +124,16 @@ describe('Danh mục · biểu tượng và ảnh của loại thiết bị', ()
     );
   });
 
+  // Hai người cùng thay ảnh: lượt sau phải bỏ ảnh của lượt trước vào thùng rác, không để ảnh mồ côi.
+  it('hai lượt thay ảnh cùng lúc: chỉ còn sống đúng ảnh đang dùng', async () => {
+    const base = await upload(typeId, png(30));
+    await photos.setPhoto(SA.email, typeId, base.id);
+    const [b, c] = await Promise.all([upload(typeId, png(32)), upload(typeId, png(34))]);
+    await Promise.all([photos.setPhoto(SA.email, typeId, b.id), photos.setPhoto(SA.email, typeId, c.id)]);
+    const current = (await catalog.lists({ includeInactive: true })).deviceTypes.find((t) => t.id === typeId)?.photoFileId;
+    expect((await files.listFor('device_type', typeId)).map((f) => f.id)).toEqual([current]);
+  });
+
   it('tệp không gắn được vào loại không có thật', async () => {
     await expect(upload('00000000-0000-4000-8000-000000000000', png(20))).rejects.toBeTruthy();
   });

@@ -102,7 +102,7 @@ interface Dashboard {
   breakGlass: Block<BreakGlassItem>;
   subnetLoad: Block<SubnetLoadItem> & { thresholdPercent?: number | null };
   staleSecrets: Block<StaleSecretItem>;
-  /** Chỉ đọc `total` cho ô số — màn không còn khối danh sách (Q-33). */
+  /** Chỉ đọc `total` cho ô số "Vừa thanh lý" — danh sách xem ở Kho thanh lý (Q-33). */
   disposed: Block<unknown>;
 }
 

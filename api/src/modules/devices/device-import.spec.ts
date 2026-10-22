@@ -92,6 +92,15 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
     expect(plan.rows[0].action).not.toBe('error');
   });
 
+  it('mã đã có trong kho, file viết thường: giữ đúng mã đang lưu, không ghi đè thành chữ thường', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Mã thiết bị *': 'sw-core-01' }]),
+      context({ devices: new Map([['sw-core-01', existing()]]) }),
+    );
+    expect(plan.rows[0].action).not.toBe('error');
+    expect(plan.rows[0].values).toMatchObject({ code: 'SW-CORE-01' });
+  });
+
   it.each([
     ['Mã thiết bị *', 'Mã thiết bị'],
     ['Tên thiết bị *', 'Tên thiết bị'],

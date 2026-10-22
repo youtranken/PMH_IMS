@@ -859,6 +859,10 @@ export function AccountsScreen({ me }: { me: Me }) {
                 () => setRole.mutateAsync({ id: roleFor.id, role }),
                 t('auth.stepUpFor', { action: t('accounts.changeRoleOf', { name: roleFor.fullName }) }),
               );
+              /* Vai đã ghi: hộp phải biết, để bước nhóm hỏng rồi bấm Lưu lại thì chỉ gửi lại nhóm —
+                 không đòi mã 6 số và đổi lại một vai đã đổi xong. */
+              setRoleFor({ ...roleFor, role });
+              void refresh();
             }
             const groupChanged = role === 'member' && featureGroupId !== (roleFor.featureGroupId ?? null);
             if (groupChanged) await setFeatureGroup.mutateAsync({ id: roleFor.id, featureGroupId });

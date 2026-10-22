@@ -231,6 +231,14 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
     expect(screen.getAllByText('Hợp đồng bảo trì')).toHaveLength(1);
   });
 
+  it('hợp đồng: link cũ ?tab=profile mở tab Giấy tờ, không mở panel hồ sơ đã bỏ', async () => {
+    mockFetch([], row({ id: 'm1', code: 'HD-E2E-01', kind: 'maintenance', contract: 'HD-77' }));
+    renderDetail('/maintenance/m1?tab=profile');
+    await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(await screen.findByRole('tab', { name: /Giấy tờ/, selected: true })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { selected: true, name: /Hồ sơ|Tổng quan/ })).toBeNull();
+  });
+
   it('hợp đồng không có ngày hết hạn: ngày bắt đầu nằm trong ô Hết hạn (không còn tab để ghi)', async () => {
     mockFetch([], row({ id: 'm2', code: 'DV-E2E-02', kind: 'maintenance', startDate: '2026-03-01', endDate: null }));
     renderDetail('/maintenance/m2');

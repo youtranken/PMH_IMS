@@ -1335,10 +1335,6 @@ export class IpAddressService {
   }
 }
 
-/**
- * Q-14: hồ sơ IP phải gắn thiết bị hoặc người/bộ phận — có hồ sơ là Đang dùng (Q-02), và một
- * hồ sơ không chủ chỉ là dòng "Trống" mồ côi đứng cạnh ô trống thật.
- */
 /** "Người — Phòng ban" của máy, cùng cách ghép với ô chọn máy bên web (`deviceOwnerText`). */
 function deviceOwnerOf(device: { assignedTo: string | null; department: string | null }): string | null {
   return [device.assignedTo, device.department].filter((part) => part?.trim()).join(' — ') || null;
@@ -1349,6 +1345,10 @@ function ownUsedBy(deviceId: string | null | undefined, usedBy: string | null | 
   return deviceId ? null : usedBy?.trim() || null;
 }
 
+/**
+ * Q-14: hồ sơ IP phải gắn thiết bị hoặc người/bộ phận — có hồ sơ là Đang dùng (Q-02), và một
+ * hồ sơ không chủ chỉ là dòng "Trống" mồ côi đứng cạnh ô trống thật.
+ */
 function requireOwner(
   deviceId: string | null | undefined,
   usedBy: string | null | undefined,

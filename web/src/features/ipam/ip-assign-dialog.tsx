@@ -27,10 +27,6 @@ export function ownerRule(t: TFunction, deviceId: string, usedBy: string): strin
 }
 
 /**
- * Ô chọn thiết bị cho hồ sơ IP — hộp Cấp và hộp Sửa hỏi cùng một câu, cùng một cách. Ghi ngay
- * cạnh mã máy nào ĐÃ giữ IP để khỏi cấp hai địa chỉ cho một máy (Q-20).
- */
-/**
  * Ô "Người dùng / phòng ban" của IP GẮN MÁY: chỉ đọc, theo hồ sơ máy (LF-03, Q-33). Bản sao gõ
  * riêng trong hồ sơ IP là thứ làm sổ nói tên người cũ sau khi máy đổi tay.
  */
@@ -43,6 +39,10 @@ export function IpUsedByFromDevice({ owner }: { owner: string }) {
   );
 }
 
+/**
+ * Ô chọn thiết bị cho hồ sơ IP — hộp Cấp và hộp Sửa hỏi cùng một câu, cùng một cách. Ghi ngay
+ * cạnh mã máy nào ĐÃ giữ IP để khỏi cấp hai địa chỉ cho một máy (Q-20).
+ */
 export function IpDeviceCombobox({
   deviceId,
   term,

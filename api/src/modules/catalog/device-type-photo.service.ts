@@ -42,9 +42,17 @@ export class DeviceTypePhotoService {
         });
       }
     }
-    const before = type?.photoFileId ?? null;
-    if (before === fileId) return;
     await this.db.transaction(async (tx) => {
+      /* Đọc ảnh cũ TRONG transaction, khoá dòng: hai người cùng thay ảnh thì lượt sau phải thấy
+         ảnh của lượt trước để bỏ vào thùng rác — đọc ngoài thì cả hai cùng bỏ ảnh gốc, ảnh giữa
+         mồ côi (không màn nào dọn được) và lịch sử ghi sai `before`. */
+      const [locked] = await tx
+        .select({ photoFileId: deviceTypeTable.photoFileId })
+        .from(deviceTypeTable)
+        .where(eq(deviceTypeTable.id, typeId))
+        .for('update');
+      const before = locked?.photoFileId ?? null;
+      if (before === fileId) return;
       await tx.update(deviceTypeTable).set({ photoFileId: fileId, updatedAt: new Date() }).where(eq(deviceTypeTable.id, typeId));
       await this.catalog.recordWithin(tx, actor, DEVICE_TYPE, typeId, fileId ? 'photo_set' : 'photo_removed', {
         photoFileId: { before, after: fileId },

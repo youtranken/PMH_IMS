@@ -836,13 +836,6 @@ export class NatRuleService {
   }
 }
 
-/**
- * Bản ghi DB → hình dạng mà `natChanges` so được.
- *
- * `internalIp` phải đi qua `hostOf`: cột là kiểu `inet` nên Postgres trả về `172.16.10.5/32`,
- * còn giá trị mới từ form là `172.16.10.5`. Không chuẩn hóa thì MỌI lượt sửa đều đẻ ra một
- * dòng "IP trong: 172.16.10.5/32 → 172.16.10.5" — sai, và lặp lại mãi.
- */
 /** Bản đã trộn của một lượt sửa → cùng hình với `snapshotOf`, chuẩn hoá đúng như câu UPDATE. */
 function snapshotOfInput(merged: NatRuleInput): NatRuleSnapshot {
   return {
@@ -857,6 +850,13 @@ function snapshotOfInput(merged: NatRuleInput): NatRuleSnapshot {
   };
 }
 
+/**
+ * Bản ghi DB → hình dạng mà `natChanges` so được.
+ *
+ * `internalIp` phải đi qua `hostOf`: cột là kiểu `inet` nên Postgres trả về `172.16.10.5/32`,
+ * còn giá trị mới từ form là `172.16.10.5`. Không chuẩn hóa thì MỌI lượt sửa đều đẻ ra một
+ * dòng "IP trong: 172.16.10.5/32 → 172.16.10.5" — sai, và lặp lại mãi.
+ */
 function snapshotOf(row: typeof natRuleTable.$inferSelect): NatRuleSnapshot {
   return {
     ports: describePortRange(row.externalFrom, row.externalTo),

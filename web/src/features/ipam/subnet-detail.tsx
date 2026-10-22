@@ -78,6 +78,12 @@ interface NatRef {
   voidedAt: string | null;
 }
 
+/** File Excel của một dải và của mọi IP — nút Xuất ở đầu trang (desktop) và menu ⋯ (điện thoại). */
+export function subnetExport(subnet: { id: string; cidr: string }): { url: string; fileName: string } {
+  return { url: `/api/v1/ipam/subnets/${subnet.id}/export.xlsx`, fileName: `ip-${subnet.cidr.replace("/", "-")}.xlsx` };
+}
+export const ALL_IP_EXPORT = { url: "/api/v1/ipam/addresses/export.xlsx", fileName: "ip-tat-ca.xlsx" };
+
 /**
  * Cột PHẢI của màn Địa chỉ IP: toàn bộ một dải — IP đã có hồ sơ và ô còn trống, xếp theo thứ
  * tự địa chỉ.
@@ -88,12 +94,6 @@ interface NatRef {
  * Nhận cả bản ghi dải qua props (cột trái đã tải danh sách rồi) — không hỏi lại API cho một
  * thứ đang nằm sẵn trong tay.
  */
-/** File Excel của một dải và của mọi IP — nút Xuất ở đầu trang (desktop) và menu ⋯ (điện thoại). */
-export function subnetExport(subnet: { id: string; cidr: string }): { url: string; fileName: string } {
-  return { url: `/api/v1/ipam/subnets/${subnet.id}/export.xlsx`, fileName: `ip-${subnet.cidr.replace("/", "-")}.xlsx` };
-}
-export const ALL_IP_EXPORT = { url: "/api/v1/ipam/addresses/export.xlsx", fileName: "ip-tat-ca.xlsx" };
-
 export function SubnetPane({
   subnet: item,
   subnets = [],
@@ -1061,7 +1061,7 @@ export function IpForm({
     term: record.deviceCode ?? "",
   });
   const [usedBy, setUsedBy] = useState(record.usedBy ?? "");
-  /** IP gắn máy đọc người dùng theo máy (LF-03) — không còn ô tự ghi khi đã chọn máy. */
+  /** IP gắn máy đọc người dùng theo máy (LF-03) — đã chọn máy thì không có ô tự ghi. */
   const [deviceOwner, setDeviceOwner] = useState(record.deviceId ? (record.usedBy ?? "") : "");
   const departments = useDepartments();
   const [assignedAt, setAssignedAt] = useState(record.assignedAt ?? "");

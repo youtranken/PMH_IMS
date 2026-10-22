@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, within } from '@/test/test-utils';
+import { fireEvent, jsonResponse, renderWithI18n, screen, waitFor, within } from '@/test/test-utils';
 import { DevicesScreen } from './devices-screen';
 
 /**
@@ -34,8 +34,9 @@ function mockFetch() {
             row('d1', 'SW-01', { deviceModelId: 'm1', modelPhotoVersion: '2026-10-01T00:00:00.000Z' }),
             row('d2', 'SW-02'),
             row('d3', 'AP-03', { deviceTypeId: 't2', deviceTypeName: 'Access Point' }),
+            row('d4', 'AP-04', { deviceTypeId: 't2', deviceTypeName: 'Access Point', deviceModelId: 'm4', modelPhotoVersion: 'v1' }),
           ],
-          total: 3,
+          total: 4,
         }));
       }
       if (url.startsWith('/api/v1/ipam/devices/addresses')) {
@@ -124,5 +125,24 @@ describe('/devices — cột theo Q-27', () => {
     const r3 = screen.getByRole('row', { name: /AP-03/ });
     const photo = await within(r3).findByRole('img', { name: 'Access Point' });
     expect(photo.getAttribute('src')).toBe('/api/v1/catalog/device-types/t2/photo?v=f9');
+  });
+
+  // Hai ảnh cùng hỏng (model + loại): dừng ở biểu tượng, không đổi qua lại hai URL mãi.
+  it('cột Ảnh: ảnh model lẫn ảnh loại đều hỏng thì về biểu tượng, không đổi qua lại', async () => {
+    mockFetch();
+    renderScreen();
+    // Chờ cột IP về (bảng dựng lại hàng một lượt) để thẻ ảnh không bị thay giữa chừng.
+    const r1 = await screen.findByRole('row', { name: /SW-01/ }, { timeout: 5000 });
+    await within(r1).findByText('10.0.0.1 +1');
+    const r4 = screen.getByRole('row', { name: /AP-04/ });
+    const thumb = within(r4).getByTestId('device-thumb');
+    const first = within(thumb).getByRole('img', { name: 'Ảnh AP-04' });
+    expect(first.getAttribute('src')).toContain('/api/v1/device-models/m4/photo/front');
+    fireEvent.error(first);
+    const second = await within(thumb).findByRole('img', { name: 'Access Point' });
+    expect(second.tagName).toBe('IMG');
+    fireEvent.error(second);
+    await waitFor(() => expect(thumb.querySelector('img')).toBeNull());
+    expect(thumb.querySelector('svg[data-icon="access_point"]')).not.toBeNull();
   });
 });
