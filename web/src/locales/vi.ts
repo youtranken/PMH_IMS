@@ -3695,6 +3695,7 @@ export default {
       serviceAccountImported: 'Nhập tài khoản dịch vụ từ Excel',
       ispImported: 'Nhập đường truyền từ Excel',
       softwareImported: 'Nhập phần mềm từ Excel',
+      deviceModelExported: 'Xuất danh sách model thiết bị',
       disposalExported: 'Xuất kho thanh lý',
       expiryRenewed: 'Gia hạn',
       expiryDigestSent: 'Gửi email tổng hợp hạn',

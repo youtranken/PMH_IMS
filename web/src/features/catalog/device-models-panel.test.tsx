@@ -105,3 +105,18 @@ describe('Danh mục → Model thiết bị (Q-26)', () => {
     expect(screen.queryByRole('menuitem', { name: /Gán model/ })).toBeNull();
   });
 });
+
+// UX-E30: tab Model có Xuất Excel như các tab khác — đúng bộ lọc đang xem.
+describe('Model thiết bị — Xuất Excel', () => {
+  it('nút "Xuất Excel" gọi /device-models/export.xlsx kèm ô tìm', async () => {
+    mockFetch();
+    renderPanel('sa');
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('searchbox'), 'C92');
+    const fetchMock = fetch as unknown as { mock: { calls: [RequestInfo | URL][] } };
+    // Ô tìm có debounce: chờ danh sách hỏi theo từ đã gõ rồi mới Xuất — file theo đúng thứ đang xem.
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('search=C92'))).toBe(true));
+    await user.click(screen.getByRole('button', { name: /Xuất Excel/ }));
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/v1/device-models/export.xlsx?search=C92'))).toBe(true));
+  });
+});

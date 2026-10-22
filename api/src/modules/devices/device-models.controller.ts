@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patc
 import type { Response } from 'express';
 import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, ValidateIf } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { NoStepUp } from '../auth/step-up.decorator';
@@ -65,12 +67,39 @@ export class DeviceModelsController {
   constructor(
     private readonly models: DeviceModelsService,
     private readonly photos: DevicePhotosService,
+    private readonly excel: ExcelExportService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
   @Get()
   list(@Query() query: ListQueryDto) {
     return this.models.list({ search: query.search, deviceTypeId: query.deviceTypeId, manufacturer: query.manufacturer }, parsePageQuery(query));
+  }
+
+  /**
+   * Xuất đúng bộ lọc đang xem của tab Model (UX-E30, FR-028). ĐẶT TRƯỚC `@Get(':id')`: Nest khớp
+   * route theo thứ tự khai báo, để sau thì `export.xlsx` bị `:id` nuốt.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('device_model.exported', 'device_model')
+  @Get('export.xlsx')
+  async exportModels(@Query() query: ListQueryDto, @Res() res: Response) {
+    const rows = await this.models.listAll({ search: query.search, deviceTypeId: query.deviceTypeId, manufacturer: query.manufacturer });
+    const buffer = await this.excel.build({
+      sheetName: 'Model thiết bị',
+      columns: [
+        { header: 'Loại', width: 18, value: (r) => r.deviceTypeName },
+        { header: 'Hãng', width: 18, value: (r) => r.manufacturer ?? '' },
+        { header: 'Model', width: 28, value: (r) => r.model },
+        { header: 'Gắn tủ', width: 10, value: (r) => (r.rackMountable ? 'Có' : 'Không') },
+        { header: 'Số U', width: 8, value: (r) => r.uSize },
+        { header: 'Số cổng', width: 10, value: (r) => r.portCount },
+        { header: 'Số máy', width: 10, value: (r) => r.deviceCount },
+        { header: 'Có ảnh', width: 10, value: (r) => (r.photoFrontFileId ? 'Có' : 'Không') },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'model-thiet-bi.xlsx');
   }
 
   @Roles('sa', 'admin', 'member')

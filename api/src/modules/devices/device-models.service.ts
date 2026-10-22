@@ -82,6 +82,16 @@ export class DeviceModelsService {
     return { items: await this.decorate(rows), total: Number(total[0]?.value ?? 0) };
   }
 
+  /** Cả danh sách theo bộ lọc, cùng thứ tự với `list` — chỉ cho file xuất (FR-028, UX-E30). */
+  async listAll(filter: DeviceModelFilter): Promise<DeviceModelItem[]> {
+    const rows = await this.db
+      .select()
+      .from(deviceModelTable)
+      .where(this.whereOf(filter))
+      .orderBy(asc(sql`coalesce(${deviceModelTable.manufacturer}, '')`), asc(deviceModelTable.model), asc(deviceModelTable.id));
+    return this.decorate(rows);
+  }
+
   async get(id: string): Promise<DeviceModelItem> {
     const [row] = await this.db.select().from(deviceModelTable).where(eq(deviceModelTable.id, id));
     if (!row) throw notFound();
