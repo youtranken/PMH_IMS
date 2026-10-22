@@ -64,7 +64,7 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     mockCount(2);
     renderShell(ADMIN);
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
-    const link = within(nav).getByRole('link', { name: 'Duyệt mở két' });
+    const link = within(nav).getByRole('link', { name: 'Yêu cầu mở két' });
     expect(await within(link).findByText('2')).toBeInTheDocument();
     expect(link).toHaveAccessibleDescription('2 Yêu cầu chờ duyệt');
     // AX-03: câu mô tả nằm trong một landmark (banner), không trôi ngoài mọi landmark.
@@ -75,7 +75,7 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     const fetchMock = mockCount(0);
     renderShell(ADMIN);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const link = screen.getByRole('link', { name: 'Duyệt mở két' });
+    const link = screen.getByRole('link', { name: 'Yêu cầu mở két' });
     expect(link).not.toHaveAccessibleDescription();
   });
 

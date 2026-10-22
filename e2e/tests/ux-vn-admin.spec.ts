@@ -145,17 +145,17 @@ test.describe('Tài khoản — lọc, lý do khóa, đổi vai', () => {
     const user = await createMember(page);
     await page.goto('/admin/accounts');
     await searchAndWaitForFilter(page, user.email);
-    await rowAction(page, user.fullName, 'Đổi vai trò…');
-    const dialog = page.getByRole('dialog', { name: `Đổi vai trò: ${user.fullName}` });
+    await rowAction(page, user.fullName, 'Vai trò & nhóm quyền…');
+    const dialog = page.getByRole('dialog', { name: `Vai trò & nhóm quyền: ${user.fullName}` });
     await dialog.getByRole('radio', { name: /^Quản trị/ }).check();
-    await dialog.getByRole('button', { name: 'Đổi vai trò', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(user.fullName) }).getByText('Quản trị')).toBeVisible();
     expect(sql(`SELECT role FROM users WHERE id = '${user.id}'`)).toBe('admin');
 
     const saFullName = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
     await searchAndWaitForFilter(page, E2E_SA.email);
     const menu = await rowActionNames(page, saFullName);
-    expect(menu).not.toContain('Đổi vai trò…');
+    expect(menu).not.toContain('Vai trò & nhóm quyền…');
     expect(menu).not.toContain('Khóa');
   });
 

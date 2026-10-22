@@ -241,6 +241,7 @@ export default {
     groupIp: 'Địa chỉ IP',
     deviceOnDiagram: '{{code}} trên {{diagram}}',
     deviceOnDiagramSub: 'Mở bản vẽ, bay tới máy',
+    natTitle: '{{protocol}} {{ports}} → {{ip}}:{{port}}',
     groupSubnet: 'Dải mạng',
     ipTitle: 'IP {{address}}',
     ipSub: '{{owner}} · {{subnet}}',
@@ -440,9 +441,6 @@ export default {
     /* Mảng thương hiệu cạnh card đăng nhập (màn rộng). */
     panelOrg: 'Phú Mỹ Hưng',
     panelSystem: 'IMS — Quản lý hệ thống IT',
-    panelPoint1: 'Thiết bị, phần mềm, mạng và đường truyền ở một chỗ.',
-    panelPoint2: 'Nhắc trước khi bản quyền, bảo hành, đường truyền hết hạn.',
-    panelPoint3: 'Két mật khẩu mã hóa; mỗi lần mở đều ghi nhật ký.',
     notYou: 'Không phải {{email}}?',
     signOut: 'Đăng xuất',
     signingOut: 'Đang đăng xuất…',
@@ -573,7 +571,7 @@ export default {
     diagrams: 'Sơ đồ mạng',
     serviceAccounts: 'Tài khoản dịch vụ',
     vaultAccess: 'Quyền két sắt',
-    approvals: 'Duyệt mở két',
+    approvals: 'Yêu cầu mở két',
     approvalsMine: 'Xin mở két',
     vault: 'Két sắt',
     disposal: 'Kho thanh lý',
@@ -2666,8 +2664,6 @@ export default {
     /* Ô chọn nhóm ở form tài khoản. "Đủ quyền" = chưa gán nhóm. */
     field: 'Nhóm quyền',
     fullAccess: 'Đủ quyền',
-    change: 'Đổi nhóm quyền…',
-    changeTitle: 'Nhóm quyền của {{name}}',
     changed: 'Đã đổi nhóm quyền của {{name}}.',
   },
   accounts: {
@@ -2808,8 +2804,8 @@ export default {
     footprintRequestsFailed: 'Yêu cầu mở két (không đếm được)',
     footprintDevices: '{{count}} Thiết bị đang ghi người này sử dụng',
     footprintDevicesFailed: 'Thiết bị đang ghi người này sử dụng (không đếm được)',
-    changeRole: 'Đổi vai trò…',
-    changeRoleSubmit: 'Đổi vai trò',
+    roleAndGroup: 'Vai trò & nhóm quyền…',
+    roleAndGroupOf: 'Vai trò & nhóm quyền: {{name}}',
     changeRoleOf: 'Đổi vai trò: {{name}}',
     changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được mọi két theo vai — quyền két gán riêng không còn tác dụng.',
     changeRoleToMember: 'Hạ xuống Thành viên là mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',
@@ -4003,7 +3999,7 @@ export default {
     checkAlsoMatched: 'Còn {{count}} dòng khớp khác nhưng hẹp hơn.',
   },
   approvals: {
-    title: 'Duyệt mở két',
+    title: 'Yêu cầu mở két',
     subtitle: 'Yêu cầu xin mở két để xem mật khẩu.',
     /* Member không duyệt gì — màn của họ là danh sách yêu cầu của chính mình. */
     titleMine: 'Xin mở két',
@@ -4755,8 +4751,6 @@ export default {
     secretCount: '{{count}} Ngăn',
     staleSince: 'Đổi lần cuối {{date}} · {{days}} ngày trước',
 
-    disposed: 'Kho thanh lý · 7 ngày',
-    seeAllDisposed: 'Xem toàn bộ kho thanh lý',
     /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */
     needsYou: 'Cần bạn duyệt ({{count}})',
     isoNeedsYou: 'Phiếu ISO cần bạn duyệt ({{count}})',
@@ -4902,11 +4896,11 @@ export default {
     secretProbeEscalationMultiplierDesc: 'Trong lúc nghỉ, số lần sai vượt hệ số này nhân ngưỡng cảnh báo thì gửi thêm đúng một mail leo thang.',
     breakGlassMaxGrantHoursLabel: 'Số giờ tối đa của một lần mở két',
     breakGlassMaxGrantHoursDesc: 'Người xin chọn số giờ không vượt quá mốc này.',
-    approvalReminderHoursLabel: 'Nhắc duyệt sau',
-    approvalReminderHoursDesc: 'Yêu cầu duyệt bản vẽ / hạn tài khoản dịch vụ chờ quá chừng này thì gửi mail nhắc. Yêu cầu mở két chỉ hiện nhãn "Chờ lâu", không gửi mail.',
+    approvalReminderHoursLabel: 'Gắn nhãn Chờ lâu sau',
+    approvalReminderHoursDesc: 'Bản vẽ / hạn tài khoản dịch vụ chờ duyệt quá chừng này thì gửi một mail nhắc. Yêu cầu mở két chỉ gắn nhãn "Chờ lâu". Không gửi mail.',
     breakGlassPendingExpireHoursLabel: 'Yêu cầu mở két tự hết hạn sau',
     breakGlassPendingExpireHoursDesc:
-      'Chờ quá chừng này mà không ai duyệt thì yêu cầu tự hết hạn và báo người xin. Phải lớn hơn "Nhắc duyệt sau".',
+      'Chờ quá chừng này mà không ai duyệt thì yêu cầu tự hết hạn và báo người xin. Phải lớn hơn "Gắn nhãn Chờ lâu sau".',
     expiryCriticalDaysLabel: 'Mức "khẩn" — còn dưới',
     expiryCriticalDaysDesc: 'Hồ sơ còn ít ngày hơn mốc này tô đỏ. Phải nhỏ hơn mức "sắp hết hạn".',
     expiryWarningDaysLabel: 'Mức "sắp hết hạn" — còn dưới',

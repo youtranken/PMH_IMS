@@ -204,7 +204,7 @@ export function AccountForm({
         </Field>
 
         {/* Vai trò ngay sau Email: lựa chọn hệ trọng nhất của form (nó quyết ai xem được mọi
-            két) không nằm cuối cùng sau ngày sinh. Đổi vai sau khi tạo: menu "Đổi vai trò…". */}
+            két) không nằm cuối cùng sau ngày sinh. Đổi vai sau khi tạo: menu "Vai trò & nhóm quyền…". */}
         {editing ? null : (
           <div className="span-2">
             <RoleChoice value={role} onChange={setRole} name="create-role" />

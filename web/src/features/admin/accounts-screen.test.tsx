@@ -52,8 +52,12 @@ const ROWS = [
 ];
 
 function stubFetch() {
-  const fetchMock = vi.fn((_input: RequestInfo | URL) =>
-    Promise.resolve(jsonResponse(200, { items: ROWS, total: 2 })),
+  const fetchMock = vi.fn((input: RequestInfo | URL) =>
+    Promise.resolve(
+      String(input).startsWith('/api/v1/feature-groups')
+        ? jsonResponse(200, [])
+        : jsonResponse(200, { items: ROWS, total: 2 }),
+    ),
   );
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -113,11 +117,30 @@ describe('Màn Tài khoản', () => {
     await screen.findByText('E2E Super Admin');
     expect(screen.getByText('Bạn')).toBeInTheDocument();
     const own = await menuOf(user, 'E2E Super Admin');
-    for (const hidden of ['Khóa', 'Vô hiệu hóa', 'Đặt lại xác thực 2 lớp', 'Đổi vai trò…']) {
+    for (const hidden of ['Khóa', 'Vô hiệu hóa', 'Đặt lại xác thực 2 lớp', 'Vai trò & nhóm quyền…']) {
       expect(own).not.toContain(hidden);
     }
     const other = await menuOf(user, 'E2E Thành viên');
-    expect(other).toEqual(expect.arrayContaining(['Khóa', 'Vô hiệu hóa', 'Đổi vai trò…']));
+    expect(other).toEqual(expect.arrayContaining(['Khóa', 'Vô hiệu hóa', 'Vai trò & nhóm quyền…']));
+  });
+
+  // UX-E15 (Q-33): vai và nhóm quyền là MỘT hộp — nhóm quyền chỉ có nghĩa với Thành viên.
+  it('"Vai trò & nhóm quyền…" là một mục, mở một hộp có cả vai lẫn nhóm quyền', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    renderAt('/admin/accounts');
+    await screen.findByText('E2E Thành viên');
+    const other = await menuOf(user, 'E2E Thành viên');
+    expect(other).not.toContain('Đổi vai trò…');
+    expect(other).not.toContain('Đổi nhóm quyền…');
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E Thành viên' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Vai trò & nhóm quyền…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Vai trò & nhóm quyền: E2E Thành viên' });
+    expect(within(dialog).getByRole('radio', { name: /^Thành viên/ })).toBeChecked();
+    expect(within(dialog).getByLabelText('Nhóm quyền')).toBeInTheDocument();
+    // Lên Quản trị thì nhóm quyền không còn nghĩa gì — ô chọn biến mất.
+    await user.click(within(dialog).getByRole('radio', { name: /^Quản trị/ }));
+    expect(within(dialog).queryByLabelText('Nhóm quyền')).toBeNull();
   });
 
   // Chưa kích hoạt 2 lớp thì không có gì để đặt lại: mục vẫn đứng đó nhưng tắt, nói vì sao.

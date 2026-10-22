@@ -371,7 +371,7 @@
   }
 }
 
-/* Tiêu đề nhóm khép/mở được (`collapsible` trong app-nav.ts): giữ nguyên dáng `.nav-label`, chỉ
+/* Tiêu đề nhóm khép/mở được (mọi nhóm trong app-nav.ts): giữ nguyên dáng `.nav-label`, chỉ
    thêm mũi tên — để nó đọc như một tiêu đề nhóm, không như một mục menu thứ mười mấy. */
 .nav-group-toggle {
   width: 100%;

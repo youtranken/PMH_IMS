@@ -368,6 +368,18 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(recent[0]).toEqual(expect.objectContaining({ code: expect.stringMatching(/^0206-2026-\d{3}$/), kind: expect.any(String), severity: expect.any(String) }));
     });
 
+    // UX-E32 (Q-33): Tìm nhanh tra số phiếu 0206 — khớp một phần, không phân biệt hoa thường.
+    it('findByCode: khớp một phần số phiếu, tối đa `limit` phiếu, mới nhất lên đầu; % và _ là chữ thường', async () => {
+      const hits = await incidents.findByCode('2026-00', 3);
+      expect(hits).toHaveLength(3);
+      expect(hits.every((h) => h.code.includes('2026-00'))).toBe(true);
+      expect(hits.map((h) => h.code)).toEqual([...hits.map((h) => h.code)].sort().reverse());
+      expect(hits[0]).toEqual(expect.objectContaining({ id: expect.any(String), description: expect.any(String), severity: expect.any(String) }));
+      expect(await incidents.findByCode('0206-2026-001', 5)).toEqual([expect.objectContaining({ code: '0206-2026-001' })]);
+      expect(await incidents.findByCode('%', 5)).toEqual([]);
+      expect(await incidents.findByCode('0206_2026', 5)).toEqual([]);
+    });
+
     it('In Progress không có Resolution Time; Resolved bắt buộc có', async () => {
       await expect(
         incidents.create(people.other, { ...incident({ kind: 'other', status: 'resolved', resolvedAt: null }), cells: [] }),

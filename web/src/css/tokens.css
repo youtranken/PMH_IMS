@@ -242,6 +242,10 @@
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-card:rgba(255,255,255,.06); --auth-card-border:rgba(255,255,255,.14);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
+    /* Tấm nền sau logo PMH ở màn đăng nhập (PW-C21): chữ "Phu My Hung" của logo là xám trung tính,
+       chỉ đọc rõ trên nền sáng như bản in của công ty. Màn đăng nhập tối ở cả hai theme nên cặp
+       dark giữ nguyên giá trị. */
+    --auth-logo-plate:rgba(255,255,255,.94);
     /* Lớp phủ trên ảnh đăng nhập: xanh than trung tính hợp tông trời chạng vạng của ảnh. Ảnh không
        còn chữ đè lên (Q-20) nên phủ nhẹ, chỉ tối dần về mép phải để ảnh liền với nền mờ của cột
        form. Màn đăng nhập tối ở cả hai theme nên cặp dark giữ nguyên giá trị. */
@@ -406,6 +410,7 @@ html[data-theme='dark'] {
     --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee; --sidebar-label:#9fb0a5;
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
+    --auth-logo-plate:rgba(255,255,255,.94);
     --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.12) 0%,rgba(12,16,30,.18) 60%,rgba(12,16,30,.45) 100%);
     /* Watermark chỉ nằm trên giấy sáng (trình vẽ + trình xem) ở cả hai theme: giữ màu mực tối. */
     --diagram-watermark:rgba(31,35,28,.13);

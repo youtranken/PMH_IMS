@@ -149,9 +149,9 @@ describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card n
     expect(screen.getByText('Quản lý hệ thống IT · PMH')).toBeInTheDocument();
   });
 
-  it('màn đăng nhập (`intro`): trên card có logo công ty, tên hệ thống và ba dòng về IMS', () => {
+  it('mọi màn (kể cả đăng nhập): trên card chỉ logo công ty + tên hệ thống, không dòng giới thiệu (Q-33)', () => {
     withProviders(
-      <AuthCard title="Đăng nhập" intro>
+      <AuthCard title="Đăng nhập">
         <p>thân</p>
       </AuthCard>,
     );
@@ -160,20 +160,10 @@ describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card n
     expect(within(head).getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeInTheDocument();
     expect(head).not.toHaveTextContent('Phú Mỹ Hưng');
     expect(head).toHaveTextContent('IMS — Quản lý hệ thống IT');
-    expect(within(head).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(head).queryAllByRole('listitem')).toHaveLength(0);
+    expect(head).not.toHaveTextContent('Két mật khẩu');
     // Khối thương hiệu không được giành tiêu đề của màn.
     expect(within(head).queryByRole('heading')).toBeNull();
-  });
-
-  it('các bước giữa luồng (không `intro`): chỉ logo + tên hệ thống, không ba dòng giới thiệu (Q-20)', () => {
-    withProviders(
-      <AuthCard title="Xác thực 2 lớp">
-        <p>thân</p>
-      </AuthCard>,
-    );
-    const head = screen.getByTestId('auth-head');
-    expect(within(head).getByRole('img', { name: 'Phú Mỹ Hưng' })).toBeInTheDocument();
-    expect(within(head).queryAllByRole('listitem')).toHaveLength(0);
   });
 });
 
@@ -251,10 +241,11 @@ describe('auth.css — bố cục ảnh / form', () => {
     expect(rule(css, '.auth-photo img')).toMatch(/object-fit:\s*cover/);
   });
 
-  // PW-C21: chữ "Phu My Hung" xám của logo nằm trên ảnh mờ còn sáng → tương phản thấp.
-  it('nền cột form (ảnh mờ) đủ tối cho chữ xám của logo: brightness ≤ 0.32', () => {
-    const level = Number(/brightness\(([\d.]+)\)/.exec(rule(css, '.auth-main::before'))?.[1] ?? 1);
-    expect(level).toBeLessThanOrEqual(0.32);
+  // PW-C21: chữ "Phu My Hung" xám của logo chìm trên ảnh mờ — logo đứng trên nền sáng riêng.
+  it('logo đầy đủ nằm trên tấm nền sáng riêng (token có cặp dark)', () => {
+    expect(rule(css, '.auth-head-logo')).toMatch(/background:\s*var\(--auth-logo-plate\)/);
+    const tokens = readFileSync(join(__dirname, '..', '..', 'css', 'tokens.css'), 'utf8');
+    expect(tokens.match(/--auth-logo-plate:/g)).toHaveLength(2);
   });
 
   it('≤720px: bỏ mảng ảnh và khối logo trên card, hiện biểu tượng + tên trong card', () => {

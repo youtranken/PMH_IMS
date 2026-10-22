@@ -25,6 +25,7 @@ export function Popover({
   onOpenChange,
   disabled,
   buttonClassName = 'btn',
+  hint,
   anchor,
   children,
 }: {
@@ -36,6 +37,8 @@ export function Popover({
   onOpenChange: (open: boolean) => void;
   disabled?: boolean;
   buttonClassName?: string;
+  /** Câu giải thích của nút mở, chỉ hiện khi rê chuột (`title`). */
+  hint?: string;
   /** Có (kể cả `null` lúc điểm neo chưa gắn) = không vẽ nút; hộp neo vào phần tử này. */
   anchor?: HTMLElement | null;
   children: ReactNode;
@@ -97,6 +100,7 @@ export function Popover({
           aria-expanded={open}
           aria-controls={open ? id : undefined}
           disabled={disabled}
+          title={hint}
           onClick={() => onOpenChange(!open)}
         >
           {label}

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmpSpec, cssRules, declValue, readCss, specificity, type Rule } from '@/test/css-test-kit';
-import { OTP_ORBIT_MS, OTP_RING_IN_MS } from '@/ui/otp-input';
+import { OTP_MIN_SPIN_MS, OTP_ORBIT_MS, OTP_RING_IN_MS, OTP_SUCCESS_MS } from '@/ui/otp-input';
 
 /**
  * Luật CSS dùng chung mà jsdom không kiểm được: thứ tự lớp, độ ưu tiên giữa luật chung và luật
@@ -539,6 +539,14 @@ describe('ô mã 6 số (ui/otp-input.tsx)', () => {
     const body = rule('shared-kit.css', '.otp-boxes')!.body;
     expect(declValue(body, '--otp-ring-in')).toBe(`${OTP_RING_IN_MS}ms`);
     expect(declValue(body, '--otp-orbit')).toBe(`${OTP_ORBIT_MS}ms`);
+  });
+
+  // UX-E10 (Q-33): mã đúng → đi tiếp trong 2 giây ở MỌI nơi (đăng nhập, mở két, duyệt sơ đồ).
+  it('cả hiệu ứng mã đúng (vòng tối thiểu + hội tụ + dấu tích) gói trong 2 giây', () => {
+    const anim = declValue(rule('shared-kit.css', '.otp-check-mark')!.body, 'animation') ?? '';
+    const [duration, delay] = [...anim.matchAll(/(\d+)ms/g)].map((m) => Number(m[1]));
+    expect(duration + delay).toBe(OTP_SUCCESS_MS);
+    expect(OTP_MIN_SPIN_MS + OTP_SUCCESS_MS).toBeLessThanOrEqual(2000);
   });
 });
 

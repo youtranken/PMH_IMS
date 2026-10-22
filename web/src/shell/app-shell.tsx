@@ -516,32 +516,32 @@ function SearchIcon() {
   );
 }
 
-/** Khoá nhớ nhóm nào người dùng đã tự mở — theo từng máy, không phải dữ liệu cần giữ lâu. */
+/** Khoá nhớ nhóm nào người dùng đã tự mở / tự khép — theo từng máy, không cần giữ lâu. */
 const NAV_OPEN_PREFIX = 'ims_nav_open:';
 
 /*
  * localStorage có thể ném lỗi (trình duyệt chặn dữ liệu trang, cửa sổ riêng tư): lúc đó menu
- * vẫn phải dựng, chỉ mất phần "nhớ".
+ * vẫn phải dựng, chỉ mất phần "nhớ". `null` = người dùng chưa chọn → theo mặc định của nhóm.
  */
-function readGroupOpen(labelKey: string): boolean {
+function readGroupOpen(labelKey: string): boolean | null {
   try {
-    return window.localStorage.getItem(NAV_OPEN_PREFIX + labelKey) === '1';
+    const stored = window.localStorage.getItem(NAV_OPEN_PREFIX + labelKey);
+    return stored === '1' ? true : stored === '0' ? false : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 function writeGroupOpen(labelKey: string, open: boolean): void {
   try {
-    if (open) window.localStorage.setItem(NAV_OPEN_PREFIX + labelKey, '1');
-    else window.localStorage.removeItem(NAV_OPEN_PREFIX + labelKey);
+    window.localStorage.setItem(NAV_OPEN_PREFIX + labelKey, open ? '1' : '0');
   } catch {
-    /* Không nhớ được thì thôi — lần sau nhóm khép như mặc định. */
+    /* Không nhớ được thì thôi — lần sau nhóm theo mặc định. */
   }
 }
 
 /**
- * Một nhóm trên menu. Nhóm `collapsible` có tiêu đề là nút khép/mở (Q-18).
+ * Một nhóm trên menu. Tiêu đề MỌI nhóm là nút khép/mở (Q-33); `defaultClosed` chỉ chọn mặc định.
  *
  * Đang đứng ở một màn TRONG nhóm thì nhóm tự mở: mục đang chọn mà nằm khuất sau một nhóm khép
  * thì người dùng mất dấu mình đang ở đâu. Lần tự mở ấy không ghi vào localStorage — chỉ lựa
@@ -576,13 +576,15 @@ function NavSection({
   const { t } = useTranslation();
   const regionId = useId();
   const holdsRoute = groupOfPath([group], pathname) !== null;
-  const [open, setOpen] = useState(() => holdsRoute || readGroupOpen(group.labelKey));
+  const [open, setOpen] = useState(
+    () => holdsRoute || (readGroupOpen(group.labelKey) ?? !group.defaultClosed),
+  );
 
   useEffect(() => {
     if (holdsRoute) setOpen(true);
   }, [holdsRoute, pathname]);
 
-  if (!group.collapsible || compact) {
+  if (compact) {
     return (
       <div>
         <p className="nav-label">{t(group.labelKey)}</p>
