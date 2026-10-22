@@ -750,6 +750,18 @@ export default {
       'sẽ không còn tab Sơ đồ cổng. Máy đã khai cổng giữ nguyên.',
     deactivated: 'Đã ngừng dùng "{{name}}".',
     activated: 'Đã dùng lại "{{name}}".',
+    selectOne: 'Chọn {{name}}',
+    bulkLabel: 'Thao tác với các mục đã chọn',
+    bulkSelected: 'Đã chọn {{count}}',
+    bulkClear: 'Bỏ chọn',
+    bulkDeactivate: 'Ngừng dùng {{count}} mục',
+    bulkActivate: 'Dùng lại {{count}} mục',
+    bulkConfirmDeactivate:
+      'Từ giờ không form nào chọn được {{count}} mục này. Hồ sơ đang dùng chúng giữ nguyên; ' +
+      'dùng lại được bất cứ lúc nào.',
+    bulkConfirmActivate: 'Các mục đã chọn ({{count}}) sẽ chọn lại được trong mọi form.',
+    bulkDeactivated: 'Đã ngừng dùng {{count}} mục.',
+    bulkActivated: 'Đã dùng lại {{count}} mục.',
     emptyFilteredOnly: 'Không có {{kind}} nào khớp bộ lọc.',
     clearAllFilters: 'Xóa bộ lọc',
     cabinetCodeHint: 'Quy ước TU-<mã site>-NN — chọn site là điền sẵn số kế tiếp, sửa được.',

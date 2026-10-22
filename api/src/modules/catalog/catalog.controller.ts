@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -15,6 +16,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -97,6 +101,15 @@ class DeviceTypeIdParamDto {
 
 class ActiveDto {
   @IsBoolean() active!: boolean;
+}
+
+/** Trần một lượt = cỡ trang lớn nhất của bảng: chỉ chọn được dòng đang thấy. */
+class BulkActiveDto extends ActiveDto {
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Chọn ít nhất một mục.' })
+  @ArrayMaxSize(200, { message: 'Mỗi lượt đổi tối đa 200 mục.' })
+  @IsUUID(undefined, { each: true, message: 'Mã mục danh mục không hợp lệ.' })
+  ids!: string[];
 }
 
 class EntityParamDto {
@@ -309,6 +322,20 @@ export class CatalogController {
   ) {
     await this.catalog.setActive(actor(req), params.entity, params.id, body.active);
     return { active: body.active };
+  }
+
+  /** UX-E25: ẩn / hiện nhiều mục — cùng quyền với ẩn / hiện từng mục. */
+  @Roles('sa', 'admin')
+  @Post(':entity/bulk-active')
+  @HttpCode(200)
+  @Audited('catalog.active.changed', 'catalog', { writtenByService: true })
+  async setActiveMany(
+    @Param() params: EntityParamDto,
+    @Body() body: BulkActiveDto,
+    @Req() req: AuthedRequest,
+  ) {
+    const changed = await this.catalog.setActiveMany(actor(req), params.entity, body.ids, body.active);
+    return { changed, active: body.active };
   }
 
   @Roles('sa', 'admin')

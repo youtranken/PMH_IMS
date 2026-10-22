@@ -1,7 +1,7 @@
 import { formatPhone } from '@/lib/phone-format';
 import { AuditLogLink } from '@/ui/audit-log-link';
 import { PhoneLink } from '@/ui/phone-link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
@@ -30,6 +30,8 @@ import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-acti
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
+import { StickyActionBar } from '@/ui/sticky-action-bar';
+import { useRowSelection } from '@/ui/use-row-selection';
 import { useToast } from '@/ui/toast';
 import { CatalogForm } from './catalog-form';
 import { DeviceModelsPanel } from './device-models-panel';
@@ -505,8 +507,45 @@ export function CatalogScreen({ me }: { me: Me }) {
     (input) => `/api/v1/catalog/${entity}/${input.id}`,
     { method: 'DELETE', csrfToken, refreshMe: false, body: () => undefined },
   );
+  const setActiveMany = useApiMutation<{ ids: string[]; active: boolean }, { changed: number }>(
+    `/api/v1/catalog/${entity}/bulk-active`,
+    { csrfToken, refreshMe: false },
+  );
 
   const items = rows.data?.items ?? [];
+
+  /* Chọn nhiều để Ngừng dùng / Dùng lại một lượt (UX-E25) — cùng quyền với từng mục (SA/Admin).
+     Chỉ tính dòng đang THẤY: dòng đã chọn ở trang / bộ lọc khác không bị đổi theo ngầm. */
+  const picked = useRowSelection();
+  const { clear: clearPicked } = picked;
+  useEffect(() => clearPicked(), [entity, clearPicked]);
+  const pickedRows = items.filter((row) => picked.selected.has(row.id));
+  const pickedActive = pickedRows.filter((row) => row.active);
+  const pickedInactive = pickedRows.filter((row) => !row.active);
+  const runBulk = (targets: CatalogRow[], active: boolean) => {
+    void (async () => {
+      const count = targets.length;
+      const action = t(active ? 'catalog.bulkActivate' : 'catalog.bulkDeactivate', { count });
+      const ok = await askConfirm({
+        title: action,
+        message: t(active ? 'catalog.bulkConfirmActivate' : 'catalog.bulkConfirmDeactivate', { count }),
+        danger: !active,
+        confirmLabel: action,
+      });
+      if (!ok) return;
+      setActiveMany.mutate(
+        { ids: targets.map((row) => row.id), active },
+        {
+          onSuccess: () => {
+            toast({ message: t(active ? 'catalog.bulkActivated' : 'catalog.bulkDeactivated', { count }) });
+            picked.clear();
+            void refresh();
+          },
+          onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+        },
+      );
+    })();
+  };
 
   /* Bộ lọc "thật" của tab — `tab` không tính: đổi tab không phải là lọc. */
   const activeCount = [filters.search, filters.status, siteId].filter(Boolean).length;
@@ -845,6 +884,11 @@ export function CatalogScreen({ me }: { me: Me }) {
               stackOnMobile
               mobileCard={mobileCard}
               rowClassName={(row) => (row.active ? '' : 'row-muted')}
+              selection={
+                canManage
+                  ? { ...picked, rowLabel: (row) => t('catalog.selectOne', { name: catalogLabel(entity, row) }) }
+                  : undefined
+              }
               manualSorting
               sorting={sorting}
               onSortingChange={(updater) => {
@@ -863,6 +907,36 @@ export function CatalogScreen({ me }: { me: Me }) {
               total={rows.data?.total ?? 0}
               onPageChange={url.setPage}
             />
+            {pickedRows.length > 0 ? (
+              <StickyActionBar
+                label={t('catalog.bulkLabel')}
+                note={t('catalog.bulkSelected', { count: pickedRows.length })}
+              >
+                <button type="button" className="btn" onClick={picked.clear}>
+                  {t('catalog.bulkClear')}
+                </button>
+                {pickedInactive.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={setActiveMany.isPending}
+                    onClick={() => runBulk(pickedInactive, true)}
+                  >
+                    {t('catalog.bulkActivate', { count: pickedInactive.length })}
+                  </button>
+                ) : null}
+                {pickedActive.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn danger"
+                    disabled={setActiveMany.isPending}
+                    onClick={() => runBulk(pickedActive, false)}
+                  >
+                    {t('catalog.bulkDeactivate', { count: pickedActive.length })}
+                  </button>
+                ) : null}
+              </StickyActionBar>
+            ) : null}
           </>
         )}
       </TabPanel>

@@ -454,6 +454,35 @@ export class CatalogService {
   }
 
   /**
+   * Ẩn / hiện nhiều mục một lượt (UX-E25): MỘT transaction — một id không còn thì cả lượt không đổi
+   * gì, người dùng không phải đoán mục nào đã đổi. Mục đã đúng trạng thái thì bỏ qua: không ghi
+   * lịch sử "Ngừng dùng" cho mục vốn đã ngừng. Trả về số mục thực sự đổi.
+   */
+  async setActiveMany(actor: string, entity: CatalogEntity, ids: string[], active: boolean): Promise<number> {
+    const unique = [...new Set(ids)];
+    const table = tableOf(entity);
+    return this.db.transaction(async (tx) => {
+      const rows = (await tx
+        .select({ id: table.id, active: table.active })
+        .from(table)
+        .where(inArray(table.id, unique))
+        .for('update')) as { id: string; active: boolean }[];
+      if (rows.length !== unique.length) {
+        throw new NotFoundException({
+          code: 'CATALOG_NOT_FOUND',
+          message: 'Có mục đã bị xóa trong lúc bạn chọn. Tải lại danh sách rồi chọn lại.',
+        });
+      }
+      const changing = rows.filter((row) => row.active !== active);
+      for (const row of changing) {
+        await this.updateWithin(tx, entity, row.id, { active });
+        await this.recordWithin(tx, actor, entity, row.id, active ? 'activated' : 'deactivated', {});
+      }
+      return changing.length;
+    });
+  }
+
+  /**
    * Xóa hẳn — CHỈ khi chưa ai tham chiếu tới. Không tự đi đếm bên `devices` được vì tầng nền
    * không được biết tầng nghiệp vụ (AD-2); để khóa ngoại ON DELETE RESTRICT của Postgres chặn
    * rồi dịch mã lỗi 23503 thành câu tiếng Việt.
