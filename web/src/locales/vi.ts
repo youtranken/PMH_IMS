@@ -3784,6 +3784,7 @@ export default {
       isoAntivirusIssueDeleted: 'Xóa dòng issue 0208',
       isoIncidentCreated: 'Lập phiếu sự cố 0206',
       isoIncidentUpdated: 'Sửa phiếu sự cố 0206',
+      isoIncidentExported: 'Xuất danh sách phiếu 0206',
       isoPeriodSubmitted: 'Gửi chốt kỳ phiếu',
       isoPeriodApproved: 'Duyệt chốt kỳ phiếu',
       isoPeriodReturned: 'Trả lại kỳ phiếu',
