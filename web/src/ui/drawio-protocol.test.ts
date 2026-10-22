@@ -36,13 +36,6 @@ describe('drawioUrl — tham số nhúng (AD-17)', () => {
     }
   });
 
-  // PW-B20: thanh IMS tối mà thư viện hình, canvas, bảng bên phải vẫn sáng trắng.
-  it('theme tối → dark=1; theme sáng không có cờ', () => {
-    expect(new URL(drawioUrl('edit', 'dark'), 'https://ims.local').searchParams.get('dark')).toBe('1');
-    expect(new URL(drawioUrl('view', 'dark'), 'https://ims.local').searchParams.get('dark')).toBe('1');
-    expect(new URL(drawioUrl('edit', 'light'), 'https://ims.local').searchParams.has('dark')).toBe(false);
-  });
-
   it('màn xem: tắt khung công cụ', () => {
     expect(new URL(drawioUrl('view'), 'https://ims.local').searchParams.get('chrome')).toBe('0');
   });

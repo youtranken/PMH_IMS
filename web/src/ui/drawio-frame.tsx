@@ -12,7 +12,6 @@ import {
   type DrawioEvent,
   type DrawioMode,
 } from './drawio-protocol';
-import { currentTheme } from '@/lib/theme';
 
 /**
  * Ô màu dây IMS (`imsPaint`) → token màu dây của GIẤY trong `tokens.css`. Giấy trình vẽ luôn sáng
@@ -89,8 +88,6 @@ export const DrawioFrame = forwardRef<DrawioFrameHandle, DrawioFrameProps>(funct
   const { t } = useTranslation();
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [attempt, setAttempt] = useState(0);
-  /* Theme lúc MỞ khung: đổi theme giữa chừng mà đổi `src` là nạp lại trình vẽ — mất phần đang vẽ. */
-  const [theme] = useState(currentTheme);
   const [initialised, setInitialised] = useState(false);
   const [stalled, setStalled] = useState(false);
   const latest = useRef({ onEvent, initialXml, mode });
@@ -149,7 +146,7 @@ export const DrawioFrame = forwardRef<DrawioFrameHandle, DrawioFrameProps>(funct
         ref={frameRef}
         className="drawio-frame-iframe"
         title={title}
-        src={drawioUrl(mode, theme)}
+        src={drawioUrl(mode)}
         sandbox={DRAWIO_SANDBOX}
       />
       <DiagramWatermark viewer={viewer} density={mode === 'edit' ? 'edit' : undefined} />
