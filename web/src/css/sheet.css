@@ -661,6 +661,7 @@ button.sheet-mark:focus-visible {
 .paper-table .paper-band {
   background: var(--paper-band);
   color: var(--paper-band-ink);
+  font-weight: var(--fw-bold);
   text-align: left;
 }
 
@@ -689,9 +690,10 @@ button.sheet-mark:focus-visible {
   width: 10%;
 }
 
-/* Tiêu đề ô tick hẹp ("Full", "FileSV") chữ nhỏ hơn cho vừa ô như mẫu. */
+/* Tiêu đề ô tick hẹp ("Full", "FileSV"): giữ 12px như cả tờ (DS-30), chỉ bớt đệm và cho xuống
+   dòng trong ô thay vì thu chữ. */
 .paper-detail thead tr:last-child th {
-  font-size: 0.85em;
+  overflow-wrap: anywhere;
   padding-left: 1px;
   padding-right: 1px;
 }
