@@ -23,6 +23,7 @@ import { RowActions, type RowAction } from "@/ui/row-actions";
 import { MobileCardList, type MobileCard } from "@/ui/data-table";
 import { BREAKPOINTS } from "@/ui/breakpoints";
 import { useMediaQuery } from "@/ui/use-media-query";
+import { useXlsxDownload } from "@/ui/export-xlsx-button";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
 import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from "@/ui/use-form-errors";
@@ -59,7 +60,8 @@ import {
   type SlotLine,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
-import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
+import { AssignIpDialog, IpDeviceCombobox, IpUsedByFromDevice, ownerRule } from "./ip-assign-dialog";
+import { deviceOwnerText } from "@/ui/device-combobox";
 import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
 import { paletteShortcut } from "@/ui/command-palette";
@@ -75,6 +77,12 @@ interface NatRef {
   deviceCode: string | null;
   voidedAt: string | null;
 }
+
+/** File Excel của một dải và của mọi IP — nút Xuất ở đầu trang (desktop) và menu ⋯ (điện thoại). */
+export function subnetExport(subnet: { id: string; cidr: string }): { url: string; fileName: string } {
+  return { url: `/api/v1/ipam/subnets/${subnet.id}/export.xlsx`, fileName: `ip-${subnet.cidr.replace("/", "-")}.xlsx` };
+}
+export const ALL_IP_EXPORT = { url: "/api/v1/ipam/addresses/export.xlsx", fileName: "ip-tat-ca.xlsx" };
 
 /**
  * Cột PHẢI của màn Địa chỉ IP: toàn bộ một dải — IP đã có hồ sơ và ô còn trống, xếp theo thứ
@@ -181,6 +189,7 @@ export function SubnetPane({
   });
 
   const attachments = useOwnerAttachments("subnet", id);
+  const xlsx = useXlsxDownload();
 
   // Chỉ dải và IP của dải — sổ NAT và các màn khác không đổi khi cấp/thu hồi một địa chỉ.
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["ipam", "subnets"] });
@@ -288,6 +297,9 @@ export function SubnetPane({
   );
   const rows = pageSlots(lines, page);
   const narrow = useMediaQuery(BREAKPOINTS.cards);
+  /* Điện thoại không có "Bản đồ" (PW-B05): lưới 254 ô ở 390px là ô 20px không chạm trúng, và
+     hai hàng điều khiển đẩy IP đầu tiên xuống dưới mép màn hình. */
+  const shownView = narrow ? "list" : view;
 
   // Đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào một bảng
   // rỗng và tưởng không có gì.
@@ -486,16 +498,46 @@ export function SubnetPane({
               <span>{t("ipam.vlanBadge", { vlan: item.vlan })}</span>
             ) : null}
             {item.siteCode ? <span>{item.siteCode}</span> : null}
-            <span className="muted">
-              {t("ipam.createdBy", { by: item.createdBy, date: formatDate(item.createdAt) })}
-            </span>
+            {/* Điện thoại: thông tin dải MỘT dòng (PW-B05) — người tạo và mô tả là thứ đọc ở máy tính. */}
+            {narrow ? null : (
+              <span className="muted">
+                {t("ipam.createdBy", { by: item.createdBy, date: formatDate(item.createdAt) })}
+              </span>
+            )}
           </p>
-          {item.description ? <p className="muted pane-desc">{item.description}</p> : null}
+          {item.description && !narrow ? <p className="muted pane-desc">{item.description}</p> : null}
         </div>
         <div className="pane-actions">
-          <button type="button" className="btn" onClick={() => setFilesOpen(true)}>
-            {t("ipam.filesButton", { count: attachments.data?.length ?? 0 })}
-          </button>
+          {narrow ? (
+            /* Xuất (đầu trang ở desktop) và Giấy tờ vào một nút ⋯: còn "Cấp IP trống kế tiếp" là
+               nút duy nhất đứng ngoài trên điện thoại (PW-B05). */
+            <RowActions
+              label={t("ipam.moreOf", { cidr: item.cidr })}
+              items={[
+                {
+                  key: "files",
+                  label: t("ipam.filesButton", { count: attachments.data?.length ?? 0 }),
+                  onSelect: () => setFilesOpen(true),
+                },
+                {
+                  key: "export",
+                  label: t("ipam.exportCurrent"),
+                  disabled: xlsx.busy,
+                  onSelect: () => xlsx.run(subnetExport(item).url, subnetExport(item).fileName),
+                },
+                {
+                  key: "export-all",
+                  label: t("common.exportAll"),
+                  disabled: xlsx.busy,
+                  onSelect: () => xlsx.run(ALL_IP_EXPORT.url, ALL_IP_EXPORT.fileName),
+                },
+              ]}
+            />
+          ) : (
+            <button type="button" className="btn" onClick={() => setFilesOpen(true)}>
+              {t("ipam.filesButton", { count: attachments.data?.length ?? 0 })}
+            </button>
+          )}
           {canWrite ? (
             <button
               type="button"
@@ -550,7 +592,7 @@ export function SubnetPane({
             }),
           )}
         />
-        {!subnetDisabled ? (
+        {!subnetDisabled && !narrow ? (
           <SegmentedRadio<"list" | "map">
             label={t("ipam.viewGroup")}
             value={view}
@@ -563,7 +605,7 @@ export function SubnetPane({
         ) : null}
       </div>
 
-      {view === "list" ? (
+      {shownView === "list" ? (
         <FilterBar
           search={needle}
           onSearchChange={(value) => {
@@ -575,7 +617,7 @@ export function SubnetPane({
       ) : null}
       {/* Ô "Tra IP" cấp trang đã bỏ (UX-E19, trùng Tìm nhanh): gõ đủ một IP không thuộc dải này
           thì chỉ đường sang dải chứa nó — kể cả IP chưa có hồ sơ, thứ Tìm nhanh không tra được. */}
-      {view === "list" && jump ? (
+      {shownView === "list" && jump ? (
         <p className="muted small" role="status">
           {jump.other ? (
             <>
@@ -605,7 +647,7 @@ export function SubnetPane({
         <LoadError error={slots.error} onRetry={() => void slots.refetch()} />
       ) : subnetDisabled && item.addressCount === 0 ? (
         <EmptyState title={t("ipam.slotEmpty")} hint={t("ipam.voidedNeverUsed")} />
-      ) : view === "map" ? (
+      ) : shownView === "map" ? (
         <SubnetMap
           cidr={item.cidr}
           slots={all}
@@ -1019,6 +1061,8 @@ export function IpForm({
     term: record.deviceCode ?? "",
   });
   const [usedBy, setUsedBy] = useState(record.usedBy ?? "");
+  /** IP gắn máy đọc người dùng theo máy (LF-03) — đã chọn máy thì không có ô tự ghi. */
+  const [deviceOwner, setDeviceOwner] = useState(record.deviceId ? (record.usedBy ?? "") : "");
   const departments = useDepartments();
   const [assignedAt, setAssignedAt] = useState(record.assignedAt ?? "");
   const [note, setNote] = useState(record.note ?? "");
@@ -1067,7 +1111,7 @@ export function IpForm({
           save.mutate(
             {
               deviceId: device.deviceId,
-              usedBy: usedBy.trim(),
+              usedBy: device.deviceId ? "" : usedBy.trim(),
               assignedAt,
               note: note.trim(),
             },
@@ -1089,23 +1133,30 @@ export function IpForm({
           <IpDeviceCombobox
             deviceId={device.deviceId}
             term={device.term}
-            onChange={setDevice}
+            onChange={(next) => {
+              setDevice({ deviceId: next.deviceId, term: next.term });
+              if (next.device) setDeviceOwner(deviceOwnerText(next.device));
+            }}
           />
         </Field>
 
-        <Field label={t("ipam.usedBy")} hint={t("ipam.usedByHint")}>
-          {/* Gợi ý từ danh mục Bộ phận, VẪN gõ tự do được: ô này đôi khi là một phòng, đôi
-              khi là "Chị Lan — Kế toán", đôi khi là hai phòng dùng chung một máy in. Ép thành
-              khóa ngoại là ép người dùng khai sai cho vừa cái ô. */}
-          <SuggestInput
-            value={usedBy}
-            onChange={setUsedBy}
-            options={departments.names}
-            failed={departments.failed}
-            placeholder={t("ipam.usedByPlaceholder")}
-            ariaLabel={t("ipam.usedBy")}
-          />
-        </Field>
+        {device.deviceId ? (
+          <IpUsedByFromDevice owner={deviceOwner} />
+        ) : (
+          <Field label={t("ipam.usedBy")} hint={t("ipam.usedByHint")}>
+            {/* Gợi ý từ danh mục Bộ phận, VẪN gõ tự do được: ô này đôi khi là một phòng, đôi
+                khi là "Chị Lan — Kế toán", đôi khi là hai phòng dùng chung một máy in. Ép thành
+                khóa ngoại là ép người dùng khai sai cho vừa cái ô. */}
+            <SuggestInput
+              value={usedBy}
+              onChange={setUsedBy}
+              options={departments.names}
+              failed={departments.failed}
+              placeholder={t("ipam.usedByPlaceholder")}
+              ariaLabel={t("ipam.usedBy")}
+            />
+          </Field>
+        )}
 
         <Field label={t("ipam.assignedAt")}>
           <DatePicker

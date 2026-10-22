@@ -17,7 +17,7 @@ import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { AttachmentTabNote } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { IspRow } from './isp-types';
@@ -27,6 +27,7 @@ import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
 import { CodeInput, IpInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 import { useSuggestedCode } from '@/ui/use-suggested-code';
 
@@ -63,6 +64,11 @@ function initialState(row: IspRow | null): FormState {
   };
 }
 
+/** Sau "Lưu và nhân bản": giữ nhà mạng, tốc độ, site, hotline, hợp đồng, ngày; bỏ ô riêng từng đường. */
+function nextState(saved: FormState): FormState {
+  return { ...saved, code: '', wanIps: [''], note: '' };
+}
+
 /** Form đường truyền ISP (FR-010). Màn nhập — desktop-first. */
 export function IspForm({
   row,
@@ -73,7 +79,8 @@ export function IspForm({
   row: IspRow | null;
   csrfToken: string;
   onClose: () => void;
-  onSaved: () => void;
+  /** `keepOpen`: "Lưu và nhân bản" — form ở lại để khai đường kế tiếp, nơi gọi chỉ làm mới danh sách. */
+  onSaved: (options?: { keepOpen: boolean }) => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -129,7 +136,12 @@ export function IspForm({
 
   // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
   const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
-  const codeGuard = useSuggestedCode(row ? null : '/api/v1/isp-lines/next-code', form.code, applyCode, 'isp-code');
+  // Mỗi lượt "Lưu và nhân bản" là một vòng mới: hỏi lại mã kế tiếp của mã vừa lưu.
+  const [codeRound, setCodeRound] = useState(0);
+  const codeGuard = useSuggestedCode(row ? null : '/api/v1/isp-lines/next-code', form.code, applyCode, 'isp-code', codeRound);
+  /* Nút nào gửi form: đọc trong `onSubmit` của CÙNG lượt bấm nên phải là ref. */
+  const cloneAfter = useRef(false);
+  const [sentToClone, setSentToClone] = useState(false);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -157,7 +169,9 @@ export function IspForm({
     });
 
   const check = useFormErrors({
-    code: !form.code.trim() && t('formErrors.required'),
+    code:
+      (!form.code.trim() && t('formErrors.required')) ||
+      (recordCodeProblem(form.code, row?.code) && t('formErrors.codeFormat')),
     providerId: !form.providerId && t('formErrors.requiredPick'),
     wanIps: firstWanIssue && t(WAN_ISSUE_KEY[firstWanIssue]),
     note: secretTextRule(t, form.note),
@@ -184,7 +198,28 @@ export function IspForm({
           <DialogCancel>
             {t('common.cancel')}
           </DialogCancel>
-          <SubmitButton form="isp-form" busy={busy} succeeded={save.isSuccess} />
+          {/* FM-21: khai nhiều đường cùng nhà mạng / site — lưu xong form ở lại. */}
+          {row ? null : (
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                cloneAfter.current = true;
+                check.formRef.current?.requestSubmit();
+              }}
+            >
+              {t('isp.saveAndNext')}
+            </button>
+          )}
+          <SubmitButton
+            form="isp-form"
+            busy={busy}
+            succeeded={save.isSuccess && !sentToClone}
+            onClick={() => {
+              cloneAfter.current = false;
+            }}
+          />
         </>
       }
     >
@@ -196,6 +231,10 @@ export function IspForm({
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
+          const again = cloneAfter.current;
+          cloneAfter.current = false;
+          setSentToClone(again);
+          const sent = form;
           save.mutate(
             {
               code: form.code.trim(),
@@ -232,11 +271,20 @@ export function IspForm({
                     }
                     for (const message of failures) toast({ message, tone: 'warn' });
                   }
+                  if (again) {
+                    setForm(nextState(sent));
+                    // Máy gắn là của RIÊNG đường vừa lưu.
+                    setDevice(null);
+                    setCodeRound((n) => n + 1);
+                    document.getElementById('isp-code')?.focus();
+                    onSaved({ keepOpen: true });
+                    return;
+                  }
                   onSaved();
                 })();
               },
               onError: (err) => {
-                if (!server.claim(err, { ISP_CODE_TAKEN: 'isp-code' })) setError(errorMessage(err));
+                if (!server.claim(err, { ISP_CODE_TAKEN: 'isp-code', CODE_FORMAT_INVALID: 'isp-code' })) setError(errorMessage(err));
               },
             },
           );
@@ -255,10 +303,10 @@ export function IspForm({
           </p>
         ) : null}
         {check.summary}
-        <FormSection title={t('isp.tabProfile')} columns={4}>
+        <FormSection title={t('isp.sectionProfile')} columns={4}>
           <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code') ?? server.error('isp-code')}>
             <CodeInput
-              caps
+              upper
               id="isp-code"
               data-guard-value={codeGuard}
               required
@@ -461,24 +509,10 @@ export function IspForm({
           <NoteField id="isp-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
-        {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id.
-            Sửa: panel giấy tờ đầy đủ — đổi hợp đồng là việc thường xuyên của đường truyền. */}
+        {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id. Sửa: chỉ một dòng chỉ
+            sang tab Giấy tờ (UX-E20) — panel ghi thẳng, không thuộc lượt Lưu của form. */}
         {row ? (
-          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
-             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
-          <FormSection
-            title={t('attachments.title')}
-            titleTip={t('attachments.liveTip')}
-            columns={1}
-          >
-            <AttachmentPanel
-              ownerType="isp"
-              ownerId={row.id}
-              csrfToken={csrfToken}
-              canEdit={!busy}
-            />
-          </FormSection>
+          <AttachmentTabNote ownerType="isp" ownerId={row.id} />
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}

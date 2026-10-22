@@ -14,6 +14,7 @@ import {
   type ParsedSheets,
 } from '../../common/import-plan';
 import { effectiveOf } from '../../common/merge-effective';
+import { recordCodeMessage, recordCodeProblem } from '../../common/record-code';
 import { viDate } from '../../common/today';
 import { secretTextMessage } from '../../common/no-secret-text';
 import { textLooksLikeSecret } from '../../common/note-secret';
@@ -470,6 +471,17 @@ function planRow(
   seen.add(key);
 
   const existing = context.devices.get(key);
+  // PW-A12: mã MỚI theo cùng luật với form; mã đã có trong kho giữ nguyên như đang lưu — file khớp
+  // mã không phân biệt hoa thường, nên chữ trong ô không được viết đè mã đang lưu (`pc-01` ≠ `PC-01`).
+  if (!existing) {
+    const code = String(values.code).trim().toUpperCase();
+    if (recordCodeProblem(code)) {
+      return { ...base, action: 'error', label, message: recordCodeMessage('Mã thiết bị') };
+    }
+    values.code = code;
+  } else {
+    values.code = existing.code;
+  }
 
   /*
    * Kiểm tra phải chạy trên GIÁ TRỊ SAU KHI GHÉP với hồ sơ đang có, không chỉ trên các ô

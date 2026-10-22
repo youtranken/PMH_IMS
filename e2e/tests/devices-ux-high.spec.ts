@@ -348,6 +348,8 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
     const submit = dialog.getByRole('button', { name: 'Thanh lý', exact: true });
 
     // Lượt 1: "Chỉ thanh lý" trong khi máy còn giữ IP → 409, hộp mở lại với danh sách vướng.
+    await expect(cleanup).toBeChecked();
+    await only.check();
     const first = page.waitForResponse((r) => r.url().includes(`/devices/${deviceId}/status`));
     await submit.click();
     expect((await first).status()).toBe(409);
@@ -361,9 +363,8 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
     await submit.click();
     expect((await second).status()).toBe(409);
 
-    // Hộp dựng lại từ đầu: chọn "Gỡ hết" thì ô mã phải TRỐNG, không còn chữ của lượt trước.
-    await expect(only).toBeChecked();
-    await cleanup.check();
+    // Hộp dựng lại từ đầu: về mặc định "Gỡ hết", ô mã TRỐNG, không còn chữ của lượt trước.
+    await expect(cleanup).toBeChecked();
     await expect(typeCode).toHaveValue('');
     await expect(submit).toBeDisabled();
   });

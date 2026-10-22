@@ -67,7 +67,7 @@ function renderAt(path: string) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('màn sơ đồ tự giải thích', () => {
-  it('chế độ Xem: việc trên thanh có (i); mục ⋮ có dòng mô tả; "Hướng dẫn" mở hộp giải thích', async () => {
+  it('chế độ Xem: thanh không có (i), lời giải thích nằm ở tooltip; mục ⋮ không có dòng mô tả; "Hướng dẫn" mở hộp giải thích', async () => {
     routeFetch({
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
       '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: node(), version: { ...VERSION, xml: '<mxfile/>', svg: SVG } }),
@@ -78,14 +78,15 @@ describe('màn sơ đồ tự giải thích', () => {
     renderAt('/diagrams/d1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
     const user = userEvent.setup();
-    for (const subject of ['Tìm', 'Phát hành']) {
-      expect(await screen.findByRole('button', { name: `Giải thích: ${subject}` })).toBeInTheDocument();
-    }
-    await user.click(screen.getByRole('button', { name: 'Giải thích: Phát hành' }));
-    expect(screen.getByText(/thành bản chính thức/)).toBeInTheDocument();
+    // UX-E02 (Q-33): bỏ tầng chữ thứ hai — không còn nút (i) trên thanh, câu giải thích vào title.
+    expect(await screen.findByRole('button', { name: 'Phát hành' })).toHaveAttribute('title', expect.stringMatching(/thành bản chính thức/));
+    expect(screen.getByRole('button', { name: 'Tìm' })).toHaveAttribute('title', expect.stringMatching(/.+/));
+    expect(screen.queryByRole('button', { name: /^Giải thích: / })).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /^Thao tác với/ }));
-    expect(await screen.findByRole('menuitem', { name: 'Kiểm tra khớp' })).toHaveTextContent('So bản vẽ với dữ liệu kho');
+    const check = await screen.findByRole('menuitem', { name: 'Kiểm tra khớp' });
+    expect(check).toHaveTextContent(/^Kiểm tra khớp$/);
+    expect(check).toHaveAttribute('title', expect.stringMatching(/So bản vẽ với dữ liệu kho/));
     // "Hướng dẫn" đứng đầu menu; menu chia nhóm có tiêu đề.
     const menu = screen.getByRole('menu');
     expect(within(menu).getAllByRole('menuitem')[0]).toHaveAccessibleName('Hướng dẫn');
@@ -139,9 +140,8 @@ describe('màn sơ đồ tự giải thích', () => {
     expect(items[1]).toHaveTextContent('kéo dây');
     expect(items[2]).toHaveTextContent('Lưu');
     expect(items[3]).toHaveTextContent(/Phát hành|Gửi duyệt/);
-    expect(screen.getByRole('button', { name: 'Giải thích: Thiết bị kho' })).toBeInTheDocument();
-    // PW-B21: Lưu là nút chính ở mép phải thanh — sau menu ⋮, không kẹp giữa hai nút (i).
-    expect(screen.queryByRole('button', { name: 'Giải thích: Lưu' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Thiết bị kho' })).toHaveAttribute('title', expect.stringMatching(/.+/));
+    expect(screen.queryByRole('button', { name: /^Giải thích: / })).toBeNull();
     const save = screen.getByRole('button', { name: 'Lưu' });
     expect(save).toHaveClass('primary');
     const more = screen.getByRole('button', { name: /^Thao tác với / });

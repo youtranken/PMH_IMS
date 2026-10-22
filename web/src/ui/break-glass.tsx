@@ -16,7 +16,7 @@ import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
 
 /**
- * Luồng phiếu break-glass dùng chung — màn Duyệt mở két, trang chi tiết một phiếu, khối "Cần bạn
+ * Luồng phiếu break-glass dùng chung — màn Yêu cầu mở két, trang chi tiết một phiếu, khối "Cần bạn
  * duyệt" của bảng điều khiển và khung Két của hồ sơ (nhập mã duyệt, gửi lại mã, rút yêu cầu).
  *
  * Duyệt là người xin NHẬP MÃ người duyệt đọc cho (Q-30); IMS không có nút Duyệt. Một bản duy

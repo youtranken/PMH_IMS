@@ -25,7 +25,7 @@ const SCREENS: [string, string][] = [
   ['/ip-addresses', 'Địa chỉ IP · IMS'],
   ['/nat', 'Sổ NAT · IMS'],
   ['/service-accounts', 'Tài khoản dịch vụ · IMS'],
-  ['/approvals', 'Duyệt mở két · IMS'],
+  ['/approvals', 'Yêu cầu mở két · IMS'],
   ['/disposal', 'Kho thanh lý · IMS'],
   ['/admin/accounts', 'Người dùng IMS · IMS'],
   ['/admin/catalog', 'Danh mục · IMS'],

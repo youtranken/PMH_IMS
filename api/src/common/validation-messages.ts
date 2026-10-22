@@ -62,6 +62,8 @@ export const FIELD_LABEL: Record<string, string> = {
   deviceIds: 'Danh sách thiết bị',
   deviceTypeId: 'Loại thiết bị',
   diagramShape: 'Hình trên sơ đồ',
+  icon: 'Biểu tượng',
+  fileId: 'Tệp ảnh',
   dir: 'Chiều sắp xếp',
   email: 'Email',
   employeeCode: 'Mã nhân viên',

@@ -27,11 +27,11 @@ const RETIRED = {
   autoRetireOn: null,
 };
 
-/* "Khôi phục…" là lối QUAY LẠI của một hồ sơ đã thanh lý — chữ xanh (`ok`), không lẫn với việc thường. */
+/* "Dùng lại…" là lối QUAY LẠI của một hồ sơ đã thanh lý — chữ xanh (`ok`), không lẫn với việc thường. */
 describe('Danh sách phần mềm — màu việc trong menu ⋮', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('Khôi phục… mang lớp ok', async () => {
+  it('Dùng lại… mang lớp ok', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) =>
@@ -53,6 +53,6 @@ describe('Danh sách phần mềm — màu việc trong menu ⋮', () => {
     );
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với LIC-RET-01' }));
-    expect(screen.getByRole('menuitem', { name: 'Khôi phục…' })).toHaveClass('ok');
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toHaveClass('ok');
   });
 });

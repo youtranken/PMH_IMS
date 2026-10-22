@@ -150,6 +150,10 @@ export function DisposalScreen() {
   /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13). Loại
      khác dùng lại ở trang hồ sơ của nó (Q-19): MỘT mục mang tên nói rõ việc người ta tìm tới —
      để thêm "Mở hồ sơ" cạnh nó là hai mục cùng một đích (UX-E14). */
+  /* Thiết bị: hộp "Dùng lại…" của trang hồ sơ mở sẵn (`?action=reuse`) — tới trang rồi còn phải
+     tìm nút là thêm một bước cho cùng một việc. */
+  const reuseLink = (item: DisposalItem) =>
+    item.kind === 'device' ? `${LINK.device(item.id)}?action=reuse` : LINK[item.kind](item.id);
   const actionsOf = (item: DisposalItem): RowAction[] =>
     item.kind === 'software'
       ? [
@@ -161,7 +165,7 @@ export function DisposalScreen() {
             onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
           },
         ]
-      : [{ key: 'reuse', label: t('disposal.reuse'), ok: true, onSelect: () => navigate(LINK[item.kind](item.id)) }];
+      : [{ key: 'reuse', label: t('disposal.reuse'), ok: true, onSelect: () => navigate(reuseLink(item)) }];
   /** Loại chạm trần 500 dòng của API thì số trên chip là TRẦN, không phải số thật (PW-A09). */
   const chipCount = (key: DisposalKind) =>
     `${formatCount(counts?.[key] ?? 0)}${truncated.includes(key) ? '+' : ''}`;

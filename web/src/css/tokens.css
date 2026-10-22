@@ -186,10 +186,15 @@
   --warn-tint: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
   --danger-tint: color-mix(in srgb, var(--danger) 22%, transparent);
   --primary-tint: color-mix(in srgb, var(--primary) 16%, transparent);
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-lg: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
+  /*
+   * Bóng chỉ cho lớp NỔI trên trang, đúng 3 nấc (DS-23): thẻ nằm trên trang phẳng, chỉ có viền —
+   * bóng rải khắp thẻ thì mắt không còn tách được cái đang nổi khỏi cái nằm trên trang.
+   * 1 = menu, popover, gợi ý, ngày; 2 = toast, ngăn kéo, thanh thao tác dính; 3 = hộp thoại.
+   */
+  --elev-1: 0 12px 28px -10px rgba(16, 24, 40, 0.25);
+  --elev-2: 0 16px 36px -14px rgba(16, 24, 40, 0.3), 0 4px 10px -6px rgba(16, 24, 40, 0.12);
+  --elev-3: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
     0 8px 20px -12px rgba(16, 24, 40, 0.2);
-  --shadow-pop: 0 12px 28px -10px rgba(16, 24, 40, 0.25);
   /*
    * Lớp phủ sau hộp thoại. Là token (không viết thẳng trong `overlays.css`) để có cặp cho chế
    * độ tối: trang vốn đã tối mà bị phủ thêm 44% đen thì bảng phía sau gần như đen tuyền.
@@ -237,6 +242,10 @@
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-card:rgba(255,255,255,.06); --auth-card-border:rgba(255,255,255,.14);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
+    /* Tấm nền sau logo PMH ở màn đăng nhập (PW-C21): chữ "Phu My Hung" của logo là xám trung tính,
+       chỉ đọc rõ trên nền sáng như bản in của công ty. Màn đăng nhập tối ở cả hai theme nên cặp
+       dark giữ nguyên giá trị. */
+    --auth-logo-plate:rgba(255,255,255,.94);
     /* Lớp phủ trên ảnh đăng nhập: xanh than trung tính hợp tông trời chạng vạng của ảnh. Ảnh không
        còn chữ đè lên (Q-20) nên phủ nhẹ, chỉ tối dần về mép phải để ảnh liền với nền mờ của cột
        form. Màn đăng nhập tối ở cả hai theme nên cặp dark giữ nguyên giá trị. */
@@ -355,10 +364,10 @@ html[data-theme='dark'] {
   --warn-tint: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
   --danger-tint: color-mix(in srgb, var(--danger) 22%, transparent);
   --primary-tint: color-mix(in srgb, var(--primary) 16%, transparent);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
+  --elev-1: 0 12px 28px -10px rgba(0, 0, 0, 0.6);
+  --elev-2: 0 16px 36px -14px rgba(0, 0, 0, 0.65), 0 4px 10px -6px rgba(0, 0, 0, 0.4);
+  --elev-3: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
     0 8px 20px -12px rgba(0, 0, 0, 0.5);
-  --shadow-pop: 0 12px 28px -10px rgba(0, 0, 0, 0.6);
   /* Chế độ tối: nền đã tối sẵn nên lớp phủ phải THUẦN ĐEN và đậm hơn một chút mới tách được
      hộp ra khỏi trang; dùng lại sắc xanh của bản sáng thì hai lớp hòa vào nhau. */
   --scrim: rgba(0, 0, 0, 0.62);
@@ -401,6 +410,7 @@ html[data-theme='dark'] {
     --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee; --sidebar-label:#9fb0a5;
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
+    --auth-logo-plate:rgba(255,255,255,.94);
     --auth-photo-veil:linear-gradient(90deg,rgba(12,16,30,.12) 0%,rgba(12,16,30,.18) 60%,rgba(12,16,30,.45) 100%);
     /* Watermark chỉ nằm trên giấy sáng (trình vẽ + trình xem) ở cả hai theme: giữ màu mực tối. */
     --diagram-watermark:rgba(31,35,28,.13);

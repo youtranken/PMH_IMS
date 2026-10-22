@@ -498,7 +498,7 @@
   border-radius: 999px;
   background: var(--surface);
   color: var(--ink-2);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-1);
   cursor: pointer;
 }
 .tabs-arrow:hover { color: var(--ink); border-color: var(--border-2); }

@@ -150,19 +150,21 @@ describe('Bảng điều khiển', () => {
     expect(within(block).queryByText('lan@pmh.com.vn')).toBeNull();
   });
 
-  it('khối thanh lý không in mã loại thô ("vpn")', async () => {
+  // PW-A26 (Q-33): khối "Kho thanh lý" trùng ô số "Vừa thanh lý" — chỉ còn ô số, dẫn sang /disposal.
+  it('không có khối Kho thanh lý; ô số "Vừa thanh lý" dẫn sang Kho thanh lý', async () => {
     mockApi(BOARD);
     renderBoard();
-    const block = (await screen.findByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).closest('section')!;
-    expect(within(block).getByText(/Tài khoản VPN/)).toBeInTheDocument();
-    expect(within(block).queryByText(/^vpn/)).toBeNull();
+    const tile = await screen.findByRole('link', { name: /Vừa thanh lý · 7 ngày/ });
+    expect(tile).toHaveAttribute('href', '/disposal');
+    expect(screen.queryByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).toBeNull();
+    expect(screen.queryByText('VPN-OLD')).toBeNull();
   });
 
   // UX-E05: tin tốt đã nằm ở ô số 0 — khối yên không lặp lại lần hai; khối LỖI vẫn hiện, có Thử lại.
   it('khối LỖI có tông cảnh báo + Thử lại; khối yên (Sự cố, 0 phiếu) không hiện; không câu "không có việc gì gấp"', async () => {
-    mockApi({ ...BOARD, disposed: { available: false, items: [], total: 0 } });
+    mockApi({ ...BOARD, expiring: { available: false, items: [], total: 0 } });
     renderBoard();
-    const errorBlock = (await screen.findByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).closest('section')!;
+    const errorBlock = (await screen.findByRole('heading', { name: 'Tổng hợp hết hạn cần xử lý' })).closest('section')!;
     expect(errorBlock).toHaveClass('tone-error');
     expect(within(errorBlock).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sự cố · 7 ngày' })).toBeNull();

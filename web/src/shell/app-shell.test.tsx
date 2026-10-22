@@ -270,11 +270,23 @@ describe('AppShell — menu gọn (Q-18)', () => {
     expect(systemToggle()).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('các nhóm khác không khép được — chỉ "Hệ thống"', () => {
+  it('mọi nhóm đều khép được (PW-C07): nhóm dùng hằng ngày mặc định mở, khép tay thì nhớ', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    const first = renderShell('/devices');
+    for (const name of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Phiếu ISO', 'Hệ thống']) {
+      expect(within(nav()).getByRole('button', { name })).toBeInTheDocument();
+    }
+    const network = within(nav()).getByRole('button', { name: 'Mạng' });
+    expect(network).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav()).getByRole('link', { name: 'Sổ NAT' })).toBeVisible();
+
+    await userEvent.setup().click(network);
+    expect(network).toHaveAttribute('aria-expanded', 'false');
+    expect(within(nav()).queryByRole('link', { name: 'Sổ NAT' })).toBeNull();
+
+    first.unmount();
     renderShell('/devices');
-    expect(within(nav()).queryByRole('button', { name: 'Tài sản' })).toBeNull();
-    expect(within(nav()).getByRole('link', { name: 'Thiết bị' })).toBeVisible();
+    expect(within(nav()).getByRole('button', { name: 'Mạng' })).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('đang ở một màn trong nhóm thì nhóm tự mở, dù mặc định khép', () => {

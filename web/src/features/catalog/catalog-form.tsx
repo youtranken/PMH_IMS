@@ -29,6 +29,9 @@ import {
 import { cabinetNumber, suggestCabinetCode } from './cabinet-code';
 import { deviceUsage } from './catalog-usage';
 import { DeviceTypeDiagramIcon } from './device-type-diagram-icon';
+import { DeviceTypePhoto } from './device-type-photo';
+import { DEVICE_TYPE_ICON_KEYS, DEVICE_TYPE_ICON_LABEL_KEY, DeviceTypeIcon } from '@/ui/device-type-icon';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { CodeInput } from '@/ui/code-input';
 
 /** `GET /catalog/diagram-shapes` — danh sách hình ĐÓNG, server kiểm đúng danh sách này khi ghi. */
@@ -47,6 +50,8 @@ type FormState = {
   isRouter: boolean;
   /** '' = "Thiết bị khác". */
   diagramShape: string;
+  /** Biểu tượng giao diện (PW-A18); '' = biểu tượng chung. */
+  icon: string;
   supplies: string;
   phone: string;
   contact: string;
@@ -69,6 +74,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
       hasPortMap: boolean;
       isRouter: boolean;
       diagramShape: string | null;
+      icon: string | null;
       hotline: string | null;
       protocol: ServiceProtocol;
       portFrom: number;
@@ -86,6 +92,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
     hasPortMap: any.hasPortMap ?? (entity === 'device_type' ? false : false),
     isRouter: any.isRouter ?? false,
     diagramShape: any.diagramShape ?? '',
+    icon: any.icon ?? '',
     supplies: any.supplies ?? '',
     phone: any.phone ?? '',
     contact: any.contact ?? '',
@@ -111,6 +118,7 @@ export function CatalogForm({
   onClose,
   onSaved,
   canUploadIcon = false,
+  canSetPhoto = false,
 }: {
   entity: CatalogEntity;
   /** null = thêm mới. */
@@ -118,6 +126,8 @@ export function CatalogForm({
   csrfToken: string;
   /** SA: tải/gỡ biểu tượng SVG riêng của loại thiết bị đang sửa (server chỉ cho SA). */
   canUploadIcon?: boolean;
+  /** SA / Quản trị: tải / bỏ ảnh riêng của loại thiết bị đang sửa (PW-A18). */
+  canSetPhoto?: boolean;
   onClose: () => void;
   /**
    * Nhận luôn BẢN GHI vừa lưu.
@@ -495,6 +505,40 @@ export function CatalogForm({
             {row && canUploadIcon ? (
               <DeviceTypeDiagramIcon typeId={row.id} typeName={catalogLabel(entity, row)} csrfToken={csrfToken} />
             ) : null}
+            {/* Khung ảnh của máy chưa có ảnh thật hiện biểu tượng này (PW-A18) — khác hình trên sơ đồ. */}
+            <Field label={t('catalog.typeIcon')} hint={t('catalog.typeIconHint')} span={2}>
+              <SegmentedRadio
+                label={t('catalog.typeIcon')}
+                value={form.icon}
+                options={[
+                  {
+                    value: '',
+                    label: (
+                      <>
+                        <DeviceTypeIcon icon={null} /> {t('catalog.typeIconGeneric')}
+                      </>
+                    ),
+                  },
+                  ...DEVICE_TYPE_ICON_KEYS.map((key) => ({
+                    value: key,
+                    label: (
+                      <>
+                        <DeviceTypeIcon icon={key} /> {t(DEVICE_TYPE_ICON_LABEL_KEY[key])}
+                      </>
+                    ),
+                  })),
+                ]}
+                onChange={(value) => set('icon', value)}
+              />
+            </Field>
+            {row && canSetPhoto ? (
+              <DeviceTypePhoto
+                typeId={row.id}
+                typeName={catalogLabel(entity, row)}
+                photoFileId={(row as { photoFileId?: string | null }).photoFileId ?? null}
+                csrfToken={csrfToken}
+              />
+            ) : null}
             <Field label={t('catalog.description')} htmlFor="catalog-description" error={check.error('description')}>
               <input
                 id="catalog-description"
@@ -753,6 +797,7 @@ function buildBody(entity: CatalogEntity, form: FormState): Built {
         isRouter: form.isRouter,
         description: form.description.trim(),
         diagramShape: form.diagramShape || null,
+        icon: form.icon || null,
       });
     case 'vendor':
       return ok({

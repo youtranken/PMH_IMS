@@ -52,8 +52,8 @@
   padding: clamp(16px, 5vh, 56px) var(--space-7) var(--space-7);
   overflow: hidden;
 }
-/* Logo PMH + tên hệ thống, giữa cột form, trên card. Chữ "Phu My Hung" trong logo xám sáng: chỉ
-   đọc được trên nền tối — nền cột form là ảnh làm mờ + tối (luật ngay dưới). */
+/* Logo PMH + tên hệ thống, giữa cột form, trên card. Logo đứng trên tấm nền sáng riêng: chữ
+   "Phu My Hung" xám của nó chìm trên ảnh mờ của cột form (PW-C21). */
 .auth-head {
   position: relative;
   z-index: 1;
@@ -65,18 +65,14 @@
   color: var(--auth-ink);
   text-align: center;
 }
-.auth-head-logo img { display: block; width: clamp(120px, 10vw, 168px); height: auto; }
-.auth-head-system { font-size: var(--fs-lg); font-weight: 600; }
-.auth-head-points {
-  margin: 0;
-  padding-left: 1.2em;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  text-align: left;
+.auth-head-logo {
+  display: block;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--r-lg);
+  background: var(--auth-logo-plate);
 }
+.auth-head-logo img { display: block; width: clamp(104px, 9vw, 148px); height: auto; }
+.auth-head-system { font-size: var(--fs-lg); font-weight: 600; }
 /* Màn rộng: nền cột form là CHÍNH ảnh bên trái, phóng to + làm mờ + tối đi — hai nửa cùng tông
    chạng vạng nên liền một khối, thay cho nền lục riêng trông như hai trang ghép. Không trải ảnh
    rõ ra toàn màn: cây cầu nằm ở nửa phải ảnh, card sẽ che đúng nó. Ảnh đã được mảng trái tải nên
@@ -87,7 +83,6 @@
   inset: -40px;
   z-index: 0;
   background: url('/brand/login-photo.webp') 70% 60% / cover no-repeat;
-  /* 0,32 chứ không sáng hơn: chữ "Phu My Hung" của logo là xám sáng, nền sáng hơn thì chìm (PW-C21). */
   filter: blur(28px) brightness(0.32) saturate(1.1);
   pointer-events: none;
 }
@@ -127,7 +122,7 @@
   /* Viền nhấn trên cùng: tách card khỏi nền tối, cùng màu với thanh "Bước 1/2". */
   border-top: 3px solid var(--warm);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-3);
   animation: pageIn 0.3s var(--ease) both;
 }
 .auth-card > .ghost.sm {
@@ -207,7 +202,7 @@
 }
 /* Mã đúng: card có quầng xanh phía sau, tiêu đề mới hiện dần. */
 .auth-card.is-verified {
-  box-shadow: var(--shadow-lg), var(--auth-card-ok-glow);
+  box-shadow: var(--elev-3), var(--auth-card-ok-glow);
   transition: box-shadow 400ms var(--ease);
 }
 .auth-card.is-verified .auth-title,

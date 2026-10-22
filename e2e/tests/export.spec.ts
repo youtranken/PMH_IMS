@@ -81,6 +81,8 @@ test.describe('Xuất Excel', () => {
       '/api/v1/ipam/addresses/export.xlsx',
       '/api/v1/ipam/nat/export.xlsx',
       '/api/v1/vault/break-glass/export.xlsx',
+      // UX-E31: danh sách phiếu 0206 của một năm.
+      `/api/v1/iso/incidents/export.xlsx?year=${new Date().getFullYear()}`,
     ]) {
       const res = await page.request.get(url);
       expect(res.status(), `phải xuất được: ${url}`).toBe(200);

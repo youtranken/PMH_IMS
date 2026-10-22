@@ -156,7 +156,7 @@ describe('Bố cục form đường truyền', () => {
     renderForm(ROW_ON_INACTIVE);
     const dialog = screen.getAllByRole('dialog')[0];
     expect(Number.parseInt(dialog.style.maxWidth, 10)).toBeGreaterThanOrEqual(960);
-    for (const heading of ['Hồ sơ', 'Hợp đồng và liên hệ sự cố']) {
+    for (const heading of ['Nhận dạng', 'Hợp đồng và liên hệ sự cố']) {
       const section = within(dialog).getByRole('heading', { name: heading }).closest('section');
       expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     }
@@ -281,5 +281,53 @@ describe('Form đường truyền — IP WAN nhiều dòng', () => {
     await waitFor(() => expect(calls.some((c) => c.url === '/api/v1/isp-lines/line-1')).toBe(true));
     const body = calls.find((c) => c.url === '/api/v1/isp-lines/line-1')!.body as Record<string, unknown>;
     expect(body.wanIps).toEqual([]);
+  });
+});
+
+/* FM-21: khai nhiều đường cùng nhà mạng / site — lưu xong form ở lại, bỏ mã, IP WAN, ghi chú. */
+describe('Form đường truyền — Lưu và nhân bản', () => {
+  it('lưu một đường, form ở lại: mã + IP WAN + ghi chú trống, nhà mạng / tốc độ giữ nguyên', async () => {
+    const calls = mockFetch();
+    const saved = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <IspForm row={null} csrfToken="t" onClose={() => undefined} onSaved={saved} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/v1/catalog'))).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Nhà mạng' }));
+    await user.click(await screen.findByRole('option', { name: 'VNPT' }));
+    await user.type(screen.getByLabelText(/Mã đường/), 'ISP-E2E-01');
+    await user.type(screen.getByRole('textbox', { name: /Tốc độ gói cước/ }), '100M');
+    await user.type(screen.getByRole('textbox', { name: 'Ghi chú' }), 'Tầng 2');
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
+    await waitFor(() => expect(saved).toHaveBeenCalledWith({ keepOpen: true }));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines')!.body as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'ISP-E2E-01', providerId: 'p-vnpt', note: 'Tầng 2' });
+    expect(screen.getByRole('dialog', { name: 'Thêm đường truyền' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Mã đường/)).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: /Tốc độ gói cước/ })).toHaveValue('100M');
+    expect(screen.getByRole('button', { name: 'Nhà mạng' })).toHaveTextContent('VNPT');
+  });
+
+  it('form Sửa không có nút Lưu và nhân bản', () => {
+    mockFetch();
+    renderForm(ROW_ON_INACTIVE as IspRow);
+    expect(screen.queryByRole('button', { name: 'Lưu và nhân bản' })).toBeNull();
+  });
+});
+
+/* PW-A35 (Q-33): tiêu đề khối là danh từ — "Hồ sơ" là tên tab của trang chi tiết, không phải khối. */
+describe('Form đường truyền — tiêu đề khối', () => {
+  it('khối đầu là "Nhận dạng"', () => {
+    mockFetch();
+    renderForm(null);
+    const headings = within(screen.getByRole('dialog')).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent?.trim());
+    expect(headings).toContain('Nhận dạng');
+    expect(headings).not.toContain('Hồ sơ');
   });
 });

@@ -21,6 +21,24 @@ export const NAT_DEFAULT_SHOWN: Record<NatBucket, boolean> = {
   voided: false,
 };
 
+/**
+ * Chip trạng thái sống trên URL (`?states=open,voided`, UX-E40) để link dán đi mở ra đúng phần
+ * sổ đang xem. Rỗng / không đọc được = mặc định; mặc định thì không ghi lên URL.
+ */
+export function parseNatShown(param: string): Record<NatBucket, boolean> {
+  if (param === 'none') return { open: false, off: false, voided: false };
+  const picked = param.split(',').filter((part): part is NatBucket => NAT_BUCKETS.includes(part as NatBucket));
+  if (picked.length === 0) return NAT_DEFAULT_SHOWN;
+  return { open: picked.includes('open'), off: picked.includes('off'), voided: picked.includes('voided') };
+}
+
+export function natShownParam(shown: Record<NatBucket, boolean>): string {
+  const on = NAT_BUCKETS.filter((bucket) => shown[bucket]);
+  const isDefault = NAT_BUCKETS.every((bucket) => shown[bucket] === NAT_DEFAULT_SHOWN[bucket]);
+  // Tắt hết chip vẫn phải ghi được: `none` không khớp rổ nào nên đọc lại ra bảng rỗng có chủ ý.
+  return isDefault ? '' : on.length === 0 ? 'none' : on.join(',');
+}
+
 export function natBucket(rule: { enabled: boolean; voidedAt: string | null }): NatBucket {
   if (rule.voidedAt) return 'voided';
   return rule.enabled ? 'open' : 'off';

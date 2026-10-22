@@ -1372,6 +1372,48 @@ Chủ dự án duyệt mockup bố cục ngày 21/10/2026 và cho làm toàn b�
   mục "Đổi mật khẩu", "Xác thực 2 lớp" cùng dẫn vào Hồ sơ). Hồ sơ vẫn có thẻ Giao diện. Nút tài
   khoản mang một mũi tên lên, cùng màu ở mọi giao diện (PW-C26).
 
+### Q-33 · Đợt 8 soát giao diện — 36 mục gác lại (22/10/2026, chủ dự án chốt từng mục)
+
+Chủ dự án chốt từng mục còn gác lại sau Đợt 0b–7. Mục nào đổi một quyết định cũ thì ghi quyết định
+bị đổi.
+
+- **Mọi nhóm trên menu đều gập được** (đổi một phần Q-18, PW-C07). Trước đây một số nhóm luôn mở.
+- **Màn đăng nhập chỉ còn logo + tên hệ thống** (đổi một phần Q-20, UX-E11): bỏ ba dòng giới
+  thiệu. Logo đặt trên một nền sáng riêng để đọc được ở cả giao diện tối (PW-C21). Giữ dòng liên
+  hệ IT, không làm "Quên mật khẩu" (PW-C06).
+- **Hiệu ứng "mã đúng" ở ô mã 2 lớp còn 2 giây ở mọi nơi**, kể cả đăng nhập (UX-E10).
+- **Sơ đồ mạng bỏ nút (i) trên thanh công cụ và dòng mô tả dưới mục menu** (đổi một phần Q-23,
+  UX-E02): mô tả chuyển vào tooltip; mục bị tắt vẫn nói lý do. Giữ màn Hướng dẫn.
+- **Tiêu đề khối form là danh từ** ("Nhận dạng", "Vị trí", "Thời hạn", "Phụ trách"); ô Mã luôn
+  đứng trước ô Tên (bổ sung Q-27, PW-A35 + FM-25).
+- **Tiêu đề cột bảng 12px chữ thường, đậm vừa** (đổi một phần Q-27, DS-09) thay vì chữ in hoa.
+- **Thẻ trên điện thoại theo một khuôn chung**: tiêu đề là mã, dòng phụ là tên, thao tác chỉ qua
+  nút ⋯ (ngoại lệ có chủ đích của Q-18, TB-09).
+- **Bảng điều khiển bỏ khối "Tổng hợp kho thanh lý"** (đổi một phần Q-21, PW-A26); ô số dẫn sang
+  Kho thanh lý.
+- **Chi tiết hợp đồng / dịch vụ bỏ tab Tổng quan** (PW-A10): Ghi chú lên dải tóm tắt, ô thứ 3 là
+  "Số hợp đồng", bỏ dòng "Loại hồ sơ" lặp.
+- **Giấy phiếu ISO chữ 12px, dải tiêu đề đậm hơn** (bổ sung Q-28, DS-30).
+- **Mã hồ sơ mới chỉ gồm A–Z 0–9 - _ . /**, tự in hoa (PW-A12). Chỉ áp cho mã mới và khi sửa mã;
+  mã cũ giữ nguyên.
+- **Thanh lý thiết bị mặc định "Thanh lý và gỡ"** (LF-05); hệ thống bắt gõ lại mã máy khi có BẤT
+  CỨ thứ gì bị gỡ (IP, license, NAT, đường truyền), máy trống thì không (LF-25).
+- **Một cặp thao tác "Thanh lý… / Dùng lại…"**; tài khoản dịch vụ "Ngừng dùng… / Dùng lại…"
+  (UX-E13, UX-E40). Không còn chữ "Bật lại".
+- **IP gắn máy lấy người dùng theo máy**, không giữ bản sao riêng; IP không gắn máy giữ ô tự ghi
+  (LF-03).
+- **Lượt Sửa không đổi gì thì API bỏ qua**: không ghi nhật ký, không ghi lịch sử rỗng; web vẫn báo
+  đã lưu (FM-24).
+- **Người duyệt (SA / Quản trị) thấy nút "Yêu cầu mở két"**, Thành viên giữ "Xin mở két" (PW-C20).
+- **Luật gửi chọn nấc 7 / 14 / 30 / 60 / 90 ngày**; Bảng điều khiển bỏ "Xin chào", thay bằng
+  "Cập nhật lúc …"; NAT dùng huy hiệu ngắn và giữ bộ lọc trên URL (UX-E40).
+- **Tìm nhanh tra thêm NAT và số phiếu 0206** (UX-E32). Không thêm lệnh (Cấp IP, Xin mở két), không
+  tra người dùng / nhà cung cấp.
+- **Danh mục loại thiết bị chọn được icon hoặc tải ảnh lên** (PW-A18); khung ảnh trống của thiết
+  bị dùng icon của loại.
+- Không làm: draw.io giao diện tối (giữ V-05), ma trận quyền két (để sau go-live), cột Bảo hành
+  (dùng màn Sắp hết hạn), khối "Nâng cao" ở Tham số, giữ Q-30 và Q-15.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

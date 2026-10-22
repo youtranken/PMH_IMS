@@ -213,3 +213,64 @@ describe('DataTable — tiêu đề thẻ gọn', () => {
     expect(screen.getByText('SW-E2E-CORE-01').closest('.list-card-title')).toHaveClass('mono');
   });
 });
+
+/*
+ * Khuôn thẻ chung (TB-09, Q-33): thao tác trên thẻ CHỈ qua nút ⋯. Desktop có nút "Sửa" đứng
+ * ngoài menu (Q-18); trên thẻ nó gộp vào đầu menu — dòng thẻ hẹp, hai nút cạnh badge thì tiêu đề
+ * mã bị ép xuống dòng. Màn không khai `actions` cho thẻ thì thẻ lấy cột `actions` của bảng: không
+ * màn nào để điện thoại "không có thao tác gì" trong khi desktop có.
+ */
+describe('DataTable — thao tác trên thẻ chỉ qua ⋯', () => {
+  const onEdit = vi.fn();
+  const WITH_ACTIONS: ColumnDef<Dev>[] = [
+    { accessorKey: 'code', header: 'Mã' },
+    {
+      id: 'actions',
+      header: 'Thao tác',
+      cell: ({ row }) => (
+        <RowActions
+          primary={{ label: 'Sửa', ariaLabel: `Sửa ${row.original.code}`, onClick: () => onEdit(row.original.code) }}
+          label={`Thao tác với ${row.original.code}`}
+          items={[{ key: 'x', label: 'Thanh lý…', onSelect: () => {}, danger: true }]}
+        />
+      ),
+    },
+  ];
+
+  it('thẻ không khai `actions`: lấy cột `actions`, nút "Sửa" gộp vào menu ⋯', async () => {
+    viewport(390);
+    renderWithI18n(
+      <MemoryRouter>
+        <DataTable data={DATA} columns={WITH_ACTIONS} emptyText="Trống" mobileCard={{ title: (r) => r.code, subtitle: (r) => r.name }} />
+      </MemoryRouter>,
+    );
+    const card = within(screen.getAllByRole('listitem')[0]);
+    expect(card.queryByRole('button', { name: 'Sửa SW-E2E-CORE-01' })).toBeNull();
+    await userEvent.click(card.getByRole('button', { name: 'Thao tác với SW-E2E-CORE-01' }));
+    const items = screen.getAllByRole('menuitem').map((el) => el.textContent);
+    expect(items[0]).toBe('Sửa');
+    expect(items).toContain('Thanh lý…');
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sửa' }));
+    expect(onEdit).toHaveBeenCalledWith('SW-E2E-CORE-01');
+  });
+
+  it('`actions` trả null: thẻ không có thao tác dù bảng có cột `actions`', () => {
+    viewport(390);
+    renderWithI18n(
+      <MemoryRouter>
+        <DataTable data={DATA} columns={WITH_ACTIONS} emptyText="Trống" mobileCard={{ title: (r) => r.code, actions: () => null }} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('button', { name: /Thao tác với/ })).toBeNull();
+  });
+
+  it('màn rộng: nút "Sửa" vẫn đứng ngoài menu (Q-18)', () => {
+    viewport(1280);
+    renderWithI18n(
+      <MemoryRouter>
+        <DataTable data={DATA} columns={WITH_ACTIONS} emptyText="Trống" mobileCard={{ title: (r) => r.code }} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByRole('button', { name: 'Sửa SW-E2E-CORE-01' })).toHaveLength(1);
+  });
+});

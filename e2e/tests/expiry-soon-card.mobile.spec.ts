@@ -42,7 +42,8 @@ test('Sắp hết hạn ở 390px: thẻ 2 dòng, bốn ô số chia 2 × 2, sá
   await expect(card.getByText('Còn 10 ngày')).toBeVisible();
   const [y, m, d] = end.split('-');
   await expect(card).toContainText(`Chứng chỉ SSL · ${d}/${m}/${y}`);
-  await expect(card.getByRole('button', { name: 'Gia hạn' })).toBeVisible();
+  // Gia hạn nằm trong nút ⋯ như mọi thẻ (TB-09).
+  await expect(card.getByRole('button', { name: `Thao tác với ${code}` })).toBeVisible();
   // Không còn thẻ bảng gập "Mục / Loại / Hết hạn / Tình trạng / Thao tác".
   await expect(page.getByRole('table')).toHaveCount(0);
 
@@ -64,6 +65,7 @@ test('Sắp hết hạn ở 390px: thẻ 2 dòng, bốn ô số chia 2 × 2, sá
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   // Gia hạn ngay trên thẻ vẫn mở đúng hộp của mục đó.
-  await card.getByRole('button', { name: 'Gia hạn' }).click();
+  await card.getByRole('button', { name: `Thao tác với ${code}` }).click();
+  await page.getByRole('menuitem', { name: 'Gia hạn' }).click();
   await expect(page.getByRole('dialog', { name: new RegExp(`Gia hạn — ${code}`) })).toBeVisible();
 });

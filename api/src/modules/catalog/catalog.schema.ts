@@ -44,6 +44,10 @@ export const deviceTypeTable = pgTable('device_type', {
   isRouter: boolean('is_router').notNull().default(false),
   description: text('description'),
   diagramShape: text('diagram_shape'),
+  /** Biểu tượng trên giao diện (danh sách đóng `DEVICE_TYPE_ICONS`); null = biểu tượng chung. */
+  icon: text('icon'),
+  /** Ảnh riêng — tệp `files` của chính loại này, thắng biểu tượng (migration 0077). */
+  photoFileId: uuid('photo_file_id'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

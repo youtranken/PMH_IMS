@@ -201,14 +201,49 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
   });
 
   // PW-A10: hợp đồng bảo trì — ô Bắt đầu lặp ngày đầu của khoảng hạn; "Loại hồ sơ" lặp tên màn.
-  it('hợp đồng bảo trì: ô 3 là Số hợp đồng, không ô Bắt đầu; tab Hồ sơ không có Loại hồ sơ', async () => {
+  it('hợp đồng bảo trì: ô 3 là Số hợp đồng (không PO), không ô Bắt đầu, không Loại hồ sơ', async () => {
     mockFetch([], row({ id: 'm1', code: 'HD-E2E-01', kind: 'maintenance', startDate: '2026-01-01', contract: 'HD-77' }));
     renderDetail('/maintenance/m1');
     const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
-    expect(strip).toHaveTextContent('Số hợp đồng / PO');
+    expect(strip).not.toHaveTextContent('Số hợp đồng / PO');
     expect(strip).toHaveTextContent('HD-77');
     expect(within(strip).queryByText('Bắt đầu')).toBeNull();
     expect(screen.queryByText('Loại hồ sơ')).toBeNull();
+  });
+
+  // PW-A10: tab Tổng quan của hợp đồng / dịch vụ chỉ còn Ghi chú — Ghi chú lên dải tóm tắt, bỏ tab.
+  it('hợp đồng bảo trì: không tab Tổng quan; dải có Số hợp đồng + Ghi chú; loại không lặp dưới tiêu đề', async () => {
+    mockFetch(
+      [],
+      row({ id: 'm1', code: 'HD-E2E-01', kind: 'maintenance', contract: 'HD-77', note: 'Gọi NCC trước 9h' }),
+    );
+    renderDetail('/maintenance/m1');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(within(strip).getByText('Số hợp đồng', { exact: true })).toBeInTheDocument();
+    expect(within(strip).getByText('Ghi chú', { exact: true })).toBeInTheDocument();
+    expect(strip).toHaveTextContent('Gọi NCC trước 9h');
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent?.replace(/\d+$/, '').trim())).toEqual([
+      'Két sắt',
+      'Giấy tờ',
+      'Lịch sử',
+    ]);
+    // Tên màn đã ở crumb; dưới tiêu đề không ghi lại "Hợp đồng bảo trì".
+    expect(screen.getAllByText('Hợp đồng bảo trì')).toHaveLength(1);
+  });
+
+  it('hợp đồng: link cũ ?tab=profile mở tab Giấy tờ, không mở panel hồ sơ đã bỏ', async () => {
+    mockFetch([], row({ id: 'm1', code: 'HD-E2E-01', kind: 'maintenance', contract: 'HD-77' }));
+    renderDetail('/maintenance/m1?tab=profile');
+    await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(await screen.findByRole('tab', { name: /Giấy tờ/, selected: true })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { selected: true, name: /Hồ sơ|Tổng quan/ })).toBeNull();
+  });
+
+  it('hợp đồng không có ngày hết hạn: ngày bắt đầu nằm trong ô Hết hạn (không còn tab để ghi)', async () => {
+    mockFetch([], row({ id: 'm2', code: 'DV-E2E-02', kind: 'maintenance', startDate: '2026-03-01', endDate: null }));
+    renderDetail('/maintenance/m2');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(strip).toHaveTextContent('01/03/2026');
   });
 
   // PW-A21: SSL / tên miền / hợp đồng không có ghế → chip "Ghế" ở tab Lịch sử là lọc ra rỗng.

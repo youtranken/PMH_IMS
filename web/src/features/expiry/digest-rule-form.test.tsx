@@ -7,7 +7,7 @@ import { DigestRulesPanel } from './digest-rules-panel';
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-function renderForm() {
+function renderForm({ adding = true, withinDays = 30 } = {}) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
@@ -19,7 +19,7 @@ function renderForm() {
               id: 'r1',
               name: 'SSL → IT',
               kinds: ['ssl'],
-              withinDays: 30,
+              withinDays,
               recipients: ['it@pmh.com.vn'],
               frequency: 'weekly',
               hour: 8,
@@ -41,13 +41,19 @@ function renderForm() {
         <DigestRulesPanel
           me={me}
           kinds={[{ kind: 'ssl', label: 'Chứng chỉ SSL', canRenew: true }]}
-          adding
+          adding={adding}
           onAddingChange={() => {}}
         />
       </ConfirmProvider>
     </ToastProvider>,
   );
   return screen.findByRole('dialog', { name: 'Thêm luật' });
+}
+
+async function openEdit(withinDays: number) {
+  renderForm({ adding: false, withinDays });
+  await userEvent.click(await screen.findByRole('button', { name: 'Sửa SSL → IT' }));
+  return screen.findByRole('dialog', { name: /Sửa luật/ });
 }
 
 /*
@@ -113,5 +119,28 @@ describe('Form luật gửi báo cáo — chip người nhận, gợi ý, công 
     }
     expect(within(dialog).queryByText(/kể cả loại thêm về sau/)).toBeNull();
     expect(within(dialog).queryByText(/Không cần có tài khoản IMS/)).toBeNull();
+  });
+
+  // UX-E40 (Q-33): số ngày nhìn tới chọn theo nấc, không gõ tay.
+  it('"Trong vòng" là dải nấc 7/14/30/60/90 ngày, mặc định 30; không còn ô gõ số', async () => {
+    const dialog = await renderForm();
+    const group = within(dialog).getByRole('radiogroup', { name: 'Trong vòng' });
+    expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      '7 ngày',
+      '14 ngày',
+      '30 ngày',
+      '60 ngày',
+      '90 ngày',
+    ]);
+    expect(within(group).getByRole('radio', { name: '30 ngày' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(dialog).queryByRole('textbox', { name: /Trong vòng/ })).toBeNull();
+    await userEvent.click(within(group).getByRole('radio', { name: '60 ngày' }));
+    expect(within(group).getByRole('radio', { name: '60 ngày' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('luật cũ có số ngày ngoài nấc (45) vẫn giữ được số đó', async () => {
+    const dialog = await openEdit(45);
+    const group = within(dialog).getByRole('radiogroup', { name: 'Trong vòng' });
+    expect(within(group).getByRole('radio', { name: '45 ngày' })).toHaveAttribute('aria-checked', 'true');
   });
 });

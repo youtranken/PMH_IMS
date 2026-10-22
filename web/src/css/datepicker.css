@@ -110,7 +110,7 @@
   /* auto (không hidden): trên màn rất thấp, size() clamp maxHeight → cuộn được thay
      vì cắt mất hàng ngày cuối không bấm tới. */
   overflow: auto;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-1);
   z-index: var(--z-popover);
   /* Radix modal set body{pointer-events:none}; popover portal ra body thừa hưởng -> phải bật lại. */
   pointer-events: auto;

@@ -1,6 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { InfoTip } from '@/ui/info-tip';
 import { Popover } from '@/ui/popover';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useDisabledReason } from '@/ui/disabled-reason';
@@ -15,7 +14,11 @@ export interface BarAction extends RowAction {
   primary?: boolean;
   /** Lý do nút tắt: đứng ngoài thì đọc được qua `aria-describedby`, trong menu thì thành dòng mô tả. */
   disabledReason?: string | null;
-  /** Một dòng "việc này để làm gì": đứng ngoài thì thành nút (i), trong menu thì thành dòng mô tả. Thiếu → tra `diagrams.help.<key>`. */
+  /**
+   * Một dòng "việc này để làm gì", chỉ hiện khi rê chuột (`title`) cả ngoài thanh lẫn trong menu:
+   * thanh sơ đồ không thêm tầng chữ thứ hai — nút (i), dòng mô tả — cạnh hộp Hướng dẫn (Q-33).
+   * Thiếu → tra `diagrams.help.<key>`.
+   */
   help?: string;
 }
 
@@ -130,25 +133,25 @@ export function BarButton({ action }: { action: BarAction }) {
         type="button"
         className={className}
         disabled={action.disabled || Boolean(action.disabledReason)}
+        title={help}
         {...reason.buttonProps}
         onClick={action.onSelect}
       >
         {action.label}
       </button>
       {reason.hint}
-      {help ? <InfoTip subject={action.label}>{help}</InfoTip> : null}
     </>
   );
 }
 
 /**
- * Việc trong menu: lý do tắt (nếu có) thắng câu giải thích ở dòng mô tả của mục — mục menu không có
- * `aria-describedby`, và người dùng cần biết vì sao không bấm được hơn là việc đó để làm gì.
+ * Việc trong menu: mục bị tắt vẫn NÓI lý do ở dòng mô tả — mục menu không có `aria-describedby`, và
+ * người dùng cần biết vì sao không bấm được. Câu giải thích thường chỉ vào tooltip (Q-33).
  */
 export function toMenuItem(action: BarAction): RowAction {
   const { primary: _primary, disabledReason, help, ...item } = action;
   if (disabledReason) return { ...item, disabled: true, hint: disabledReason };
-  return help ? { ...item, hint: help } : item;
+  return help ? { ...item, title: help } : item;
 }
 
 /** Menu ⋮ của thanh. Một việc thì vẽ thành nút — menu một mục là thêm một cú bấm mà không giấu được gì. */

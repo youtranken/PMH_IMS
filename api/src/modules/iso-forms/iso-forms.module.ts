@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { AuditModule } from '../audit/audit.module';
 import { FilesModule } from '../files/files.module';
@@ -40,6 +41,7 @@ import { IsoPeriodStore } from './iso-period.store';
     IsoMailContent,
     IsoReminderService,
     IsoFormsApiService,
+    ExcelExportService,
   ],
   exports: [IsoFormsApiService],
 })

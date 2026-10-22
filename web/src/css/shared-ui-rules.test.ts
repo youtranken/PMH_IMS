@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmpSpec, cssRules, declValue, readCss, specificity, type Rule } from '@/test/css-test-kit';
-import { OTP_ORBIT_MS, OTP_RING_IN_MS } from '@/ui/otp-input';
+import { OTP_MIN_SPIN_MS, OTP_ORBIT_MS, OTP_RING_IN_MS, OTP_SUCCESS_MS } from '@/ui/otp-input';
 
 /**
  * Luật CSS dùng chung mà jsdom không kiểm được: thứ tự lớp, độ ưu tiên giữa luật chung và luật
@@ -274,19 +274,12 @@ describe('chuyển động nhẹ khi rê chuột', () => {
     expect(t, selector).toMatch(/var\(--dur(-fast)?\)/);
   });
 
-  it('ô số trên Bảng điều khiển nhấc 1px + bóng khi rê chuột', () => {
-    const body = rule('shared-kit.css', '.kpi:hover')!.body;
-    expect(declValue(body, 'transform')).toBe('translateY(-1px)');
-    expect(declValue(body, 'box-shadow')).toBeDefined();
-  });
-
   it('"giảm chuyển động": tắt mọi transition/animation và bỏ cả các cú nhấc/trượt khi hover', () => {
     const all = rule('detail-tabs.css', `${MOTION_SYSTEM} *`, REDUCE)!;
     expect(declValue(all.body, 'transition')).toBe('none !important');
     expect(declValue(all.body, 'animation')).toBe('none !important');
     for (const [file, selector] of [
       ['base.css', '.nav-item:hover'],
-      ['shared-kit.css', '.kpi:hover'],
     ]) {
       expect(declValue(rule(file, `${MOTION_SYSTEM} ${selector}`, REDUCE)!.body, 'transform'), selector).toBe('none');
     }
@@ -546,6 +539,14 @@ describe('ô mã 6 số (ui/otp-input.tsx)', () => {
     const body = rule('shared-kit.css', '.otp-boxes')!.body;
     expect(declValue(body, '--otp-ring-in')).toBe(`${OTP_RING_IN_MS}ms`);
     expect(declValue(body, '--otp-orbit')).toBe(`${OTP_ORBIT_MS}ms`);
+  });
+
+  // UX-E10 (Q-33): mã đúng → đi tiếp trong 2 giây ở MỌI nơi (đăng nhập, mở két, duyệt sơ đồ).
+  it('cả hiệu ứng mã đúng (vòng tối thiểu + hội tụ + dấu tích) gói trong 2 giây', () => {
+    const anim = declValue(rule('shared-kit.css', '.otp-check-mark')!.body, 'animation') ?? '';
+    const [duration, delay] = [...anim.matchAll(/(\d+)ms/g)].map((m) => Number(m[1]));
+    expect(duration + delay).toBe(OTP_SUCCESS_MS);
+    expect(OTP_MIN_SPIN_MS + OTP_SUCCESS_MS).toBeLessThanOrEqual(2000);
   });
 });
 

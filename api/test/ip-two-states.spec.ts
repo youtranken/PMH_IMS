@@ -205,7 +205,8 @@ describe('Vòng đời hai trạng thái trên DB thật', () => {
         expect(await rowOf(ipId)).toMatchObject({
           status: 'assigned',
           device_id: deviceId,
-          used_by: 'Anh Hung',
+          // Gắn máy thì người dùng đọc từ máy, không lưu bản sao (LF-03).
+          used_by: null,
         });
         expect(rows[0].assigned_at).not.toBe('2026-01-02');
       },

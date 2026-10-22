@@ -79,8 +79,8 @@ test.describe('Nhóm quyền (Q-31)', () => {
 
     await page.goto('/admin/accounts');
     await searchAndWaitForFilter(page, E2E_MEMBER.email);
-    await rowAction(page, 'E2E Thành viên', 'Đổi nhóm quyền…');
-    const assign = page.getByRole('dialog', { name: 'Nhóm quyền của E2E Thành viên' });
+    await rowAction(page, 'E2E Thành viên', 'Vai trò & nhóm quyền…');
+    const assign = page.getByRole('dialog', { name: 'Vai trò & nhóm quyền: E2E Thành viên' });
     await assign.getByLabel('Nhóm quyền').click();
     await page.getByRole('option', { name: 'E2E Mạng' }).click();
     await assign.getByRole('button', { name: 'Lưu' }).click();

@@ -15,7 +15,6 @@ import { diagramVersionLabel, diagramVersionStanding } from '@/ui/diagram-versio
 import { DiagramViewer, type ViewerCell, type ViewerDiff } from '@/ui/diagram-viewer';
 import { DrawioFrame, readCablePalette, type DrawioFrameHandle } from '@/ui/drawio-frame';
 import { exportedSvgText, paintImsXml, type DrawioEvent } from '@/ui/drawio-protocol';
-import { InfoTip } from '@/ui/info-tip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Popover } from '@/ui/popover';
 import { Tabs } from '@/ui/tabs';
@@ -704,7 +703,6 @@ function DiagramScreenFor({ me, id }: { me: Me; id: string }) {
   const primary = (
     <>
       {inView ? searchTool : null}
-      {inView && searchTool ? <InfoTip subject={t('diagrams.nav.search')}>{t('diagrams.help.search')}</InfoTip> : null}
       {inView && reviewActs && review.pinMode ? <PinModeToggle active onToggle={review.togglePinMode} /> : null}
       {inView ? reviewPrimary.map((action) => <BarButton key={action.key} action={action} />) : null}
       {toolbar === 'compare' && !narrow ? <BarButton action={versionsAction} /> : null}
@@ -1410,7 +1408,14 @@ function DiagramEditor({
       band={band}
       primary={
         <>
-          <Popover label={t('diagrams.stock.button')} title={t('diagrams.stock.title')} open={stockOpen} onOpenChange={setStockOpen} disabled={!ready}>
+          <Popover
+            label={t('diagrams.stock.button')}
+            title={t('diagrams.stock.title')}
+            hint={t('diagrams.help.stock')}
+            open={stockOpen}
+            onOpenChange={setStockOpen}
+            disabled={!ready}
+          >
             <StockDevicePicker
               present={present}
               busy={inserting}
@@ -1426,7 +1431,6 @@ function DiagramEditor({
               }}
             />
           </Popover>
-          <InfoTip subject={t('diagrams.stock.button')}>{t('diagrams.help.stock')}</InfoTip>
         </>
       }
       trailing={

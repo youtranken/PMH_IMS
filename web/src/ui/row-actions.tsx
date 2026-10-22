@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
@@ -36,6 +36,11 @@ export interface RowAction {
    */
   hint?: string;
   /**
+   * Câu giải thích "việc này để làm gì" chỉ hiện khi rê chuột (thuộc tính `title`): màn đã nhiều
+   * chữ thì không thêm dòng mô tả dưới mỗi mục (thanh sơ đồ, Q-33).
+   */
+  title?: string;
+  /**
    * Tên nhóm có tiêu đề trong menu dài (thanh của màn sơ đồ: "Dây & kết nối", "Phiên bản & duyệt").
    * Có nhóm thì menu xếp theo nhóm — nhóm đứng theo lần đầu xuất hiện, trong nhóm vẫn đẩy việc
    * nguy hiểm xuống cuối. Tiêu đề chỉ để đọc, phím mũi tên đi qua mục chứ không dừng ở tiêu đề.
@@ -63,6 +68,13 @@ export interface RowPrimaryAction {
    */
   disabledReason?: string | null;
 }
+
+/**
+ * Bật trong thẻ gọn của điện thoại (`MobileCardItem` của `data-table`): nút `primary` gộp vào ĐẦU
+ * menu ⋯ thay vì đứng cạnh nó (TB-09, Q-33). Thẻ hẹp — thêm một nút cạnh badge thì tiêu đề mã bị
+ * ép xuống dòng; mọi thẻ chỉ có một nút ⋯ ở cùng một chỗ.
+ */
+export const RowActionsCompact = createContext(false);
 
 /**
  * Menu ba chấm (dọc) cho cột "Thao tác" của MỌI bảng danh sách (AD-15).
@@ -105,7 +117,18 @@ export function RowActions({
   maxHeight?: number;
 }) {
   const reason = useDisabledReason(primary?.disabledReason);
+  const compact = useContext(RowActionsCompact);
   if (!primary) return <RowActionsMenu {...menu} />;
+  if (compact) {
+    const first: RowAction = {
+      key: 'row-primary',
+      label: primary.label,
+      onSelect: primary.onClick,
+      disabled: primary.disabled || Boolean(primary.disabledReason),
+      hint: primary.disabledReason ?? undefined,
+    };
+    return <RowActionsMenu {...menu} items={[first, ...menu.items]} />;
+  }
   return (
     <div className="action-cell">
       {/* Nút có viền như "Gia hạn" / "Mở két" ở các bảng khác: chữ đậm trơn không đọc ra nút. */}
@@ -334,6 +357,7 @@ function RowActionsMenu({
                 type="button"
                 role="menuitem"
                 disabled={item.disabled}
+                title={item.title}
                 className={
                   item.muted
                     ? 'ghost is-muted'

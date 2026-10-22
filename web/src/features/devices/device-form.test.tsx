@@ -124,15 +124,15 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(screen.getByRole('button', { name: 'Site' })).toHaveTextContent(/KHO-CU.*\(ngừng dùng\)/);
   });
 
-  it('sửa: "giấy tờ lưu ngay" nằm trong nút (i) cạnh tiêu đề khu, không phải băng cảnh báo', async () => {
+  // UX-E20: ảnh và giấy tờ ghi thẳng, trùng tab Giấy tờ / khu "Hình dùng trên sơ đồ" — form Sửa
+  // chỉ còn một dòng chỉ đường.
+  it('sửa: không có khu Ảnh và giấy tờ, chỉ một dòng chỉ sang tab Giấy tờ', async () => {
     mockFetch();
     renderForm({ id: 'd1', code: 'PC-01', name: 'Máy', deviceTypeId: 't-on', status: 'in_use' } as DeviceRow);
-    const user = userEvent.setup();
-    expect(screen.queryByText(/có hiệu lực ngay/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }));
-    expect(
-      await screen.findByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Giấy tờ · quản lý ở tab Giấy tờ$/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Ảnh và giấy tờ/ })).toBeNull();
+    expect(screen.queryByLabelText('Chọn file để đính kèm')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Mặt trước' })).toBeNull();
   });
 
   /* Vị trí U trong tủ: hai ô chỉ hiện khi đã chọn tủ; bỏ tủ thì gửi U rỗng. */
@@ -210,11 +210,11 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     });
   });
 
-  it('hai khối luôn mở (Máy gì, Đặt ở đâu); phần còn lại gập, có số ô đã khai (Q-27)', async () => {
+  it('hai khối luôn mở (Nhận dạng, Vị trí — tiêu đề là danh từ, Q-33); phần còn lại gập, có số ô đã khai (Q-27)', async () => {
     mockFetch();
     renderForm(null);
-    expect(screen.getByRole('heading', { name: 'Máy gì' })).toBeVisible();
-    const where = screen.getByRole('heading', { name: 'Đặt ở đâu' }).closest('section');
+    expect(screen.getByRole('heading', { name: 'Nhận dạng' })).toBeVisible();
+    const where = screen.getByRole('heading', { name: 'Vị trí' }).closest('section');
     expect(where?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Truy cập quản trị', 'Ảnh và giấy tờ', 'Ghi chú']) {
       expect(screen.getByRole('button', { name: new RegExp(`^${fold}`) })).toHaveAttribute('aria-expanded', 'false');
@@ -226,10 +226,10 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
   });
 
-  it('thứ tự trong "Máy gì": Model trước, rồi Mã · Tên gọi · Loại thiết bị', () => {
+  it('thứ tự trong "Nhận dạng": Model trước, rồi Mã · Tên gọi · Loại thiết bị (Mã luôn trước Tên)', () => {
     mockFetch();
     renderForm(null);
-    const what = screen.getByRole('heading', { name: 'Máy gì' }).closest('section') as HTMLElement;
+    const what = screen.getByRole('heading', { name: 'Nhận dạng' }).closest('section') as HTMLElement;
     const labels = Array.from(what.querySelectorAll('label, .field-label')).map((el) => el.textContent?.replace('*', '').trim());
     const order = ['Model', 'Mã thiết bị', 'Tên gọi', 'Loại thiết bị'].map((name) => labels.findIndex((l) => l?.startsWith(name)));
     expect(order.every((i) => i >= 0)).toBe(true);

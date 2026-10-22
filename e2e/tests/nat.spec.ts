@@ -659,7 +659,8 @@ test.describe('Panel IP trên trang thiết bị', () => {
     // Hỏi trong KHU "Địa chỉ IP": bản đồ quan hệ ở trên cũng nhắc lại địa chỉ này (xem bài NAT).
     const ipSection = await openDeviceZone(page, 'Địa chỉ IP');
     await expect(ipSection.getByText(`172.16.${octet}.1`)).toBeVisible();
-    await expect(ipSection.getByText('cổng mặc định')).toBeVisible();
+    // IP gắn máy đọc người dùng từ máy (LF-03): chữ tự do gửi kèm không được lưu.
+    await expect(ipSection.getByText('cổng mặc định')).toHaveCount(0);
     // IP của máy khác KHÔNG được lọt vào panel của con router này.
     await expect(page.getByText(internalIp)).toHaveCount(0);
   });

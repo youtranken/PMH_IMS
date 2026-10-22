@@ -104,14 +104,19 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
-  // LF-04: chọn máy thì ô người dùng theo máy — chỉ khi ô còn trống.
-  it('chọn máy → ô "Người dùng / phòng ban" điền theo máy', async () => {
-    mockFetch();
-    renderDialog(null);
+  // LF-03 (Q-33): IP gắn máy lấy người dùng theo máy — không còn ô tự ghi, không gửi bản sao.
+  it('chọn máy → "Người dùng / phòng ban" đọc theo máy, không còn ô gõ; gửi usedBy rỗng', async () => {
+    const calls = mockFetch();
+    const onDone = vi.fn();
+    renderDialog(null, onDone);
     const user = userEvent.setup();
     await user.type(await screen.findByRole('combobox', { name: 'Thiết bị' }), 'PC-E2E');
     await user.click(await screen.findByRole('option', { name: /PC-E2E-9/ }));
-    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Chị Lan — Kế toán');
+    expect(screen.queryByRole('combobox', { name: 'Người dùng / phòng ban' })).toBeNull();
+    expect(screen.getByText('Chị Lan — Kế toán')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cấp IP' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ usedBy: '' });
   });
 
   it('ô trống: gửi POST addresses kèm ngày cấp, ghi chú và lý do', async () => {

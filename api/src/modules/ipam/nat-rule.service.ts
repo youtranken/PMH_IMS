@@ -328,6 +328,14 @@ export class NatRuleService {
     }
     const ipAddressId = input.internalIp !== undefined ? (ip?.id ?? null) : before.ipAddressId;
 
+    // Form gửi lại đủ mọi ô: lưu mà không đổi gì thì không ghi hàng, lịch sử hay nhật ký (FM-24).
+    // Router và nối sang hồ sơ IP không nằm trong dòng lịch sử nên so riêng.
+    const unchanged =
+      Object.keys(natChanges(snapshotOf(before), snapshotOfInput(merged))).length === 0 &&
+      merged.deviceId === before.deviceId &&
+      ipAddressId === before.ipAddressId;
+    if (unchanged) return { ...(await this.decorate([before]))[0], warnings };
+
     try {
       const row = await this.db.transaction(async (tx) => {
         if (input.deviceId) await this.requireDraytekWithin(tx, input.deviceId);
@@ -380,16 +388,7 @@ export class NatRuleService {
          * từ đâu sang đâu". Chép cả bản ghi vào lịch sử thì mỗi lần sửa một ô cũng ra một dòng
          * mười trường giống hệt nhau, và người đọc phải tự dò xem chỗ nào khác.
          */
-        const changes = natChanges(snapshotOf(before), {
-          ports: describePortRange(merged.externalFrom, merged.externalTo),
-          protocol: merged.protocol,
-          internalIp: merged.internalIp,
-          internalPort: merged.internalPort,
-          usedBy: merged.usedBy.trim(),
-          reason: merged.reason.trim(),
-          enabled: merged.enabled ?? true,
-          note: merged.note?.trim() || null,
-        });
+        const changes = natChanges(snapshotOf(before), snapshotOfInput(merged));
         if (Object.keys(changes).length > 0) {
           await this.recordWithin(tx, actor, id, 'updated', changes);
         }
@@ -835,6 +834,20 @@ export class NatRuleService {
     }
     return error;
   }
+}
+
+/** Bản đã trộn của một lượt sửa → cùng hình với `snapshotOf`, chuẩn hoá đúng như câu UPDATE. */
+function snapshotOfInput(merged: NatRuleInput): NatRuleSnapshot {
+  return {
+    ports: describePortRange(merged.externalFrom, merged.externalTo),
+    protocol: merged.protocol,
+    internalIp: merged.internalIp,
+    internalPort: merged.internalPort,
+    usedBy: merged.usedBy.trim(),
+    reason: merged.reason.trim(),
+    enabled: merged.enabled ?? true,
+    note: merged.note?.trim() || null,
+  };
 }
 
 /**

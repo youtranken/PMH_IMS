@@ -222,7 +222,6 @@ button.primary {
 button.primary:hover:not(:disabled) {
   background: var(--primary);
   filter: brightness(1.06);
-  box-shadow: var(--shadow);
 }
 button.warm {
   color: var(--on-brand);
@@ -427,7 +426,7 @@ html[data-motion='off'] .nav-item:hover { transform: none; }
 }
 .sidebar.is-drawer {
   height: 100%;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-2);
   animation: drawerIn 0.2s var(--ease) both;
 }
 .drawer-backdrop {

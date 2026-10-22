@@ -38,6 +38,7 @@ import {
 import { normalizeKey } from '../../common/import-plan';
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { diagramShapeDef } from './diagram-shapes';
+import { isDeviceTypeIcon } from './device-type-icons';
 import {
   CABLE_COLOR_SLOTS,
   type CabinetRecord,
@@ -86,6 +87,8 @@ export interface CatalogInput {
   isRouter?: boolean;
   /** `null` = bỏ hình, về "Thiết bị khác". */
   diagramShape?: string | null;
+  /** `null` = biểu tượng chung. */
+  icon?: string | null;
   supplies?: string | null;
   phone?: string | null;
   contact?: string | null;
@@ -317,6 +320,13 @@ export class CatalogService {
     return new Map(rows.map((r) => [r.id, { shape: r.shape, iconSvg: r.svg }]));
   }
 
+  /** Một loại thiết bị theo id (cả loại đã ngừng dùng); id lạ / không phải uuid thì `null`. */
+  async deviceTypeById(id: string): Promise<DeviceTypeRecord | null> {
+    if (!UUID_RE.test(id)) return null;
+    const [row] = await this.db.select().from(deviceTypeTable).where(eq(deviceTypeTable.id, id));
+    return row ?? null;
+  }
+
   async diagramIcon(id: string): Promise<string | null> {
     await this.requireOne('device_type', id);
     const [row] = await this.db
@@ -420,6 +430,10 @@ export class CatalogService {
       // "Trước khi sửa" đọc LẠI trong tx, khoá hàng: hai lượt sửa chồng nhau mà dùng `before` đọc ở
       // trên thì lượt sau ghi vào lịch sử (chỉ-thêm) giá trị cũ thay vì giá trị lượt trước vừa ghi.
       const locked = await this.requireOne(entity, id, tx);
+      // Form gửi lại đủ mọi ô: lưu mà không đổi gì thì không ghi hàng, lịch sử hay nhật ký (FM-24).
+      if (Object.keys(pickChanged(locked, values)).length === 0) {
+        return locked as unknown as CatalogRecord;
+      }
       const updated = await this.updateWithin(tx, entity, id, values);
       await this.recordWithin(tx, actor, entity, id, 'updated', {
         before: pickChanged(locked, values),
@@ -450,6 +464,35 @@ export class CatalogService {
         active ? 'activated' : 'deactivated',
         {},
       );
+    });
+  }
+
+  /**
+   * Ẩn / hiện nhiều mục một lượt (UX-E25): MỘT transaction — một id không còn thì cả lượt không đổi
+   * gì, người dùng không phải đoán mục nào đã đổi. Mục đã đúng trạng thái thì bỏ qua: không ghi
+   * lịch sử "Ngừng dùng" cho mục vốn đã ngừng. Trả về số mục thực sự đổi.
+   */
+  async setActiveMany(actor: string, entity: CatalogEntity, ids: string[], active: boolean): Promise<number> {
+    const unique = [...new Set(ids)];
+    const table = tableOf(entity);
+    return this.db.transaction(async (tx) => {
+      const rows = (await tx
+        .select({ id: table.id, active: table.active })
+        .from(table)
+        .where(inArray(table.id, unique))
+        .for('update')) as { id: string; active: boolean }[];
+      if (rows.length !== unique.length) {
+        throw new NotFoundException({
+          code: 'CATALOG_NOT_FOUND',
+          message: 'Có mục đã bị xóa trong lúc bạn chọn. Tải lại danh sách rồi chọn lại.',
+        });
+      }
+      const changing = rows.filter((row) => row.active !== active);
+      for (const row of changing) {
+        await this.updateWithin(tx, entity, row.id, { active });
+        await this.recordWithin(tx, actor, entity, row.id, active ? 'activated' : 'deactivated', {});
+      }
+      return changing.length;
     });
   }
 
@@ -677,6 +720,7 @@ export class CatalogService {
           ...(input.isRouter !== undefined ? { isRouter: input.isRouter } : {}),
           ...(input.description !== undefined ? { description: text(input.description) } : {}),
           ...(input.diagramShape !== undefined ? { diagramShape: diagramShapeOf(input.diagramShape) } : {}),
+          ...(input.icon !== undefined ? { icon: deviceTypeIconOf(input.icon) } : {}),
         };
       case 'vendor':
         return {
@@ -983,6 +1027,15 @@ function diagramShapeOf(value: string | null): string | null {
   if (value === null || value === '') return null;
   if (!diagramShapeDef(value)) {
     throw new BadRequestException({ code: 'DIAGRAM_SHAPE_INVALID', message: 'Hình trên sơ đồ không có trong danh sách cho phép.' });
+  }
+  return value;
+}
+
+/** Biểu tượng phải nằm trong danh sách ĐÓNG mà web vẽ được (PW-A18). */
+function deviceTypeIconOf(value: string | null): string | null {
+  if (value === null || value === '') return null;
+  if (!isDeviceTypeIcon(value)) {
+    throw new BadRequestException({ code: 'DEVICE_TYPE_ICON_INVALID', message: 'Biểu tượng không có trong danh sách cho phép.' });
   }
   return value;
 }

@@ -162,15 +162,4 @@ describe('Form thiết bị — khu "Ảnh thiết bị"', () => {
     await userEvent.setup({ pointerEventsCheck: 0 }).click(screen.getByRole('button', { name: 'Mở hồ sơ đặt lại ảnh' }));
     expect(onOpenCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }));
   });
-
-  it('sửa: ô ảnh ghi thẳng (không chờ Lưu)', async () => {
-    const calls = mockFetch();
-    renderForm({ id: 'd1', code: 'FW-E2E-01', name: 'Tường lửa', deviceTypeId: 't-fw', deviceTypeName: 'Firewall', status: 'in_use' } as DeviceRow);
-    const front = await screen.findByRole('group', { name: 'Mặt trước' });
-    await within(front).findByText('Biểu tượng loại Firewall');
-    await userEvent.setup().upload(within(front).getByLabelText('Tải ảnh lên — Mặt trước'), new File(['x'], 'mat-truoc.png', { type: 'image/png' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Dùng ảnh đã cắt' }));
-    expect(await within(front).findByText('Ảnh riêng của máy này')).toBeInTheDocument();
-    expect(calls.some((c) => c.url.endsWith('/devices/d1') && c.method === 'PATCH')).toBe(false);
-  });
 });

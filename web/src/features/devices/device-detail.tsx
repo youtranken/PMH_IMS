@@ -117,7 +117,8 @@ export function DeviceDetail({ me }: { me: Me }) {
   const [assigningIp, setAssigningIp] = useState(false);
   const [cloning, setCloning] = useState(false);
   /** Hộp đổi trạng thái nhanh — cũng là hộp mở lại hồ sơ đã thanh lý. */
-  const [statusOpen, setStatusOpen] = useState(false);
+  /* `?action=reuse` là lối "Dùng lại…" của Kho thanh lý: hộp mở sẵn ngay khi tới trang. */
+  const [statusOpen, setStatusOpen] = useState(() => params.get("action") === "reuse");
   const [statusError, setStatusError] = useState<string | null>(null);
   /* `?action=retire` là lối từ menu ⋮ của danh sách: hộp thanh lý cần đọc các khu mà chỉ trang
      này có, nên danh sách chuyển sang đây và hộp mở sẵn. Máy đã thanh lý thì bỏ qua (xem chỗ
@@ -601,9 +602,8 @@ export function DeviceDetail({ me }: { me: Me }) {
     setStatusError(null);
     setStatusOpen(true);
   };
-  /* Gỡ `?action=retire` khi đóng hộp: để lại thì F5 hay Back về trang này lại bật hộp thanh lý. */
-  const closeRetire = () => {
-    setRetiring(false);
+  /* Gỡ `?action=…` khi đóng hộp: để lại thì F5 hay Back về trang này lại bật hộp. */
+  const dropAction = () => {
     if (params.has("action")) {
       setParams(
         (next) => {
@@ -613,6 +613,14 @@ export function DeviceDetail({ me }: { me: Me }) {
         { replace: true },
       );
     }
+  };
+  const closeRetire = () => {
+    setRetiring(false);
+    dropAction();
+  };
+  const closeStatus = () => {
+    setStatusOpen(false);
+    dropAction();
   };
   const openRetire = () => {
     setRetireBlocked(null);
@@ -652,7 +660,7 @@ export function DeviceDetail({ me }: { me: Me }) {
       { status },
       {
         onSuccess: () => {
-          setStatusOpen(false);
+          closeStatus();
           toast({ message: t("devices.statusChanged") });
           void refresh();
         },
@@ -690,7 +698,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                sơ" xám ở chỗ mắt tìm nút chính chỉ là một lời hứa không bấm được. */
             <>
               <button type="button" className="btn primary" onClick={openStatus}>
-                {t("devices.reopen")}
+                {t("devices.reopenMenu")}
               </button>
               <button type="button" className="btn ghost" onClick={() => setCloning(true)}>
                 {t("devices.clone")}
@@ -1094,7 +1102,7 @@ export function DeviceDetail({ me }: { me: Me }) {
           reopen={retired}
           busy={setStatus.isPending}
           error={statusError}
-          onCancel={() => setStatusOpen(false)}
+          onCancel={closeStatus}
           onConfirm={changeStatus}
         />
       ) : null}

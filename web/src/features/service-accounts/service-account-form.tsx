@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { noteContainsSecret } from '@/lib/note-secret';
 import { NoteField } from '@/ui/note-field';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { AttachmentTabNote } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
@@ -30,6 +30,7 @@ import {
   type ServiceAccountStatus,
 } from './service-account-types';
 import { CodeInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface FormState {
@@ -129,6 +130,7 @@ export function ServiceAccountForm({
     !row && noteContainsSecret(form.note, secretValue) && t('vault.noteContainsSecret');
   const check = useFormErrors({
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
+    code: recordCodeProblem(form.code, row?.code) && t('formErrors.codeFormat'),
     allowedIps:
       badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
     // Chứa đúng mật khẩu đang cất (B1) hay trông như mật khẩu (Q-19) — cùng một ô, một lỗi.
@@ -258,7 +260,7 @@ export function ServiceAccountForm({
                 })();
               },
               onError: (err) => {
-                if (!server.claim(err, { SERVICE_ACCOUNT_CODE_TAKEN: 'sa-code' })) setError(errorMessage(err));
+                if (!server.claim(err, { SERVICE_ACCOUNT_CODE_TAKEN: 'sa-code', CODE_FORMAT_INVALID: 'sa-code' })) setError(errorMessage(err));
               },
             },
           );
@@ -323,7 +325,7 @@ export function ServiceAccountForm({
               nói trước hậu quả ngay khi nó bị đổi. */}
           <Field
             label={t('serviceAccounts.code')}
-            error={server.error('sa-code')}
+            error={check.error('code') ?? server.error('sa-code')}
             hint={
               row
                 ? form.code.trim() !== row.code
@@ -337,7 +339,7 @@ export function ServiceAccountForm({
             htmlFor="sa-code"
           >
             <CodeInput
-              caps
+              upper
               id="sa-code"
               placeholder={t('serviceAccounts.codeAutoPlaceholder')}
               value={form.code}
@@ -477,22 +479,10 @@ export function ServiceAccountForm({
           <NoteField id="sa-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
+        {/* Sửa: chỉ một dòng chỉ sang tab Giấy tờ (UX-E20) — panel ghi thẳng, không thuộc lượt
+            Lưu của form. */}
         {row ? (
-          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
-             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
-          <FormSection
-            title={t('attachments.title')}
-            titleTip={t('attachments.liveTip')}
-            columns={1}
-          >
-            <AttachmentPanel
-              ownerType="service_account"
-              ownerId={row.id}
-              csrfToken={csrfToken}
-              canEdit={!busy}
-            />
-          </FormSection>
+          <AttachmentTabNote ownerType="service_account" ownerId={row.id} />
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}

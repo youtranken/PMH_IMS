@@ -123,7 +123,7 @@ describe('Q-14 · mục danh mục đã vô hiệu không chọn mới được'
       ['nhà cung cấp', { vendorId: 'vendorOff' }, /Nhà cung cấp "NCC cũ E2E" đã ngừng dùng/],
       ['tủ', { siteId: 'siteOn', cabinetId: 'cabOff' }, /Tủ mạng "R02" đã ngừng dùng/],
     ])('tạo mới trỏ vào %s đã vô hiệu → 400 CATALOG_REF_INACTIVE', async (_label, refs, message) => {
-      const input: Record<string, string> = { code: `E2E-NEW-${_label}`, name: 'Mới', deviceTypeId: id.typeOn };
+      const input: Record<string, string> = { code: `E2E-NEW-${_label.normalize('NFD').replace(/[^A-Za-z]/g, '').toUpperCase()}`, name: 'Mới', deviceTypeId: id.typeOn };
       for (const [key, name] of Object.entries(refs)) input[key] = id[name];
       const error = await devices.create(actor, input).catch((e: unknown) => e);
       expect(error).toMatchObject(INACTIVE);

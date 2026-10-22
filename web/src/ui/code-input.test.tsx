@@ -17,6 +17,21 @@ describe('CodeInput', () => {
     renderWithI18n(<CodeInput caps aria-label="Mã" value="" onChange={() => undefined} />);
     expect(screen.getByRole('textbox', { name: 'Mã' })).toHaveAttribute('autocapitalize', 'characters');
   });
+
+  /* PW-A12: mã hồ sơ luôn in hoa — gõ chữ thường thì thành hoa ngay, con trỏ không nhảy về cuối. */
+  it('upper: gõ chữ thường ra chữ hoa, sửa giữa mã con trỏ đứng yên', async () => {
+    function Harness() {
+      const [v, setV] = useState('');
+      return <CodeInput upper aria-label="Mã" value={v} onChange={(e) => setV(e.target.value)} />;
+    }
+    renderWithI18n(<Harness />);
+    const input = screen.getByRole('textbox', { name: 'Mã' }) as HTMLInputElement;
+    await userEvent.type(input, 'pc-01');
+    expect(input).toHaveValue('PC-01');
+    await userEvent.type(input, 'x', { initialSelectionStart: 2, initialSelectionEnd: 2 });
+    expect(input).toHaveValue('PCX-01');
+    expect(input.selectionStart).toBe(3);
+  });
 });
 
 /** FM-05: bàn phím số iPhone tiếng Việt chỉ có dấu phẩy — "10,20,1,5" phải thành IP. */

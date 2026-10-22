@@ -26,8 +26,8 @@ import { SignOutLink } from './sign-out-link';
  * `verified`: mã 2 lớp vừa được nhận (`useOtpSuccess().confirmed`) — card có quầng xanh, tiêu đề
  * mới hiện dần (Q-21 mẫu "Glassy OTP"). Nơi gọi tự đổi chữ `title`/`subtitle`.
  *
- * `intro`: ba dòng giới thiệu chỉ có ở màn đăng nhập. Các bước sau (mã 2 lớp, cài 2 lớp, đổi
- * mật khẩu) chỉ có logo, để card không bị đẩy xuống quá màn laptop 1366×768.
+ * Không có dòng giới thiệu IMS, kể cả ở màn đăng nhập (Q-33): người mở màn này đã biết IMS là
+ * gì, và ba dòng đó đẩy card xuống quá màn laptop 1366×768.
  *
  * ≤720px CSS ẩn `.auth-head` và mảng ảnh; khối biểu tượng + tên trong card (`.auth-logo`) gánh
  * việc nhận diện. Màn rộng thì ngược lại, nên không bao giờ hiện hai logo.
@@ -42,7 +42,6 @@ export function AuthCard({
   footer,
   signedInAs,
   setupFor,
-  intro = false,
   verified = false,
 }: {
   title: string;
@@ -55,8 +54,6 @@ export function AuthCard({
   footer?: ReactNode;
   signedInAs?: Pick<Me, 'email' | 'csrfToken'> | null;
   setupFor?: Me | null;
-  /** Hiện ba dòng giới thiệu IMS trên card — chỉ màn đăng nhập. */
-  intro?: boolean;
   verified?: boolean;
 }) {
   const { t } = useTranslation();
@@ -81,13 +78,6 @@ export function AuthCard({
         <div className="auth-head" data-testid="auth-head">
           <BrandLogo alt={t('auth.panelOrg')} className="auth-head-logo" lazy />
           <p className="auth-head-system">{t('auth.panelSystem')}</p>
-          {intro ? (
-            <ul className="auth-head-points">
-              <li>{t('auth.panelPoint1')}</li>
-              <li>{t('auth.panelPoint2')}</li>
-              <li>{t('auth.panelPoint3')}</li>
-            </ul>
-          ) : null}
         </div>
         <section className={verified ? 'auth-card is-verified' : 'auth-card'}>
           {/* Chỉ hiện ≤720px (xem chú thích đầu component). */}

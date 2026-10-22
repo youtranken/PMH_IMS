@@ -84,7 +84,7 @@
 .modal {
   background: var(--surface);
   border-radius: var(--r-xl);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-3);
   max-width: 560px;
   width: 100%;
   padding: var(--space-10);

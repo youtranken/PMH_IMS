@@ -355,6 +355,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                   ),
                   meta: (row) =>
                     `${t(SECRET_OWNER_KIND_KEY[row.ownerType])} · ${formatDateTime(row.lastChangeAt)}`,
+                  // Chạm thẻ là mở két (`onRowClick`) — nút "Mở két" của cột Thao tác lặp lại đúng việc đó.
+                  actions: () => null,
                 }}
                 onRowClick={(row: VaultOwner) => setOpened(row)}
               />

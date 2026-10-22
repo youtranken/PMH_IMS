@@ -281,7 +281,7 @@ describe('Q-15: thuật ngữ đã chốt', () => {
 
   /**
    * "Break-glass", "Duyệt yêu cầu", "Xin quyền xem" và "secret" là tên kỹ thuật hoặc tên cũ của
-   * cùng một việc. Người dùng chỉ gặp "Xin mở két" / "Duyệt mở két", và mật khẩu trong két gọi
+   * cùng một việc. Người dùng chỉ gặp "Xin mở két" / "Yêu cầu mở két", và mật khẩu trong két gọi
    * là "ngăn" như ở màn két.
    */
   it('không còn tên cũ của việc mở két', () => {
@@ -291,11 +291,13 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     expect(bad).toEqual([]);
   });
 
-  it('người xin gặp "Xin mở két", người duyệt gặp "Duyệt mở két"', () => {
+  // PW-C20 (Q-33): duyệt bằng mã gửi qua mail (Q-30), màn không còn nút Duyệt — người duyệt thấy
+  // danh sách "Yêu cầu mở két".
+  it('người xin gặp "Xin mở két", người duyệt gặp "Yêu cầu mở két"', () => {
     expect(lookup('vault.request')).toBe('Xin mở két');
     expect(lookup('nav.approvalsMine')).toBe(lookup('vault.request'));
     expect(lookup('approvals.titleMine')).toBe(lookup('vault.request'));
-    expect(lookup('nav.approvals')).toBe('Duyệt mở két');
+    expect(lookup('nav.approvals')).toBe('Yêu cầu mở két');
     expect(lookup('approvals.title')).toBe(lookup('nav.approvals'));
   });
 
@@ -342,6 +344,24 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     const catalogKeys = VALUES.filter(([k]) => /^(catalog|history\.catalog)\./.test(k));
     expect(catalogKeys.length).toBeGreaterThan(50);
     expect(catalogKeys.filter(([, v]) => /vô hiệu|bật lại/i.test(v))).toEqual([]);
+  });
+
+  /**
+   * Lấy lại một tài sản đã thanh lý mang MỘT tên ở mọi màn (UX-E13): phần mềm từng là
+   * "Khôi phục…" trong khi đường truyền là "Dùng lại…" — cùng một việc, hai nhãn ngay cạnh nhau
+   * ở Kho thanh lý.
+   */
+  it('tài sản: một cặp "Thanh lý… / Dùng lại…"', () => {
+    expect(lookup('software.disposeMenu')).toBe(lookup('isp.terminateMenu'));
+    expect(lookup('software.restore')).toBe(lookup('isp.reactivateMenu'));
+    expect(lookup('software.restoreSubmit')).toBe(lookup('isp.actionActive'));
+    expect(lookup('serviceAccounts.enableMenu')).toBe(lookup('isp.reactivateMenu'));
+    expect(lookup('iso.catalog.resume')).toBe(lookup('catalog.activate'));
+    // FM-21: cùng một nút ở ba form Thêm.
+    expect(lookup('software.saveAndNext')).toBe(lookup('devices.saveAndNext'));
+    expect(lookup('isp.saveAndNext')).toBe(lookup('devices.saveAndNext'));
+    const assetKeys = VALUES.filter(([k]) => /^(software|isp|serviceAccounts|iso)\./.test(k));
+    expect(assetKeys.filter(([, v]) => /khôi phục…|bật lại/i.test(v))).toEqual([]);
   });
 
   /** NAT viết thuần Việt như các màn khác: "luật NAT", "cổng ngoài", "cổng trong". */
@@ -605,8 +625,14 @@ describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
     expect(bad).toEqual([]);
   });
 
-  it('tham số "Nhắc duyệt sau" nói rõ mở két không gửi mail (thư nhắc chỉ còn cho bản vẽ / TK dịch vụ)', () => {
-    expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két[^.]*không gửi mail/);
+  it('tham số "Gắn nhãn Chờ lâu sau" nói rõ mở két không gửi mail (thư nhắc chỉ còn cho bản vẽ / TK dịch vụ)', () => {
+    expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két chỉ gắn nhãn "Chờ lâu"\. Không gửi mail\.$/);
+  });
+
+  // TX-03 (Q-33): với yêu cầu mở két, tham số chỉ còn quyết nhãn "Chờ lâu" — tên nói đúng việc đó.
+  it('tham số mang tên "Gắn nhãn Chờ lâu sau"', () => {
+    expect(lookup('settings.approvalReminderHoursLabel')).toBe('Gắn nhãn Chờ lâu sau');
+    expect(lookup('settings.breakGlassPendingExpireHoursDesc')).toContain('"Gắn nhãn Chờ lâu sau"');
   });
 });
 

@@ -131,7 +131,8 @@ describe('Q-14 · import thiết bị không chọn mới mục danh mục đã 
   ])(
     'dòng TẠO MỚI trỏ vào %s đã vô hiệu → lỗi theo dòng ở Đối chiếu, commit không ghi',
     async (label, refs, message) => {
-      const code = `E2E-IMP-NEW-${label.replace(/\s/g, '')}`;
+      // Mã theo luật A–Z 0–9 (PW-A12): bỏ dấu và khoảng trắng của nhãn.
+      const code = `E2E-IMP-NEW-${label.normalize('NFD').replace(/[^A-Za-z]/g, '').toUpperCase()}`;
       const buffer = file({ 'Mã thiết bị *': code, 'Tên thiết bị *': 'Máy mới', ...refs });
 
       const plan = await deviceImport.preview(buffer);

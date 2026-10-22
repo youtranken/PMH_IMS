@@ -72,8 +72,8 @@ test.describe('Bảng điều khiển ở 390px', () => {
     const moreSubnets = subnets.getByRole('button', { name: /^Xem thêm \d+$/ });
     if (await moreSubnets.count()) await moreSubnets.click();
     await expect(page.getByText('100% · đã cấp 2/2 · còn 0')).toBeVisible();
-    /* DASH-002: ở 390px khối hạn thành thẻ gọn, không phải bảng cuộn ngang — và nút Gia hạn
-       vẫn còn trên thẻ. */
+    /* DASH-002: ở 390px khối hạn thành thẻ gọn, không phải bảng cuộn ngang — và Gia hạn vẫn
+       còn trên thẻ, trong nút ⋯ như mọi thẻ (TB-09). */
     const expiring = page.locator('section').filter({ hasText: 'Tổng hợp hết hạn cần xử lý' });
     const moreExpiring = expiring.getByRole('button', { name: /^Xem thêm \d+$/ });
     if (await moreExpiring.count()) await moreExpiring.click();
@@ -84,7 +84,9 @@ test.describe('Bảng điều khiển ở 390px', () => {
     const card = expiring
       .getByRole('listitem')
       .filter({ hasText: 'License có tên rất dài để thử tràn ngang trên điện thoại' });
-    await expect(card.getByRole('button', { name: 'Gia hạn', exact: true })).toBeVisible();
+    await card.getByRole('button', { name: /^Thao tác với / }).click();
+    await expect(page.getByRole('menuitem', { name: 'Gia hạn', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

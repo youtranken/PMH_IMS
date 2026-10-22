@@ -124,7 +124,7 @@
   border: 1px solid var(--sidebar-border);
   /* Nền sidebar (tối) — KHÔNG dùng --surface sáng, nếu không chữ .sb-act (ink sáng) mất. */
   background: var(--sidebar-bg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-1);
   z-index: 20;
 }
 .sb-act {
@@ -371,7 +371,7 @@
   }
 }
 
-/* Tiêu đề nhóm khép/mở được (`collapsible` trong app-nav.ts): giữ nguyên dáng `.nav-label`, chỉ
+/* Tiêu đề nhóm khép/mở được (mọi nhóm trong app-nav.ts): giữ nguyên dáng `.nav-label`, chỉ
    thêm mũi tên — để nó đọc như một tiêu đề nhóm, không như một mục menu thứ mười mấy. */
 .nav-group-toggle {
   width: 100%;

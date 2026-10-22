@@ -903,9 +903,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'vào từ đâu → chuyển tới đâu → vì sao mở. Thêm mới thì chưa có giấy tờ và lịch sử để kể',
     ).toHaveText([
       'Thêm luật NAT',
-      'Cổng mở ra ngoài',
-      'Chuyển tới máy bên trong',
-      'Mở cho ai và vì sao',
+      'Phía ngoài',
+      'Phía trong',
+      'Mục đích',
     ]);
 
     /* ----- Đủ ô, đúng vai ----- */
@@ -1108,9 +1108,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       /* Tiêu đề hộp LÀ một `h2`, và nó kèm giao thức và cổng. */
     ).toHaveText([
       'Sửa luật NAT — UDP 9000-9010',
-      'Cổng mở ra ngoài',
-      'Chuyển tới máy bên trong',
-      'Mở cho ai và vì sao',
+      'Phía ngoài',
+      'Phía trong',
+      'Mục đích',
       'Giấy tờ đính kèm',
     ]);
 

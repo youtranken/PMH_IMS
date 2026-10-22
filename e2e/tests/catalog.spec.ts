@@ -27,6 +27,40 @@ test.beforeEach(() => {
  * Chạy trên stack docker thật, không mock API (DoD).
  */
 test.describe('Danh mục', () => {
+  test('UX-E25: chọn nhiều mục → Ngừng dùng một lượt; id lạ thì cả lượt bị từ chối', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const headers = await writeHeaders(page);
+    const ids: string[] = [];
+    for (const n of [1, 2]) {
+      const res = await page.request.post('/api/v1/catalog/site', {
+        headers,
+        data: { code: `E2E-BULK-${stamp}-${n}`, name: `Site hàng loạt ${n}` },
+      });
+      expect(res.status()).toBe(201);
+      ids.push((await res.json()).id);
+    }
+
+    const bad = await page.request.post('/api/v1/catalog/site/bulk-active', {
+      headers,
+      data: { ids: [ids[0], '00000000-0000-4000-8000-000000000000'], active: false },
+    });
+    expect(bad.status(), 'một id không có thì cả lượt không đổi gì').toBe(404);
+
+    await page.goto(`/admin/catalog?tab=site&q=E2E-BULK-${stamp}`);
+    for (const n of [1, 2]) {
+      await page.getByRole('checkbox', { name: `Chọn E2E-BULK-${stamp}-${n}`, exact: false }).check();
+    }
+    const bar = page.getByRole('group', { name: 'Thao tác với các mục đã chọn' });
+    await expect(bar.getByText('Đã chọn 2')).toBeVisible();
+    await bar.getByRole('button', { name: 'Ngừng dùng 2 mục' }).click();
+    await confirmAction(page, 'Ngừng dùng 2 mục');
+    await expect(page.getByText('Đã ngừng dùng 2 mục.')).toBeVisible();
+    for (const n of [1, 2]) {
+      await expect(page.getByRole('row', { name: new RegExp(`E2E-BULK-${stamp}-${n}`) }).getByText('Đã ngừng dùng')).toBeVisible();
+    }
+  });
+
   test('đường hạnh phúc: thêm site → thêm tủ trong site đó → ngừng dùng → dùng lại', async ({
     page,
   }) => {

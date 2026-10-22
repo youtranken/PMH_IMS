@@ -120,14 +120,13 @@ describe('Form hồ sơ phần mềm', () => {
     expect(group).toHaveClass('segmented');
   });
 
-  it('SỬA: lời nhắc "lưu ngay" của giấy tờ nằm sau nút (i) cạnh tiêu đề khu', async () => {
+  // UX-E20: panel giấy tờ ghi thẳng, trùng tab Giấy tờ — form Sửa chỉ còn một dòng chỉ đường.
+  it('SỬA: không nhúng panel giấy tờ, chỉ một dòng chỉ sang tab Giấy tờ', async () => {
     mockFetch();
     render(ROW);
-    expect(screen.queryByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.')).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' }));
-    expect(
-      screen.getByText('Tải lên / xóa ở đây được lưu ngay, không cần bấm Lưu.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Giấy tờ · quản lý ở tab Giấy tờ$/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Chọn file để đính kèm')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Giải thích: Giấy tờ đính kèm' })).toBeNull();
   });
 });
 
@@ -200,5 +199,80 @@ describe('Form theo màn (Q-22)', () => {
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toMatchObject({ kind });
+  });
+});
+
+/* PW-A12 (Q-33): mã hồ sơ chỉ A–Z 0–9 - _ . /, tự in hoa; mã khai trước luật vẫn sửa được. */
+describe('Form phần mềm — luật mã hồ sơ', () => {
+  it('gõ chữ thường thành chữ hoa; có dấu / khoảng trắng thì báo tại ô, không gửi', async () => {
+    const writes = mockFetch();
+    renderWithI18n(
+      <ToastProvider>
+        <SoftwareForm row={null} screen="maintenance" csrfToken="csrf" onClose={() => {}} onSaved={() => {}} />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    const code = screen.getByRole('textbox', { name: /Mã hồ sơ/ });
+    await user.type(code, 'hồ sơ -1');
+    expect(code).toHaveValue('HỒ SƠ -1');
+    await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Bảo trì');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    expect(await screen.findAllByText(/Chỉ dùng chữ A–Z/)).not.toHaveLength(0);
+    expect(writes).toHaveLength(0);
+  });
+
+  it('Sửa hồ sơ có mã cũ sai luật: không đụng ô Mã thì lưu được', async () => {
+    const writes = mockFetch();
+    render({ ...ROW, code: 'hồ sơ -1' });
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ code: 'hồ sơ -1' });
+  });
+});
+
+/* FM-21: khai cả lô hợp đồng / dịch vụ — lưu xong giữ form mở, bỏ mã + ghi chú, giữ phần chung. */
+describe('Form phần mềm — Lưu và nhân bản', () => {
+  it('lưu một hồ sơ, form ở lại: mã + ghi chú trống, tên / NCC / hạn giữ nguyên', async () => {
+    const writes = mockFetch();
+    const saved = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <SoftwareForm row={null} screen="maintenance" csrfToken="csrf" onClose={() => {}} onSaved={saved} />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /Mã hồ sơ/ }), 'BT-E2E-01');
+    await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Bảo trì UPS');
+    await user.type(screen.getByRole('textbox', { name: 'Ghi chú' }), 'Tầng 3');
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ code: 'BT-E2E-01', name: 'Bảo trì UPS', note: 'Tầng 3' });
+    await waitFor(() => expect(saved).toHaveBeenCalledWith(expect.objectContaining({ id: 'sw1' }), { keepOpen: true }));
+    expect(screen.getByRole('dialog', { name: 'Thêm hợp đồng bảo trì' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Mã hồ sơ/ })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: /Tên hồ sơ/ })).toHaveValue('Bảo trì UPS');
+  });
+
+  it('form Sửa không có nút Lưu và nhân bản', () => {
+    mockFetch();
+    render(ROW);
+    expect(screen.queryByRole('button', { name: 'Lưu và nhân bản' })).toBeNull();
+  });
+});
+
+/* PW-A35 + FM-25 (Q-33): tiêu đề khối là danh từ, Mã luôn đứng trước Tên. */
+describe('Form phần mềm — tiêu đề khối + thứ tự Mã / Tên', () => {
+  it('license: khối "Nhận dạng" (không còn "Phần mềm gì"); ô Mã trước ô Tên', () => {
+    mockFetch();
+    render(null);
+    const dialog = screen.getByRole('dialog');
+    const headings = within(dialog).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent?.trim());
+    expect(headings).toContain('Nhận dạng');
+    expect(headings).not.toContain('Phần mềm gì');
+    const boxes = within(dialog).getAllByRole('textbox');
+    const code = boxes.indexOf(screen.getByRole('textbox', { name: /Mã hồ sơ/ }));
+    const name = boxes.indexOf(screen.getByRole('textbox', { name: /Tên hồ sơ/ }));
+    expect(code).toBeLessThan(name);
   });
 });

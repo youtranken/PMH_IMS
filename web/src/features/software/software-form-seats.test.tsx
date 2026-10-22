@@ -68,14 +68,14 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>, code = 'LI
 }
 
 describe('Form phần mềm — ghế và hợp đồng (Q-27)', () => {
-  it('Tên · Mã · Nhà cung cấp đứng một hàng, theo đúng thứ tự', () => {
+  it('Mã · Tên · Nhà cung cấp đứng một hàng, theo đúng thứ tự (FM-25: Mã trước Tên)', () => {
     mockFetch();
     render();
-    const section = screen.getByRole('heading', { name: 'Phần mềm gì' }).closest('section') as HTMLElement;
+    const section = screen.getByRole('heading', { name: 'Nhận dạng' }).closest('section') as HTMLElement;
     const grid = section.querySelector('.form-grid');
     expect(grid).toHaveAttribute('data-columns', '3');
     const labels = Array.from(section.querySelectorAll('label')).map((label) => label.textContent?.replace('*', '').trim());
-    expect(labels.slice(0, 3)).toEqual(['Tên hồ sơ', 'Mã hồ sơ', 'Nhà cung cấp']);
+    expect(labels.slice(0, 3)).toEqual(['Mã hồ sơ', 'Tên hồ sơ', 'Nhà cung cấp']);
   });
 
   it('ô tick khoá khi dưới 2 ghế; 3 ghế + tick → bảng Ghế 1…3, ẩn hợp đồng / ghi chú / giấy tờ chung, gửi seats', async () => {

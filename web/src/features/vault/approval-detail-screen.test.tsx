@@ -97,14 +97,14 @@ async function findFact(label: string): Promise<HTMLElement> {
 describe('Trang chi tiết phiếu break-glass', () => {
   // Link trong thư trỏ tới phiếu đã bị dọn / gõ sai id: phải có đường về danh sách phiếu, và
   // nói "không còn" chứ không phải một khối lỗi chung chung.
-  it('phiếu không tồn tại (404): nói không còn, có link về Duyệt mở két', async () => {
+  it('phiếu không tồn tại (404): nói không còn, có link về Yêu cầu mở két', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve(jsonResponse(404, { code: 'NOT_FOUND', message: 'Không tìm thấy' }))),
     );
     renderDetail();
     expect(await screen.findByText('404')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /Duyệt mở két/ })[0]).toHaveAttribute('href', '/approvals');
+    expect(screen.getAllByRole('link', { name: /Yêu cầu mở két/ })[0]).toHaveAttribute('href', '/approvals');
   });
 
   it('nói máy nào (link hồ sơ), lý do, số giờ xin, người duyệt đã chọn — và KHÔNG có nút Duyệt (Q-30)', async () => {
@@ -119,7 +119,7 @@ describe('Trang chi tiết phiếu break-glass', () => {
     expect(screen.getByText('Người duyệt: admin@pmh.com.vn')).toBeInTheDocument();
     // Đầu trang là DetailHeader dùng chung: breadcrumb quay về danh sách duyệt.
     const crumbs = screen.getByRole('navigation', { name: 'breadcrumb' });
-    expect(within(crumbs).getByRole('link', { name: 'Duyệt mở két' })).toHaveAttribute('href', '/approvals');
+    expect(within(crumbs).getByRole('link', { name: 'Yêu cầu mở két' })).toHaveAttribute('href', '/approvals');
     expect(screen.getByRole('heading', { level: 1, name: 'Yêu cầu mở két' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Duyệt/ })).not.toBeInTheDocument();
     expect(screen.getByText('Đồng ý → đọc mã trong thư cho người xin.')).toBeInTheDocument();

@@ -8,6 +8,7 @@ import {
 import { and, asc, count, desc, eq, ilike, getTableColumns, inArray, ne, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { nextCode } from '../../common/next-code';
+import { recordCode } from '../../common/record-code';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -284,7 +285,7 @@ export class DevicesService {
      * thanh lý nhầm vẫn chạy — nếu không thì bấm nhầm một lần là hồ sơ chết vĩnh viễn.
      */
     this.assertNotRetired(before);
-    const values = await this.prepare(input, id);
+    const values = await this.prepare(input, id, before.code);
     this.assertNotRetiringViaUpdate(before, values.status as DeviceStatus | undefined);
     const changes = diffDevice(before, values);
     const warnings =
@@ -676,13 +677,14 @@ export class DevicesService {
   private async prepare(
     input: DeviceInput,
     id: string | null,
+    currentCode?: string,
   ): Promise<Record<string, unknown>> {
     const values: Record<string, unknown> = {};
     const put = (key: string, value: unknown) => {
       if (value !== undefined) values[key] = value;
     };
 
-    put('code', input.code === undefined ? undefined : requireText(input.code, 'Mã thiết bị'));
+    put('code', input.code === undefined ? undefined : recordCode(input.code, 'Mã thiết bị', currentCode));
     put('name', input.name === undefined ? undefined : requireText(input.name, 'Tên thiết bị'));
     put('deviceTypeId', input.deviceTypeId);
     put('model', text(input.model));

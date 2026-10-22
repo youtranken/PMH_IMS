@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, within } from '@/test/test-utils';
+import { fireEvent, jsonResponse, renderWithI18n, screen, waitFor, within } from '@/test/test-utils';
 import { DevicesScreen } from './devices-screen';
 
 /**
@@ -30,15 +30,31 @@ function mockFetch() {
     vi.fn((url: string) => {
       if (url.startsWith('/api/v1/devices?')) {
         return Promise.resolve(jsonResponse(200, {
-          items: [row('d1', 'SW-01', { deviceModelId: 'm1', modelPhotoVersion: '2026-10-01T00:00:00.000Z' }), row('d2', 'SW-02')],
-          total: 2,
+          items: [
+            row('d1', 'SW-01', { deviceModelId: 'm1', modelPhotoVersion: '2026-10-01T00:00:00.000Z' }),
+            row('d2', 'SW-02'),
+            row('d3', 'AP-03', { deviceTypeId: 't2', deviceTypeName: 'Access Point' }),
+            row('d4', 'AP-04', { deviceTypeId: 't2', deviceTypeName: 'Access Point', deviceModelId: 'm4', modelPhotoVersion: 'v1' }),
+          ],
+          total: 4,
         }));
       }
       if (url.startsWith('/api/v1/ipam/devices/addresses')) {
         return Promise.resolve(jsonResponse(200, { d1: ['10.0.0.1', '10.0.0.2'] }));
       }
       if (url.startsWith('/api/v1/catalog')) {
-        return Promise.resolve(jsonResponse(200, { sites: [], cabinets: [], deviceTypes: [], vendors: [], departments: [] }));
+        return Promise.resolve(
+          jsonResponse(200, {
+            sites: [],
+            cabinets: [],
+            deviceTypes: [
+              { id: 't1', name: 'Switch', hasPortMap: true, isRouter: false, description: null, active: true, icon: 'switch', photoFileId: null },
+              { id: 't2', name: 'Access Point', hasPortMap: false, isRouter: false, description: null, active: true, icon: 'access_point', photoFileId: 'f9' },
+            ],
+            vendors: [],
+            departments: [],
+          }),
+        );
       }
       return Promise.resolve(jsonResponse(200, {}));
     }),
@@ -89,14 +105,44 @@ describe('/devices — cột theo Q-27', () => {
     expect(within(r1).queryByText('SN-1')).toBeNull();
   });
 
-  it('cột Ảnh: model có ảnh thì là ảnh model; không có thì ghi tên loại', async () => {
+  it('cột Ảnh: model có ảnh thì là ảnh model', async () => {
     mockFetch();
     renderScreen();
     const r1 = await screen.findByRole('row', { name: /SW-01/ }, { timeout: 5000 });
     const img = within(r1).getByRole('img', { name: 'Ảnh SW-01' });
     expect(img.getAttribute('src')).toContain('/api/v1/device-models/m1/photo/front');
-    const r2 = screen.getByRole('row', { name: /SW-02/ });
-    expect(within(r2).queryByRole('img')).toBeNull();
-    expect(within(r2).getByTestId('device-thumb')).toHaveTextContent('Switch');
+  });
+
+  // PW-A18 (Q-33): khung trống không in tên loại chữ nhỏ — biểu tượng loại, tên loại khi rê chuột.
+  it('cột Ảnh: chưa có ảnh thì biểu tượng của loại, tên loại ở title; loại có ảnh riêng thì ảnh đó', async () => {
+    mockFetch();
+    renderScreen();
+    const r2 = await screen.findByRole('row', { name: /SW-02/ }, { timeout: 5000 });
+    const thumb = within(r2).getByTestId('device-thumb');
+    expect(await within(thumb).findByRole('img', { name: 'Switch' })).toHaveAttribute('title', 'Switch');
+    expect(thumb.querySelector('svg[data-icon="switch"]')).not.toBeNull();
+    expect(thumb).not.toHaveTextContent('Switch');
+    const r3 = screen.getByRole('row', { name: /AP-03/ });
+    const photo = await within(r3).findByRole('img', { name: 'Access Point' });
+    expect(photo.getAttribute('src')).toBe('/api/v1/catalog/device-types/t2/photo?v=f9');
+  });
+
+  // Hai ảnh cùng hỏng (model + loại): dừng ở biểu tượng, không đổi qua lại hai URL mãi.
+  it('cột Ảnh: ảnh model lẫn ảnh loại đều hỏng thì về biểu tượng, không đổi qua lại', async () => {
+    mockFetch();
+    renderScreen();
+    // Chờ cột IP về (bảng dựng lại hàng một lượt) để thẻ ảnh không bị thay giữa chừng.
+    const r1 = await screen.findByRole('row', { name: /SW-01/ }, { timeout: 5000 });
+    await within(r1).findByText('10.0.0.1 +1');
+    const r4 = screen.getByRole('row', { name: /AP-04/ });
+    const thumb = within(r4).getByTestId('device-thumb');
+    const first = within(thumb).getByRole('img', { name: 'Ảnh AP-04' });
+    expect(first.getAttribute('src')).toContain('/api/v1/device-models/m4/photo/front');
+    fireEvent.error(first);
+    const second = await within(thumb).findByRole('img', { name: 'Access Point' });
+    expect(second.tagName).toBe('IMG');
+    fireEvent.error(second);
+    await waitFor(() => expect(thumb.querySelector('img')).toBeNull());
+    expect(thumb.querySelector('svg[data-icon="access_point"]')).not.toBeNull();
   });
 });

@@ -8,18 +8,35 @@ type NativeProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
  * Bàn phím điện thoại mặc định viết hoa chữ đầu và tự sửa chữ: "sw-core" thành "Sw-core", "pmh"
  * thành "PMH." — mã sai mà người gõ không thấy. Ô này tắt cả hai và tắt kiểm chính tả (gạch đỏ
  * dưới mọi mã). `caps` bật bàn phím chữ HOA cho ô mã / serial, không ép dữ liệu thành chữ hoa.
+ * `upper` (mã hồ sơ, PW-A12) thì ép: chữ gõ vào thành chữ hoa ngay, con trỏ giữ nguyên chỗ.
  */
-export const CodeInput = forwardRef<HTMLInputElement, NativeProps & { caps?: boolean }>(
-  function CodeInput({ caps = false, className, ...props }, ref) {
+export const CodeInput = forwardRef<HTMLInputElement, NativeProps & { caps?: boolean; upper?: boolean }>(
+  function CodeInput({ caps = false, upper = false, className, onChange, ...props }, ref) {
     return (
       <input
         ref={ref}
         type="text"
         className={className ? `inp mono ${className}` : 'inp mono'}
-        autoCapitalize={caps ? 'characters' : 'none'}
+        autoCapitalize={caps || upper ? 'characters' : 'none'}
         autoCorrect="off"
         spellCheck={false}
         {...props}
+        onChange={
+          upper
+            ? (event: ChangeEvent<HTMLInputElement>) => {
+                const input = event.target;
+                const next = input.value.toUpperCase();
+                // Sửa thẳng DOM trước khi báo lên: React nhận đúng giá trị đang hiện nên không
+                // đặt lại ô (đặt lại là con trỏ nhảy về cuối).
+                if (next !== input.value) {
+                  const { selectionStart, selectionEnd } = input;
+                  input.value = next;
+                  input.setSelectionRange(selectionStart, selectionEnd);
+                }
+                onChange?.(event);
+              }
+            : onChange
+        }
       />
     );
   },

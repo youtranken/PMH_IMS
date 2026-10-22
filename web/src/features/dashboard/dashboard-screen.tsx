@@ -27,9 +27,9 @@ import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
-import { disposalDetailText, disposalItemKindLabel, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
 import { cutExpiryBoard } from './expiry-board-cut';
+import { RowActions } from '@/ui/row-actions';
 
 interface Block<T> {
   available: boolean;
@@ -86,15 +86,6 @@ interface StaleSecretItem {
   daysSince: number;
 }
 
-interface DisposedItem {
-  kind: DisposalKind;
-  id: string;
-  code: string;
-  name: string;
-  detail: string | null;
-  disposedAt: string | null;
-}
-
 interface IncidentItem {
   id: string;
   code: string;
@@ -111,7 +102,8 @@ interface Dashboard {
   breakGlass: Block<BreakGlassItem>;
   subnetLoad: Block<SubnetLoadItem> & { thresholdPercent?: number | null };
   staleSecrets: Block<StaleSecretItem>;
-  disposed: Block<DisposedItem>;
+  /** Chỉ đọc `total` cho ô số "Vừa thanh lý" — danh sách xem ở Kho thanh lý (Q-33). */
+  disposed: Block<unknown>;
 }
 
 /** Trên điện thoại mỗi khối chỉ bày chừng này mục, phần còn lại bung tại chỗ. */
@@ -346,45 +338,10 @@ export function DashboardScreen({ me }: { me: Me }) {
     );
   }
 
-  /* Tuần qua công ty bỏ những gì — các loại gộp sẵn ở module `disposal`, không gộp lại. */
-  if (canSee(me, 'assets')) place(
-    board.disposed,
-    <BlockCard
-      key="disposed"
-      title={t('dashboard.disposed')}
-      total={board.disposed.total}
-      available={board.disposed.available}
-      moreTo={PATHS.disposal}
-      moreLabel={t('dashboard.seeAllDisposed')}
-      unavailableText={t('dashboard.blockError')}
-      onRetry={retry}
-    >
-      <MobileLimited
-        items={board.disposed.items}
-        render={(item) => {
-          const detail = disposalDetailText(item.kind, item.detail, t);
-          return (
-            <li key={`${item.kind}-${item.id}`}>
-              <div className="dash-line">
-                <span className="dash-line-name" title={[item.code, item.name].filter(Boolean).join(' · ')}>
-                  {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xóa". */}
-                  <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
-                  <span className="dash-line-sub">{item.name}</span>
-                </span>
-                <span className="badge muted">{disposalItemKindLabel(item.kind, item.detail, t)}</span>
-              </div>
-              <span className="muted">
-                {[detail, item.disposedAt ? formatDate(item.disposedAt) : null]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            </li>
-          );
-        }}
-      />
-    </BlockCard>,
-    3,
-  );
+  /*
+   * Kho thanh lý không thành khối (Q-33): ô số "Vừa thanh lý" ở hàng KPI đã nói tuần qua bỏ bao
+   * nhiêu và dẫn sang /disposal — tám dòng giống nhau bên dưới chỉ lặp lại con số đó.
+   */
 
   /* Sự cố tuần qua — phiếu 0206 theo Detection Time (FR-027 ②). */
   if (canSee(me, 'iso_0206')) place(
@@ -944,7 +901,14 @@ function ExpiringBlock({
         href: (item) => item.link ?? undefined,
         badge: (item) => <ExpiryBadge end={item.endDate} />,
         meta: (item) => `${expiryKindLabel(kinds, item.kind)} · ${formatDate(item.endDate)}`,
-        aside: (item) => (item.canRenew ? <RenewButton item={item} onRenew={setRenewing} /> : null),
+        // Thẻ chỉ có nút ⋯ (TB-09): Gia hạn vào menu thay vì đứng cạnh badge.
+        actions: (item) =>
+          item.canRenew ? (
+            <RowActions
+              label={t('common.actionsOf', { subject: item.label })}
+              items={[{ key: 'renew', label: t('expiry.renew'), onSelect: () => setRenewing(item) }]}
+            />
+          ) : null,
       }}
     />
   );
