@@ -43,9 +43,10 @@ import {
   filterNat,
   NAT_BUCKET_KEY,
   NAT_BUCKETS,
-  NAT_DEFAULT_SHOWN,
   NAT_SORT_KEYS,
   natBucket,
+  natShownParam,
+  parseNatShown,
   sortNat,
   type NatBucket,
   type NatSortKey,
@@ -104,6 +105,8 @@ interface NatFilters extends Record<string, string> {
   protocol: '' | NatProtocol;
   /** '1' = chỉ rule mở cổng nhạy cảm. */
   sensitive: '' | '1';
+  /** Chip trạng thái (`natShownParam`); rỗng = mặc định chỉ luật đang dùng. */
+  states: string;
 }
 
 const EMPTY_NAT_FILTERS: NatFilters = {
@@ -112,6 +115,7 @@ const EMPTY_NAT_FILTERS: NatFilters = {
   deviceId: '',
   protocol: '',
   sensitive: '',
+  states: '',
 };
 
 const NAT_PAGE_SIZE = 50;
@@ -149,9 +153,9 @@ export function NatScreen({ me }: { me: Me }) {
   const picked = useRowSelection();
   const [removingMany, setRemovingMany] = useState(false);
   const [historyOf, setHistoryOf] = useState<NatRow | null>(null);
-  const [shown, setShown] = useState<Record<NatBucket, boolean>>(NAT_DEFAULT_SHOWN);
-  // Ba chip trạng thái khác mặc định cũng là một bộ lọc đang bật — tính vào "Bộ lọc (n)".
-  const bucketsChanged = NAT_BUCKETS.some((bucket) => shown[bucket] !== NAT_DEFAULT_SHOWN[bucket]);
+  // Chip khác mặc định nằm trên URL nên `url.activeCount` đã tính nó vào "Bộ lọc (n)".
+  const shown = parseNatShown(filters.states);
+  const setShown = (next: Record<NatBucket, boolean>) => url.setFilter('states', natShownParam(next));
   const settings = useIpamSettings();
 
   const canHide = me.role === 'sa' || me.role === 'admin';
@@ -225,7 +229,8 @@ export function NatScreen({ me }: { me: Me }) {
   const pickedRules = rows.filter((rule) => picked.selected.has(rule.id) && !rule.voidedAt);
   const page = clampPage(url.page, rows.length, url.limit);
   const pageRows = rows.slice((page - 1) * url.limit, page * url.limit);
-  const filtered = url.isFiltered;
+  // Chip trạng thái không phải "tìm / lọc": sổ trống thật thì vẫn mời thêm luật đầu tiên.
+  const filtered = Object.entries(filters).some(([key, value]) => key !== 'states' && value !== '');
 
   /*
    * Link thẳng tới MỘT luật (X-05, `?rule=<id>`) — dán vào biên bản sự cố. Dòng đó được tô sáng và
@@ -289,12 +294,17 @@ export function NatScreen({ me }: { me: Me }) {
     return (
       <>
         {voided ? (
-          <span className="badge muted" title={rule.voidReason ?? undefined}>
-            {t('nat.voidedBadge', {
+          /* Huy hiệu ngắn như mọi trạng thái khác (UX-E40); ngày · người · lý do ở title và trong
+             hộp Lịch sử của luật. */
+          <span
+            className="badge muted"
+            title={t('nat.voidedTitle', {
               date: formatDate(rule.voidedAt),
               by: rule.voidedBy ?? '—',
               reason: rule.voidReason ?? '—',
             })}
+          >
+            {t('nat.bucketVoided')}
           </span>
         ) : rule.enabled ? (
           <span className="badge ok">{t('nat.bucketOpen')}</span>
@@ -476,11 +486,8 @@ export function NatScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('nat.search')}
-        activeCount={url.activeCount + (bucketsChanged ? 1 : 0)}
-        onClear={() => {
-          setShown(NAT_DEFAULT_SHOWN);
-          url.clearFilters();
-        }}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.siteId}
@@ -522,7 +529,7 @@ export function NatScreen({ me }: { me: Me }) {
             <FilterToggle
               key={bucket}
               pressed={shown[bucket]}
-              onChange={(on) => setShown((current) => ({ ...current, [bucket]: on }))}
+              onChange={(on) => setShown({ ...shown, [bucket]: on })}
             >
               {t(NAT_BUCKET_KEY[bucket])} <span className="seg-count">{counts[bucket]}</span>
             </FilterToggle>
@@ -576,10 +583,7 @@ export function NatScreen({ me }: { me: Me }) {
             <button
               type="button"
               className="btn"
-              onClick={() => {
-                setShown(NAT_DEFAULT_SHOWN);
-                url.clearFilters();
-              }}
+              onClick={url.clearFilters}
             >
               {t('common.clearFilters')}
             </button>
@@ -595,7 +599,7 @@ export function NatScreen({ me }: { me: Me }) {
               className="btn sm"
               onClick={() => {
                 url.clearFilters();
-                setShown({ ...NAT_DEFAULT_SHOWN, voided: true });
+                setShown({ open: true, off: false, voided: true });
               }}
             >
               {t('nat.linkedShow')}

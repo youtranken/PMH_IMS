@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { countNat, filterNat, natBucket, NAT_DEFAULT_SHOWN, sortNat } from './nat-buckets';
+import {
+  countNat,
+  filterNat,
+  natBucket,
+  natShownParam,
+  NAT_DEFAULT_SHOWN,
+  parseNatShown,
+  sortNat,
+} from './nat-buckets';
 
 const rule = (enabled: boolean, voidedAt: string | null) => ({ enabled, voidedAt });
 
@@ -61,5 +69,26 @@ describe('sortNat — sắp sổ NAT theo cột người đọc chọn', () => {
     const copy = [...list];
     sortNat(list, 'newest');
     expect(list).toEqual(copy);
+  });
+});
+
+describe('chip trạng thái trên URL (UX-E40)', () => {
+  it.each([
+    ['', NAT_DEFAULT_SHOWN],
+    ['rác', NAT_DEFAULT_SHOWN],
+    ['open,voided', { open: true, off: false, voided: true }],
+    ['off', { open: false, off: true, voided: false }],
+    ['none', { open: false, off: false, voided: false }],
+  ])('đọc %j', (param, shown) => {
+    expect(parseNatShown(param)).toEqual(shown);
+  });
+
+  it.each([
+    [NAT_DEFAULT_SHOWN, ''],
+    [{ open: true, off: true, voided: false }, 'open,off'],
+    [{ open: false, off: false, voided: false }, 'none'],
+  ])('ghi %o → %j, đọc lại ra đúng bản đó', (shown, param) => {
+    expect(natShownParam(shown)).toBe(param);
+    expect(parseNatShown(param)).toEqual(shown);
   });
 });
