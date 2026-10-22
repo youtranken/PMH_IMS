@@ -448,7 +448,7 @@ export function DeviceForm({
           </p>
         ) : null}
         {check.summary}
-        {/* Hai khối luôn mở là đủ để lưu một máy (Q-27): máy gì, đặt ở đâu. Model đứng đầu vì nó
+        {/* Hai khối luôn mở là đủ để lưu một máy (Q-27): Nhận dạng, Vị trí. Model đứng đầu vì nó
             điền sẵn Loại, Số U và ảnh. Phần còn lại gập, khai sau cũng được — khối nào đã có giá
             trị (sửa, nhân bản) hoặc có lỗi thì tự mở. */}
         <FormSection title={t('devices.formSectionWhat')} columns={3}>

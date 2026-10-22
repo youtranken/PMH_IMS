@@ -1820,8 +1820,8 @@ export default {
        chung `tabProfile` thì đổi tên tab kéo theo cả tiêu đề khối trong hộp "Thêm thiết bị"
        ("là máy gì → đứng ở đâu → mua của ai"), nơi chữ "Tổng quan" vô nghĩa vì chưa có gì để
        tổng quan. */
-    formSectionWhat: 'Máy gì',
-    formSectionWhere: 'Đặt ở đâu',
+    formSectionWhat: 'Nhận dạng',
+    formSectionWhere: 'Vị trí',
     foldPeople: 'Người dùng và phòng ban',
     foldPurchaseSummary: 'nhà cung cấp, ngày mua, hạn bảo hành, serial',
     foldAccessSummary: 'Web / SSH / RDP…',
@@ -1843,7 +1843,7 @@ export default {
     specTitle: 'Thông số',
     factsLabel: 'Tóm tắt thiết bị',
     cabinetCard: 'Trong tủ {{cabinet}}',
-    cabinetNoU: 'Chưa khai U của máy trong tủ — khai ở Sửa hồ sơ › Đặt ở đâu.',
+    cabinetNoU: 'Chưa khai U của máy trong tủ — khai ở Sửa hồ sơ › Vị trí.',
     cabinetThis: 'máy này',
     cabinetEmpty: 'trống',
     noUserYet: 'chưa khai',

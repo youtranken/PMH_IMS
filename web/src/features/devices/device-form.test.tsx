@@ -210,11 +210,11 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     });
   });
 
-  it('hai khối luôn mở (Máy gì, Đặt ở đâu); phần còn lại gập, có số ô đã khai (Q-27)', async () => {
+  it('hai khối luôn mở (Nhận dạng, Vị trí — tiêu đề là danh từ, Q-33); phần còn lại gập, có số ô đã khai (Q-27)', async () => {
     mockFetch();
     renderForm(null);
-    expect(screen.getByRole('heading', { name: 'Máy gì' })).toBeVisible();
-    const where = screen.getByRole('heading', { name: 'Đặt ở đâu' }).closest('section');
+    expect(screen.getByRole('heading', { name: 'Nhận dạng' })).toBeVisible();
+    const where = screen.getByRole('heading', { name: 'Vị trí' }).closest('section');
     expect(where?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Truy cập quản trị', 'Ảnh và giấy tờ', 'Ghi chú']) {
       expect(screen.getByRole('button', { name: new RegExp(`^${fold}`) })).toHaveAttribute('aria-expanded', 'false');
@@ -226,10 +226,10 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveAttribute('rows', '2');
   });
 
-  it('thứ tự trong "Máy gì": Model trước, rồi Mã · Tên gọi · Loại thiết bị', () => {
+  it('thứ tự trong "Nhận dạng": Model trước, rồi Mã · Tên gọi · Loại thiết bị (Mã luôn trước Tên)', () => {
     mockFetch();
     renderForm(null);
-    const what = screen.getByRole('heading', { name: 'Máy gì' }).closest('section') as HTMLElement;
+    const what = screen.getByRole('heading', { name: 'Nhận dạng' }).closest('section') as HTMLElement;
     const labels = Array.from(what.querySelectorAll('label, .field-label')).map((el) => el.textContent?.replace('*', '').trim());
     const order = ['Model', 'Mã thiết bị', 'Tên gọi', 'Loại thiết bị'].map((name) => labels.findIndex((l) => l?.startsWith(name)));
     expect(order.every((i) => i >= 0)).toBe(true);

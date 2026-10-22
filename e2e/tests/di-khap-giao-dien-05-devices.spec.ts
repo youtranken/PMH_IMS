@@ -609,7 +609,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     for (const fold of DEVICE_FOLDS) {
       await expect(
         dialog.getByRole('button', { name: new RegExp(`^${fold}`) }),
-        `Hộp thêm mới mở ra với khối "${fold}" GẬP — chỉ hai khối Máy gì / Đặt ở đâu luôn mở`,
+        `Hộp thêm mới mở ra với khối "${fold}" GẬP — chỉ hai khối Nhận dạng / Vị trí luôn mở`,
       ).toHaveAttribute('aria-expanded', 'false');
     }
     await openDeviceFolds(dialog);
@@ -622,12 +622,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(dialog.getByRole('heading', { level: 2 })), {
         message:
-          'Form thiết bị: hai khối luôn mở kể một mạch chuyện (máy gì → đặt ở đâu); trong khối gập "Ảnh và giấy tờ" có hai khu con có tiêu đề',
+          'Form thiết bị: hai khối luôn mở kể một mạch chuyện (nhận dạng → vị trí); trong khối gập "Ảnh và giấy tờ" có hai khu con có tiêu đề',
       })
       .toEqual([
         'Thêm thiết bị',
-        'Máy gì',
-        'Đặt ở đâu',
+        'Nhận dạng',
+        'Vị trí',
         'Ảnh thiết bị',
         'Giấy tờ đính kèm',
       ]);
