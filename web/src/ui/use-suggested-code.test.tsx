@@ -31,3 +31,17 @@ describe('useSuggestedCode', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('useSuggestedCode — không dùng mã cũ', () => {
+  it('ô Mã bị xoá trắng sau khi đã điền ("Lưu & thêm tiếp") → hỏi lại, điền mã kế tiếp', async () => {
+    let next = 'PC-E2E-012';
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, { code: next }))));
+    renderWithI18n(<Probe url="/api/v1/devices/next-code" />);
+    const box = await screen.findByDisplayValue('PC-E2E-012');
+    next = 'PC-E2E-013';
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.change(box, { target: { value: '' } });
+    expect(await screen.findByDisplayValue('PC-E2E-013')).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+});

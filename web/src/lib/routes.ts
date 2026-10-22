@@ -50,7 +50,6 @@ export const PATHS = {
   diagrams: '/diagrams',
   /** Mở MỘT bản vẽ — nội dung hỏi mã phạm vi sơ đồ (AD-17). `?mode=edit` mở thẳng màn sửa. */
   diagram: (id: string) => `/diagrams/${id}`,
-  /** Trình chiếu từ một nút cây: bản chính thức từ tổng xuống chi tiết, toàn màn hình. */
 
   serviceAccounts: '/service-accounts',
   serviceAccount: (id: string) => `/service-accounts/${id}`,

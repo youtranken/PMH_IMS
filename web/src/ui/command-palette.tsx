@@ -156,7 +156,6 @@ interface DiagramFoundHit {
   diagrams: { id: string; name: string }[];
 }
 
-/** Nhận "vlan 20", "VLAN20" hay chỉ "20" — ở PMH người ta gọi dải theo VLAN. */
 /**
  * Hồ sơ đang dùng lên trước, đã thanh lý / ngừng dùng xuống cuối nhóm (ST-05): gõ "DM-0001" mà
  * dòng đầu là DM-000100 đã thanh lý thì Enter mở nhầm. Giữ thứ tự server trong từng phần.
@@ -166,6 +165,7 @@ function liveFirst<T extends { status?: string }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => ended(a) - ended(b));
 }
 
+/** Nhận "vlan 20", "VLAN20" hay chỉ "20" — ở PMH người ta gọi dải theo VLAN. */
 function vlanOf(q: string): number | null {
   const match = /^(?:vlan\s*)?(\d{1,4})$/i.exec(q.trim());
   return match ? Number(match[1]) : null;

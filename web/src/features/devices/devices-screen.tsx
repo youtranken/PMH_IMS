@@ -161,6 +161,7 @@ export function DevicesScreen({ me }: { me: Me }) {
     (cabinet) => !filters.siteId || cabinet.siteId === filters.siteId,
   );
   const rows = devices.data?.items ?? [];
+  const pickedIds = rows.filter((row) => picked.selected.has(row.id)).map((row) => row.id);
 
   /**
    * Máy nào đang cài license — hỏi MỘT lượt cho cả trang (không N+1) để biết dòng nào đáng
@@ -556,9 +557,11 @@ export function DevicesScreen({ me }: { me: Me }) {
             total={devices.data?.total ?? 0}
             onPageChange={setPage}
           />
-          {picked.selected.size > 0 ? (
+          {/* Lô chỉ gồm máy ĐANG BÀY ở trang này: sang trang / đổi bộ lọc thì máy đã tick mà khuất
+              không bị đổi theo (UX-E25). */}
+          {pickedIds.length > 0 ? (
             <DeviceBulkBar
-              ids={[...picked.selected]}
+              ids={pickedIds}
               csrfToken={me.csrfToken}
               onClear={picked.clear}
               onDone={() => {

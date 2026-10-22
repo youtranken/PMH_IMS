@@ -186,8 +186,6 @@ export function NatScreen({ me }: { me: Me }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam', 'nat'] });
   const all = useMemo(() => rules.data ?? [], [rules.data]);
-  // Luật đã gỡ không gỡ lại được — bỏ khỏi lô dù đang tick.
-  const pickedRules = all.filter((rule) => picked.selected.has(rule.id) && !rule.voidedAt);
 
   /* Rule đi ra WAN nào: IP WAN của đường truyền gắn cùng router (một văn phòng chỉ vài đường,
      một lượt đủ). Hỏng hay chưa về thì dòng chỉ thiếu phần WAN, bảng vẫn đọc được. */
@@ -222,6 +220,9 @@ export function NatScreen({ me }: { me: Me }) {
   );
   const counts = countNat(narrowed);
   const rows = sortNat(filterNat(narrowed, shown), sortKey);
+  // Lô chỉ gồm luật ĐANG BÀY theo bộ lọc + chip: đổi bộ lọc rồi bấm Gỡ không được gỡ luật đã khuất.
+  // Luật đã gỡ không gỡ lại được — bỏ khỏi lô dù đang tick.
+  const pickedRules = rows.filter((rule) => picked.selected.has(rule.id) && !rule.voidedAt);
   const page = clampPage(url.page, rows.length, url.limit);
   const pageRows = rows.slice((page - 1) * url.limit, page * url.limit);
   const filtered = url.isFiltered;

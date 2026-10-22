@@ -191,6 +191,8 @@ export class ServiceAccountController {
    * (SA, Admin): file là một lối thêm / sửa nữa, không rộng quyền hơn form.
    */
   @Roles('sa', 'admin')
+  // File mẫu mang DỮ LIỆU THẬT (xuất ra sửa rồi nhập lại) — ghi vết như file Xuất.
+  @Audited('service_account.exported', 'service_account')
   @Get('template')
   async template(@Res() res: Response) {
     sendXlsx(res, await this.imports.template(), 'mau-tai-khoan-dich-vu.xlsx');

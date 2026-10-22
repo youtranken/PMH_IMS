@@ -171,6 +171,8 @@ export class IspLineController {
    * file là một lối thêm / sửa nữa, không rộng quyền hơn form.
    */
   @Roles('sa', 'admin', 'member')
+  // File mẫu mang DỮ LIỆU THẬT (xuất ra sửa rồi nhập lại) — ghi vết như file Xuất.
+  @Audited('isp.exported', 'isp_line')
   @Get('template')
   async template(@Res() res: Response) {
     sendXlsx(res, await this.imports.template(), 'mau-duong-truyen.xlsx');

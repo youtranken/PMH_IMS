@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Inject,
   Injectable,
   NotFoundException,
@@ -393,9 +394,10 @@ export class SoftwareService {
   }
 
   /**
-   * Lõi ghi của Sửa — form và file nhập đi chung một đường. `before` là ảnh chụp LÚC ĐỐI CHIẾU
-   * (form: lúc đọc trước khi ghi; file: lúc dựng bảng đối chiếu) — khác bản đang khoá là có người
-   * sửa xen vào, huỷ chứ không ghi đè.
+   * Lõi ghi của Sửa — form và file nhập đi chung một đường. `before` là ảnh chụp đọc ngay trước
+   * transaction (form: lúc đọc hồ sơ; file: lúc ĐỐI CHIẾU LẠI file trong chính lượt ghi) — khác bản
+   * đang khoá là có người sửa xen vào khoảng đó, huỷ chứ không ghi đè. Bảng đối chiếu người dùng
+   * xem TRƯỚC đó không được chốt: lượt ghi đối chiếu lại nên vẫn đúng luật với dữ liệu lúc ghi.
    */
   private async updateRowWithin(
     tx: Tx,
@@ -492,13 +494,16 @@ export class SoftwareService {
           ...diffRecord(TRACKED, before, values),
           ...websitesChange(before.websites, values.websites as string[] | undefined),
         };
+        // Bớt ghế dưới số máy đang dùng: báo NGAY ở dòng này, không để lượt ghi từ chối cả file.
+        if (hasChanges(changes)) await this.requireSeatsFitWithin(this.db, before, values);
         rows.push(
           hasChanges(changes)
             ? { rowNumber: item.rowNumber, sheet: item.sheet, label: code, action: 'update', before, values, changes }
             : { rowNumber: item.rowNumber, sheet: item.sheet, label: code, action: 'unchanged' },
         );
       } catch (err) {
-        if (err instanceof BadRequestException) {
+        // Mọi từ chối 4xx của luật form (400 sai dữ liệu, 409 ghế đang dùng…) thành dòng lỗi.
+        if (err instanceof HttpException && err.getStatus() < 500) {
           const body = err.getResponse() as { message?: string };
           rows.push(error(body.message ?? err.message));
           continue;
@@ -962,7 +967,7 @@ export class SoftwareService {
    * đúng hàng đó trước khi chèn, nên không ghế nào chen vào giữa lúc đếm và lúc ghi.
    */
   private async requireSeatsFitWithin(
-    tx: Tx,
+    tx: Pick<Database, 'select'>,
     before: typeof softwareTable.$inferSelect,
     values: Record<string, unknown>,
   ): Promise<void> {

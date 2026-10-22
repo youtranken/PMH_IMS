@@ -24,6 +24,7 @@ import { hourSteps } from '@/ui/grant-hours';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { canSee } from '@/lib/features';
+import { LAST_APPROVER_KEY } from '@/lib/after-logout';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -1256,9 +1257,6 @@ function PendingCodeBox({
 /** Số lượt nhập mã của một yêu cầu (Q-30) — "còn N lần" chỉ hiện khi đã dùng bớt. */
 const CODE_ATTEMPTS = 5;
 
-/** Đếm lùi kiểu đồng hồ: "1:59" khi còn giờ (giờ:phút), "9:12" khi dưới một giờ (phút:giây). */
-const LAST_APPROVER_KEY = 'ims_bg_approver';
-
 function readLastApprover(): string | null {
   try {
     return localStorage.getItem(LAST_APPROVER_KEY);
@@ -1275,6 +1273,7 @@ function writeLastApprover(email: string): void {
   }
 }
 
+/** Đếm lùi kiểu đồng hồ: "1:59" khi còn giờ (giờ:phút), "9:12" khi dưới một giờ (phút:giây). */
 function clockText(seconds: number): string {
   const { hours, minutes, seconds: secs } = remainingParts(seconds);
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -1327,6 +1326,8 @@ function BreakGlassDialog({
   useEffect(() => {
     const last = remembered.current;
     if (!last || approver || !approvers.data?.some((a) => a.email === last)) return;
+    // Chọn sẵn MỘT lần: người xin bỏ chọn thì không bị điền lại.
+    remembered.current = null;
     setApprover(last);
   }, [approvers.data, approver]);
   /* Chỉ đặt từ các nấc của `hourSteps` nên luôn là số nguyên dương — không cần nhánh kiểm. */

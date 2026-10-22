@@ -489,6 +489,20 @@ describe('Phiếu ISO · 0203 / 0206 / 0208 và kỳ (Q-28)', () => {
       expect(Object.keys((await periods.overview(people.sa, 2026)).kpis).sort()).toEqual(keys);
     });
 
+    // Yêu cầu mở lại kỳ là hàng chờ của người duyệt, đếm trên MỌI phiếu — Member chỉ nhận 0.
+    it('KPI reopenPending: Member luôn 0 (giữ khóa, không lộ số của người duyệt)', async () => {
+      const seeded = await scratch.pool.query<{ id: string }>(
+        `INSERT INTO approval (kind, state, requester, subject_type, subject_id, reason)
+         VALUES ('iso_period_reopen', 'pending', 'khac@pmh.com.vn', 'iso_period', gen_random_uuid(), 'E2E mở lại') RETURNING id`,
+      );
+      try {
+        expect((await periods.overview(people.sa, 2026)).kpis.reopenPending).toBeGreaterThan(0);
+        expect((await periods.overview(people.other, 2026)).kpis.reopenPending).toBe(0);
+      } finally {
+        await scratch.pool.query(`DELETE FROM approval WHERE id = $1`, [seeded.rows[0].id]);
+      }
+    });
+
     it('Member chỉ có 0208 mở kỳ 0203 → 403 FEATURE_HIDDEN', async () => {
       await expect(
         periods.detail({ ...people.other, features: ['iso_0208', 'iso'] }, '0203', 2026, 11),

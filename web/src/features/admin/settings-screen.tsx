@@ -239,12 +239,18 @@ export function SettingsScreen({ me }: { me: Me }) {
   };
 
   const askSwitch = (next: Group) => {
-    if (next === group) return;
+    // Bấm đúng nhóm đang mở khi đang tìm = thoát ô tìm, về nhóm đó.
+    if (next === group) {
+      setQ('');
+      return;
+    }
     if (changed.length > 0) setLeavingTo(next);
     else switchGroup(next);
   };
 
   const switchGroup = (next: Group) => {
+    // Bỏ ô tìm chỉ khi THẬT SỰ sang nhóm khác: chọn "Ở lại" ở hộp hỏi thì vẫn giữ kết quả tìm.
+    setQ('');
     setDrafts({});
     setSaveError(null);
     setParams(
@@ -321,10 +327,7 @@ export function SettingsScreen({ me }: { me: Me }) {
                     /* Đổi khu ngay trên trang, không sang trang khác: nút bật/tắt, không
                        `aria-current="page"` (giá trị đó dành cho link điều hướng). */
                     aria-pressed={!needle && g.key === group}
-                    onClick={() => {
-                      setQ('');
-                      askSwitch(g.key);
-                    }}
+                    onClick={() => askSwitch(g.key)}
                   >
                     {t(g.label)}
                     {customised(g.key) > 0 ? <span className="seg-count">{customised(g.key)}</span> : null}

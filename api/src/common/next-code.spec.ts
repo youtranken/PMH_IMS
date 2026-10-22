@@ -10,6 +10,8 @@ describe('nextCode', () => {
     ['ISP-HN-1A', [], null],
     ['ROUTER', [], null],
     [null, [], null],
+    // Số ≥ 16 chữ số vượt 2^53: không được treo (Number + 1 làm tròn về chính nó).
+    ['SN12345678901234568', ['SN12345678901234568'], 'SN12345678901234569'],
   ] as const)('%s (đã có %j) → %s', (last, taken, expected) => {
     expect(nextCode(last, taken)).toBe(expected);
   });

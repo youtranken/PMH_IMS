@@ -675,7 +675,8 @@ export class IpamController {
   @Audited('nat.exported', 'nat_rule')
   @Get('nat/export.xlsx')
   async exportNat(@Query() query: NatExportQueryDto, @Res() res: Response) {
-    const states = (query.states ? query.states.split(',') : ['open', 'off']) as NatState[];
+    // Vắng = mọi rule còn trong sổ (như cũ); có mà rỗng = màn tắt hết chip → file rỗng như màn.
+    const states = (query.states === undefined ? ['open', 'off'] : query.states.split(',').filter(Boolean)) as NatState[];
     const [all, sensitiveText, timeZone] = await Promise.all([
       this.nat.list({ ...natFilters(query), includeVoided: states.includes('voided') }),
       this.config.getString('natSensitivePorts'),

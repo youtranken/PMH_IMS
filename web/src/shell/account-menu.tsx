@@ -114,7 +114,7 @@ export function AccountMenu({ me, initials, roleLabel }: { me: Me; initials: str
           {t('profile.menuProfile')}
         </button>
         {/* Đổi mật khẩu, 2 lớp nằm trong Hồ sơ — thêm hai lối vào cùng một trang chỉ làm menu dài (UX-E18). */}
-        {/* Một hàng ba nút biểu tượng như nút ở topbar, không phải ba dòng chữ có dấu ✓ (Q-20). */}
+        {/* Một hàng ba nút biểu tượng như ở Hồ sơ, không phải ba dòng chữ có dấu ✓ (Q-20). */}
         <div className="sb-theme">
           <span className="sb-act-label" aria-hidden="true">
             {t('profile.menuAppearance')}

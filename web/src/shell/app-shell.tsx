@@ -104,11 +104,14 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || isAnyDialogOpen()) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      // Ô nhập, vùng soạn thảo, và mọi lớp đè (Tìm nhanh tự dựng hộp, menu ⋮, ô chọn): "/" không cướp
+      // tiêu điểm ra khỏi chúng.
+      if (target?.isContentEditable || target?.closest('input, textarea, select, [role="dialog"], [role="menu"], [role="listbox"]')) return;
       const box = document.querySelector<HTMLInputElement>('#noi-dung input[type="search"]');
-      if (!box) return;
-      event.preventDefault();
+      // Drawer điện thoại đang mở thì <main> inert: focus không đi được — để "/" yên.
+      if (!box || box.closest('[inert]')) return;
       box.focus();
+      if (document.activeElement === box) event.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -73,11 +73,30 @@ describe('Nhập phần mềm từ Excel', () => {
     expect(plan.rows[4].message).toMatch(/Loại/);
   });
 
+  it('bớt ghế dưới số máy đang dùng → dòng lỗi ngay ở bảng đối chiếu, không đợi lượt ghi', async () => {
+    const sw = await scratch.pool.query<{ id: string }>(
+      `INSERT INTO software (code, name, kind, license_model, seat_total) VALUES ('LIC-E2E-GHE', 'Ghế', 'license', 'perpetual', 3) RETURNING id`,
+    );
+    const type = await scratch.pool.query<{ id: string }>(`INSERT INTO device_type (name) VALUES ('PC E2E ghế') RETURNING id`);
+    for (const code of ['PC-E2E-G1', 'PC-E2E-G2']) {
+      const device = await scratch.pool.query<{ id: string }>(
+        `INSERT INTO device (code, name, device_type_id) VALUES ($1, $2, $3) RETURNING id`,
+        [code, code, type.rows[0].id],
+      );
+      await scratch.pool.query(`INSERT INTO license_assignment (software_id, device_id, assigned_by) VALUES ($1, $2, 'test')`, [
+        sw.rows[0].id,
+        device.rows[0].id,
+      ]);
+    }
+    const plan = await software.planImport([{ rowNumber: 2, sheet: 'Phần mềm', cells: { code: 'LIC-E2E-GHE', seatTotal: 1 } }]);
+    expect(plan.rows[0]).toMatchObject({ action: 'error', label: 'LIC-E2E-GHE' });
+  });
+
   it('ghi: một transaction, mỗi hồ sơ một dòng lịch sử, một dòng nhật ký tổng', async () => {
     const plan = await software.planImport(ROWS);
     const result = await scratch.db.transaction((tx) => software.commitImportWithin(tx, ACTOR, plan));
     expect(result).toEqual({ created: 1, updated: 1 });
-    const { rows } = await scratch.pool.query(`SELECT code, kind, seat_total FROM software ORDER BY code`);
+    const { rows } = await scratch.pool.query(`SELECT code, kind, seat_total FROM software WHERE code <> 'LIC-E2E-GHE' ORDER BY code`);
     expect(rows).toEqual([
       { code: 'BT-E2E-MOI', kind: 'maintenance', seat_total: null },
       { code: 'LIC-E2E-CU', kind: 'license', seat_total: 8 },

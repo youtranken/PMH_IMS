@@ -453,8 +453,8 @@ export class ServiceAccountService {
         }
         created += 1;
       } else if (row.action === 'update' && row.values && row.existingId) {
-        // So với mốc LÚC ĐỐI CHIẾU, không với bản đọc trong transaction: người khác sửa xen vào
-        // giữa thì bảng đối chiếu người dùng vừa duyệt đã cũ — huỷ cả file.
+        // So với mốc lúc lượt ghi ĐỐI CHIẾU LẠI file (ngay trước transaction), không với bản đọc
+        // trong transaction: người khác sửa xen vào khoảng đó thì huỷ cả file, không ghi đè.
         requireUnchangedSince({ updatedAt: row.seenAt! }, await this.requireRowWithin(tx, row.existingId, 'update'), {
           code: 'SERVICE_ACCOUNT_ALREADY_CHANGED',
           message: `Tài khoản "${row.label}" vừa được người khác sửa — tải lên lại.`,

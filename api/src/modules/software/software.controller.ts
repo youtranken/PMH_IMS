@@ -317,6 +317,8 @@ export class SoftwareController {
    * File mẫu theo `?kind=` của màn (Q-22): đúng sheet + cột file Xuất của màn đó.
    */
   @Roles('sa', 'admin', 'member')
+  // File mẫu mang DỮ LIỆU THẬT (xuất ra sửa rồi nhập lại) — ghi vết như file Xuất.
+  @Audited('software.exported', 'software')
   @Get('template')
   async template(@Query() query: SoftwareExportQueryDto, @Res() res: Response) {
     const { buffer, fileName } = await this.imports.template(softwareKindsQuery(query.kind));

@@ -577,11 +577,20 @@ export async function stepUpViaApi(
  */
 export async function switchTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
   const html = page.locator('html');
-  const account = page.getByRole('button', { name: /^Menu tài khoản của / });
-  if ((await html.getAttribute('data-theme')) !== theme && (await account.count()) > 0) {
-    await account.click();
-    await page.getByRole('menu').getByRole('menuitemradio', { name: theme === 'dark' ? 'Tối' : 'Sáng' }).click();
-    if (await page.getByRole('menu').isVisible()) await page.keyboard.press('Escape');
+  if ((await html.getAttribute('data-theme')) !== theme) {
+    // Điện thoại: menu tài khoản nằm trong drawer điều hướng — mở drawer trước, chọn xong đóng lại.
+    const drawer = page.getByRole('button', { name: 'Mở menu' });
+    const viaDrawer = (await drawer.count()) > 0 && (await drawer.isVisible());
+    if (viaDrawer) await drawer.click();
+    const account = page.getByRole('button', { name: /^Menu tài khoản của / });
+    if ((await account.count()) > 0) {
+      await account.click();
+      await page.getByRole('menu').getByRole('menuitemradio', { name: theme === 'dark' ? 'Tối' : 'Sáng' }).click();
+      if (await page.getByRole('menu').isVisible()) await page.keyboard.press('Escape');
+    }
+    if (viaDrawer && (await page.getByRole('button', { name: 'Đóng menu' }).isVisible())) {
+      await page.getByRole('button', { name: 'Đóng menu' }).click();
+    }
   }
   await expect(html).toHaveAttribute('data-theme', theme);
 }

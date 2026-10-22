@@ -41,6 +41,9 @@ export function DeviceBulkBar({
   const close = () => {
     setOpen(null);
     setError(null);
+    // Hủy rồi mở lại (có khi cho lô khác) không được điền sẵn chữ cũ và bật sẵn nút Lưu.
+    setAssignedTo('');
+    setDepartment('');
   };
   const finish = (message: string) => {
     toast({ message });

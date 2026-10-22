@@ -565,21 +565,6 @@
     text-overflow: ellipsis;
   }
 }
-/* Trình chiếu sơ đồ: phủ cả khung nhìn, đè lên shell nhưng nằm DƯỚI lớp hộp thoại — hộp nhập mã
-   khi hết ân hạn giữa chừng phải nổi lên trên trang đang chiếu. Hoạt ảnh mờ-hiện của `.page` giữ
-   trạng thái cuối nên biến `.page` thành ngữ cảnh xếp lớp riêng: còn nó thì `z-index` của khung
-   chiếu không vượt được thanh trên của shell (thanh đó đè lên tên trang đang chiếu). */
-.page:has(.slideshow) {
-  animation: none;
-}
-.slideshow {
-  position: fixed;
-  inset: 0;
-  z-index: calc(var(--z-modal-backdrop) - 1);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-}
 /* Màn sửa sơ đồ chỉ dành cho máy tính (`BREAKPOINTS.editor`): hẹp hơn thì thanh trên chỉ còn tab
    và chế độ xem, ô chọn thiết bị không cần giữ bề ngang cố định. */
 @media (max-width: 1023px) {

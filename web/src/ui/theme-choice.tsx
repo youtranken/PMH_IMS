@@ -15,7 +15,7 @@ const OPTIONS: { value: ThemePreference; labelKey: string; Icon: typeof SunIcon 
 ];
 
 /**
- * Lựa chọn đang lưu, cập nhật khi nơi khác đổi (nút ở topbar) và — khi đang "Theo hệ thống" —
+ * Lựa chọn đang lưu, cập nhật khi nơi khác đổi (menu tài khoản ↔ Hồ sơ) và — khi đang "Theo hệ thống" —
  * khi máy tự chuyển sáng/tối theo giờ.
  */
 export function useThemePreference(): ThemePreference {

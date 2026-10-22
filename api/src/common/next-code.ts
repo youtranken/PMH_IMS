@@ -8,8 +8,13 @@ export function nextCode(last: string | null, taken: readonly string[]): string 
   if (!match) return null;
   const [, prefix, digits] = match;
   const used = new Set(taken.map((code) => code.trim().toUpperCase()));
-  for (let n = Number(digits) + 1; ; n += 1) {
-    const candidate = `${prefix}${String(n).padStart(digits.length, '0')}`;
+  // BigInt chứ không Number: số ≥ 16 chữ số (serial làm mã) vượt 2^53, `n + 1` không đổi `n` và
+  // vòng lặp không bao giờ thoát — treo cả API. Trần số vòng = số mã đã có + 1 (luôn đủ để thoát).
+  let n = BigInt(digits);
+  for (let tries = 0; tries <= used.size; tries += 1) {
+    n += 1n;
+    const candidate = `${prefix}${n.toString().padStart(digits.length, '0')}`;
     if (!used.has(candidate.toUpperCase())) return candidate;
   }
+  return null;
 }

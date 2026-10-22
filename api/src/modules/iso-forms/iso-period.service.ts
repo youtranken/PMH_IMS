@@ -183,7 +183,8 @@ export class IsoPeriodService implements OnModuleInit {
       });
     }
     const cells = months.flatMap((m) => (m.access === 'ok' ? m.forms : []));
-    const pendingReopen = (await this.approvals.pending(PERIOD_REOPEN_KIND)).length;
+    // Hàng chờ của người duyệt, đếm trên mọi phiếu — người không duyệt nhận 0 (giữ khóa, PW-B27).
+    const pendingReopen = isManager(actor) ? (await this.approvals.pending(PERIOD_REOPEN_KIND)).length : 0;
     const unlinked = (await this.incidents.unlinked({ year })).filter((c) => forms.includes(c.form)).length;
     // Cùng một bộ khóa cho mọi vai (PW-B27): bộ khác nhau thì web xếp ô số khác chỗ theo vai,
     // người dùng hai vai đọc hai màn khác nhau. Vai nào cần nhấn ô nào là việc của tông màu.

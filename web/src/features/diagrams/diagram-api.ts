@@ -30,7 +30,7 @@ export interface DiagramNode {
   latestVersion: { id: string; seq: number; savedAt: string; savedBy: string; savedByName?: string | null } | null;
   /** Số phiên bản chính thức ("#3 · Chính thức"); `null` = chưa phát hành. Thiếu → coi như `null`. */
   officialSeq?: number | null;
-  /** Phiên bản chính thức hiện hành — trình chiếu mở đúng bản này. Thiếu → coi như `null`. */
+  /** Phiên bản chính thức hiện hành — tab Xem mở đúng bản này. Thiếu → coi như `null`. */
   officialVersionId?: string | null;
   /** Yêu cầu duyệt đang chờ của bản vẽ. */
   pendingApprovalId?: string | null;

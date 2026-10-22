@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { runMigrations } from '../src/database/migration-runner';
 import { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
@@ -14,6 +15,7 @@ import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from
 const TEST_TIMEOUT = 120_000;
 const ACTOR = 'nguoi.nhap@pmh.com.vn';
 let ROUTER = '';
+let RETIRED = '';
 
 describe('Nhập đường truyền từ Excel', () => {
   let scratch: ScratchDb;
@@ -21,9 +23,19 @@ describe('Nhập đường truyền từ Excel', () => {
   const audit = { appendWithin: jest.fn().mockResolvedValue(undefined) };
   const devices = {
     idsByCodes: jest.fn((codes: string[]) =>
-      Promise.resolve(new Map(codes.filter((c) => c.toLowerCase() === 'rt-e2e-01').map((): [string, string] => ['rt-e2e-01', ROUTER]))),
+      Promise.resolve(
+        new Map(
+          codes
+            .map((c) => c.toLowerCase())
+            .flatMap((c): [string, string][] => (c === 'rt-e2e-01' ? [[c, ROUTER]] : c === 'rt-e2e-old' ? [[c, RETIRED]] : [])),
+        ),
+      ),
     ),
     assertUsableWithin: jest.fn().mockResolvedValue(undefined),
+    // Máy đã thanh lý: form báo 400 ngay — bảng đối chiếu cũng phải báo ở đúng dòng.
+    assertUsable: jest.fn((id: string) =>
+      id === RETIRED ? Promise.reject(new BadRequestException({ code: 'DEVICE_RETIRED', message: 'Thiết bị RT-E2E-OLD đã thanh lý.' })) : Promise.resolve(),
+    ),
     getByIds: jest.fn().mockResolvedValue(new Map()),
   };
 
@@ -45,6 +57,11 @@ describe('Nhập đường truyền từ Excel', () => {
       [type.rows[0].id],
     );
     ROUTER = router.rows[0].id;
+    const old = await scratch.pool.query<{ id: string }>(
+      `INSERT INTO device (code, name, device_type_id, status) VALUES ('RT-E2E-OLD', 'Router cũ', $1, 'retired') RETURNING id`,
+      [type.rows[0].id],
+    );
+    RETIRED = old.rows[0].id;
     await scratch.pool.query(
       `INSERT INTO isp_line (code, provider, provider_id, bandwidth) VALUES ('ISP-E2E-CU', 'FPT E2E', $1, '100 Mbps')`,
       [p['FPT E2E']],
@@ -90,6 +107,11 @@ describe('Nhập đường truyền từ Excel', () => {
     expect(plan.rows[2].message).toMatch(/Thiết bị "MAY-LA"/);
     expect(plan.rows[5].message).toMatch(/trùng với dòng 6/);
     expect(plan.rows[6].message).toMatch(/nhà mạng/i);
+  });
+
+  it('gắn máy đã thanh lý → dòng lỗi ngay ở bảng đối chiếu, không đợi lượt ghi', async () => {
+    const plan = await isp.planImport([{ rowNumber: 2, cells: { code: 'ISP-E2E-OLDDEV', provider: 'FPT E2E', device: 'RT-E2E-OLD' } }]);
+    expect(plan.rows[0]).toMatchObject({ action: 'error', message: expect.stringMatching(/thanh lý/) });
   });
 
   it('ghi: một transaction, IP WAN theo file, mỗi đường một dòng lịch sử, một dòng nhật ký tổng', async () => {

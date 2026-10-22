@@ -8,6 +8,9 @@ const SIGNED_OUT_KEY = 'ims_signed_out';
 /** Tiền tố khoá localStorage của danh sách "mở gần đây" trong ô tìm nhanh (`ui/command-palette`). */
 export const PALETTE_RECENT_PREFIX = 'ims_palette_recent:';
 
+/** Người duyệt chọn lần trước ở hộp Xin mở két (`ui/vault-panel`) — xoá cùng lúc với "mở gần đây". */
+export const LAST_APPROVER_KEY = 'ims_bg_approver';
+
 /**
  * Danh sách "mở gần đây" nằm trong localStorage, sống qua cả lượt đăng xuất: trên máy dùng chung
  * người kế tiếp (hay ai mở công cụ trình duyệt) đọc được mã + tên hồ sơ người trước vừa mở.
@@ -25,6 +28,8 @@ export function clearPaletteRecent(): void {
       if (key?.startsWith(PALETTE_RECENT_PREFIX)) keys.push(key);
     }
     for (const key of keys) localStorage.removeItem(key);
+    // Người kế tiếp trên máy dùng chung không được thấy (và gửi nhầm cho) người duyệt người trước chọn.
+    localStorage.removeItem(LAST_APPROVER_KEY);
   } catch {
     // Kho bị chặn thì cũng không có gì đã ghi để xoá.
   }

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Inject,
   Injectable,
   NotFoundException,
@@ -322,7 +323,8 @@ export class IspLineService {
 
   /**
    * Lõi ghi của Sửa — form và file nhập đi chung một đường. `seenAt` (chỉ file nhập): `updatedAt`
-   * lúc đối chiếu; khác bản đang khoá nghĩa là có người sửa xen vào → huỷ, không ghi đè.
+   * lúc lượt ghi ĐỐI CHIẾU LẠI file ngay trước transaction; khác bản đang khoá nghĩa là có người sửa
+   * xen vào khoảng đó → huỷ, không ghi đè. Bảng đối chiếu xem trước đó không được chốt.
    */
   private async updateLineWithin(
     tx: Tx,
@@ -427,6 +429,8 @@ export class IspLineService {
       try {
         const values = await this.prepare(input, before?.id ?? null);
         const wanIps = requireWanIps(input.wanIps);
+        // Máy đã thanh lý / không còn: báo NGAY ở dòng này như form, không để lượt ghi từ chối cả file.
+        if (device.id && device.id !== before?.deviceId) await this.devices.assertUsable(device.id);
         if (!before) {
           rows.push({ rowNumber: item.rowNumber, label: code, action: 'create', values, wanIps: wanIps ?? [] });
           continue;
@@ -442,7 +446,7 @@ export class IspLineService {
             : { rowNumber: item.rowNumber, label: code, action: 'unchanged' },
         );
       } catch (err) {
-        if (err instanceof BadRequestException) {
+        if (err instanceof HttpException && err.getStatus() < 500) {
           const body = err.getResponse() as { message?: string };
           rows.push(error(body.message ?? err.message));
           continue;
