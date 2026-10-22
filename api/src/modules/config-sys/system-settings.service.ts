@@ -119,8 +119,8 @@ export class SystemSettingsService {
       throw new BadRequestException({
         code: 'SETTING_OUT_OF_RANGE',
         message:
-          '"Nhắc duyệt sau" phải nhỏ hơn "Yêu cầu mở két tự hết hạn sau", ' +
-          'không thì thư nhắc không kịp đi.',
+          '"Gắn nhãn Chờ lâu sau" phải nhỏ hơn "Yêu cầu mở két tự hết hạn sau", ' +
+          'không thì nhãn và thư nhắc không kịp đi trước lúc hết hạn.',
       });
     }
 

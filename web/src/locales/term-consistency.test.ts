@@ -607,8 +607,14 @@ describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
     expect(bad).toEqual([]);
   });
 
-  it('tham số "Nhắc duyệt sau" nói rõ mở két không gửi mail (thư nhắc chỉ còn cho bản vẽ / TK dịch vụ)', () => {
-    expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két[^.]*không gửi mail/);
+  it('tham số "Gắn nhãn Chờ lâu sau" nói rõ mở két không gửi mail (thư nhắc chỉ còn cho bản vẽ / TK dịch vụ)', () => {
+    expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két chỉ gắn nhãn "Chờ lâu"\. Không gửi mail\.$/);
+  });
+
+  // TX-03 (Q-33): với yêu cầu mở két, tham số chỉ còn quyết nhãn "Chờ lâu" — tên nói đúng việc đó.
+  it('tham số mang tên "Gắn nhãn Chờ lâu sau"', () => {
+    expect(lookup('settings.approvalReminderHoursLabel')).toBe('Gắn nhãn Chờ lâu sau');
+    expect(lookup('settings.breakGlassPendingExpireHoursDesc')).toContain('"Gắn nhãn Chờ lâu sau"');
   });
 });
 
