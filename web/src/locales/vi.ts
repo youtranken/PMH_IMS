@@ -570,7 +570,7 @@ export default {
     diagrams: 'Sơ đồ mạng',
     serviceAccounts: 'Tài khoản dịch vụ',
     vaultAccess: 'Quyền két sắt',
-    approvals: 'Duyệt mở két',
+    approvals: 'Yêu cầu mở két',
     approvalsMine: 'Xin mở két',
     vault: 'Két sắt',
     disposal: 'Kho thanh lý',
@@ -3994,7 +3994,7 @@ export default {
     checkAlsoMatched: 'Còn {{count}} dòng khớp khác nhưng hẹp hơn.',
   },
   approvals: {
-    title: 'Duyệt mở két',
+    title: 'Yêu cầu mở két',
     subtitle: 'Yêu cầu xin mở két để xem mật khẩu.',
     /* Member không duyệt gì — màn của họ là danh sách yêu cầu của chính mình. */
     titleMine: 'Xin mở két',

@@ -45,7 +45,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Sổ NAT', path: '/nat', heading: /^Sổ NAT$/ },
     { link: 'Sơ đồ mạng', path: '/diagrams', heading: /^Sơ đồ mạng$/ },
     { link: 'Tài khoản dịch vụ', path: '/service-accounts', heading: /^Tài khoản dịch vụ$/ },
-    { link: 'Duyệt mở két', path: '/approvals', heading: /^Duyệt mở két$/ },
+    { link: 'Yêu cầu mở két', path: '/approvals', heading: /^Yêu cầu mở két$/ },
     { link: 'Két sắt', path: '/vault', heading: /^Két sắt$/ },
     { link: 'Kho thanh lý', path: '/disposal', heading: /^Kho thanh lý$/ },
     { link: 'Người dùng IMS', path: '/admin/accounts', heading: /^Người dùng IMS$/ },

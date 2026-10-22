@@ -181,7 +181,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       'Quản trị viên phải thấy trang tổng Két sắt (Member thì không)',
     ).toBeVisible();
     await expect(menu.getByRole('link', { name: 'Danh mục', exact: true })).toBeVisible();
-    await expect(menu.getByRole('link', { name: 'Duyệt mở két', exact: true })).toBeVisible();
+    await expect(menu.getByRole('link', { name: 'Yêu cầu mở két', exact: true })).toBeVisible();
 
     // Phần admin KHÔNG được thấy.
     await expect(

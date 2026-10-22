@@ -588,7 +588,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     }
 
     await page.goto('/approvals');
-    await expect(page.getByRole('heading', { level: 1, name: 'Duyệt mở két' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Yêu cầu mở két' })).toBeVisible();
 
     /*
      * ĐỦ BA NGĂN. Nhãn tab "Chờ duyệt" có số đếm nối sau kèm dấu cách, nên cắt phần số đi rồi

@@ -41,7 +41,7 @@ describe('LoginScreen', () => {
   it('đích đã nhớ → dòng phụ nói TÊN MÀN, không in đường dẫn', () => {
     rememberNextPath('/approvals/9f1c2b');
     renderLogin();
-    expect(screen.getByText('Đăng nhập để mở: Duyệt mở két')).toBeInTheDocument();
+    expect(screen.getByText('Đăng nhập để mở: Yêu cầu mở két')).toBeInTheDocument();
     expect(screen.queryByText(/\/approvals/)).toBeNull();
   });
 
