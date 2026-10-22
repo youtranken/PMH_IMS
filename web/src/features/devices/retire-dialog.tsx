@@ -16,9 +16,11 @@ export interface RetireGroup {
  * Không dùng `ConfirmDialog`: hộp đó cố ý chỉ nhận một câu + một ô tick. Ở đây có hai danh
  * sách, một lựa chọn hai nhánh và một ô gõ lại mã — là một form nhỏ, nên dựng trên `Dialog`.
  *
- * Mặc định là "Chỉ thanh lý": gỡ hàng loạt (thu hồi IP, gỡ rule NAT, trả ghế license) không
- * hoàn tác được nên phải là điều người dùng chọn ra. Chọn gỡ mà có mục bị gỡ thì bắt gõ lại mã
- * máy — một cú bấm theo quán tính không được xoá sạch IP của một máy đang chạy.
+ * Mặc định là "Gỡ hết rồi thanh lý" (Q-33): "Chỉ thanh lý" bị API chặn khi máy còn giữ gì,
+ * nên để nó đứng sẵn là để người dùng bấm vào ngõ cụt. Gỡ hàng loạt (thu hồi IP, gỡ rule NAT,
+ * trả ghế license, gỡ đường truyền) không hoàn tác được, nên có BẤT CỨ mục nào bị gỡ là bắt gõ
+ * lại mã máy — một cú bấm theo quán tính không được xoá sạch IP của một máy đang chạy. Máy
+ * không giữ gì thì không có lựa chọn và gửi `cleanup=false`: không có gì để ghi là "đã gỡ".
  */
 export function RetireDialog({
   code,
@@ -46,7 +48,7 @@ export function RetireDialog({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
-  const [cleanup, setCleanup] = useState(false);
+  const [cleanup, setCleanup] = useState(true);
   const [typed, setTyped] = useState('');
   const typedId = useId();
   const hintId = useId();
@@ -54,9 +56,9 @@ export function RetireDialog({
   const cutCount = cut.reduce((sum, group) => sum + group.items.length, 0);
   const hasCut = cutCount > 0 || (blockedBy?.length ?? 0) > 0 || unknown;
   // Chưa đọc được thì coi như CÓ mục bị gỡ: đòi gõ mã là phía an toàn.
-  const needsCode = cleanup && hasCut;
+  const removes = cleanup && hasCut;
   const codeOk = typed.trim().toUpperCase() === code.toUpperCase();
-  const canSubmit = !busy && (!needsCode || codeOk);
+  const canSubmit = !busy && (!removes || codeOk);
 
   return (
     <Dialog
@@ -76,7 +78,7 @@ export function RetireDialog({
             type="button"
             className="btn danger"
             disabled={!canSubmit}
-            onClick={() => onConfirm(cleanup)}
+            onClick={() => onConfirm(removes)}
           >
             {busy ? t('common.working') : t('devices.retire')}
           </button>
@@ -165,7 +167,7 @@ export function RetireDialog({
           </fieldset>
         ) : null}
 
-        {needsCode ? (
+        {removes ? (
           <Field
             label={t('devices.retireTypeCode', { code })}
             htmlFor={typedId}
