@@ -3667,6 +3667,7 @@ export default {
       ipExported: 'Xuất danh sách IP',
       natExported: 'Xuất sổ NAT',
       expiryExported: 'Xuất danh sách sắp hết hạn',
+      expiryRenewalsExported: 'Xuất danh sách đã gia hạn',
       disposalExported: 'Xuất kho thanh lý',
       expiryRenewed: 'Gia hạn',
       expiryDigestSent: 'Gửi email tổng hợp hạn',

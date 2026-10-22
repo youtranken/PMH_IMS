@@ -69,6 +69,37 @@ describe('Tab "Đã gia hạn"', () => {
     expect(screen.getByRole('group', { name: 'Khoảng ngày gia hạn' })).toBeInTheDocument();
   });
 
+  // PW-A29: tab Đã gia hạn cũng xuất được — cùng chỗ (đầu trang) như tab Danh sách.
+  it('đầu trang có "Xuất Excel" gọi đúng file của tab Đã gia hạn', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/expiry/renewals')) return Promise.resolve(jsonResponse(200, [RENEWAL]));
+      if (url.includes('/api/v1/expiry?')) {
+        return Promise.resolve(
+          jsonResponse(200, { items: [], total: 0, summary: { expired: 0, critical: 0, warning: 0 }, thresholds: { criticalDays: 7, warningDays: 30 }, failedKinds: [] }),
+        );
+      }
+      return Promise.resolve(jsonResponse(200, []));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <ConfirmProvider>
+            <ExpiryScreen me={me} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Đã gia hạn' }));
+    await screen.findAllByText('Lê Minh');
+    await user.click(screen.getByRole('button', { name: /Xuất Excel/ }));
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith('/api/v1/expiry/renewals/export.xlsx'))).toBe(true),
+    );
+  });
+
   it('P-02: cột Chi phí + Hợp đồng của từng lượt gia hạn; dòng tổng chi phí dưới bảng', async () => {
     const rows = [
       { ...RENEWAL, contract: 'HĐ-E2E-01', cost: 12000000, websites: null },

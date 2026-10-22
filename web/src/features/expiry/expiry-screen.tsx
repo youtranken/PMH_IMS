@@ -139,6 +139,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const navigate = useNavigate();
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
+  const [renewalsRange, setRenewalsRange] = useState({ from: '', to: '' });
+  const renewalsRangeQuery = renewalsQuery(renewalsRange);
   const [addingRule, setAddingRule] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const canEditRules = me.role === 'sa' || me.role === 'admin';
@@ -397,6 +399,12 @@ export function ExpiryScreen({ me }: { me: Me }) {
               }
               fileName={state ? `sap-het-han-${EXPORT_SUFFIX[state]}.xlsx` : 'sap-het-han.xlsx'}
             />
+          ) : tab === 'renewals' ? (
+            /* Xuất đúng khoảng ngày đang xem của tab Đã gia hạn (PW-A29). */
+            <ExportXlsxButton
+              url={`/api/v1/expiry/renewals/export.xlsx${renewalsRangeQuery ? `?${renewalsRangeQuery}` : ''}`}
+              fileName="da-gia-han.xlsx"
+            />
           ) : null
         }
       />
@@ -493,7 +501,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
         </TabPanel>
       ) : tab === 'renewals' ? (
         <TabPanel tabKey="renewals">
-          <RenewalsPanel kindLabel={kindLabel} />
+          <RenewalsPanel kindLabel={kindLabel} range={renewalsRange} onRangeChange={setRenewalsRange} />
         </TabPanel>
       ) : (
         <TabPanel tabKey="list">
@@ -772,9 +780,17 @@ function BulkRenewBar({
 }
 
 /** Tab "Đã gia hạn": các lượt gia hạn gần nhất (`GET /expiry/renewals`) — ai, lúc nào, cũ → mới. */
-function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
+function RenewalsPanel({
+  kindLabel,
+  range,
+  onRangeChange: setRange,
+}: {
+  kindLabel: (kind: string) => string;
+  /** Khoảng ngày nằm ở màn cha: nút Xuất ở đầu trang xuất đúng khoảng đang xem. */
+  range: { from: string; to: string };
+  onRangeChange: React.Dispatch<React.SetStateAction<{ from: string; to: string }>>;
+}) {
   const { t } = useTranslation();
-  const [range, setRange] = useState({ from: '', to: '' });
   const query = renewalsQuery(range);
   const renewals = useQuery({
     queryKey: ['expiry', 'renewals', query],
