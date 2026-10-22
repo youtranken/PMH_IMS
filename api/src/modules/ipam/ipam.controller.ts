@@ -14,6 +14,9 @@ import {
 import { Transform, type TransformFnParams } from 'class-transformer';
 import type { Response } from 'express';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -197,6 +200,16 @@ export class NatBodyDto {
  * Có DTO chứ không nhận object trần: `deviceId`/`siteId` đi thẳng vào `eq(...)`, nên
  * `?deviceId=abc` xuống tới Postgres thành lỗi `22P02` và bung 500 thay vì 400.
  */
+class BulkVoidDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200, { message: 'Một lượt gỡ tối đa 200 luật.' })
+  @IsUUID(undefined, { each: true, message: 'Mã luật NAT không hợp lệ.' })
+  ids!: string[];
+
+  @IsString() @Length(3, 500) @NoSecretText() reason!: string;
+}
+
 class NatQueryDto {
   @IsOptional() @ValidateIf((_o, v) => v !== '') @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
   deviceId?: string;
@@ -760,6 +773,14 @@ export class IpamController {
       enabled: body.enabled,
       note: body.note,
     });
+  }
+
+  /** Gỡ nhiều rule, một lý do (UX-E25) — cùng vai với gỡ từng rule. */
+  @Roles('sa', 'admin')
+  @Post('nat/bulk-void')
+  @Audited('nat.voided', 'nat_rule', { writtenByService: true })
+  bulkVoidNat(@Body() body: BulkVoidDto, @Req() req: AuthedRequest) {
+    return this.nat.bulkVoid(actor(req), body.ids, body.reason);
   }
 
   /** Gỡ rule = ẩn kèm lý do: "port 8080 đóng ngày nào, ai đóng, vì sao" sẽ có người hỏi. */

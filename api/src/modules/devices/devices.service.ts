@@ -333,72 +333,129 @@ export class DevicesService {
     status: DeviceStatus,
     options: { cleanup?: boolean } = {},
   ): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      /*
-       * KHOÁ HÀNG THIẾT BỊ TRƯỚC KHI ĐỌC BẤT CỨ THỨ GÌ KHÁC.
-       *
-       * Đọc `requireRow` và đếm `holdings` NGOÀI transaction rồi mới mở transaction để ghi là
-       * đúng mẫu "M2" mà `common/cas.ts` mô tả, và ở đây nó hỏng theo hai đường:
-       *
-       *   1. HAI LƯỢT THANH LÝ SONG SONG. Cả hai đọc `status = 'active'`, cả hai thấy không
-       *      giữ gì, cả hai chạy `releaseAllWithin`, cả hai ghi. Một lần thanh lý ra HAI dòng
-       *      `status-changed` trong `device_history` — bảng chỉ-thêm mà FR-007 dựng lên để
-       *      trả lời "ai làm gì hôm đó".
-       *
-       *   2. THANH LÝ ĐUA VỚI MỘT LƯỢT GẮN TÀI SẢN. Nguy hiểm hơn nhiều. Lượt thanh lý đếm
-       *      `holdings` thấy rỗng; cùng lúc đó một người khác đang gán IP/ghế license cho
-       *      chính máy này trong transaction của họ, chưa commit nên ta không thấy. Hai bên
-       *      commit, và kết quả là một máy `retired` vẫn đang giữ tài sản — đúng cái trạng
-       *      thái mà cả `DeviceRetirementRegistry` sinh ra để loại trừ.
-       *
-       * `FOR UPDATE` ở đây bắt cặp với `FOR SHARE` mà `assertUsableWithin` đặt trên cùng hàng
-       * đó. Hai lượt không còn chồng lên nhau được nữa, theo cả hai thứ tự:
-       *
-       *   · thanh lý khoá trước → lượt gắn xếp hàng, rồi đọc lại thấy `retired` → `DEVICE_RETIRED`;
-       *   · lượt gắn khoá trước → thanh lý xếp hàng, rồi đếm `holdings` thấy tài sản vừa được
-       *     gán → `DEVICE_HAS_HOLDINGS`.
-       *
-       * Cùng một nước cờ `LicenseAssignmentService` đã dùng để chặn vượt seat, chỉ là đặt trên
-       * hàng `device` thay vì hàng `software`.
-       */
-      const before = await this.requireRowWithin(tx, id, 'update');
-      /*
-       * Đọc lại SAU khi có khoá, nên lượt thứ hai của hai lượt thanh lý song song thấy đúng
-       * trạng thái lượt thứ nhất vừa ghi và lặng lẽ không làm gì. Trả 409 ở đây mới là sai:
-       * người trực bấm Thanh lý, máy ĐÃ thanh lý — đúng ý họ rồi, không có gì để báo lỗi.
-       */
-      if (before.status === status) return;
+    await this.db.transaction((tx) => this.setStatusWithin(tx, actor, id, status, options));
+  }
 
-      if (status === 'retired' && !options.cleanup) {
-        const holdings = await this.retirement.holdingsWithin(tx, id);
-        if (holdings.length > 0) {
-          throw new ConflictException({
-            code: 'DEVICE_HAS_HOLDINGS',
-            message:
-              `Thiết bị ${before.code} còn đang giữ: ${holdings.join(', ')}. ` +
-              'Gỡ những thứ này trước, hoặc chọn "Gỡ hết rồi thanh lý".',
-            holdings,
-          });
-        }
+  /**
+   * Đổi trạng thái NHIỀU máy (UX-E25): MỘT transaction cho cả lô, mỗi máy đi qua đúng lõi của đổi
+   * tay (khoá hàng, kiểm tài sản đang giữ khi thanh lý, kiểm chỗ trong tủ khi mở lại), mỗi máy một
+   * dòng lịch sử. Một máy hỏng luật thì cả lô không ghi gì. Trả số máy thật sự đổi.
+   */
+  async bulkSetStatus(actor: string, ids: string[], status: DeviceStatus): Promise<{ changed: number }> {
+    return this.db.transaction(async (tx) => {
+      let changed = 0;
+      // Khoá theo thứ tự id cố định: hai lô chồng nhau không khoá chéo thành deadlock.
+      for (const id of [...new Set(ids)].sort()) {
+        if (await this.setStatusWithin(tx, actor, id, status, {})) changed += 1;
       }
-
-      /*
-       * Dọn TRƯỚC khi lật trạng thái.
-       *
-       * Ngược lại thì máy đã là `retired` khi các releaser chạy, và chúng đi qua đúng những
-       * cửa ghi mà `assertUsable` vừa đóng lại — lượt dọn tự chặn chính mình.
-       */
-      if (status === 'retired' && options.cleanup) {
-        await this.retirement.releaseAllWithin(tx, actor, id);
-      }
-      // Máy thanh lý không giữ chỗ trong tủ; đưa lại vào dùng thì phải còn chỗ đó.
-      if (before.status === 'retired') await this.assertRackFreeWithin(tx, id, rackClaimOf({ status }, before));
-      await this.updateWithin(tx, id, { status });
-      await this.recordWithin(tx, actor, id, 'status-changed', {
-        status: { before: before.status, after: status },
-        ...(status === 'retired' && options.cleanup ? { cleanup: { before: null, after: true } } : {}),
-      });
+      return { changed };
     });
+  }
+
+  /**
+   * Sửa cùng một bộ ô (người dùng, phòng ban) cho NHIỀU máy (UX-E25). Mỗi máy đi qua đúng
+   * `prepare()` + chốt "đã thanh lý thì khoá" của Sửa tay; ghi MỘT transaction, mỗi máy một dòng
+   * lịch sử "updated" với đúng phần đổi. Một máy hỏng luật thì cả lô không ghi gì.
+   */
+  async bulkUpdate(
+    actor: string,
+    ids: string[],
+    input: Pick<DeviceInput, 'assignedTo' | 'department'>,
+  ): Promise<{ updated: number }> {
+    const plans: { before: Awaited<ReturnType<DevicesService['requireRow']>>; values: Record<string, unknown>; changes: ReturnType<typeof diffDevice> }[] = [];
+    for (const id of [...new Set(ids)].sort()) {
+      const before = await this.requireRow(id);
+      this.assertNotRetired(before);
+      const values = await this.prepare(input, id);
+      const changes = diffDevice(before, values);
+      if (hasChanges(changes)) plans.push({ before, values, changes });
+    }
+    await this.db.transaction(async (tx) => {
+      for (const plan of plans) {
+        requireUnchangedSince(plan.before, await this.requireRowWithin(tx, plan.before.id, 'update'), {
+          code: 'DEVICE_ALREADY_CHANGED',
+          message: `Thiết bị ${plan.before.code} vừa được người khác sửa — tải lại rồi thử lại. Chưa ghi gì cả.`,
+        });
+        await this.updateWithin(tx, plan.before.id, plan.values);
+        await this.recordWithin(tx, actor, plan.before.id, 'updated', plan.changes);
+      }
+    });
+    return { updated: plans.length };
+  }
+
+  /** Lõi đổi trạng thái — đổi tay và đổi hàng loạt đi chung. `false` = trạng thái đã đúng, không ghi. */
+  private async setStatusWithin(
+    tx: Tx,
+    actor: string,
+    id: string,
+    status: DeviceStatus,
+    options: { cleanup?: boolean },
+  ): Promise<boolean> {
+    /*
+     * KHOÁ HÀNG THIẾT BỊ TRƯỚC KHI ĐỌC BẤT CỨ THỨ GÌ KHÁC.
+     *
+     * Đọc `requireRow` và đếm `holdings` NGOÀI transaction rồi mới mở transaction để ghi là
+     * đúng mẫu "M2" mà `common/cas.ts` mô tả, và ở đây nó hỏng theo hai đường:
+     *
+     *   1. HAI LƯỢT THANH LÝ SONG SONG. Cả hai đọc `status = 'active'`, cả hai thấy không
+     *      giữ gì, cả hai chạy `releaseAllWithin`, cả hai ghi. Một lần thanh lý ra HAI dòng
+     *      `status-changed` trong `device_history` — bảng chỉ-thêm mà FR-007 dựng lên để
+     *      trả lời "ai làm gì hôm đó".
+     *
+     *   2. THANH LÝ ĐUA VỚI MỘT LƯỢT GẮN TÀI SẢN. Nguy hiểm hơn nhiều. Lượt thanh lý đếm
+     *      `holdings` thấy rỗng; cùng lúc đó một người khác đang gán IP/ghế license cho
+     *      chính máy này trong transaction của họ, chưa commit nên ta không thấy. Hai bên
+     *      commit, và kết quả là một máy `retired` vẫn đang giữ tài sản — đúng cái trạng
+     *      thái mà cả `DeviceRetirementRegistry` sinh ra để loại trừ.
+     *
+     * `FOR UPDATE` ở đây bắt cặp với `FOR SHARE` mà `assertUsableWithin` đặt trên cùng hàng
+     * đó. Hai lượt không còn chồng lên nhau được nữa, theo cả hai thứ tự:
+     *
+     *   · thanh lý khoá trước → lượt gắn xếp hàng, rồi đọc lại thấy `retired` → `DEVICE_RETIRED`;
+     *   · lượt gắn khoá trước → thanh lý xếp hàng, rồi đếm `holdings` thấy tài sản vừa được
+     *     gán → `DEVICE_HAS_HOLDINGS`.
+     *
+     * Cùng một nước cờ `LicenseAssignmentService` đã dùng để chặn vượt seat, chỉ là đặt trên
+     * hàng `device` thay vì hàng `software`.
+     */
+    const before = await this.requireRowWithin(tx, id, 'update');
+    /*
+     * Đọc lại SAU khi có khoá, nên lượt thứ hai của hai lượt thanh lý song song thấy đúng
+     * trạng thái lượt thứ nhất vừa ghi và lặng lẽ không làm gì. Trả 409 ở đây mới là sai:
+     * người trực bấm Thanh lý, máy ĐÃ thanh lý — đúng ý họ rồi, không có gì để báo lỗi.
+     */
+    if (before.status === status) return false;
+
+    if (status === 'retired' && !options.cleanup) {
+      const holdings = await this.retirement.holdingsWithin(tx, id);
+      if (holdings.length > 0) {
+        throw new ConflictException({
+          code: 'DEVICE_HAS_HOLDINGS',
+          message:
+            `Thiết bị ${before.code} còn đang giữ: ${holdings.join(', ')}. ` +
+            'Gỡ những thứ này trước, hoặc chọn "Gỡ hết rồi thanh lý".',
+          holdings,
+        });
+      }
+    }
+
+    /*
+     * Dọn TRƯỚC khi lật trạng thái.
+     *
+     * Ngược lại thì máy đã là `retired` khi các releaser chạy, và chúng đi qua đúng những
+     * cửa ghi mà `assertUsable` vừa đóng lại — lượt dọn tự chặn chính mình.
+     */
+    if (status === 'retired' && options.cleanup) {
+      await this.retirement.releaseAllWithin(tx, actor, id);
+    }
+    // Máy thanh lý không giữ chỗ trong tủ; đưa lại vào dùng thì phải còn chỗ đó.
+    if (before.status === 'retired') await this.assertRackFreeWithin(tx, id, rackClaimOf({ status }, before));
+    await this.updateWithin(tx, id, { status });
+    await this.recordWithin(tx, actor, id, 'status-changed', {
+      status: { before: before.status, after: status },
+      ...(status === 'retired' && options.cleanup ? { cleanup: { before: null, after: true } } : {}),
+    });
+    return true;
   }
 
   async recordWithin(
