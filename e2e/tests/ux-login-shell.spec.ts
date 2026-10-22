@@ -59,7 +59,7 @@ test.describe('Đăng nhập', () => {
 test.describe('Thương hiệu PMH trên màn đăng nhập (Q-19)', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('màn rộng: mảng ảnh bên trái (chỉ ảnh) rộng hơn cột form (~60/40); logo PMH + giới thiệu ở cột form (Q-20)', async ({
+  test('màn rộng: mảng ảnh bên trái (chỉ ảnh) rộng hơn cột form (~60/40); logo PMH + tên hệ thống ở cột form, không dòng giới thiệu (Q-33)', async ({
     page,
   }) => {
     await page.goto('/login');
@@ -75,7 +75,7 @@ test.describe('Thương hiệu PMH trên màn đăng nhập (Q-19)', () => {
     await expect(logo).toHaveJSProperty('complete', true);
     expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
     await expect(head.getByText('IMS — Quản lý hệ thống IT')).toBeVisible();
-    await expect(head.getByRole('listitem')).toHaveCount(3);
+    await expect(head.getByRole('listitem')).toHaveCount(0);
     // Logo nằm GIỮA cột form, phía trên card.
     const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Đăng nhập' }) });
     const logoBox = (await logo.boundingBox())!;

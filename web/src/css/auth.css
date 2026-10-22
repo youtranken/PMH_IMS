@@ -67,16 +67,6 @@
 }
 .auth-head-logo img { display: block; width: clamp(120px, 10vw, 168px); height: auto; }
 .auth-head-system { font-size: var(--fs-lg); font-weight: 600; }
-.auth-head-points {
-  margin: 0;
-  padding-left: 1.2em;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  text-align: left;
-}
 /* Màn rộng: nền cột form là CHÍNH ảnh bên trái, phóng to + làm mờ + tối đi — hai nửa cùng tông
    chạng vạng nên liền một khối, thay cho nền lục riêng trông như hai trang ghép. Không trải ảnh
    rõ ra toàn màn: cây cầu nằm ở nửa phải ảnh, card sẽ che đúng nó. Ảnh đã được mảng trái tải nên

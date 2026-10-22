@@ -30,6 +30,14 @@ afterEach(() => {
 });
 
 describe('LoginScreen', () => {
+  it('trên card chỉ logo + tên hệ thống, không ba dòng giới thiệu (Q-33, UX-E11)', () => {
+    renderLogin();
+    const head = screen.getByTestId('auth-head');
+    expect(head).toHaveTextContent('IMS — Quản lý hệ thống IT');
+    expect(head.querySelectorAll('li')).toHaveLength(0);
+    expect(head).not.toHaveTextContent('Két mật khẩu');
+  });
+
   it('đích đã nhớ → dòng phụ nói TÊN MÀN, không in đường dẫn', () => {
     rememberNextPath('/approvals/9f1c2b');
     renderLogin();
