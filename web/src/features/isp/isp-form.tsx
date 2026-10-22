@@ -303,7 +303,7 @@ export function IspForm({
           </p>
         ) : null}
         {check.summary}
-        <FormSection title={t('isp.tabProfile')} columns={4}>
+        <FormSection title={t('isp.sectionProfile')} columns={4}>
           <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code') ?? server.error('isp-code')}>
             <CodeInput
               upper

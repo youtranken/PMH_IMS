@@ -261,3 +261,19 @@ describe('Form phần mềm — Lưu và nhân bản', () => {
     expect(screen.queryByRole('button', { name: 'Lưu và nhân bản' })).toBeNull();
   });
 });
+
+/* PW-A35 + FM-25 (Q-33): tiêu đề khối là danh từ, Mã luôn đứng trước Tên. */
+describe('Form phần mềm — tiêu đề khối + thứ tự Mã / Tên', () => {
+  it('license: khối "Nhận dạng" (không còn "Phần mềm gì"); ô Mã trước ô Tên', () => {
+    mockFetch();
+    render(null);
+    const dialog = screen.getByRole('dialog');
+    const headings = within(dialog).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent?.trim());
+    expect(headings).toContain('Nhận dạng');
+    expect(headings).not.toContain('Phần mềm gì');
+    const boxes = within(dialog).getAllByRole('textbox');
+    const code = boxes.indexOf(screen.getByRole('textbox', { name: /Mã hồ sơ/ }));
+    const name = boxes.indexOf(screen.getByRole('textbox', { name: /Tên hồ sơ/ }));
+    expect(code).toBeLessThan(name);
+  });
+});

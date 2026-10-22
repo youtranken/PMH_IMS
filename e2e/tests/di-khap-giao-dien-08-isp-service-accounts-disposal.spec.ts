@@ -331,10 +331,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await dialogBlockNames(dialog),
-      'Hộp thêm đường truyền có đúng ba khối: Hồ sơ · Hợp đồng và liên hệ sự cố · Giấy tờ đính kèm',
+      'Hộp thêm đường truyền có đúng ba khối: Nhận dạng · Hợp đồng và liên hệ sự cố · Giấy tờ đính kèm',
     ).toEqual(sortVi([
       'Thêm đường truyền',
-      'Hồ sơ',
+      // PW-A35: tiêu đề khối là danh từ.
+      'Nhận dạng',
       'Hợp đồng và liên hệ sự cố',
       'Giấy tờ đính kèm',
     ]));
@@ -395,6 +396,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Bắt đầu',
         'Chọn file để đính kèm',
         'Hủy',
+        // FM-21: khai nhiều đường cùng nhà mạng — lưu xong form ở lại.
+        'Lưu và nhân bản',
         'Lưu',
       ]),
     );
@@ -1089,8 +1092,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(
       sortVi([
         'Thêm tài khoản',
-        'Hồ sơ',
-        'Thuộc về ai',
+        'Nhận dạng',
+        'Phụ trách',
         'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
            "Ghi chú" — hai dòng y hệt chồng nhau. */
@@ -1164,8 +1167,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(
       sortVi([
         'Thêm tài khoản',
-        'Hồ sơ',
-        'Thuộc về ai',
+        'Nhận dạng',
+        'Phụ trách',
         'Cấu hình VPN',
         'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là

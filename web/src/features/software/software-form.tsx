@@ -515,16 +515,7 @@ export function SoftwareForm({
               />
             </Field>
           ) : null}
-          {/* Một hàng ba ô (Q-27): tên · mã · nhà cung cấp — "cái gì, gọi là gì, mua của ai". */}
-          <Field label={t('software.name')} required htmlFor="sw-name" error={check.error('name')}>
-            <input
-              id="sw-name"
-              className="inp"
-              required
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-            />
-          </Field>
+          {/* Một hàng ba ô: mã · tên · nhà cung cấp. Mã luôn trước Tên như mọi form (FM-25, Q-33). */}
           <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code') ?? server.error('sw-code')}>
             <CodeInput
               upper
@@ -534,6 +525,15 @@ export function SoftwareForm({
               placeholder={batchFrom ? suggestedCode : codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
+            />
+          </Field>
+          <Field label={t('software.name')} required htmlFor="sw-name" error={check.error('name')}>
+            <input
+              id="sw-name"
+              className="inp"
+              required
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
             />
           </Field>
           <Field label={t('software.vendor')}>

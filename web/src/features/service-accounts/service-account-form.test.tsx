@@ -24,10 +24,12 @@ describe('Form tài khoản dịch vụ — bố cục', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('hộp rộng, khối Hồ sơ và Thuộc về ai xếp 4 cột', () => {
+  // PW-A35 + FM-25: tiêu đề khối là danh từ ("Nhận dạng", "Phụ trách"), không phải câu hỏi.
+  it('hộp rộng, khối Nhận dạng và Phụ trách xếp 4 cột', () => {
     const dialog = renderForm();
     expect(Number.parseInt(dialog.style.maxWidth, 10)).toBeGreaterThanOrEqual(960);
-    for (const heading of ['Hồ sơ', 'Thuộc về ai']) {
+    expect(within(dialog).queryByRole('heading', { name: 'Thuộc về ai' })).toBeNull();
+    for (const heading of ['Nhận dạng', 'Phụ trách']) {
       const section = within(dialog).getByRole('heading', { name: heading }).closest('section');
       expect(section?.querySelector('.form-grid')).toHaveAttribute('data-columns', '4');
     }
