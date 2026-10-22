@@ -62,6 +62,8 @@ import { Pagination } from '@/ui/pagination';
 import { DataTable } from '@/ui/data-table';
 import { useListUrlState } from '@/ui/use-list-url-state';
 import { IpInput } from '@/ui/code-input';
+import { StickyActionBar } from '@/ui/sticky-action-bar';
+import { useRowSelection } from '@/ui/use-row-selection';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -144,6 +146,8 @@ export function NatScreen({ me }: { me: Me }) {
     : 'external';
   const [editing, setEditing] = useState<{ rule: NatRow | null } | null>(null);
   const [hiding, setHiding] = useState<NatRow | null>(null);
+  const picked = useRowSelection();
+  const [removingMany, setRemovingMany] = useState(false);
   const [historyOf, setHistoryOf] = useState<NatRow | null>(null);
   const [shown, setShown] = useState<Record<NatBucket, boolean>>(NAT_DEFAULT_SHOWN);
   // Ba chip trạng thái khác mặc định cũng là một bộ lọc đang bật — tính vào "Bộ lọc (n)".
@@ -182,6 +186,8 @@ export function NatScreen({ me }: { me: Me }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam', 'nat'] });
   const all = useMemo(() => rules.data ?? [], [rules.data]);
+  // Luật đã gỡ không gỡ lại được — bỏ khỏi lô dù đang tick.
+  const pickedRules = all.filter((rule) => picked.selected.has(rule.id) && !rule.voidedAt);
 
   /* Rule đi ra WAN nào: IP WAN của đường truyền gắn cùng router (một văn phòng chỉ vài đường,
      một lượt đủ). Hỏng hay chưa về thì dòng chỉ thiếu phần WAN, bảng vẫn đọc được. */
@@ -610,6 +616,12 @@ export function NatScreen({ me }: { me: Me }) {
               .join(' ')
           }
           rowCurrent={(rule) => rule.id === linkedId}
+          /* Gỡ nhiều luật một lý do (UX-E25) — cùng vai với gỡ từng luật (SA/Admin). */
+          selection={
+            canHide
+              ? { ...picked, rowLabel: (rule) => t('nat.selectOne', { ports: `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}` }) }
+              : undefined
+          }
           mobileCard={{
             title: (rule) => {
               const { ports } = natParts(rule);
@@ -681,14 +693,37 @@ export function NatScreen({ me }: { me: Me }) {
         </Dialog>
       ) : null}
 
+      {pickedRules.length > 0 && !removingMany ? (
+        <StickyActionBar label={t('nat.bulkLabel')} note={t('nat.bulkSelected', { count: pickedRules.length })}>
+          <button type="button" className="btn" onClick={picked.clear}>
+            {t('nat.bulkClear')}
+          </button>
+          <button type="button" className="btn danger" onClick={() => setRemovingMany(true)}>
+            {t('nat.removeMany', { count: pickedRules.length })}
+          </button>
+        </StickyActionBar>
+      ) : null}
       {hiding ? (
         <RemoveDialog
-          rule={hiding}
+          rules={[hiding]}
           csrfToken={me.csrfToken}
           onClose={() => setHiding(null)}
           onDone={() => {
             setHiding(null);
             toast({ message: t('nat.removed') });
+            void refresh();
+          }}
+        />
+      ) : null}
+      {removingMany && pickedRules.length > 0 ? (
+        <RemoveDialog
+          rules={pickedRules}
+          csrfToken={me.csrfToken}
+          onClose={() => setRemovingMany(false)}
+          onDone={() => {
+            setRemovingMany(false);
+            toast({ message: t('nat.removedMany', { count: pickedRules.length }) });
+            picked.clear();
             void refresh();
           }}
         />
@@ -1337,13 +1372,14 @@ function NatForm({
 }
 
 /** Gỡ rule kèm lý do: "port 8080 đóng ngày nào, ai đóng, vì sao" sẽ có người hỏi. */
+/** Gỡ một luật, hoặc nhiều luật một lý do (UX-E25 — một lượt POST, một transaction). */
 function RemoveDialog({
-  rule,
+  rules,
   csrfToken,
   onClose,
   onDone,
 }: {
-  rule: NatRow;
+  rules: NatRow[];
   csrfToken: string;
   onClose: () => void;
   onDone: () => void;
@@ -1352,12 +1388,19 @@ function RemoveDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useSubmitError([reason]);
   const check = useFormErrors({ reason: reasonRule(t, reason) });
+  const rule = rules[0];
+  const many = rules.length > 1;
 
-  const remove = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {
+  const removeOne = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {
     method: 'DELETE',
     csrfToken,
     refreshMe: false,
   });
+  const removeMany = useApiMutation<{ ids: string[]; reason: string }, unknown>('/api/v1/ipam/nat/bulk-void', {
+    csrfToken,
+    refreshMe: false,
+  });
+  const remove = many ? removeMany : removeOne;
 
   return (
     <Dialog
@@ -1367,7 +1410,11 @@ function RemoveDialog({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!remove.isPending}
       maxWidth={480}
-      title={t('nat.removeTitle', { ports: `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}` })}
+      title={
+        many
+          ? t('nat.removeManyTitle', { count: rules.length })
+          : t('nat.removeTitle', { ports: `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}` })
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -1394,10 +1441,9 @@ function RemoveDialog({
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
-          remove.mutate(
-            { reason: reason.trim() },
-            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
-          );
+          const handlers = { onSuccess: onDone, onError: (err: unknown) => setError(errorMessage(err)) };
+          if (many) removeMany.mutate({ ids: rules.map((r) => r.id), reason: reason.trim() }, handlers);
+          else removeOne.mutate({ reason: reason.trim() }, handlers);
         }}
       >
         <p className="muted">{t('nat.removeHint')}</p>
