@@ -588,8 +588,11 @@ export async function switchTheme(page: Page, theme: 'light' | 'dark'): Promise<
       await page.getByRole('menu').getByRole('menuitemradio', { name: theme === 'dark' ? 'Tối' : 'Sáng' }).click();
       if (await page.getByRole('menu').isVisible()) await page.keyboard.press('Escape');
     }
-    if (viaDrawer && (await page.getByRole('button', { name: 'Đóng menu' }).isVisible())) {
-      await page.getByRole('button', { name: 'Đóng menu' }).click();
+    // Đóng drawer bằng Esc: nút "Đóng menu" ở thanh trên nằm DƯỚI lớp drawer, bấm chuột bị che.
+    const drawerPanel = page.getByRole('dialog', { name: 'Điều hướng chính' });
+    if (viaDrawer && (await drawerPanel.isVisible())) {
+      await page.keyboard.press('Escape');
+      await expect(drawerPanel).toBeHidden();
     }
   }
   await expect(html).toHaveAttribute('data-theme', theme);
