@@ -82,7 +82,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'Cổng ngoài' }).fill('8080');
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('Phòng Nhân sự');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('máy chấm công truy cập từ ngoài');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
@@ -142,7 +142,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('textbox', { name: 'Cổng ngoài' }).fill('9091');
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.0.0');
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('thử');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('thử');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('thử');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(form.getByText(/ĐỊA CHỈ MẠNG/)).toBeVisible();
@@ -184,7 +184,7 @@ test.describe('Sổ NAT', () => {
     await expect(form.getByRole('textbox', { name: 'Cổng trong' })).toHaveValue('5001');
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('Team IT');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('VPN vào LAN nội bộ');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
@@ -221,7 +221,7 @@ test.describe('Sổ NAT', () => {
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('443');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kinh doanh');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('P. Kinh doanh');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('web đơn hàng cho đối tác');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(
@@ -251,7 +251,7 @@ test.describe('Sổ NAT', () => {
     const form = page.getByRole('dialog');
 
     // Khai dở một ô TRƯỚC khi mở hộp thêm router — nó phải còn nguyên khi quay lại.
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('Team IT');
 
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').click();
     await page.getByRole('button', { name: 'Thêm thiết bị mới' }).click();
@@ -265,7 +265,7 @@ test.describe('Sổ NAT', () => {
 
     // Router vừa tạo được CHỌN SẴN, và ô khai dở còn nguyên.
     await expect(form.getByPlaceholder('Chọn hoặc gõ để lọc…')).toHaveValue(newRouter);
-    await expect(form.getByRole('combobox', { name: 'Mở cho ai' })).toHaveValue('Team IT');
+    await expect(form.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Team IT');
 
     await form.getByRole('textbox', { name: 'Cổng ngoài' }).fill('7443');
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
@@ -628,6 +628,10 @@ test.describe('Sổ NAT', () => {
     expect(res.status()).toBe(200);
     expect(res.headers()['content-type']).toContain('spreadsheetml');
     expect((await res.body()).length).toBeGreaterThan(1000);
+    // UX-E29: xuất theo bộ lọc của màn; chip trạng thái lạ bị chặn 400, không ra file rỗng.
+    const filtered = await page.request.get('/api/v1/ipam/nat/export.xlsx?states=open,off&protocol=tcp&sort=newest');
+    expect(filtered.status()).toBe(200);
+    expect((await page.request.get('/api/v1/ipam/nat/export.xlsx?states=open,lung-tung')).status()).toBe(400);
   });
 });
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { noteContainsSecret } from '@/lib/note-secret';
+import { NoteField } from '@/ui/note-field';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
@@ -28,6 +29,8 @@ import {
   type ServiceAccountRow,
   type ServiceAccountStatus,
 } from './service-account-types';
+import { CodeInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface FormState {
   code: string;
@@ -87,6 +90,7 @@ export function ServiceAccountForm({
   const departments = useDepartments();
   const [form, setForm] = useState<FormState>(() => initialState(row));
   const [error, setError] = useSubmitError([form]);
+  const server = useServerFieldErrors([form]);
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /*
@@ -253,7 +257,9 @@ export function ServiceAccountForm({
                   }
                 })();
               },
-              onError: (err) => setError(errorMessage(err)),
+              onError: (err) => {
+                if (!server.claim(err, { SERVICE_ACCOUNT_CODE_TAKEN: 'sa-code' })) setError(errorMessage(err));
+              },
             },
           );
         }}
@@ -281,9 +287,8 @@ export function ServiceAccountForm({
             htmlFor="sa-login"
             error={check.error('login')}
           >
-            <input
+            <CodeInput
               id="sa-login"
-              className="inp mono"
               required={!form.code.trim()}
               placeholder={t('serviceAccounts.phLogin')}
               value={form.login}
@@ -318,6 +323,7 @@ export function ServiceAccountForm({
               nói trước hậu quả ngay khi nó bị đổi. */}
           <Field
             label={t('serviceAccounts.code')}
+            error={server.error('sa-code')}
             hint={
               row
                 ? form.code.trim() !== row.code
@@ -330,9 +336,9 @@ export function ServiceAccountForm({
             }
             htmlFor="sa-code"
           >
-            <input
+            <CodeInput
+              caps
               id="sa-code"
-              className="inp mono"
               placeholder={t('serviceAccounts.codeAutoPlaceholder')}
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
@@ -468,20 +474,7 @@ export function ServiceAccountForm({
         {/* Khu chỉ có ĐÚNG một ô, nên tiêu đề khu và nhãn ô nói y hệt nhau, hai dòng chồng
             nhau cách nhau 8px. Bỏ tiêu đề khu — nhãn ô mới là thứ ô nhập cần. */}
         <FormSection columns={1}>
-          <Field
-            label={t('serviceAccounts.note')}
-            hint={t('serviceAccounts.noteHint')}
-            htmlFor="sa-note"
-            error={check.error('note')}
-          >
-            <textarea
-              id="sa-note"
-              className="inp"
-              rows={3}
-              value={form.note}
-              onChange={(e) => set('note', e.target.value)}
-            />
-          </Field>
+          <NoteField id="sa-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
         {row ? (

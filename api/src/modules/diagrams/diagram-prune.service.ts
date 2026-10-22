@@ -163,7 +163,7 @@ export class DiagramPruneService {
       const diagram = await this.lock(tx, diagramId, true);
       const creator = diagram.createdBy.toLowerCase() === actor.email.toLowerCase();
       if (!creator && !canManageNode(diagram, actor)) {
-        throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Admin/SA hoặc người tạo bản vẽ này mới xóa hẳn được.' });
+        throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Super Admin / Quản trị hoặc người tạo bản vẽ này mới xóa hẳn được.' });
       }
       if (confirmName.trim() !== diagram.name.trim()) {
         throw new BadRequestException({ code: 'DIAGRAM_CONFIRM_NAME', message: 'Tên gõ lại không khớp tên bản vẽ.' });
@@ -214,7 +214,7 @@ export class DiagramPruneService {
    */
   async erase(actor: PruneActor, diagramId: string, confirmName: string): Promise<{ versions: number }> {
     if (actor.role !== 'sa' && actor.role !== 'admin') {
-      throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Admin/SA mới xóa vĩnh viễn bản vẽ đã lưu trữ được.' });
+      throw new ForbiddenException({ code: 'DIAGRAM_MANAGE_FORBIDDEN', message: 'Chỉ Super Admin / Quản trị mới xóa vĩnh viễn bản vẽ đã lưu trữ được.' });
     }
     return this.db.transaction(async (tx) => {
       const diagram = await this.lock(tx, diagramId, true);
@@ -371,7 +371,7 @@ function assertCanDiscard(diagram: { kind: 'official' | 'presentation'; ownerEma
   if (!canManageNode(diagram, actor)) {
     throw new ForbiddenException({
       code: 'DIAGRAM_MANAGE_FORBIDDEN',
-      message: 'Thành viên chỉ bỏ bản nháp của bản trình bày do mình tạo hoặc phụ trách — bản chính thức cần Admin/SA.',
+      message: 'Thành viên chỉ bỏ bản nháp của bản trình bày do mình tạo hoặc phụ trách — bản chính thức cần Super Admin / Quản trị.',
     });
   }
 }

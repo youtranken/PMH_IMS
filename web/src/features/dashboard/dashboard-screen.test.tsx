@@ -124,13 +124,26 @@ describe('Bảng điều khiển', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Đã quá hạn (3)' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sắp tới (16)' })).toBeInTheDocument();
-    expect(screen.getByText('Xin chào, Trần Sếp', { exact: false })).toBeInTheDocument();
+    // TX-18: dòng phụ chỉ nói giờ cập nhật, không lời chào.
+    expect(screen.getByText(/^Cập nhật lúc /)).toBeInTheDocument();
+    expect(screen.queryByText(/Xin chào/)).toBeNull();
+  });
+
+  // PW-A06: cột Thao tác trống gần hết các dòng → bỏ; nút Gia hạn đứng cạnh huy hiệu.
+  it('bảng hạn không có cột Thao tác; dòng gia hạn được có nút "Gia hạn" ở ô Tình trạng', async () => {
+    mockApi({ ...BOARD, expiring: { ...BOARD.expiring, items: [{ ...expiringItem('a', -40), canRenew: true }, expiringItem('b', 5)] } });
+    renderBoard();
+    const block = (await screen.findByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' })).closest('section')!;
+    await within(block).findAllByRole('table');
+    expect(within(block).queryByRole('columnheader', { name: 'Thao tác' })).toBeNull();
+    const renew = within(block).getByRole('button', { name: 'Gia hạn' });
+    expect(renew.closest('td')).toHaveTextContent(/Quá hạn/);
   });
 
   it('dòng mở két: TÊN người xin, đối tượng là link, trạng thái "Đã duyệt" có màu, không email trần', async () => {
     mockApi(BOARD);
     renderBoard();
-    const block = (await screen.findByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).closest('section')!;
+    const block = (await screen.findByRole('heading', { name: 'Yêu cầu mở két · 7 ngày' })).closest('section')!;
     expect(within(block).getByText('Nguyễn Thị Lan')).toHaveAttribute('title', 'lan@pmh.com.vn');
     expect(within(block).getByRole('link', { name: 'VPN-01 · VPN chi nhánh' })).toBeInTheDocument();
     expect(within(block).getByText('Đã duyệt')).toHaveClass('ok');
@@ -140,20 +153,21 @@ describe('Bảng điều khiển', () => {
   it('khối thanh lý không in mã loại thô ("vpn")', async () => {
     mockApi(BOARD);
     renderBoard();
-    const block = (await screen.findByRole('heading', { name: 'Tổng hợp kho thanh lý (7 ngày)' })).closest('section')!;
+    const block = (await screen.findByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).closest('section')!;
     expect(within(block).getByText(/Tài khoản VPN/)).toBeInTheDocument();
     expect(within(block).queryByText(/^vpn/)).toBeNull();
   });
 
-  it('khối LỖI có tông cảnh báo + Thử lại; khối yên (Sự cố, 0 phiếu) là tin tốt — không cùng kiểu', async () => {
+  // UX-E05: tin tốt đã nằm ở ô số 0 — khối yên không lặp lại lần hai; khối LỖI vẫn hiện, có Thử lại.
+  it('khối LỖI có tông cảnh báo + Thử lại; khối yên (Sự cố, 0 phiếu) không hiện; không câu "không có việc gì gấp"', async () => {
     mockApi({ ...BOARD, disposed: { available: false, items: [], total: 0 } });
     renderBoard();
-    const errorBlock = (await screen.findByRole('heading', { name: 'Tổng hợp kho thanh lý (7 ngày)' })).closest('section')!;
+    const errorBlock = (await screen.findByRole('heading', { name: 'Kho thanh lý · 7 ngày' })).closest('section')!;
     expect(errorBlock).toHaveClass('tone-error');
     expect(within(errorBlock).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
-    const incidents = screen.getByRole('heading', { name: 'Sự cố tuần qua' }).closest('section')!;
-    expect(incidents).toHaveClass('tone-good');
-    expect(incidents).toHaveTextContent('Tuần qua không có sự cố nào.');
+    expect(screen.queryByRole('heading', { name: 'Sự cố · 7 ngày' })).toBeNull();
+    expect(screen.queryByText('7 ngày qua không có sự cố nào.')).toBeNull();
+    expect(screen.queryByText('Không có việc gì gấp.')).toBeNull();
   });
 
   it('FR-027 ②: phiếu 0206 tuần qua hiện số phiếu dẫn tới phiếu, mô tả và mức độ', async () => {
@@ -166,7 +180,7 @@ describe('Bảng điều khiển', () => {
       },
     });
     renderBoard();
-    const block = (await screen.findByRole('heading', { name: 'Sự cố tuần qua' })).closest('section')!;
+    const block = (await screen.findByRole('heading', { name: 'Sự cố · 7 ngày' })).closest('section')!;
     expect(within(block).getByRole('link', { name: '0206-2026-004' })).toHaveAttribute('href', '/iso/incidents/inc-1');
     expect(within(block).getByText('Job VSS lỗi')).toBeInTheDocument();
     expect(within(block).getByText('Cao')).toBeInTheDocument();
@@ -220,6 +234,6 @@ describe('Bảng điều khiển', () => {
     );
     renderBoard();
     const block = (await screen.findByRole('heading', { name: 'Yêu cầu mở két của tôi' })).closest('section')!;
-    expect(within(block).getAllByText(/đã duyệt — mở két, bấm "Xem"/)).toHaveLength(1);
+    expect(within(block).getAllByText(/đã được duyệt — bấm "Xem" ở ngăn cần mở/)).toHaveLength(1);
   });
 });

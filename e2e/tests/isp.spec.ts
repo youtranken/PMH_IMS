@@ -178,7 +178,7 @@ test.describe('Đường truyền ISP', () => {
     await page.reload();
     await expect(page.getByText('Đã thanh lý', { exact: true })).toBeVisible();
     // Băng rôn đầu trang: ngày và NGƯỜI thanh lý (họ tên khi tra được, không thì email).
-    await expect(page.getByText(/Đã thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
+    await expect(page.getByText(/Đã thanh lý \d{2}\/\d{2}\/\d{4} · .+/)).toBeVisible();
     // Đường đã chết thì thôi giục bổ sung ô còn thiếu.
     await expect(page.getByRole('button', { name: /^Bổ sung \d+ ô còn thiếu$/ })).toHaveCount(0);
 
@@ -400,7 +400,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await expect(ask.getByRole('button', { name: 'Đã thanh lý' })).toHaveCount(0);
     await ask.getByRole('button', { name: 'Thanh lý', exact: true }).click();
     // Băng rôn mang nhãn TRẠNG THÁI "Đã thanh lý" (Q-14), kèm ngày và người làm (NET-066).
-    await expect(page.getByText(/^Đã thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
+    await expect(page.getByText(/^Đã thanh lý \d{2}\/\d{2}\/\d{4} · .+/)).toBeVisible();
   });
 
   test('form: IP WAN sai định dạng thì báo ngay dưới ô, không gửi', async ({ page }) => {
@@ -476,8 +476,8 @@ test.describe('Đường truyền — nhiều IP WAN', () => {
 
     await row.getByRole('link', { name: code, exact: true }).click();
     const main = page.getByRole('main');
-    await expect(main.getByRole('button', { name: `Chép IP WAN ${ipA}` })).toBeVisible();
-    await expect(main.getByRole('button', { name: `Chép IP WAN ${ipB}` })).toBeVisible();
+    await expect(main.getByRole('button', { name: `Sao chép IP WAN ${ipA}` })).toBeVisible();
+    await expect(main.getByRole('button', { name: `Sao chép IP WAN ${ipB}` })).toBeVisible();
   });
 
   test('đường hỏng qua API: dải và IP trùng trong cùng đường bị chặn đúng mã lỗi', async ({ page }) => {

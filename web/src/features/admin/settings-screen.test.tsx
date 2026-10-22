@@ -122,8 +122,17 @@ describe('Màn Tham số hệ thống', () => {
     renderAt('/admin/settings');
     expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toHaveValue('20');
     expect(screen.getByText('lần/phút')).toBeInTheDocument();
-    expect(screen.getByText(/Mặc định: 20 lần\/phút/)).toBeInTheDocument();
-    expect(screen.getByText(/Sửa lần cuối bởi cao.thuan@pmh.com.vn/)).toBeInTheDocument();
+    expect(screen.queryByText(/mặc định 20 lần\/phút/)).toBeNull();
+    expect(screen.getByText(/Sửa lần cuối .* · cao.thuan@pmh.com.vn/)).toBeInTheDocument();
+  });
+
+  // TX-41: dòng phụ chỉ hiện khi đã có người sửa; chỉ nhắc mặc định khi giá trị đang khác nó.
+  it('đã sửa và khác mặc định → "Sửa lần cuối … · mặc định 20 lần/phút"; chưa ai sửa → không dòng phụ', async () => {
+    const rows = ROWS.map((r) => (r.key === 'login.rate_limit_per_ip' ? { ...r, value: 50 } : r));
+    renderAt('/admin/settings', () => jsonResponse(200, rows));
+    expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toHaveValue('50');
+    expect(screen.getByText(/Sửa lần cuối .* · cao.thuan@pmh.com.vn · mặc định 20 lần\/phút/)).toBeInTheDocument();
+    expect(screen.queryByText(/Chưa sửa từ lúc cài đặt/)).toBeNull();
   });
 
   it('X-02: cổng nhạy cảm của NAT và cửa sổ break-glass gần đây có nhãn tiếng Việt', async () => {
@@ -138,7 +147,7 @@ describe('Màn Tham số hệ thống', () => {
   it('nhóm Mạng IP & NAT: nhãn tiếng Việt và đơn vị cổng', async () => {
     renderAt('/admin/settings?group=ipam');
     expect(await screen.findByLabelText('Cảnh báo luật NAT mở dải cổng rộng hơn')).toHaveValue('1000');
-    expect(screen.getByText(/Mặc định: 1000 cổng/)).toBeInTheDocument();
+    expect(screen.queryByText(/mặc định 1000 cổng/)).toBeNull();
   });
 
   it('nhóm Giấy tờ đính kèm (Q-18): ba tham số, nhãn và đơn vị tiếng Việt', async () => {
@@ -149,9 +158,9 @@ describe('Màn Tham số hệ thống', () => {
     expect(groupButton).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('button', { name: 'Đăng nhập & bảo mật' })).toHaveAttribute('aria-pressed', 'false');
     expect(await screen.findByLabelText('Dung lượng tối đa mỗi file')).toHaveValue('25');
-    expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
+    expect(screen.queryByText(/mặc định 25 MB/)).toBeNull();
     expect(screen.getByLabelText('Số file tối đa mỗi lượt chọn')).toHaveValue('6');
-    expect(screen.getByText(/Mặc định: 6 file/)).toBeInTheDocument();
+    expect(screen.queryByText(/mặc định 6 file/)).toBeNull();
     expect(screen.getByLabelText('Gỡ nội dung file đã xóa sau')).toHaveValue('30');
   });
 
@@ -168,7 +177,7 @@ describe('Màn Tham số hệ thống', () => {
     await user.click(screen.getByRole('button', { name: 'Giải thích: Gỡ nội dung file đã xóa sau' }));
     expect(await screen.findByText(/Qua mốc này nội dung file bị gỡ khỏi ổ đĩa/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Giải thích: Số file tối đa mỗi lượt chọn' })).toBeNull();
-    expect(screen.getByText(/Mặc định: 25 MB/)).toBeInTheDocument();
+    expect(screen.queryByText(/mặc định 25 MB/)).toBeNull();
   });
 
   it('nới quá ngưỡng → cảnh báo; Lưu mở hộp Trước → Sau, chưa gửi gì', async () => {
@@ -211,6 +220,27 @@ describe('Màn Tham số hệ thống', () => {
       await screen.findByText('Số lượt đăng nhập tối đa mỗi IP: Phải từ 5 đến 1000.'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/login\.rate_limit_per_ip/)).not.toBeInTheDocument();
+  });
+
+  // UX-E21: ~63 tham số / 11 nhóm, không có ô tìm; menu nhóm không cho biết nhóm nào đã đổi.
+  it('ô "Tìm tham số" tìm trên mọi nhóm theo nhãn (không dấu); xóa ô thì về nhóm đang chọn', async () => {
+    renderAt('/admin/settings');
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    const search = screen.getByRole('searchbox', { name: 'Tìm tham số' });
+    await userEvent.type(search, 'an han');
+    expect(await screen.findByRole('heading', { name: 'Tham số khớp "an han"' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toBeNull();
+    expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
+    await userEvent.clear(search);
+    expect(await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP')).toBeInTheDocument();
+  });
+
+  it('menu nhóm đếm số tham số đang khác mặc định', async () => {
+    renderAt('/admin/settings', () => jsonResponse(200, ROWS.map((row) => (row.key === 'login.rate_limit_per_ip' ? { ...row, value: 30 } : row))));
+    await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
+    const nav = screen.getByRole('navigation', { name: /nhóm/i });
+    expect(within(nav).getByRole('button', { name: /^Đăng nhập/ })).toHaveTextContent(/1$/);
+    expect(within(nav).getByRole('button', { name: /^Phần mềm/ })).not.toHaveTextContent(/\d$/);
   });
 
   it('?group=software mở đúng nhóm; 0 = tắt có cảnh báo', async () => {

@@ -66,3 +66,13 @@ describe('WarrantyTimeline — notCounted nói trung tính', () => {
     expect(screen.queryByText(/thanh lý/)).toBeNull();
   });
 });
+
+/* PW-A05: ở dải 4 ô, huy hiệu đã nói "Không tính hạn" và dòng khoảng ngày đã có ngày cuối — bản
+   gọn không nhắc lại lần hai. */
+describe('WarrantyTimeline compact + notCounted', () => {
+  it('chỉ vẽ thanh, không lặp ngày và chữ "Không tính hạn"', () => {
+    renderWithI18n(<WarrantyTimeline compact end="2025-01-01" notCounted now={new Date('2026-06-01')} />);
+    expect(screen.queryByText(/Không tính hạn/)).toBeNull();
+    expect(screen.queryByText(/01\/01\/2025/)).toBeNull();
+  });
+});

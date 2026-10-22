@@ -455,7 +455,7 @@ export class LicenseAssignmentService {
     if (existing.length === 0) {
       throw new NotFoundException({
         code: 'ASSIGNMENT_NOT_FOUND',
-        message: 'Không tìm thấy bản ghi gán còn hiệu lực này.',
+        message: 'Không tìm thấy lượt gán còn hiệu lực này.',
       });
     }
     const before = existing[0];
@@ -587,7 +587,7 @@ export class LicenseAssignmentService {
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'ASSIGNMENT_NOT_FOUND',
-        message: 'Không tìm thấy bản ghi gán còn hiệu lực này.',
+        message: 'Không tìm thấy lượt gán còn hiệu lực này.',
       });
     }
     await this.db.transaction(async (tx) => {

@@ -76,10 +76,13 @@ describe('DataTable `groupBy` — một dòng tiêu đề mỗi nhóm', () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'Ngày 2026-09-29',
       'Ngày 2026-09-28',
     ]);
+    // Mỗi nhóm một section (tiêu đề + danh sách thẻ): chỉ THẺ là mục danh sách — tiêu đề nhóm không
+    // bị đếm, và không có mục "nhóm" nào chứa luôn link của thẻ.
+    expect(screen.getAllByRole('list')).toHaveLength(2);
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
   });
 });

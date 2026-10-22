@@ -42,12 +42,12 @@ describe('LoginScreen', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderLogin();
     await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
-    expect(screen.getAllByText('Bắt buộc — chưa nhập ô này.')).toHaveLength(2);
+    expect(screen.getAllByText('Chưa nhập.')).toHaveLength(2);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Email')).toHaveFocus();
     // Ô nằm trong gói biểu tượng: nhãn, lỗi và aria-invalid vẫn phải tới được ô thật.
     for (const label of ['Email', 'Mật khẩu']) {
-      expect(screen.getByLabelText(label)).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+      expect(screen.getByLabelText(label)).toHaveAccessibleDescription('Chưa nhập.');
       expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true');
     }
   });
@@ -122,7 +122,7 @@ describe('LoginScreen — phản hồi theo từng kiểu hỏng', () => {
     expect(password).toHaveFocus();
     expect(password).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText('Email')).toHaveValue('a@pmh.com.vn');
-    expect(screen.queryByText('Bắt buộc — chưa nhập ô này.')).toBeNull();
+    expect(screen.queryByText('Chưa nhập.')).toBeNull();
     // Lần sai đầu chưa doạ; lần thứ hai mới nói trước chuyện tạm khoá.
     expect(screen.queryByText(/sẽ bị tạm khóa/)).toBeNull();
     await userEvent.type(password, 'sai-lan-hai');
@@ -134,7 +134,8 @@ describe('LoginScreen — phản hồi theo từng kiểu hỏng', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     renderLogin();
     await submitWith('a@pmh.com.vn', 'dung-mat-khau');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Đăng nhập không thành công.');
+    // FM-07: nói đúng nguyên nhân (mất mạng), không phải "Đăng nhập không thành công." chung chung.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.');
     expect(screen.getByLabelText('Mật khẩu')).toHaveValue('dung-mat-khau');
   });
 

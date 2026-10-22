@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, formatDateTime, orDash, todayIso } from '@/lib/format';
 import { matchRecent, recentRange } from '@/lib/period-range';
+import { PATHS } from '@/lib/routes';
 import { CopyButton } from '@/ui/copy-button';
 import { DataTable, type MobileCard, type TableGroupBy } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
@@ -28,6 +29,7 @@ import {
   objectTypeLabel,
 } from './audit-actions';
 import { detailChanges } from './audit-detail';
+import { Actor, actorLabel } from '@/ui/actor';
 
 export interface AuditRow {
   id: string;
@@ -89,8 +91,12 @@ const EMPTY_FILTERS: Filters = {
   each: '',
 };
 
-const DEFAULT_LIMIT = 20;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** UUID rút 8 ký tự cho chip / dòng phụ; mã khác (khóa cấu hình…) để nguyên. */
+function shortId(id: string): string {
+  return UUID_RE.test(id) ? `${id.slice(0, 8)}…` : id;
+}
 
 /** Nút chọn nhanh khoảng ngày — "Hôm nay" là 1 ngày. */
 const RECENT_PRESETS = [1, 7, 30] as const;
@@ -153,21 +159,10 @@ export function AuditLogScreen() {
   const { t } = useTranslation();
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     searchKey: 'actor',
   });
   const { page, limit, filters } = url;
   const [open, setOpen] = useState<AuditRow | null>(null);
-
-  /*
-   * Ô mã đối tượng ghi lên URL khi rời ô hoặc Enter, không theo từng phím: ô tìm có debounce
-   * của hook đã dành cho người thao tác, còn mỗi phím ở đây là một lượt quét nhật ký.
-   */
-  const [objectDraft, setObjectDraft] = useState(filters.objectId);
-  useEffect(() => setObjectDraft(filters.objectId), [filters.objectId]);
-  const commitObject = () => {
-    if (objectDraft.trim() !== filters.objectId) url.setFilter('objectId', objectDraft.trim());
-  };
 
   const list = useQuery({
     queryKey: ['audit', page, limit, filters],
@@ -213,9 +208,11 @@ export function AuditLogScreen() {
             type="button"
             className="ghost sm mono audit-open"
             aria-label={t('audit.openDetail', { time: formatDateTime(row.original.createdAt) })}
+            title={formatDateTime(row.original.createdAt)}
             onClick={() => setOpen(row.original)}
           >
-            {formatDateTime(row.original.createdAt)}
+            {/* Ngày đã ở tiêu đề nhóm ("Hôm nay", "20/09/2026") — dòng chỉ in giờ (PW-C10). */}
+            {timeOf(row.original.createdAt)}
           </button>
         ),
       },
@@ -223,29 +220,28 @@ export function AuditLogScreen() {
         id: 'actor',
         header: t('audit.actor'),
         enableSorting: false,
+        /* Email ở title, không in dòng phụ trên mọi dòng (TB-23); hộp chi tiết in đủ. */
         cell: ({ row }) => (
-          <>
-            {row.original.actorName ?? row.original.actor}
-            {row.original.actorName ? (
-              <span className="cell-sub">{row.original.actor}</span>
-            ) : null}
-          </>
+          <span title={row.original.actorName ? row.original.actor : undefined}>
+            {actorLabel(row.original.actor, row.original.actorName, t).text}
+          </span>
         ),
       },
       {
         id: 'action',
         header: t('audit.action'),
         enableSorting: false,
-        /* Nhãn tiếng Việt trước, mã ở dòng phụ: mã vẫn là thứ bộ lọc gửi đi và thứ người
-           ta dán vào câu hỏi cho đội phát triển, nên không được giấu hẳn. */
+        /* Mã hành động là chữ kỹ thuật (UX-E08): ở title và hộp chi tiết — thứ người ta dán vào
+           câu hỏi cho đội phát triển — không in dòng mono trên mọi dòng. */
         cell: ({ row }) => {
           const tone = auditActionTone(row.original.action);
           const label = auditActionLabel(row.original.action, t);
           return (
             <>
-              {tone ? <span className={`badge ${tone}`}>{label}</span> : label}
+              <span className={tone ? `badge ${tone}` : undefined} title={row.original.action}>
+                {label}
+              </span>
               <RepeatBadge row={row.original} />
-              <span className="cell-sub mono">{row.original.action}</span>
             </>
           );
         },
@@ -278,7 +274,9 @@ export function AuditLogScreen() {
     /* Tên / email người làm KHÔNG ngắt giữa chừng ("e2e-" | "sa@…") — chỉ ngắt quanh mũi tên. */
     subtitle: (row) => (
       <>
-        <span className="nowrap">{row.actorName ?? row.actor}</span>
+        <span className="nowrap">
+          <Actor actor={row.actor} actorName={row.actorName} />
+        </span>
         {' → '}
         {[objectTypeLabel(row.objectType, t), row.objectLabel].filter(Boolean).join(' · ') || '—'}
       </>
@@ -291,7 +289,6 @@ export function AuditLogScreen() {
     <>
       <PageHeader
         title={t('audit.title')}
-        subtitle={t('audit.subtitle')}
         actions={<ExportXlsxButton url={exportUrl} fileName="nhat-ky.xlsx" />}
       />
 
@@ -371,18 +368,13 @@ export function AuditLogScreen() {
             onChange={(value) => url.setFilter('to', value)}
           />
         </div>
-        <input
-          className="inp filter-object-id"
-          type="search"
-          value={objectDraft}
-          aria-label={t('audit.objectId')}
-          placeholder={t('audit.objectIdPlaceholder')}
-          onChange={(event) => setObjectDraft(event.target.value)}
-          onBlur={commitObject}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') commitObject();
-          }}
-        />
+        {/* Lọc theo đối tượng đến từ link ("Mọi việc trên đối tượng này", thư cảnh báo) — không có ô
+            gõ mã (UX-E08); đang lọc thì một chip, bấm là bỏ. */}
+        {filters.objectId ? (
+          <FilterToggle pressed onChange={() => url.setFilter('objectId', '')}>
+            {t('audit.objectChip', { id: shortId(filters.objectId) })}
+          </FilterToggle>
+        ) : null}
         <label className="row filter-check">
           <input
             type="checkbox"
@@ -424,32 +416,25 @@ export function AuditLogScreen() {
             rowClassName={(row) => (auditActionTone(row.action) === 'danger' ? 'row-alert' : '')}
             groupBy={byDay}
           />
-          {/* Nhật ký đọc theo THỜI GIAN chứ không theo số trang: nói rõ trang này phủ khoảng
-              nào, và nhảy tới một ngày bằng chính ô "Đến ngày" của bộ lọc (một nguồn, hai lối). */}
+          {/* Nhật ký đọc theo THỜI GIAN chứ không theo số trang: chân bảng MỘT dòng nói trang này
+              phủ khoảng nào, cạnh phân trang (PW-C10). Nhảy tới một ngày: ô "Đến ngày" của bộ lọc. */}
           <div className="row audit-window">
             <span className="muted">
               {t('audit.viewing', {
                 from: formatDateTime(rows[rows.length - 1].createdAt),
                 to: formatDateTime(rows[0].createdAt),
               })}
+              {list.data?.totalCapped ? ` · ${t('audit.capped')}` : ''}
             </span>
-            <DatePicker
-              value={filters.to}
-              ariaLabel={t('audit.goToDate')}
-              placeholder={t('audit.goToDate')}
-              min={filters.from || undefined}
-              onChange={(value) => url.setFilter('to', value)}
+            <Pagination
+              page={page}
+              limit={limit}
+              onLimitChange={url.setLimit}
+              total={list.data?.total ?? 0}
+              onPageChange={url.setPage}
+              compact
             />
           </div>
-          <Pagination
-            page={page}
-            limit={limit}
-            onLimitChange={url.setLimit}
-            total={list.data?.total ?? 0}
-            onPageChange={url.setPage}
-            compact
-          />
-          {list.data?.totalCapped ? <p className="muted">{t('audit.capped')}</p> : null}
         </>
       )}
 
@@ -495,7 +480,7 @@ function AuditDetailDialog({
       onOpenChange={onClose}
       maxWidth={640}
       initialFocus="title"
-      title={`${row.actorName ?? row.actor} · ${auditActionLabel(row.action, t)}`}
+      title={`${actorLabel(row.actor, row.actorName, t).text} · ${auditActionLabel(row.action, t)}`}
       footer={
         <button type="button" className="btn" onClick={onClose}>
           {t('common.close')}
@@ -515,8 +500,11 @@ function AuditDetailDialog({
         </dd>
         <dt>{t('audit.actor')}</dt>
         <dd>
-          {row.actorName ?? row.actor}
+          {actorLabel(row.actor, row.actorName, t).text}
           {row.actorName ? <span className="cell-sub">{row.actor}</span> : null}
+          <Link className="cell-sub" to={`${PATHS.adminAuditLog}?${new URLSearchParams({ q: row.actor }).toString()}`} onClick={onClose}>
+            {t('audit.byActorLink')}
+          </Link>
         </dd>
         <dt>{t('audit.action')}</dt>
         <dd>
@@ -524,7 +512,16 @@ function AuditDetailDialog({
         </dd>
         <dt>{t('audit.object')}</dt>
         <dd>
-          <ObjectCell row={row} />
+          <ObjectCell row={row} full />
+          {row.objectId ? (
+            <Link
+              className="cell-sub"
+              to={`${PATHS.adminAuditLog}?${new URLSearchParams({ objectId: row.objectId }).toString()}`}
+              onClick={onClose}
+            >
+              {t('audit.onObjectLink')}
+            </Link>
+          ) : null}
         </dd>
         <dt>{t('audit.ip')}</dt>
         <dd className="mono">{orDash(row.ip)}</dd>
@@ -632,14 +629,14 @@ function RepeatBadge({ row }: { row: AuditRow }) {
  * "Tài khoản · nguyen.a@pmh.com.vn" kèm link tới hồ sơ, thay cho "user c91a9a41-…". UUID vẫn
  * còn — trong tooltip và nút chép — vì đó là thứ lọc "Mã đối tượng" nhận và thứ đối chiếu với DB.
  */
-function ObjectCell({ row }: { row: AuditRow }) {
+function ObjectCell({ row, full = false }: { row: AuditRow; full?: boolean }) {
   const { t } = useTranslation();
   const type = objectTypeLabel(row.objectType, t);
   if (!row.objectId) return <>{orDash(type)}</>;
   const name = row.objectLabel ?? null;
   return (
     <>
-      {type}
+      <span title={row.objectId}>{type}</span>
       {name ? (
         <>
           {' · '}
@@ -652,13 +649,18 @@ function ObjectCell({ row }: { row: AuditRow }) {
           )}
         </>
       ) : null}
+      {/* Bảng không in UUID trên mọi dòng (UX-E08): tên đối tượng mang UUID ở title; hộp chi
+          tiết (`full`) in bản rút + nút chép. Mã không phải UUID (khóa cấu hình…) luôn in — nó là
+          thứ duy nhất nói dòng này về cái gì. */}
+      {full || !UUID_RE.test(row.objectId) ? (
       <span className="cell-sub mono" title={row.objectId}>
         {/* UUID luôn rút 8 ký tự, có tên hay không: bản đủ làm cột này lúc hẹp lúc rộng gấp ba;
             bản đủ ở tooltip và nút chép. Mã khác (khoá cấu hình…) để nguyên — nó là thứ duy
             nhất nói dòng này về cái gì. */}
-        {UUID_RE.test(row.objectId) ? `${row.objectId.slice(0, 8)}…` : row.objectId}
-        <CopyButton value={row.objectId} label={t('audit.copyObjectId')} inline />
+        {shortId(row.objectId)}
+        {full ? <CopyButton value={row.objectId} label={t('audit.copyObjectId')} inline /> : null}
       </span>
+      ) : null}
     </>
   );
 }

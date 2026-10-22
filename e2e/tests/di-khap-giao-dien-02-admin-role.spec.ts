@@ -307,7 +307,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * `isAdmin = role === 'sa' || role === 'admin'`; các bài khác chỉ chạy nhánh `sa`, nên bài này
    * bấm thử nhánh `admin`.
    *
-   * ĐỎ KHI: admin không thấy nút "Cất mật khẩu/khóa" hoặc menu Sửa/Xoay/Thu hồi; API chặn nhầm vai
+   * ĐỎ KHI: admin không thấy nút "Cất vào két" hoặc menu Sửa/Xoay/Thu hồi; API chặn nhầm vai
    * admin ở đường ghi két; bước xác thực (step-up) không bật lên khi grace đã hết; hoặc — tệ
    * nhất — giá trị xoay xong mà lượt Xem vẫn trả giá trị cũ.
    *
@@ -340,10 +340,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     // --- CẤT.
     await expect(
-      page.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
+      page.getByRole('button', { name: 'Cất vào két' }),
       'admin phải thấy nút cất secret — vault-panel dựng nút này theo isAdmin',
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');

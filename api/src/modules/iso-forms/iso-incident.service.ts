@@ -628,14 +628,14 @@ function cellKey(cell: Pick<IncidentCell, 'form' | 'lineId' | 'day' | 'issueId'>
 export function inReviewIncident(code: string) {
   return new ConflictException({
     code: 'ISO_INCIDENT_IN_REVIEW',
-    message: `Kỳ của phiếu ${code} đang chờ SA/Admin duyệt — chỉ xem. Cần sửa thì nhờ SA/Admin trả lại kỳ.`,
+    message: `Kỳ của phiếu ${code} đang chờ Super Admin / Quản trị duyệt — chỉ xem. Cần sửa thì nhờ Super Admin / Quản trị trả lại kỳ.`,
   });
 }
 
 export function lockedIncident(code: string) {
   return new ConflictException({
     code: 'ISO_INCIDENT_LOCKED',
-    message: `Phiếu ${code} đã khoá theo kỳ đã chốt — chỉ xem. Cần sửa thì xin mở lại kỳ ở Kỳ phiếu.`,
+    message: `Phiếu ${code} đã khóa theo kỳ đã chốt — chỉ xem. Cần sửa thì xin mở lại kỳ ở Kỳ phiếu.`,
   });
 }
 

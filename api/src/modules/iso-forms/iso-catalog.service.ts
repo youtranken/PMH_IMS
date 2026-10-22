@@ -164,7 +164,7 @@ export class IsoCatalogService {
           const label = removed.find((l) => l.id === used.lineId)?.label ?? name;
           throw new ConflictException({
             code: 'ISO_LINE_HAS_TICKS',
-            message: `"${label}" đã có ô đánh trên phiếu — không xoá được. Không theo dõi nữa thì ngừng cả job.`,
+            message: `"${label}" đã có ô đánh trên phiếu — không xóa được. Không theo dõi nữa thì ngừng cả job.`,
           });
         }
         await tx.delete(isoBackupLineTable).where(inArray(isoBackupLineTable.id, removed.map((l) => l.id)));

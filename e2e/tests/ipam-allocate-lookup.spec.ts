@@ -17,7 +17,7 @@ import {
  *   · hồ sơ IP phải có thiết bị hoặc người/phòng ban (Q-14): hộp báo lỗi dưới ô, API từ chối;
  *   · MỘT hộp "Cấp IP" cho ô trống lẫn hồ sơ đã thu hồi, có ô Thiết bị ở cả hai;
  *   · cột Thiết bị: mã một dòng, tên máy là dòng phụ;
- *   · ô lọc trong dải + ô "Tra IP hoặc máy…" cấp trang.
+ *   · ô lọc trong dải (chỉ đường sang dải khác) + Tìm nhanh (Ctrl+K).
  */
 
 test.beforeEach(() => {
@@ -149,7 +149,7 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: `Cấp IP — ${address}` });
     await expect(dialog.getByRole('combobox', { name: 'Thiết bị' })).toBeVisible();
-    await expect(dialog.getByRole('combobox', { name: 'Người / phòng ban dùng' })).toHaveValue('');
+    await expect(dialog.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('');
     await dialog.getByRole('combobox', { name: 'Thiết bị' }).fill(f.deviceCode);
     await page.getByRole('option', { name: new RegExp(f.deviceCode) }).click();
     await dialog.getByRole('textbox', { name: 'Lý do' }).fill('cấp lại E2E');
@@ -163,8 +163,13 @@ test.describe('Cấp IP — hồ sơ phải có chủ (NET-001, NET-002)', () =>
   });
 });
 
-test.describe('Tra IP và máy (NET-005)', () => {
-  test('gõ một IP ở ô tra cấp trang → mở đúng dải, đúng trang, tô sáng dòng', async ({ page }) => {
+test.describe('Tra IP (NET-005, UX-E19)', () => {
+  /*
+   * Ô "Tra IP hoặc máy…" cấp trang đã bỏ (UX-E19): trùng Tìm nhanh (Ctrl+K, cùng API, cùng đích —
+   * bài Tìm nhanh ở cuối file). Link tới một IP (`?ip=`) vẫn mở đúng dải, đúng dòng; ô lọc trong
+   * dải chỉ đường khi người ta gõ IP của dải khác.
+   */
+  test('link ?ip= → mở đúng dải, tô sáng dòng; ô trống hai bên vẫn gập', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     await page.request.post('/api/v1/ipam/addresses', {
@@ -172,12 +177,7 @@ test.describe('Tra IP và máy (NET-005)', () => {
       data: { subnetId: f.subnetId, address: `${f.net}.200`, usedBy: 'Chị Bình E2E' },
     });
 
-    await page.goto('/ip-addresses');
-    const lookup = page.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
-    await lookup.fill(`${f.net}.200`);
-    await lookup.press('Enter');
-
-    await expect(page).toHaveURL(new RegExp(`/ip-addresses/${f.subnetId}\\?ip=`));
+    await page.goto(`/ip-addresses/${f.subnetId}?ip=${f.net}.200`);
     const row = ipRow(page, `${f.net}.200`);
     await expect(row).toBeVisible();
     await expect(row).toHaveClass(/row-highlight/);
@@ -190,56 +190,28 @@ test.describe('Tra IP và máy (NET-005)', () => {
     await expect(runs.last()).toContainText('54 IP trống');
   });
 
-  test('gõ mã máy ở ô tra → liệt kê IP của máy và IP ghi tên máy, bấm là tới đúng dòng', async ({ page }) => {
+  test('ô lọc trong dải: gõ IP của dải khác → link sang đúng dải, đúng dòng; IP không dải nào chứa → gợi ý Tìm nhanh', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
-    // Một máy chỉ giữ một IP (Q-20): .11 gắn máy, .12 chỉ ghi tên máy ở ô người dùng.
-    for (const [host, owner] of [
-      [11, { deviceId: f.deviceId }],
-      [12, { usedBy: `Cổng phụ ${f.deviceCode}` }],
-    ] as const) {
-      const res = await page.request.post('/api/v1/ipam/addresses', {
-        headers: f.headers,
-        data: { subnetId: f.subnetId, address: `${f.net}.${host}`, ...owner },
-      });
-      expect(res.status(), await res.text()).toBe(201);
-    }
-
-    await page.goto('/ip-addresses');
-    const lookup = page.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
-    await lookup.fill(f.deviceCode);
-    await page.getByRole('button', { name: 'Tra', exact: true }).click();
-    const results = page.getByRole('region', { name: `IP khớp "${f.deviceCode}"` });
-    await expect(results.getByRole('link', { name: `${f.net}.11` })).toBeVisible();
-    await expect(results.getByRole('link', { name: `${f.net}.12` })).toBeVisible();
-
-    await results.getByRole('link', { name: `${f.net}.12` }).click();
-    await expect(ipRow(page, `${f.net}.12`)).toHaveClass(/row-highlight/);
-  });
-
-  test('đường hỏng: IP không thuộc dải nào → nói rõ, không nhảy lung tung', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
-    await setUp(page);
-    await page.goto('/ip-addresses');
-    const lookup = page.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
-    await lookup.fill('203.0.113.77');
-    await lookup.press('Enter');
-    const alert = page.getByRole('alert');
-    await expect(alert).toHaveText('Không dải nào đang dùng chứa 203.0.113.77.');
-    await alert.getByRole('button', { name: 'Đóng thông báo' }).click();
-    await expect(alert).toHaveCount(0);
-
-    // Q-20: IP sai dạng (một phần > 255) → khung đỏ, không đi tìm theo máy.
-    const searched: string[] = [];
-    page.on('request', (req) => {
-      if (req.url().includes('/api/v1/ipam/addresses?')) searched.push(req.url());
+    const other = await page.request.post('/api/v1/ipam/subnets', {
+      headers: f.headers,
+      data: { cidr: `10.${f.octet}.2.0/24`, name: `LAN khác E2E ${f.stamp}` },
     });
-    await lookup.fill('172.16.1100.10');
-    await lookup.press('Enter');
-    await expect(page.getByRole('alert')).toHaveText(
-      'Địa chỉ IP không hợp lệ: đủ 4 phần, mỗi phần là số 0–255.',
-    );
-    expect(searched, 'IP sai dạng không được gửi đi tìm').toEqual([]);
+    expect(other.status(), await other.text()).toBe(201);
+    const otherId = ((await other.json()) as { id: string }).id;
+
+    await page.goto(`/ip-addresses/${f.subnetId}`);
+    const filter = page.getByRole('searchbox', { name: /Lọc trong dải/ });
+    await filter.fill(`10.${f.octet}.2.15`);
+    // Neo đầu chuỗi: thẻ của dải đó trong rail cũng là link mang tên dải ("10.x.2.0/24 LAN khác…").
+    await page
+      .getByRole('link', { name: new RegExp(`^LAN khác E2E ${f.stamp} · 10\\.${f.octet}\\.2\\.0/24$`) })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/ip-addresses/${otherId}\\?ip=`));
+    await expect(ipRow(page, `10.${f.octet}.2.15`)).toHaveClass(/row-highlight/);
+
+    await filter.fill('203.0.113.77');
+    await expect(page.getByText(/Không dải nào chứa 203\.0\.113\.77/)).toBeVisible();
   });
 
   test('ô lọc trong dải: gõ tên người → chỉ còn dòng của họ', async ({ page }) => {
@@ -308,21 +280,17 @@ test.describe('Tìm nhanh (Ctrl+K) tra IP và dải mạng (SHELL-015)', () => {
 test.describe('390px — màn đọc trên điện thoại', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('ô tra và bảng IP không tràn ngang; tra IP vẫn tới đúng dòng', async ({ page }) => {
+  test('bảng IP không tràn ngang; link ?ip= vẫn tới đúng dòng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     await page.request.post('/api/v1/ipam/addresses', {
       headers: f.headers,
       data: { subnetId: f.subnetId, address: `${f.net}.9`, deviceId: f.deviceId },
     });
-    await page.goto('/ip-addresses');
-    const lookup = page.getByRole('searchbox', { name: 'Tra IP hoặc máy…' });
-    await expect(lookup).toBeVisible();
-    await lookup.fill(`${f.net}.9`);
-    await lookup.press('Enter');
-    // Ở 390px bảng gập thành thẻ: tên dòng mở đầu bằng nhãn "Địa chỉ", nên không neo `^` được.
+    await page.goto(`/ip-addresses/${f.subnetId}?ip=${f.net}.9`);
+    // ≤600px mỗi IP là một THẺ (PW-B01): dòng 2 có link mã máy.
     const row = page
-      .getByRole('row')
+      .getByRole('listitem')
       .filter({ has: page.getByText(`${f.net}.9`, { exact: true }) });
     await expect(row.getByRole('link', { name: f.deviceCode })).toBeInViewport();
     expect(await horizontalOverflow(page)).toBe(0);

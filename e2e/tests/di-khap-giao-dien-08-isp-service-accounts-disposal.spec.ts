@@ -18,7 +18,15 @@ import {
   writeHeaders,
   uniqueStamp,
   stepUpViaApi,
+  isoToday,
 } from './helpers';
+
+/** Nút "sửa lần cuối dd/mm/yyyy · …" của RecordStamp (UX-E26): hồ sơ vừa dàn cảnh hôm nay. */
+function lastEditButton(): string {
+  const [y, m, d] = isoToday().split('-');
+  return `sửa lần cuối ${d}/${m}/${y} · E2E Super Admin`;
+}
+
 
 /*
  * ===== PHẦN 5 — VÀO HẲN TRONG PHÒNG: ĐƯỜNG TRUYỀN · TÀI KHOẢN DỊCH VỤ · KHO THANH LÝ =====
@@ -254,6 +262,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(
       sortVi([
         'Xuất Excel',
+        // UX-E30: nhập Excel cùng sheet + cột với file Xuất.
+        'Nhập từ Excel',
         'Thêm đường truyền',
         'Site',
         'Nhà mạng',
@@ -267,8 +277,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         `Sửa ${codeA}`,
         `Thao tác với ${codeA}`,
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
+        // UX-E36: ô tìm đang có chữ → nút xóa lọc có đếm.
+        'Xóa bộ lọc (1)',
       ]),
     );
 
@@ -354,12 +364,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * bị CSS thu về 1×1 px nhưng KHÔNG bị `visibility: hidden` — cố ý, để trình đọc màn hình
      * vẫn với tới được. Bỏ nó khỏi mảng này là bỏ luôn khả năng thấy khi khối giấy tờ rơi mất.
      */
-    /* Dải chip lọc loại dưới ô Thiết bị (Q-20): "Tất cả loại" + mỗi loại đang dùng của máy chạy
-       test — đọc danh mục tại chỗ. */
+    /* Dải chip lọc loại dưới ô Thiết bị (Q-20): "Tất cả loại" + loại đang dùng mang cờ
+       Router/Firewall của máy chạy test — đọc danh mục tại chỗ. Loại khác nằm sau "Mọi loại…"
+       (PW-B09); danh mục chưa loại nào mang cờ thì bày hết, không có nút đó. */
     const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
-      deviceTypes: { name: string; active: boolean }[];
+      deviceTypes: { name: string; active: boolean; isRouter: boolean }[];
     };
-    const typeChips = catalog.deviceTypes.filter((type) => type.active).map((type) => type.name);
+    const activeTypes = catalog.deviceTypes.filter((type) => type.active);
+    const routerTypes = activeTypes.filter((type) => type.isRouter);
+    const typeChips = (routerTypes.length > 0 ? routerTypes : activeTypes).map((type) => type.name);
+    const moreTypes = typeChips.length < activeTypes.length ? ['Mọi loại…'] : [];
     expect(
       await nameByRole(dialog, 'button'),
       'Bộ nút trong hộp thêm mới: ô chọn Nhà mạng, ô chọn Site, ô ngày Bắt đầu, ô chọn file, ' +
@@ -368,6 +382,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       sortVi([
         'Tất cả loại',
         ...typeChips,
+        ...moreTypes,
         'Đóng hộp thoại',
         'Nhà mạng',
         // Lời dặn dài của ô Nhà mạng nằm trong nút (i) (Q-19), không chiếm chỗ dưới ô.
@@ -383,6 +398,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Lưu',
       ]),
     );
+    if (moreTypes.length > 0) {
+      await dialog.getByRole('button', { name: 'Mọi loại…', exact: true }).click();
+      for (const name of activeTypes.map((type) => type.name)) {
+        await expect(
+          dialog.getByRole('group', { name: 'Lọc theo loại thiết bị' }).getByRole('button', { name, exact: true }),
+          `"Mọi loại…" phải bung đủ mọi loại đang dùng, kể cả "${name}"`,
+        ).toHaveCount(1);
+      }
+      await expect(dialog.getByRole('button', { name: 'Mọi loại…', exact: true })).toHaveCount(0);
+    }
 
     /*
      * KHÔNG CÓ Ô TRẠNG THÁI — nói thẳng ra, đừng để nó chìm trong tập hợp trên. Hồ sơ mới
@@ -405,7 +430,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       dialog.getByRole('button', { name: 'Nhà mạng', exact: true }),
       'Thiếu nhà mạng phải nói ra ngay dưới ô Nhà mạng, không phải im lặng',
-    ).toHaveAccessibleDescription(/Bắt buộc — chưa chọn ô này\./);
+    ).toHaveAccessibleDescription(/Chưa chọn\./);
     await expect(dialog, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
@@ -505,7 +530,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ĐÚNG BỘ NÚT ĐẦU TRANG (khuôn C, Q-27):
-     *   - "Chép IP WAN <ip>" và "Chép số hợp đồng" ở dải 4 ô (mỗi IP WAN một nút — Q-20),
+     *   - "Sao chép IP WAN <ip>" và "Sao chép số hợp đồng" ở dải 4 ô (mỗi IP WAN một nút — Q-20),
      *   - "Sửa hồ sơ" + ⋯ ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04),
      *   - "Bổ sung n ô còn thiếu" ở đầu khối Thông số (tab Tổng quan mở sẵn): hồ sơ này chưa khai site.
      * Mã hồ sơ CỐ Ý không có nút chép — nó là tiêu đề, bôi đen chép như mọi chữ khác. Tập hợp
@@ -513,14 +538,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await nameByRole(main, 'button'),
-      'Đầu trang hồ sơ đường truyền: Chép IP WAN · Chép số hợp đồng (dải 4 ô) · Sửa hồ sơ · menu ⋯ · Bổ sung ô thiếu',
+      'Đầu trang hồ sơ đường truyền: Sao chép IP WAN · Sao chép số hợp đồng (dải 4 ô) · Sửa hồ sơ · menu ⋯ · Bổ sung ô thiếu',
     ).toEqual(
       sortVi([
         'Bổ sung 1 ô còn thiếu',
-        'Chép IP WAN 203.113.99.9',
+        'Sao chép IP WAN 203.113.99.9',
         'Sửa hồ sơ',
         `Thao tác với ${itemCode}`,
-        'Chép số hợp đồng',
+        'Sao chép số hợp đồng',
+        // UX-E26: dòng "Tạo … · sửa lần cuối …" dưới dải 4 ô, bấm mở tab Lịch sử.
+        lastEditButton(),
       ]),
     );
     // Ô Hotline ở dải đầu trang: gọi là MỘT cú chạm.
@@ -568,11 +595,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         name: /^Két sắt/,
         marker: async () => {
           await expect(
-            main.getByText(/Nơi cất mật khẩu và license key/),
+            main.getByText(/Chưa cất mật khẩu hay key nào/),
             'Tab Két sắt phải mở ra panel két, không phải khoảng trắng',
           ).toBeVisible();
           await expect(
-            main.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
+            main.getByRole('button', { name: 'Cất vào két' }),
             'SA cất được mật khẩu PPPoE của đường truyền — nút phải có mặt',
           ).toBeVisible();
         },
@@ -594,8 +621,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         name: /^Lịch sử$/,
         marker: async () => {
           await expect(
-            main.getByRole('listitem').filter({ hasText: 'Tạo hồ sơ' }),
-            'Tab Lịch sử phải có sẵn dòng "Tạo hồ sơ" — mọi hồ sơ đều sinh ra từ một lượt ghi',
+            main.getByRole('listitem').filter({ hasText: 'Thêm hồ sơ' }),
+            'Tab Lịch sử phải có sẵn dòng "Thêm hồ sơ" — mọi hồ sơ đều sinh ra từ một lượt ghi',
           ).toBeVisible();
         },
       },
@@ -797,7 +824,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    *
    * ĐỎ KHI: menu dòng thiếu/thừa mục ở một trong hai trạng thái; cột Thao tác lọt vào màn của
    * Thành viên; trang hồ sơ thiếu/thừa nút (chép, "Sửa hồ sơ", ba chấm đổi theo trạng thái); hoặc
-   * nút "Chép tên đăng nhập" rơi mất.
+   * nút "Sao chép tên đăng nhập" rơi mất.
    */
   test('Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ có Chép · Sửa hồ sơ · ba chấm, Thành viên không thấy ba chấm', async ({
     page,
@@ -848,11 +875,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       (await rowActionNames(page, activeCode)).map(tidyLabel),
       'Tài khoản ĐANG DÙNG: Sửa đứng ngoài (Q-18), menu chỉ còn Ngừng dùng',
-    ).toEqual(['Ngừng dùng']);
+    ).toEqual(['Ngừng dùng…']);
     expect(
       (await rowActionNames(page, disabledCode)).map(tidyLabel),
       'Tài khoản ĐÃ ĐÓNG phải có đường mở lại — thiếu nó là hồ sơ đóng vĩnh viễn với giao diện',
-    ).toEqual(['Dùng lại']);
+    ).toEqual(['Dùng lại…']);
     await expect(page.getByRole('button', { name: `Sửa ${activeCode}` })).toBeVisible();
 
     // Bộ nút và bộ cột đầy đủ của vai SA — thu hẹp còn một dòng cho phần phân trang cố định.
@@ -862,9 +889,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await tableColumnNames(main),
-      'Bảng tài khoản dịch vụ của SA có đúng 8 cột (Q-15 "Đổi lần cuối", Q-20 "Hết hạn"), cột cuối là Thao tác',
+      'Bảng tài khoản dịch vụ của SA có đúng 9 cột (Q-15 "Đổi lần cuối", Q-20 "Hết hạn", TB-16 "Tên tài khoản"), cột cuối là Thao tác',
     ).toEqual([
       'Mã tài khoản',
+      'Tên tài khoản',
       'Loại',
       'Tên đăng nhập',
       'Thuộc về',
@@ -879,6 +907,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(
       sortVi([
         'Xuất Excel',
+        // UX-E30: nhập Excel chỉ cho vai ghi.
+        'Nhập từ Excel',
         'Thêm tài khoản',
         // Câu giải thích màn nằm trong nút (i) cạnh tiêu đề (Q-20).
         'Giải thích: Tài khoản dịch vụ',
@@ -886,15 +916,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Trạng thái',
         // NET-074: chip lọc tài khoản VPN không giới hạn IP nguồn.
         'VPN mở mọi IP',
-        'Sắp theo',
+        // TB-16: Tên là cột sắp được, không còn ô "Sắp theo" riêng.
         'Sắp xếp theo Mã tài khoản',
+        'Sắp xếp theo Tên tài khoản',
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
         `Sửa ${activeCode}`,
         `Thao tác với ${activeCode}`,
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
+        // UX-E36: ô tìm + lọc trạng thái đang bật → nút xóa lọc có đếm.
+        'Xóa bộ lọc (2)',
       ]),
     );
 
@@ -912,14 +943,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await nameByRole(page.getByRole('main'), 'button'),
-      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ, ba chấm, Bổ sung ô thiếu ở khối Thông tin — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
+      'Hồ sơ tài khoản dịch vụ của SA: Sao chép tên đăng nhập, Sửa hồ sơ, ba chấm, Bổ sung ô thiếu ở khối Thông tin — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
     ).toEqual(
       sortVi([
         'Bổ sung 2 ô còn thiếu',
-        'Chép tên đăng nhập',
+        'Sao chép tên đăng nhập',
         'Sửa hồ sơ',
         `Thao tác với ${activeCode}`,
-        'Cất mật khẩu/khóa',
+        'Cất vào két',
+        // UX-E26: dòng "Tạo … · sửa lần cuối …" dưới dải 4 ô.
+        lastEditButton(),
       ]),
     );
     await page.getByRole('button', { name: `Thao tác với ${activeCode}` }).click();
@@ -946,9 +979,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     );
 
     for (const [name, marker] of [
-      [/^Két sắt/, page.getByText(/Nơi cất mật khẩu và license key/)],
+      [/^Két sắt/, page.getByText(/Chưa cất mật khẩu hay key nào/)],
       [/^Giấy tờ/, page.getByText('Chưa có giấy tờ nào.')],
-      [/^Lịch sử$/, page.getByRole('listitem').filter({ hasText: 'Tạo hồ sơ' })],
+      [/^Lịch sử$/, page.getByRole('listitem').filter({ hasText: 'Thêm hồ sơ' })],
     ] as [RegExp, Locator][]) {
       const button = page.getByRole('tab', { name: name });
       await button.click();
@@ -976,10 +1009,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       await tableColumnNames(mainMember),
       'Thành viên KHÔNG thấy cột Thao tác — cột đó chỉ dựng khi có quyền ghi',
-    ).toEqual(['Mã tài khoản', 'Loại', 'Tên đăng nhập', 'Thuộc về', 'Trạng thái', 'Hết hạn']);
+    ).toEqual(['Mã tài khoản', 'Tên tài khoản', 'Loại', 'Tên đăng nhập', 'Thuộc về', 'Trạng thái', 'Hết hạn']);
     expect(
       await nameByRole(mainMember, 'button'),
-      'Bộ nút của Thành viên: không có "Thêm tài khoản", không có một nút ba chấm nào (Xuất Excel thì có — file không chứa mật khẩu)',
+      'Bộ nút của Thành viên: không có "Thêm tài khoản" hay "Nhập từ Excel", không có một nút ba chấm nào (Xuất Excel thì có — file không chứa mật khẩu)',
     ).toEqual(
       sortVi([
         'Xuất Excel',
@@ -988,13 +1021,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Trạng thái',
         // NET-074: chip lọc tài khoản VPN không giới hạn IP nguồn.
         'VPN mở mọi IP',
-        'Sắp theo',
         'Sắp xếp theo Mã tài khoản',
+        'Sắp xếp theo Tên tài khoản',
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
+        // UX-E36: ô tìm đang có chữ → nút xóa lọc có đếm.
+        'Xóa bộ lọc (1)',
       ]),
     );
   });
@@ -1070,8 +1103,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sortVi(SHARED_FIELDS));
     expect(
       await nameByRole(dialog, 'combobox'),
-      'Phòng ban là ô GỢI Ý (gõ tự do được), không phải ô chọn cứng',
-    ).toEqual(['Phòng ban']);
+      'Người dùng / phòng ban là ô GỢI Ý (gõ tự do được), không phải ô chọn cứng',
+    ).toEqual(['Người dùng / phòng ban']);
     expect(
       await nameByRole(dialog, 'button'),
       'Hộp thêm tài khoản có đúng mười một nút: ô chọn Loại, (i) của Loại và Người phụ trách, ô ngày Hết hạn + (i) của nó, Hiện + Tạo ngẫu nhiên của ô mật khẩu, ô chọn file, ✕, Hủy, Lưu',
@@ -1083,8 +1116,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Giải thích: Loại',
         'Giải thích: Người phụ trách',
         // Hạn dùng của tài khoản (Q-20).
-        'Hết hạn (tùy chọn)',
-        'Giải thích: Hết hạn (tùy chọn)',
+        'Hết hạn',
+        'Giải thích: Hết hạn',
         'Hiện',
         'Tạo ngẫu nhiên',
         'Chọn file để đính kèm',
@@ -1221,7 +1254,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       disableDialog.getByRole('textbox', { name: 'Lý do ngừng dùng' }),
       'Câu lỗi tiếng Việt dưới ô lý do, không phải bong bóng trình duyệt',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    ).toHaveAccessibleDescription('Chưa nhập.');
     // Gõ quá ngắn: `minLength` của trình duyệt không còn chặn (form `noValidate`) — hook phải nói.
     await disableDialog.getByRole('textbox', { name: 'Lý do ngừng dùng' }).fill('ab');
     await expect(
@@ -1232,10 +1265,19 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: 'Bỏ những gì vừa nhập?' }).getByRole('button', { name: 'Bỏ và đóng' }).click();
     await expect(disableDialog, 'Esc (rồi xác nhận bỏ) phải đóng được hộp vô hiệu hóa').toHaveCount(0);
+    /* Ô Trạng thái để trống khi đang dùng (PW-A24) — "còn đang dùng" đọc ở chỗ không thể
+       nhầm: không có huy hiệu "Đã ngừng dùng", và menu dòng vẫn mời Ngừng dùng chứ không
+       phải Dùng lại. */
+    const stillActive = page.getByRole('row', { name: new RegExp(itemCode) });
+    await expect(stillActive).toBeVisible();
     await expect(
-      page.getByRole('row', { name: new RegExp(itemCode) }).getByText('Đang dùng'),
+      stillActive.getByText('Đã ngừng dùng'),
       'Hủy giữa chừng thì tài khoản phải còn nguyên trạng thái đang dùng',
-    ).toBeVisible();
+    ).toHaveCount(0);
+    expect(
+      (await rowActionNames(page, itemCode)).map(tidyLabel),
+      'Hủy giữa chừng thì menu dòng vẫn là của tài khoản đang dùng',
+    ).toEqual(['Ngừng dùng…']);
   });
 
   /*
@@ -1371,8 +1413,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thanh lý đến ngày',
         'Sắp xếp',
         'Số dòng',
-        'Trang trước',
-        'Trang sau',
         'Xuất Excel',
       ]),
     );
@@ -1384,14 +1424,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     // Nói thẳng ra ba thứ tuyệt đối không được có, để log lúc đỏ đọc là hiểu ngay.
     /*
-     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): "Mở hồ sơ", và "Khôi phục…" cho phần mềm hoặc
-     * "Mở hồ sơ để dùng lại" cho loại khác (Q-19) — không mục nào ghi dữ liệu ngay tại đây,
-     * dùng lại vẫn làm ở đúng module chủ.
+     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): phần mềm "Mở hồ sơ" + "Khôi phục…", loại khác MỘT
+     * mục "Mở hồ sơ để dùng lại" (Q-19, UX-E14) — không mục nào ghi dữ liệu ngay tại đây, dùng
+     * lại vẫn làm ở đúng module chủ.
      */
     expect(
       await rowActionNames(page, deviceCode),
       'Thiết bị trong kho: chỉ có lối mở hồ sơ gốc',
-    ).toEqual(['Mở hồ sơ', 'Mở hồ sơ để dùng lại']);
+    ).toEqual(['Mở hồ sơ để dùng lại']);
     // "Xuất Excel" ĐƯỢC có (DP-004): nó chỉ đọc, và lượt xuất vẫn ghi sổ `disposal.exported`.
     for (const forbiddenLabel of [/Thêm/, /^Sửa/, /^Xóa/, /Khôi phục/]) {
       await expect(

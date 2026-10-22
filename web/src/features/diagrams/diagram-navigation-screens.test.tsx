@@ -3,10 +3,9 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import type { DiagramNode } from './diagram-api';
 import { DiagramScreen } from './diagram-screen';
-import { DiagramSlideshow } from './diagram-slideshow';
 
 /*
  * Màn xem bản vẽ: tìm & bay tới, lớp, chỉ đường; màn trình chiếu. Logic thuần ở
@@ -108,7 +107,6 @@ function renderAt(path: string) {
           <Routes>
             <Route path="/diagrams" element={<p>Cây bản vẽ</p>} />
             <Route path="/diagrams/:id" element={<DiagramScreen me={ME} />} />
-            <Route path="/diagrams/:id/present" element={<DiagramSlideshow me={ME} />} />
           </Routes>
           <Where />
         </ConfirmProvider>
@@ -242,60 +240,5 @@ describe('Chỉ đường', () => {
     await ask(user);
     expect(await screen.findByRole('alert')).toHaveTextContent('Không có đường nối giữa SW-E2E-NAV và ISP-E2E-NAV trong sơ đồ cổng');
     expect(dimmed('L-cam')).toBe(false);
-  });
-});
-
-describe('Trình chiếu', () => {
-  const TREE = [
-    node('d1', null, 'Tổng E2E', { officialVersionId: 'v-d1' }),
-    node('d2', 'd1', 'Tầng E2E', { officialVersionId: 'v-d2' }),
-    node('d3', 'd1', 'Nháp E2E', { officialVersionId: null, status: 'draft' }),
-  ];
-
-  it('đi từ tổng xuống chi tiết, mỗi trang tải đúng bản chính thức; → / ← chuyển, Esc thoát', async () => {
-    const fetchMock = routeFetch({
-      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { ...CONTENT, diagram: TREE[0] }),
-      '/api/v1/diagrams/d2/content': () => jsonResponse(200, { ...CONTENT, diagram: TREE[1], version: { ...VERSION, xml: '', svg: SVG.replace('Cam E2E', 'Trang hai E2E') } }),
-      '/api/v1/diagrams': () => jsonResponse(200, TREE),
-    });
-    renderAt('/diagrams/d1/present');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Tổng E2E' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Trang đang chiếu' })).toHaveTextContent('Trang 1/2');
-    expect(await screen.findByText('Cam E2E')).toBeInTheDocument();
-    const user = userEvent.setup();
-    await user.keyboard('{ArrowRight}');
-    expect(await screen.findByText('Trang hai E2E')).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Trang đang chiếu' })).toHaveTextContent('Trang 2/2');
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/diagrams/d2/content?mode=view&versionId=v-d2'))).toBe(true);
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/diagrams/d3/content'))).toBe(false);
-    await user.keyboard('{ArrowLeft}');
-    expect(screen.getByRole('status', { name: 'Trang đang chiếu' })).toHaveTextContent('Trang 1/2');
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/diagrams'));
-    expect(screen.getByText('Cây bản vẽ')).toBeInTheDocument();
-  });
-
-  it('hết ân hạn giữa chừng: hộp nhập mã mở tại chỗ; Esc đóng hộp mà KHÔNG thoát trình chiếu', async () => {
-    routeFetch({
-      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { ...CONTENT, diagram: TREE[0] }),
-      '/api/v1/diagrams/d2/content': () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 }),
-      '/api/v1/diagrams': () => jsonResponse(200, TREE),
-    });
-    renderAt('/diagrams/d1/present');
-    expect(await screen.findByText('Cam E2E')).toBeInTheDocument();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Tiếp →' }));
-    expect(await screen.findByRole('dialog', { name: 'Nhập mã 6 số để mở sơ đồ' })).toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    expect(await screen.findByText('Nội dung bản vẽ cần mã 2 lớp')).toBeInTheDocument();
-    expect(screen.getByTestId('where')).toHaveTextContent('/diagrams/d1/present');
-    expect(screen.getByRole('status', { name: 'Trang đang chiếu' })).toHaveTextContent('Trang 2/2');
-  });
-
-  it('nhánh chưa có bản chính thức nào: báo rõ, không tải nội dung', async () => {
-    const fetchMock = routeFetch({ '/api/v1/diagrams': () => jsonResponse(200, [node('d3', null, 'Nháp E2E', { officialVersionId: null })]) });
-    renderAt('/diagrams/d3/present');
-    expect(await screen.findByText('Nhánh này chưa có bản chính thức nào để trình chiếu.')).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content'))).toBe(false);
   });
 });

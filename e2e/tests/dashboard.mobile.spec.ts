@@ -62,13 +62,10 @@ test.describe('Bảng điều khiển ở 390px', () => {
     }
 
     await page.goto('/');
+    // Hai khối bài này gieo dữ liệu chắc chắn có; khối khác chỉ hiện khi có dữ liệu (UX-E05).
     await expect(page.getByRole('heading', { name: 'Tổng hợp hết hạn cần xử lý' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Sự cố tuần qua' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).toBeVisible();
-    // Ba khối này cũng thuộc màn ĐỌC nên phải chạy ở 390px như mọi khối khác (UX-DR2).
+    // Khối này cũng thuộc màn ĐỌC nên phải chạy ở 390px như mọi khối khác (UX-DR2).
     await expect(page.getByRole('heading', { name: /^Dải mạng ≥ \d+%$/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Tổng hợp kho thanh lý' })).toBeVisible();
     /* DASH-010: ở 390px mỗi khối chỉ bày 3 mục đầu + "Xem thêm N" bung tại chỗ. Dữ liệu bài
        khác để lại có thể đẩy mục của bài này xuống dưới mốc 3 — bung ra rồi mới tìm. */
     const subnets = page.locator('section').filter({ hasText: /Dải mạng ≥ \d+%/ });

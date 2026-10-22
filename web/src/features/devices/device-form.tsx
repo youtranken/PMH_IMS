@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { deviceModelParts, deviceModelPhotoSrc, type DeviceModel } from '@/lib/device-models';
 import { freeRuns, rackClash, rackPlacement, rackUnitLabel } from '@/lib/rack-units';
+import { NoteField } from '@/ui/note-field';
 import { RackElevation } from '@/ui/rack-elevation';
 import { useCabinetOccupants } from '@/ui/use-cabinet-occupants';
 import { useIsNarrow } from '@/ui/use-narrow';
@@ -22,7 +23,7 @@ import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import { YearQuickPicks } from '@/ui/year-quick-picks';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
@@ -34,6 +35,9 @@ import {
 import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
 import { DeviceModelField } from './device-model-field';
 import { ACCESS_KINDS, type AccessPoint } from './device-access';
+import { CodeInput, IpInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { useSuggestedCode } from '@/ui/use-suggested-code';
 
 interface FormState {
   code: string;
@@ -122,6 +126,7 @@ export function DeviceForm({
   device,
   cloneFrom,
   presetDeviceTypeId,
+  presetSiteId,
   csrfToken,
   onClose,
   onSaved,
@@ -136,6 +141,8 @@ export function DeviceForm({
    * Bỏ qua khi có `device` hoặc `cloneFrom`.
    */
   presetDeviceTypeId?: string;
+  /** Thêm mới khi danh sách đang lọc theo một site (FM-06): điền sẵn ô Site. Bỏ qua khi sửa / nhân bản. */
+  presetSiteId?: string;
   csrfToken: string;
   onClose: () => void;
   /** `keepOpen`: người dùng chọn "Lưu và nhân bản" — form đã tự làm trống, đừng đóng. */
@@ -155,13 +162,14 @@ export function DeviceForm({
   const [form, setForm] = useState<FormState>(() =>
     !device && cloneFrom
       ? cloneState(cloneFrom)
-      : !device && presetDeviceTypeId
-        ? { ...initialState(null), deviceTypeId: presetDeviceTypeId }
+      : !device
+        ? { ...initialState(null), deviceTypeId: presetDeviceTypeId ?? '', siteId: presetSiteId ?? '' }
         : initialState(device),
   );
   // Ảnh chụp lúc mở form: khối gập nào đã có giá trị thì mở sẵn (sửa, nhân bản).
   const [initial] = useState(form);
   const [error, setError] = useSubmitError([form]);
+  const server = useServerFieldErrors([form]);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();
@@ -212,6 +220,11 @@ export function DeviceForm({
   // Nút nào gửi lượt ghi gần nhất: dấu tích "đã lưu" chỉ hiện trên nút Lưu khi chính nó được bấm.
   const [sentByNext, setSentByNext] = useState(false);
 
+  // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
+  const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
+  // Mỗi lượt "Lưu & thêm tiếp" là một vòng mới: hỏi lại mã kế tiếp của mã vừa lưu.
+  const [codeRound, setCodeRound] = useState(0);
+  const codeGuard = useSuggestedCode(device ? null : '/api/v1/devices/next-code', form.code, applyCode, 'device-code', codeRound);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Bảo hành gần như luôn bắt đầu từ ngày mua: ô "Bảo hành từ" còn trống thì lấy theo.
@@ -350,6 +363,7 @@ export function DeviceForm({
           }
           if (keepOpen) {
             setForm(nextState(sent));
+            setCodeRound((n) => n + 1);
             codeRef.current?.focus();
           }
           onSaved(result, { keepOpen });
@@ -357,16 +371,16 @@ export function DeviceForm({
       },
       onError: (err) => {
         if (errorCode(err) === 'DEVICE_RACK_U_TAKEN') setRackServerError(errorMessage(err));
-        else setError(errorMessage(err));
+        else if (!server.claim(err, { DEVICE_CODE_TAKEN: 'device-code' })) setError(errorMessage(err));
       },
     });
   };
 
   const serialField = (
     <Field label={t('devices.serial')} htmlFor="device-serial">
-      <input
+      <CodeInput
+        caps
         id="device-serial"
-        className="inp mono"
         value={form.serial}
         onChange={(e) => set('serial', e.target.value)}
       />
@@ -460,11 +474,12 @@ export function DeviceForm({
               <img src={modelFront} alt={t('devices.modelPreviewAlt', { model: model?.model ?? '' })} />
             </div>
           ) : null}
-          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
-            <input
+          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code') ?? server.error('device-code')}>
+            <CodeInput
+              caps
               ref={codeRef}
               id="device-code"
-              className="inp mono"
+              data-guard-value={codeGuard}
               required
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
@@ -520,7 +535,7 @@ export function DeviceForm({
               options={activeOptions(
                 lists.data?.sites,
                 device?.siteId,
-                (site) => `${site.code} — ${site.name}`,
+                (site) => siteFormLabel(site),
               )}
               failed={lists.isError}
               onChange={(value) => set('siteId', value)}
@@ -707,8 +722,7 @@ export function DeviceForm({
                   options={ACCESS_KINDS.map((kind) => ({ value: kind, label: t(`devices.accessKind_${kind}`) }))}
                   onChange={(value) => setAccess(index, { kind: value as AccessPoint['kind'] })}
                 />
-                <input
-                  className="inp mono"
+                <IpInput
                   aria-label={`${t('devices.accessAddress')} ${index + 1}`}
                   placeholder="10.0.1.1"
                   maxLength={200}
@@ -816,20 +830,7 @@ export function DeviceForm({
           forceOpen={Boolean(check.error('note'))}
         >
           <FormSection columns={1}>
-            <Field
-              label={t('devices.note')}
-              hint={t('devices.noteHint')}
-              htmlFor="device-note"
-              error={check.error('note')}
-            >
-              <textarea
-                id="device-note"
-                className="inp"
-                rows={2}
-                value={form.note}
-                onChange={(e) => set('note', e.target.value)}
-              />
-            </Field>
+            <NoteField id="device-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
           </FormSection>
         </FoldSection>
 

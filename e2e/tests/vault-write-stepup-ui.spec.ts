@@ -97,7 +97,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
      * toast lỗi 401 rồi bỏ mặc người dùng.
      */
     await expect(
-      page.getByRole('heading', { name: 'Xác nhận danh tính' }),
+      page.getByRole('heading', { name: 'Nhập mã 6 số', exact: true }),
       'hết grace mà bấm Xoay thì phải được hỏi mã, không phải báo lỗi rồi thôi',
     ).toBeVisible();
 
@@ -107,7 +107,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
      * Gõ mã xong thì việc vừa bấm TỰ CHẠY LẠI — người dùng không phải bấm Xoay lần nữa.
      * Hộp xoay đóng lại là dấu hiệu `onSaved()` đã chạy, tức lượt thử lại thành công.
      */
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Nhập mã 6 số', exact: true })).toBeHidden();
     await expect(rotateDialog).toBeHidden();
 
     // Và bí mật vẫn còn đúng một ngăn với nhãn cũ: xoay đổi GIÁ TRỊ, không đổi metadata.
@@ -167,7 +167,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Đổi mật khẩu' });
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(`Moi#${stamp}`);
     await rotateDialog.getByRole('button', { name: 'Đổi mật khẩu' }).click();
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nhập mã 6 số', exact: true })).toBeVisible();
 
     /*
      * Bấm Hủy CỦA HỘP HỎI MÃ — phải khoanh vùng, không dùng `.first()`.
@@ -180,9 +180,9 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
      */
     const stepUpDialog = page
       .getByRole('dialog')
-      .filter({ hasText: 'Xác nhận danh tính' });
+      .filter({ hasText: 'Nhập mã 6 số' });
     await stepUpDialog.getByRole('button', { name: 'Hủy' }).click();
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Nhập mã 6 số', exact: true })).toBeHidden();
 
     /*
      * Nút Xoay phải BẬT LẠI. Đây là chỗ dễ hỏng nhất của `useStepUpRetry`: nếu lời hứa bị treo

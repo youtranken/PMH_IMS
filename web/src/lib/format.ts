@@ -74,6 +74,16 @@ export function formatMoney(value: number | null | undefined): string {
   return `${moneyFmt.format(value)} ₫`;
 }
 
+const countFmt = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+
+/**
+ * Số ĐẾM (dòng, mục, hồ sơ) có dấu chấm ngăn nghìn như tiền: "28805 dòng" đọc thành 2.880,5 hay
+ * 28 nghìn? (TB-03). Không áp cho năm, cổng, số phiên bản — những thứ đó là mã, không phải số đếm.
+ */
+export function formatCount(value: number): string {
+  return countFmt.format(value);
+}
+
 /** Ô trống trong bảng luôn là một dấu gạch, không phải chuỗi rỗng khó nhìn. */
 export function orDash(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—';

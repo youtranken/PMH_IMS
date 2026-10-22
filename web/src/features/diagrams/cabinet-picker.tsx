@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { InfoTip } from '@/ui/info-tip';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
@@ -29,7 +30,10 @@ export function CabinetPicker({
 
   return (
     <div className="stock-picker">
-      <p className="muted">{t('diagrams.frames.cabinetHint')}</p>
+      <p className="muted">
+        {t('diagrams.frames.cabinetHint')}{' '}
+        <InfoTip subject={t('diagrams.frames.cabinetInsert')}>{t('diagrams.frames.cabinetHintTip')}</InfoTip>
+      </p>
       <div className="stock-filters">
         <Select
           value={siteId}

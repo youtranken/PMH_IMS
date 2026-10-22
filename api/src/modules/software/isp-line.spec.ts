@@ -127,6 +127,7 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
       {} as UsersApiService,
       {} as DevicesApiService,
       {} as CatalogApiService,
+      {} as never,
     ).export({}, res);
 
     const headers = captured.map((column) => column.header);

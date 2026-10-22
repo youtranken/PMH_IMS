@@ -112,18 +112,32 @@ describe('Sắp hết hạn — sắp ở máy chủ, ô "Chờ tự thanh lý",
     await waitFor(() => expect(lastList(calls).searchParams.get('state')).toBe('autoRetire'));
   });
 
-  it('"tới hết tháng này" quy về số ngày tới cuối tháng; bảng có tiêu đề theo tháng (EX-003)', async () => {
+  it('"tới ngày…" quy về số ngày tới mốc đó; bảng có tiêu đề theo tháng (EX-003)', async () => {
+    const calls = stubFetch();
+    const today = todayIso();
+    const until = periodRange('month', today).to;
+    renderScreen(`/expiry?period=custom&until=${until}`);
+    await screen.findByText('SSL-E2E-WEB');
+    const days = Math.max(1, daysBetweenIso(today, until));
+    expect(lastList(calls).searchParams.get('withinDays')).toBe(String(days));
+    expect(screen.getByRole('rowheader', { name: 'Tháng 09/2026' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: 'Tháng 10/2026' })).toBeInTheDocument();
+  });
+
+  // UX-E24: 12 lựa chọn → 30 · 90 · 180 · 365 ngày · Tới ngày…; link cũ ?period=month về mặc định.
+  it('ô Khoảng thời gian còn 5 lựa chọn; link cũ period=month rơi về 30 ngày', async () => {
     const calls = stubFetch();
     renderScreen('/expiry?period=month');
     await screen.findByText('SSL-E2E-WEB');
-    const today = todayIso();
-    const days = Math.max(1, daysBetweenIso(today, periodRange('month', today).to));
-    expect(lastList(calls).searchParams.get('withinDays')).toBe(String(days));
-    expect(screen.getByRole('button', { name: 'Khoảng thời gian' })).toHaveTextContent(
-      'Quá hạn + tới hết tháng này',
-    );
-    expect(screen.getByRole('rowheader', { name: 'Tháng 09/2026' })).toBeInTheDocument();
-    expect(screen.getByRole('rowheader', { name: 'Tháng 10/2026' })).toBeInTheDocument();
+    expect(lastList(calls).searchParams.get('withinDays')).toBe('30');
+    await userEvent.click(screen.getByRole('button', { name: 'Khoảng thời gian' }));
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Quá hạn + 30 ngày tới',
+      'Quá hạn + 90 ngày tới',
+      'Quá hạn + 180 ngày tới',
+      'Quá hạn + 365 ngày tới',
+      'Quá hạn + tới ngày…',
+    ]);
   });
 
   it('"tới ngày…" cần chọn ngày: hiện ô Tới ngày', async () => {

@@ -114,7 +114,9 @@ function StepUpFields({
       <p className="muted">
         {purpose ?? (scope === 'diagram' ? t('auth.stepUpSubDiagram') : t('auth.stepUpSub'))}
       </p>
-      <p className="muted">{t(`auth.stepUpScopeNote_${scope}`)}</p>
+      {/* Câu phạm vi chỉ ở hộp mã chung (xem két / xem sơ đồ — UX-E38). Hộp đã nói việc cụ thể qua
+          `purpose` thì câu "mã này mở két, không mở sơ đồ" là nhiễu. */}
+      {purpose ? null : <p className="muted">{t(`auth.stepUpScopeNote_${scope}`)}</p>}
       {/* Đủ 6 số là tự gửi (`onComplete`) — trên điện thoại bàn phím số che mất nút Xác nhận. */}
       <OtpInput
         value={form.token}

@@ -79,16 +79,24 @@ describe('Kho thanh lý', () => {
   });
 
   /* DP-002: hồ sơ tự thanh lý khi quá hạn (Q-13) phải khác hẳn hồ sơ có người bấm. */
-  it('tự thanh lý → cột Người thanh lý ghi "Hệ thống"', async () => {
+  it('tự thanh lý → cột Người thanh lý ghi "Tự động (quá hạn)"', async () => {
     renderWith([]);
-    expect(await screen.findByText('Hệ thống · tự thanh lý khi quá hạn')).toBeInTheDocument();
+    expect(await screen.findByText('Tự động (quá hạn)')).toBeInTheDocument();
   });
 
-  /* Q-19: màu badge theo màn gốc — tài khoản dịch vụ "Đã ngừng dùng" đỏ như ở danh sách của nó. */
-  it('badge trạng thái mang màu của màn gốc', async () => {
+  /* Q-19: màu badge theo màn gốc — tài khoản dịch vụ "Đã ngừng dùng" đỏ như ở danh sách của nó.
+     PW-A25: "Đã thanh lý" là trạng thái mặc định của chính kho này — không lặp huy hiệu trên mọi dòng. */
+  it('badge trạng thái mang màu của màn gốc; "Đã thanh lý" không thành huy hiệu', async () => {
     renderWith([], [DEVICE, SERVICE_ACCOUNT]);
     expect(await screen.findByText('Đã ngừng dùng')).toHaveClass('badge', 'danger');
-    expect(screen.getByText('Đã thanh lý')).toHaveClass('badge', 'muted');
+    expect(screen.queryByText('Đã thanh lý')).toBeNull();
+  });
+
+  // TB-24: băng "chưa hiện hết" chỉ có nghĩa khi có dòng để xem.
+  it('loại bị cắt nhưng lọc ra 0 dòng → không nói "chưa hiện hết"', async () => {
+    renderWith(['device'], []);
+    await screen.findByText('Kho thanh lý đang trống.');
+    expect(screen.queryByText(/chưa hiện hết/)).toBeNull();
   });
 
   /* Q-19: "Dùng lại" thiết bị / tài khoản dịch vụ / đường truyền làm ở trang hồ sơ, không tại kho. */
@@ -96,10 +104,8 @@ describe('Kho thanh lý', () => {
     const user = userEvent.setup();
     renderWith([], [DEVICE, SERVICE_ACCOUNT]);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với TK-E2E-01' }));
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Mở hồ sơ',
-      'Mở hồ sơ để dùng lại',
-    ]);
+    // UX-E14: một mục — "Mở hồ sơ" cạnh nó là hai mục cùng một đích.
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Mở hồ sơ để dùng lại']);
     expect(screen.getByRole('menuitem', { name: 'Mở hồ sơ để dùng lại' })).toHaveClass('ok');
   });
 

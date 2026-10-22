@@ -108,7 +108,7 @@ export function useFormErrors<K extends string>(rules: FormRules<K>): FormErrors
     error: (key) => (shown ? rules[key] || null : null),
     summary:
       shown && failing.length >= 2 ? (
-        <p className="alert error" role="alert">
+        <p className="alert error form-summary" role="alert">
           {t('formErrors.summary', { count: failing.length })}
         </p>
       ) : null,

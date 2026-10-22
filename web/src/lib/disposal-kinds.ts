@@ -4,6 +4,8 @@ import {
   SERVICE_ACCOUNT_STATUS_TONE,
   SOFTWARE_STATUS_TONE,
 } from '@/lib/status-tone';
+import { screenOfKind } from '@/lib/software-screens';
+import { bandwidthLabel } from '@/lib/bandwidth';
 
 /**
  * Các loại hồ sơ vào kho thanh lý + nhãn i18n của chúng — MỘT nơi khai (AD-15).
@@ -88,6 +90,7 @@ export function disposalDetailText(
 ): string | null {
   if (!detail) return null;
   const keys = DETAIL_KEY[kind];
+  if (kind === 'isp') return bandwidthLabel(detail); // "400" trơn → "400 Mbps" như màn Đường truyền
   if (!keys) return detail;
   return keys[detail] ? t(keys[detail]) : null;
 }
@@ -99,4 +102,18 @@ export function disposalDetail(
   t: (key: string) => string,
 ): string {
   return disposalDetailText(kind, detail, t) ?? '—';
+}
+
+/**
+ * Nhãn loại của MỘT hồ sơ thanh lý (PW-A08). Phần mềm chia bốn màn (Q-22): tên miền, SSL, hợp
+ * đồng dán nhãn "Phần mềm" thì không khớp menu người ta vừa bấm. Lấy đúng tên màn từ
+ * `screenOfKind` — `detail` của phần mềm là mã loại (`ssl`, `maintenance`…).
+ */
+export function disposalItemKindLabel(
+  kind: DisposalKind,
+  detail: string | null,
+  t: (key: string) => string,
+): string {
+  if (kind === 'software' && detail) return t(screenOfKind(detail).navKey);
+  return t(DISPOSAL_KIND_KEY[kind]);
 }

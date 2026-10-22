@@ -43,8 +43,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-6);
-  border-radius: calc(var(--r) - 3px);
+  /* Khung = mục + 2×(đệm 4 + viền 1) → cả dải cao đúng --h-ctl như ô chọn đứng cạnh (DS-16). */
+  min-height: calc(var(--h-ctl) - 10px);
+  padding: 0 var(--space-6);
+  border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--ink-2);
@@ -75,7 +77,9 @@
   box-shadow: var(--shadow-sm);
 }
 .segmented label:has(input:focus-visible) {
-  box-shadow: var(--ring);
+  /* Khung cuộn ngang cắt mất outline vẽ ra ngoài, nên vẽ vào trong. */
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 /*
  * Trong ô FORM, dải nút trải hết bề ngang ô và các nút chia đều (Q-24): cỡ-theo-chữ làm hai nút
@@ -83,12 +87,17 @@
  * nằm trong hộp form mà không qua `Field` thì tự mang `fill`. Dải LỌC trên thanh công cụ không
  * đụng tới — chúng đứng cạnh nút khác, kéo dài ra là chiếm chỗ của ô tìm kiếm. Chip chọn nhiều
  * xuống dòng (`.wrap`, lọc loại thiết bị) cũng không: kéo giãn từng hàng chip là vỡ hàng.
- * `min-width: max-content` giữ chữ không bị bóp; dải hẹp hơn tổng chữ thì cuộn ngang như cũ.
+ * `min-width: max-content` giữ chữ không bị bóp; dải hẹp hơn tổng chữ thì XUỐNG HÀNG (Q-32): cuộn
+ * ngang giấu mất lựa chọn cuối ("Other" ở phiếu 0206 trên điện thoại) và cắt chữ ("In Pro…").
+ * Nút trên mỗi hàng vẫn giãn đều phủ hết bề ngang.
  */
 .field > .segmented:not(.wrap),
 .segmented.fill {
   display: flex;
+  flex-wrap: wrap;
   width: 100%;
+  overflow-x: visible;
+  background: var(--surface-2);
 }
 .field > .segmented:not(.wrap) > label,
 .field > .segmented:not(.wrap) > button,
@@ -102,10 +111,13 @@
 /* Bản dùng NÚT: chọn MỘT trong nhiều là `ui/segmented-radio.tsx` (role radio + `aria-checked`,
    mũi tên đi trong nhóm); nút bật/tắt độc lập giữ `aria-pressed`. Hai dạng cùng một vẻ ngoài. */
 .segmented button {
-  padding: var(--space-2) var(--space-6);
+  /* Như `.segmented label`: mục + khung = --h-ctl. Không đặt thì luật nút chung (--h-ctl) đẩy cả
+     dải lên 46px. */
+  min-height: calc(var(--h-ctl) - 10px);
+  padding: 0 var(--space-6);
   border: none;
   background: none;
-  border-radius: calc(var(--r) - 3px);
+  border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--ink-2);
@@ -123,7 +135,8 @@
   box-shadow: var(--shadow-sm);
 }
 .segmented button:focus-visible {
-  box-shadow: var(--ring);
+  /* Khung cuộn ngang cắt mất outline vẽ ra ngoài, nên vẽ vào trong. */
+  outline-offset: -2px;
 }
 /* Tối: `--surface` TỐI HƠN `--surface-2` của rãnh, nên nút đang bật chìm xuống thay vì nổi
    lên và gần như không khác nút thường. Tô nền nhấn + viền để trạng thái bật đọc được. */
@@ -219,6 +232,26 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--space-6) var(--space-7);
+}
+/* Ô theo độ dài nội dung (`Field size`, FM-16): kẹp bề ngang CHÍNH Ô NHẬP, nhãn và câu gợi ý vẫn
+   rộng theo ô lưới. Đơn vị rem, không ch: luật chung cấm kẹp theo ch (shared-ui-rules.test). */
+.field[data-size='xs'] > input,
+.field[data-size='xs'] > select,
+.field[data-size='xs'] > .fsel-trigger,
+.field[data-size='xs'] > .number-stepper {
+  max-width: 7rem;
+}
+.field[data-size='s'] > input,
+.field[data-size='s'] > select,
+.field[data-size='s'] > .fsel-trigger,
+.field[data-size='s'] > .number-stepper {
+  max-width: 15rem;
+}
+/* Dòng tóm tắt lỗi và khung báo lỗi máy chủ nằm trong lưới thì chiếm TRỌN hàng (FM-02): chiếm
+   một ô là đẩy lệch mọi ô sau nó sang cột bên. */
+.form-grid > .alert,
+.form-grid > .form-summary {
+  grid-column: 1 / -1;
 }
 
 /* ─── `data-columns` PHẢI có tác dụng ────────────────────────────────────────────────────
@@ -334,7 +367,9 @@ input[list]::-webkit-calendar-picker-indicator {
   display: inline-flex;
   align-items: center;
   width: 100%;
-  padding: var(--space-4) 2rem var(--space-4) var(--space-5);
+  /* Cao đúng --h-ctl như ô nhập và nút cạnh nó (DS-02); đệm dọc 0 để chiều cao do token quyết. */
+  min-height: var(--h-ctl);
+  padding: 0 2rem 0 var(--space-5);
   border: 1px solid var(--field-border);
   border-radius: var(--r);
   background: var(--surface);
@@ -482,6 +517,12 @@ input[list]::-webkit-calendar-picker-indicator {
   white-space: nowrap;
   overflow: hidden;
 }
+/* Màn cảm ứng: dòng chọn đủ 44px (FM-12) — danh sách 89 tủ mà dòng 35px thì chạm nhầm dòng kế. */
+@media (pointer: coarse) {
+  .fsel-option {
+    min-height: 44px;
+  }
+}
 /* `.fsel-option` là flex, mà `text-overflow` không cắt chữ của chính hộp flex: chữ phải nằm
    trong một khối riêng co được (`min-width: 0`) thì mới ra "…". Chữ đầy đủ ở `title`. */
 .fsel-opt-label {
@@ -532,6 +573,7 @@ textarea.mono {
 /* Nhãn của một nhóm điều khiển không phải ô nhập (dải nút chọn một): cùng dáng nhãn ô. */
 .field-label {
   display: block;
+  padding: 0;
   margin-bottom: var(--space-2);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
@@ -762,7 +804,7 @@ input.switch:focus-visible {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: var(--primary-tint);
   color: var(--primary-ink);
   font-size: var(--fs-2xs);
   line-height: 1;
@@ -849,8 +891,8 @@ input.switch:focus-visible {
 .sheet-close {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   padding: 0;
   border: none;
   background: transparent;
@@ -895,12 +937,14 @@ input.switch:focus-visible {
   display: inline-flex;
   flex: 0 0 auto;
 }
-/* Hình vẽ 16px, vùng bấm 24px (WCAG 2.5.8) — nhỏ hơn thì trên điện thoại chạm trượt sang nhãn. */
+/* Hình vẽ 16px, vùng bấm --h-ctl-sm (28 / 40 khi cảm ứng). Lề âm theo chiều dọc để nút cao hơn
+   dòng nhãn mà không đẩy hàng nhãn cao lên. */
 .info-tip-btn {
   display: inline-grid;
   place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
+  margin-block: calc((var(--h-ctl-sm) - 20px) / -2);
   padding: 0;
   border: none;
   border-radius: 50%;

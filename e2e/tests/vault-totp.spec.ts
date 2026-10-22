@@ -91,8 +91,8 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
-    const form = page.getByRole('dialog', { name: /Cất mật khẩu\/khóa/ });
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
+    const form = page.getByRole('dialog', { name: /^Cất vào két/ });
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('button', { name: 'Loại' }).click();
     await page.getByRole('option', { name: 'Mã 2 lớp' }).click();
@@ -103,7 +103,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     // Vừa nhập mã cho két (`stepUpViaApi`) = còn trong grace: cất không bị hỏi mã (Q-18).
     await expect(page.getByText('Đã lưu vào két.')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Nhập mã 6 số', exact: true })).toHaveCount(0);
 
     const row = page.getByRole('row', { name: new RegExp(label) });
     await expect(row).toContainText('Mã 2 lớp');
@@ -117,7 +117,7 @@ test.describe('Két — ngăn Mã 2 lớp', () => {
     const shown = (await page.getByTestId('totp-code').innerText()).replace(/\s/g, '');
     expect(shown).toMatch(/^\d{6}$/);
     expect(await nearbyCodes()).toContain(shown);
-    await expect(page.getByTestId('totp-code-left')).toContainText(/^\d+s$/);
+    await expect(page.getByTestId('totp-code-left')).toContainText(/^\d+ giây$/);
 
     // Màn đọc ở 390px (UX-DR2): QR + mã vẫn nằm trong khung, trang không cuộn ngang.
     await page.setViewportSize({ width: 390, height: 844 });

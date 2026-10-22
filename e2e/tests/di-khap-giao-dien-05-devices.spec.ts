@@ -14,7 +14,15 @@ import {
   stepUpViaApi,
   DEVICE_FOLDS,
   openDeviceFolds,
+  isoToday,
 } from './helpers';
+
+/** Nút "sửa lần cuối dd/mm/yyyy · …" của RecordStamp (UX-E26): hồ sơ vừa dàn cảnh hôm nay. */
+function lastEditButton(): string {
+  const [y, m, d] = isoToday().split('-');
+  return `sửa lần cuối ${d}/${m}/${y} · E2E Super Admin`;
+}
+
 
 /**
  * ===== PHẦN HAI: VÀO HẲN TỪNG PHÒNG =====
@@ -135,7 +143,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * Tên TRỢ NĂNG của một tập điều khiển, đúng thứ tự chúng nằm trong DOM.
    *
    * Vì sao không dùng `allInnerTexts()`: một nửa số điều khiển của phòng này KHÔNG có chữ nào
-   * bên trong. Nút mở `Select` hiện nhãn placeholder ("— Chọn loại —") chứ không hiện tên ô;
+   * bên trong. Nút mở `Select` hiện nhãn placeholder ("Chọn loại…") chứ không hiện tên ô;
    * nút lịch chỉ có một cái icon; ô chọn file là `<input type="file">` bị giấu về 1px và mượn
    * tên từ `<label for>` bên cạnh. Người dùng trình đọc màn hình nghe đúng chuỗi mà hàm này
    * trả về — nên đó mới là thứ đáng chốt, không phải chữ vẽ trên màn hình.
@@ -264,7 +272,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     await search.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
     await expect(
-      main.getByText(`Không có thiết bị nào khớp “KHONG-CO-MAY-NAO-E2E-${stamp}”.`),
+      main.getByText(`Không có thiết bị nào khớp "KHONG-CO-MAY-NAO-E2E-${stamp}".`),
       'lọc về rỗng phải ra empty-state, không phải bảng trắng',
     ).toBeVisible();
 
@@ -282,7 +290,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Loại thiết bị',
         'Phòng ban',
         'Trạng thái',
-        'Xóa lọc (1)',
+        'Xóa bộ lọc (1)',
         'Xóa bộ lọc',
       ]);
 
@@ -326,7 +334,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       status,
       'Ô lọc Trạng thái: mặc định trừ Đã thanh lý (Q-20), bốn trạng thái của DEVICE_STATUSES, rồi mục "cả Đã thanh lý"',
     ).toEqual([
-      'Đang theo dõi (trừ Đã thanh lý)',
+      'Trừ đã thanh lý',
       'Đang dùng',
       'Dự phòng',
       'Hỏng',
@@ -408,9 +416,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(page.getByRole('columnheader')), {
         message:
-          'Bảng thiết bị (Q-27): Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người sử dụng, bảo hành, loại · model · serial nằm ở hồ sơ',
+          'Bảng thiết bị (Q-27): [tick chọn] · Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người dùng, bảo hành, loại · model · serial nằm ở hồ sơ',
       })
       .toEqual([
+        // Cột tick chọn nhiều máy (UX-E25) không có chữ: tên nó nằm ở ô tick "Chọn tất cả" bên dưới.
+        '',
         'Ảnh',
         'Mã thiết bị',
         'Tên gọi',
@@ -419,6 +429,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Trạng thái',
         'Thao tác',
       ]);
+    await expect(
+      page.getByRole('columnheader').first().getByRole('checkbox', { name: 'Chọn tất cả' }),
+      'cột đầu là ô tick chọn cả trang (UX-E25)',
+    ).toBeVisible();
 
     /*
      * CỘT NÀO SẮP ĐƯỢC — chốt bằng TẬP HỢP nút trong dòng tiêu đề.
@@ -432,7 +446,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => controlName(headerRow.getByRole('button')), {
         message:
-          'Đúng ba cột sắp xếp được (Q-27 bỏ Người sử dụng, Bảo hành khỏi bảng), và nhãn phải NÓI RÕ đây là nút sắp xếp',
+          'Đúng ba cột sắp xếp được (Q-27 bỏ Người dùng, Bảo hành khỏi bảng), và nhãn phải NÓI RÕ đây là nút sắp xếp',
       })
       .toEqual([
         'Sắp xếp theo Mã thiết bị',
@@ -563,7 +577,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
    * `devices.spec.ts` mở hộp "Thêm thiết bị" hàng chục lần, nhưng lần nào cũng chỉ chạm ba ô:
-   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người sử dụng, Phòng ban,
+   * Mã, Tên, Loại. Mười một ô còn lại — Model, Serial, Site, Tủ mạng, Người dùng, Phòng ban,
    * Nhà cung cấp, ba ô ngày, Ghi chú — chưa có bài nào biết chúng còn tồn tại hay không. Xóa
    * hẳn ô "Bảo hành đến" khỏi form thì cả bộ E2E vẫn xanh, và cái máy tiếp theo được khai sẽ
    * không có hạn bảo hành, mãi mãi.
@@ -626,13 +640,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     await expect(
       dialog.getByRole('textbox'),
-      'Hộp thêm thiết bị có đúng 5 ô gõ chữ: Mã · Tên · Serial · Người sử dụng · Ghi chú — Model là ô gợi ý từ danh mục model',
+      'Hộp thêm thiết bị có đúng 5 ô gõ chữ: Mã · Tên · Serial · Người dùng · Ghi chú — Model là ô gợi ý từ danh mục model',
     ).toHaveCount(5);
     for (const label of [
       'Mã thiết bị',
       'Tên gọi',
       'Serial',
-      'Người sử dụng',
+      'Người dùng',
       'Ghi chú',
     ]) {
       await expect(
@@ -647,7 +661,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * cấm khai một phòng ban vừa lập.
      */
     await expect(
-      dialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      dialog.getByRole('combobox', { name: 'Phòng ban' }),
       'Ô Phòng ban phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
     ).toHaveCount(1);
     await expect(
@@ -683,7 +697,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+3 năm',
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
         'Truy cập quản trị chưa khai',
-        '+ Thêm đường truy cập',
+        '+ Đường truy cập',
         // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt; giấy tờ cùng khối.
         'Ảnh và giấy tờ chưa khai',
         'Tải ảnh lên — Mặt trước',
@@ -713,7 +727,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     /*
      * BÊN TRONG Ô CHỌN LOẠI. Khác ô lọc cùng tên ở ngoài: ở đây KHÔNG có mục "Tất cả loại" —
-     * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
+     * một cái máy phải là một loại cụ thể. Mục "Chọn loại…" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
     const typeInForm = await optionsOf(
@@ -733,26 +747,30 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * `aria-describedby`, tiêu điểm về ô lỗi đầu tiên, và hộp phải còn nguyên (đóng im lặng là
      * nuốt mất mọi thứ người dùng vừa gõ). Loại thiết bị là `Select` (nút bấm) — ô dễ rơi nhất.
      */
-    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await expect(dialog, 'Bấm Lưu khi form trống: hộp PHẢI còn đó').toBeVisible();
-    await expect(
-      dialog.getByText('Còn 3 ô cần sửa trước khi lưu.'),
-      'Ba ô bắt buộc cùng thiếu thì đầu form tóm tắt số ô phải sửa',
-    ).toBeVisible();
+    /* Ô Mã được điền sẵn mã kế tiếp (FM-21), nên lúc bấm Lưu chỉ còn Tên và Loại thiếu. Chờ mã
+       về trước khi bấm: bấm sớm hơn thì số ô thiếu tuỳ vào tốc độ mạng. */
     const codeField = dialog.getByRole('textbox', { name: 'Mã thiết bị' });
-    await expect(codeField, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Mã').toHaveAccessibleDescription(
-      'Bắt buộc — chưa nhập ô này.',
+    await expect(codeField, 'Hộp Thêm điền sẵn mã kế tiếp vào ô Mã (FM-21)').not.toHaveValue('');
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(dialog, 'Bấm Lưu khi form còn thiếu: hộp PHẢI còn đó').toBeVisible();
+    await expect(
+      dialog.getByText('Còn 2 ô cần sửa trước khi lưu.'),
+      'Hai ô bắt buộc (Tên, Loại) cùng thiếu thì đầu form tóm tắt số ô phải sửa',
+    ).toBeVisible();
+    const nameField = dialog.getByRole('textbox', { name: 'Tên gọi' });
+    await expect(nameField, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Tên').toHaveAccessibleDescription(
+      'Chưa nhập.',
     );
-    await expect(codeField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
+    await expect(nameField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
     await codeField.fill(`TB-E2E-HOP-${stamp}`);
-    await dialog.getByLabel('Tên gọi').fill('Máy chỉ để xem hộp thoại');
+    await nameField.fill('Máy chỉ để xem hộp thoại');
     await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(
       dialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
       'Thiếu LOẠI thiết bị thì chính ô Loại phải nói ra, bằng tiếng Việt',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa chọn ô này.');
+    ).toHaveAccessibleDescription('Chưa chọn.');
     await expect(dialog.getByText(/ô cần sửa trước khi lưu/), 'Còn một lỗi thì không cần tóm tắt').toHaveCount(0);
     await expect(dialog, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
 
@@ -858,7 +876,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ['Mã thiết bị', code],
       ['Tên gọi', 'Switch tầng 3 của bài kiểm kê'],
       ['Serial', `SN-E2E-${stamp}`],
-      ['Người sử dụng', 'Anh Tuấn hạ tầng'],
+      ['Người dùng', 'Anh Tuấn hạ tầng'],
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
     ]) {
       await expect(
@@ -867,7 +885,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ).toHaveValue(value);
     }
     await expect(
-      editDialog.getByRole('combobox', { name: 'Phòng ban sử dụng' }),
+      editDialog.getByRole('combobox', { name: 'Phòng ban' }),
       'Ô Phòng ban (combobox) cũng phải điền sẵn',
     ).toHaveValue('Phòng CNTT');
     await expect(
@@ -876,7 +894,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveValue('C9200-24P');
     await expect(
       editDialog.getByRole('button', { name: 'Loại thiết bị', exact: true }),
-      'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "— Chọn loại —"',
+      'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "Chọn loại…"',
     ).toHaveText('Switch');
     await expect(
       editDialog.getByRole('button', { name: 'Trạng thái', exact: true }),
@@ -912,7 +930,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+3 năm',
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
         'Truy cập quản trị chưa khai',
-        '+ Thêm đường truy cập',
+        '+ Đường truy cập',
         // Khu "Ảnh thiết bị" (Q-23): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
         'Ảnh và giấy tờ',
         'Giải thích: Ảnh thiết bị',
@@ -966,8 +984,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeDisabled();
     await expect(
       importDialog.getByText(
-        'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
-        'khai trong Danh mục trước — hệ thống không tự tạo.',
+        'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải có ' +
+        'sẵn trong Danh mục.',
       ),
       'Hộp nhập phải tự nói ra điều kiện tiên quyết, không để người dùng đoán',
     ).toBeVisible();
@@ -1035,7 +1053,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
             'Hồ sơ một con Switch phải có ĐỦ SÁU tab — Port map chỉ có mặt vì loại này bật has_port_map (FR-006); Phần mềm là tab riêng (Q-27)',
         },
       )
-      .toEqual(['Tổng quan', 'Sơ đồ cổng', 'Phần mềm', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
+      .toEqual(['Tổng quan', 'Sơ đồ cổng', 'Phần mềm', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
 
     const main = page.getByRole('main');
     const panel = page.getByRole('tabpanel');
@@ -1055,28 +1073,30 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Sửa hồ sơ',
         `Thao tác với ${code}`,
         'Cấp IP',
-        'Bổ sung 8 ô còn thiếu',
+        'Bổ sung 6 ô còn thiếu',
         // Khu "Hình dùng trên sơ đồ" (Q-23) gập sẵn (Q-27 bổ sung): chỉ còn nút mở.
         'Mở rộng Hình dùng trên sơ đồ',
+        // UX-E26: "sửa lần cuối … bởi …" ở chân thẻ phải, bấm mở tab Lịch sử.
+        lastEditButton(),
       ]);
     await expect(page.getByRole('group', { name: 'Tóm tắt thiết bị' }).getByText('Chưa có IP', { exact: true })).toBeVisible();
-    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái…', 'Nhân bản', 'Thanh lý…']);
 
     /*
-     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 9 dòng, cùng thứ tự; ô trống đứng đúng
+     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 7 dòng, cùng thứ tự; ô trống đứng đúng
      * chỗ và ghi "chưa khai" (bỏ cách ẩn ô trống: hai máy trông hai kiểu, người đọc không biết
-     * "không thấy" là chưa khai hay không có). Bảo hành chỉ ở dải 4 ô.
+     * "không thấy" là chưa khai hay không có). Bảo hành chỉ ở dải 4 ô; Nhà cung cấp (thẻ cột
+     * phải) và Phòng ban (dòng phụ ô Người dùng) không lặp ở đây (PW-A04).
      */
     const spec = panel.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
-      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Phòng ban sử dụng', 'Ghi chú',
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị', 'Ngày mua', 'Ghi chú',
     ]);
     await expect(spec.getByRole('definition').first(), 'loại đã khai thì in giá trị').toHaveText('Switch');
     await expect(
       spec.getByRole('definition').filter({ hasText: 'chưa khai' }),
-      'tám ô còn lại chưa khai — mỗi ô ghi "chưa khai" đúng chỗ của nó',
-    ).toHaveCount(8);
+      'sáu ô còn lại chưa khai — mỗi ô ghi "chưa khai" đúng chỗ của nó',
+    ).toHaveCount(6);
 
     /* ===== TAB PORT MAP ===== */
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
@@ -1129,12 +1149,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
       panel.getByText(
-        'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
+        'Chưa cất mật khẩu hay key nào.',
       ),
-      'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
+      'Két sắt trống nói một câu trạng thái, không chào hàng (UX-E09)',
     ).toBeVisible();
     await expect(
-      panel.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
+      panel.getByRole('button', { name: 'Cất vào két' }),
       'SA phải có cửa ghi vào két ngay tại hồ sơ máy',
     ).toBeVisible();
     await expect(panel.getByText('Két chưa có ngăn nào.')).toBeVisible();
@@ -1146,7 +1166,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Máy vừa khai xong phải có ĐÚNG MỘT dòng lịch sử — không có dòng nào nghĩa là lượt tạo không được ghi sổ (AD-13)',
     ).toHaveCount(1);
     await expect(
-      panel.getByText('Tạo hồ sơ', { exact: true }),
+      panel.getByText('Thêm hồ sơ', { exact: true }),
       'và dòng đó phải đọc được ra tiếng Việt, không phải chuỗi thô "created"',
     ).toBeVisible();
     // DEV-085: lịch sử nêu HỌ TÊN người làm (không phải email).

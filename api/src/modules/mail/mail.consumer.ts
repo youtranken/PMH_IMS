@@ -250,7 +250,7 @@ export class MailConsumer {
         title: 'Yêu cầu mở két đã được duyệt',
         intro:
           `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. ` +
-          'Đăng nhập IMS, mở lại két của đối tượng này và bấm "Xem", nhập mã 6 số.',
+          'Đăng nhập IMS, mở lại két của hồ sơ này và bấm "Xem", nhập mã 6 số.',
         rows: [
           subjectRow,
           { label: 'Được cấp', value: granted ? `${granted} giờ` : '—' },
@@ -299,7 +299,7 @@ export class MailConsumer {
       intro: denied
         ? 'Người duyệt đã từ chối yêu cầu của bạn. Cần thì gửi yêu cầu mới, ghi rõ lý do hơn.'
         : 'Quyền xem két của bạn đã bị cắt trước hạn. Lượt xem kế tiếp sẽ bị chặn.',
-      rows: [subjectRow, { label: 'Người quyết', value: request.decidedBy ?? '—' }, ...noteRow],
+      rows: [subjectRow, { label: 'Người duyệt', value: request.decidedBy ?? '—' }, ...noteRow],
       ctaLabel: 'Xem yêu cầu',
       ctaUrl: `${APP_URL()}${UI_PATHS.approval(request.id)}`,
       ctaWide: true,
@@ -365,7 +365,7 @@ export class MailConsumer {
     const name = subject?.code ?? 'không rõ tên';
     const rows = [
       { label: 'Bản vẽ', value: subject?.label ?? 'Không xác định' },
-      { label: 'Người quyết', value: request.decidedBy ?? '—' },
+      { label: 'Người duyệt', value: request.decidedBy ?? '—' },
       ...(request.decisionNote ? [{ label: 'Ghi chú của người duyệt', value: request.decisionNote }] : []),
     ];
     const returned = state === 'returned';

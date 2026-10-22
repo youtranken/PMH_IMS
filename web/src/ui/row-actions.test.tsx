@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act } from '@testing-library/react';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import { RowActions } from '@/ui/row-actions';
+import { ROW_MENU_MAX_HEIGHT, RowActions } from '@/ui/row-actions';
 
 function items(onEdit = vi.fn(), onDelete = vi.fn()) {
   return [
@@ -12,6 +12,15 @@ function items(onEdit = vi.fn(), onDelete = vi.fn()) {
 }
 
 describe('RowActions — menu ba chấm dùng chung', () => {
+
+  /**
+   * Menu dòng tài khoản có ~10 việc, cao hơn 320px. Chặn cứng 320px khi màn còn chỗ là giấu mất
+   * mấy mục cuối (Khóa · Vô hiệu hóa) sau một vùng cuộn không ai thấy. Trần mặc định phải đủ
+   * cho chục mục; chỉ khi khung nhìn thật sự hẹp mới phải cuộn.
+   */
+  it('trần chiều cao mặc định đủ cho chục mục (~38px/mục), không chặn ở 320px', () => {
+    expect(ROW_MENU_MAX_HEIGHT).toBeGreaterThanOrEqual(10 * 38 + 60);
+  });
   it('menu đóng thì KHÔNG mục nào nằm trong DOM', () => {
     renderWithI18n(<RowActions label="Thao tác với LIC-01" items={items()} />);
     expect(screen.getByRole('button', { name: 'Thao tác với LIC-01' })).toBeInTheDocument();

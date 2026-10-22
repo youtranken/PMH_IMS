@@ -114,7 +114,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
 
     const dialog = page.getByRole('dialog', { name: new RegExp(`Mật khẩu tạm — ${email}`) });
     await expect(page.getByTestId('temp-password')).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Chép mật khẩu tạm' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Sao chép mật khẩu tạm' })).toBeVisible();
     await dialog.getByRole('button', { name: 'Ẩn' }).click();
     await expect(page.getByTestId('temp-password')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Hiện' }).click();
@@ -128,10 +128,10 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
 });
 
 /**
- * ADM-040 — onboarding: "Sao chép quyền từ…" một đồng nghiệp (chỉ qua API gán sẵn có) và
+ * ADM-040 — onboarding: "Chép quyền từ…" một đồng nghiệp (chỉ qua API gán sẵn có) và
  * "Gán thiết bị" mở danh sách thiết bị tìm sẵn theo tên người mới.
  */
-test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', () => {
+test.describe('ADM-040 · chép quyền két, gán thiết bị theo tên', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
   test.beforeEach(() => resetAccessList());
 
@@ -170,16 +170,16 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
 
     await page.goto(`/admin/vault-access?user=${target.id}`);
     await expect(page.getByRole('heading', { name: target.fullName })).toBeVisible();
-    await page.getByRole('button', { name: 'Sao chép quyền từ…' }).click();
-    const dialog = page.getByRole('dialog', { name: `Sao chép quyền két cho ${target.fullName}` });
+    await page.getByRole('button', { name: 'Chép quyền từ…' }).click();
+    const dialog = page.getByRole('dialog', { name: `Chép quyền két — ${target.fullName}` });
     await dialog.getByRole('button', { name: 'Đồng nghiệp', exact: true }).click();
     await page.getByRole('option', { name: new RegExp(source.fullName) }).click();
-    await expect(dialog.getByText('Sẽ gán 1 nhóm:')).toBeVisible();
+    await expect(dialog.getByText('Sẽ gán 1 phạm vi:')).toBeVisible();
     await expect(dialog.getByText(`${scope.label} · Xem thẳng`)).toBeVisible();
 
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán quyền' }).click();
     await confirmAction(page, 'Gán quyền');
-    await expect(page.getByText(`Đã sao chép 1 nhóm từ ${source.fullName}.`)).toBeVisible();
+    await expect(page.getByText(`Đã chép 1 phạm vi từ ${source.fullName}.`)).toBeVisible();
     await expect(dialog).toHaveCount(0);
     expect(tierOf(target.email, scope)).toBe('whitelist');
   });
@@ -195,15 +195,15 @@ test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', 
     await grant(page, target.email, scope, 'needs_approval');
 
     await page.goto(`/admin/vault-access?user=${target.id}`);
-    await page.getByRole('button', { name: 'Sao chép quyền từ…' }).click();
-    const dialog = page.getByRole('dialog', { name: `Sao chép quyền két cho ${target.fullName}` });
+    await page.getByRole('button', { name: 'Chép quyền từ…' }).click();
+    const dialog = page.getByRole('dialog', { name: `Chép quyền két — ${target.fullName}` });
     await dialog.getByRole('button', { name: 'Đồng nghiệp', exact: true }).click();
     await page.getByRole('option', { name: new RegExp(source.fullName) }).click();
-    await expect(dialog.getByText('Bỏ qua 1 nhóm người này đã có:')).toBeVisible();
+    await expect(dialog.getByText('Bỏ qua 1 phạm vi người này đã có:')).toBeVisible();
 
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán quyền' }).click();
     await expect(dialog.getByRole('alert')).toHaveText(
-      'Không còn nhóm nào để sao chép — người này đã có mọi nhóm của đồng nghiệp.',
+      'Không còn phạm vi nào để chép — người này đã có mọi phạm vi của đồng nghiệp.',
     );
     expect(tierOf(target.email, scope), 'tầng riêng của người nhận phải giữ nguyên').toBe(
       'needs_approval',

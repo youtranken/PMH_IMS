@@ -125,37 +125,37 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Site',
       addButton: 'Thêm site',
-      columns: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Tủ mạng',
       addButton: 'Thêm tủ mạng',
-      columns: ['Mã', 'Thuộc site', 'Vị trí / mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Mã', 'Thuộc site', 'Vị trí / mô tả', 'Số U', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Loại thiết bị',
       addButton: 'Thêm loại thiết bị',
-      columns: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Nhà cung cấp',
       addButton: 'Thêm nhà cung cấp',
-      columns: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: true,
     },
     {
       tab: 'Phòng ban',
       addButton: 'Thêm phòng ban',
-      columns: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Mô tả', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
     {
       tab: 'Nhà mạng',
       addButton: 'Thêm nhà mạng',
-      columns: ['Tên', 'Hotline', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Hotline', 'Email / người liên hệ', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
     {
@@ -167,7 +167,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Loại dây',
       addButton: 'Thêm loại dây',
-      columns: ['Tên', 'Màu dây', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
+      columns: ['Tên', 'Màu dây', 'Mô tả', 'Gắn với', 'Trạng thái', 'Thao tác'],
       excelImport: false,
     },
   ];
@@ -441,7 +441,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(
       dialog.getByRole('alert'),
       'quên chọn site mà hộp im lặng thì người dùng bấm Lưu mãi không hiểu vì sao không xong',
-    ).toHaveText('Chọn site cho tủ này.');
+    ).toHaveText('Chưa chọn.');
     await expect(
       dialog,
       'hộp phải Ở LẠI cùng những gì vừa gõ — đóng đi là bắt gõ lại từ đầu',
@@ -529,7 +529,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, siteCode),
       'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Ngừng dùng (cảnh báo) rồi Xóa xếp cuối; Sửa đứng ngoài (Q-18)',
-    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Ngừng dùng', 'Xóa']);
+    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Ngừng dùng', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, siteCode, 'Sửa');
@@ -575,7 +575,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, siteCode),
       'hồ sơ ĐÃ NGỪNG DÙNG mà menu vẫn ghi "Ngừng dùng" thì không còn đường nào dùng lại nó',
-    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Dùng lại', 'Xóa']);
+    ).toEqual(['Lịch sử', 'Xem thiết bị dùng mục này', 'Dùng lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
     await rowAction(page, siteCode, 'Xóa');
@@ -714,7 +714,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Họ tên',
       'Vai trò',
       'Trạng thái',
-      '2 Lớp',
+      'Xác thực 2 lớp',
       'Đăng nhập gần nhất',
       'Thao tác',
     ]);
@@ -756,10 +756,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'menu dòng CỦA CHÍNH SA đang đăng nhập: không có Khóa / Vô hiệu / Đặt lại 2 lớp / Đổi vai (API chặn tự làm với mình)',
     ).toEqual(
       sortOrder([
-        // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
-        'Xem chi tiết',
-        'Phiên đang mở',
-        // Nhật ký / Quyền két nằm trong hộp Chi tiết (Q-21), không còn ở menu dòng.
+        // Bấm dòng mở hộp Chi tiết; Phiên đang mở / Nhật ký / Quyền két nằm trong hộp đó
+        // (Q-21, UX-E15), không lặp ở menu dòng.
         'Đặt lại mật khẩu',
         // Hạt giống SA luôn bị bắt 2 lớp (`reset-e2e.mjs`), nên mục bật/tắt đang ở vế "Bỏ".
         'Bỏ bắt buộc 2 lớp khi đăng nhập',
@@ -767,7 +765,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     );
 
     // --- Bên trong hộp "Phiên đang mở". SA đang ngồi đây, nên chắc chắn có ít nhất một phiên.
-    await rowAction(page, saFullName, 'Phiên đang mở');
+    /* Bấm ô đầu của dòng chứ không bám chữ tên: ô đó còn chứa nhãn "Bạn" và dòng phụ email,
+       nên không có phần tử nào mang ĐÚNG chữ tên để `getByText(exact)` khớp. */
+    await page.getByRole('row', { name: new RegExp(saFullName) }).getByRole('cell').first().click();
+    await page.getByRole('dialog', { name: saFullName }).getByRole('button', { name: 'Phiên đang mở' }).click();
     const sessionDialog = page.getByRole('dialog', { name: `Phiên đang mở: ${saFullName}` });
     await expect(
       sessionDialog,
@@ -901,7 +902,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('button', { name: `Thao tác với ${fullName}` })).toBeVisible();
     await rowAction(page, fullName, 'Sửa');
 
-    const editDialog = page.getByRole('dialog', { name: `Sửa hồ sơ: ${fullName}` });
+    const editDialog = page.getByRole('dialog', { name: `Sửa hồ sơ — ${fullName}` });
     await expect(editDialog).toBeVisible();
 
     expect(

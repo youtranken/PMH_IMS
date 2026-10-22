@@ -55,6 +55,17 @@ interface Hit {
   status?: string;
 }
 
+/**
+ * Lệnh "Thêm …" (UX-E32): mở thẳng form của màn qua `?new=1` (`useOpenFromUrl`). Ẩn theo vai và
+ * nhóm quyền bằng chính luật của màn đích (`canSeePath`) — không giữ danh sách quyền thứ hai.
+ */
+const COMMANDS: { key: string; path: string; navKey: string }[] = [
+  { key: 'palette.cmdAddDevice', path: PATHS.devices, navKey: 'nav.devices' },
+  { key: 'palette.cmdAddSoftware', path: PATHS.software, navKey: SOFTWARE_SCREENS.software.navKey },
+  { key: 'palette.cmdAddIsp', path: PATHS.ispLines, navKey: 'nav.isp' },
+  { key: 'palette.cmdNewIncident', path: PATHS.isoIncidents, navKey: 'nav.isoIncidents' },
+];
+
 /** Hồ sơ vừa mở gần đây — chỉ đường dẫn, mã và tên; không bao giờ có bí mật. */
 const RECENT_LIMIT = 5;
 function recentKey(email: string): string {
@@ -143,6 +154,15 @@ interface DiagramFoundHit {
   id: string;
   code: string;
   diagrams: { id: string; name: string }[];
+}
+
+/**
+ * Hồ sơ đang dùng lên trước, đã thanh lý / ngừng dùng xuống cuối nhóm (ST-05): gõ "DM-0001" mà
+ * dòng đầu là DM-000100 đã thanh lý thì Enter mở nhầm. Giữ thứ tự server trong từng phần.
+ */
+function liveFirst<T extends { status?: string }>(rows: T[]): T[] {
+  const ended = (row: T) => (row.status && disposalStatusKey(row.status) ? 1 : 0);
+  return [...rows].sort((a, b) => ended(a) - ended(b));
 }
 
 /** Nhận "vlan 20", "VLAN20" hay chỉ "20" — ở PMH người ta gọi dải theo VLAN. */
@@ -435,6 +455,19 @@ export function CommandPalette({ me }: { me: Me }) {
       }));
   }, [enabled, subnets.data, q, ipFirst, t]);
 
+  const commandHits = useMemo<Hit[]>(
+    () =>
+      COMMANDS.filter((command) => canSeePath(me, command.path)).map((command) => ({
+        group: t('palette.groupCommands'),
+        title: t(command.key),
+        sub: '',
+        to: `${command.path}?new=1`,
+        navKey: command.navKey,
+        kind: 'action' as const,
+      })),
+    [me, t],
+  );
+
   /** Màn hình cũng tìm được — gõ "nat" là nhảy thẳng sang Sổ NAT, khỏi rê chuột xuống sidebar. */
   const navHits = useMemo<Hit[]>(() => {
     if (q.length < 2) return [];
@@ -481,7 +514,7 @@ export function CommandPalette({ me }: { me: Me }) {
     const accountRows = accounts.data?.items ?? [];
     return [
       ...(ipFirst ? network : []),
-      ...deviceRows.map((row) => ({
+      ...liveFirst(deviceRows).map((row) => ({
         group: t('nav.devices'),
         title: row.code,
         sub: [row.name, row.siteCode].filter(Boolean).join(' · '),
@@ -499,7 +532,7 @@ export function CommandPalette({ me }: { me: Me }) {
         if (rows.length === 0) return [];
         const cut = (software.data?.total ?? 0) > softwareRows.length;
         return [
-          ...rows.map((row) => ({
+          ...liveFirst(rows).map((row) => ({
             group: t(spec.navKey),
             title: row.code,
             sub: row.name,
@@ -521,7 +554,7 @@ export function CommandPalette({ me }: { me: Me }) {
             : []),
         ];
       }),
-      ...ispRows.map((row) => ({
+      ...liveFirst(ispRows).map((row) => ({
         group: t('nav.isp'),
         title: row.code,
         sub: row.provider,
@@ -530,7 +563,7 @@ export function CommandPalette({ me }: { me: Me }) {
         status: row.status,
       })),
       ...more(t('nav.isp'), isp.data?.total, ispRows.length, PATHS.ispLines, 'nav.isp'),
-      ...accountRows.map((row) => ({
+      ...liveFirst(accountRows).map((row) => ({
         group: t('nav.serviceAccounts'),
         title: row.code,
         sub: [row.name, row.login].filter(Boolean).join(' · '),
@@ -547,6 +580,7 @@ export function CommandPalette({ me }: { me: Me }) {
       ),
       ...diagramHits,
       ...(ipFirst ? [] : network),
+      ...(q.length >= 2 ? commandHits.filter((hit) => foldSearch(hit.title).includes(foldSearch(q))) : []),
       ...navHits,
     ];
   }, [
@@ -560,6 +594,7 @@ export function CommandPalette({ me }: { me: Me }) {
     diagramHits,
     ipFirst,
     navHits,
+    commandHits,
     q,
     t,
   ]);
@@ -588,7 +623,7 @@ export function CommandPalette({ me }: { me: Me }) {
    * Ba cảnh của danh sách, và cả ba đều CHỌN ĐƯỢC bằng mũi tên:
    *  - chưa gõ đủ 2 ký tự: "Mở gần đây" + "Đi tới" (các màn trong menu) — lúc mở hộp là lúc tốt
    *    nhất để đưa lại đúng hồ sơ người trực đang xử lý dở;
-   *  - không có gì khớp (và không nhóm nào hỏng): lối đi tiếp "Tìm "x" trong …" thay cho ngõ cụt;
+   *  - không có gì khớp (và không nhóm nào hỏng): ba lối "Tìm "x" trong …" thay cho ngõ cụt;
    *  - còn lại: kết quả tìm.
    */
   const hits = useMemo<Hit[]>(() => {
@@ -600,6 +635,7 @@ export function CommandPalette({ me }: { me: Me }) {
         ...recent
           .filter((hit) => canSeePath(me, hit.to.split('?')[0]))
           .map((hit) => ({ ...hit, group: recentGroup })),
+        ...commandHits,
         ...visibleGroups(me)
           .flatMap((group) => group.items)
           .map((item) => ({
@@ -624,6 +660,8 @@ export function CommandPalette({ me }: { me: Me }) {
       { list: PATHS.serviceAccounts, key: 'nav.serviceAccounts' },
     ]
       .filter(({ list }) => canSeePath(me, list))
+      // Ba gợi ý là đủ (ST-06): tám dòng "Tìm … trong …" kín cả màn điện thoại.
+      .slice(0, 3)
       .map(({ list, key }) => ({
         group,
         title: t('palette.searchIn', { q, where: t(key) }),
@@ -632,7 +670,7 @@ export function CommandPalette({ me }: { me: Me }) {
         navKey: key,
         kind: 'action' as const,
       }));
-  }, [q, recent, me, found, searching, anyFailed, t]);
+  }, [q, recent, me, found, searching, anyFailed, commandHits, t]);
 
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của
      từ khoá CŨ ngay khi kết quả mới về — người dùng gõ từ mới mà con trỏ đứng ở dòng 8. */

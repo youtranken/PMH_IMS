@@ -23,7 +23,7 @@ test.beforeEach(() => {
 test('Nhật ký 390px: tiêu đề "Hôm nay", thẻ "HH:mm · việc", ô lọc gập sau nút "Bộ lọc"', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   await page.goto('/admin/audit-log');
-  await expect(page.getByRole('heading', { level: 3, name: 'Hôm nay' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Hôm nay' })).toBeVisible();
   await expect(page.getByRole('button', { name: /^\d{2}:\d{2} · / }).first()).toBeVisible();
 
   // Ô lọc gập: chưa mở thì không thấy ô Hành động; mở ra là có.

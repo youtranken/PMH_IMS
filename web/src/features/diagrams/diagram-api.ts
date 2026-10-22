@@ -1,7 +1,6 @@
 import type { PortLink } from '@/lib/port-types';
 import { diagramStatusLabel } from '@/ui/diagram-version';
 import type { PresentationSource } from './diagram-presentation';
-import type { PublicationEvent } from './diagram-timeline';
 
 /** Hình dạng trả về của `api/v1/diagrams` (module `diagrams`, AD-18). */
 
@@ -29,9 +28,9 @@ export interface DiagramNode {
   status: DiagramStatus;
   /** `savedByName` = tên người lưu cho thẻ "v12 · Thuận"; thiếu/`null` thì hiện email. */
   latestVersion: { id: string; seq: number; savedAt: string; savedBy: string; savedByName?: string | null } | null;
-  /** Số phiên bản chính thức ("chính thức v3"); `null` = chưa phát hành. Thiếu → coi như `null`. */
+  /** Số phiên bản chính thức ("#3 · Chính thức"); `null` = chưa phát hành. Thiếu → coi như `null`. */
   officialSeq?: number | null;
-  /** Phiên bản chính thức hiện hành — trình chiếu mở đúng bản này. Thiếu → coi như `null`. */
+  /** Phiên bản chính thức hiện hành — tab Xem mở đúng bản này. Thiếu → coi như `null`. */
   officialVersionId?: string | null;
   /** Yêu cầu duyệt đang chờ của bản vẽ. */
   pendingApprovalId?: string | null;
@@ -287,7 +286,7 @@ export const STATUS_KEY: Record<DiagramStatus, string> = {
   pending: 'diagrams.status.pending',
 };
 
-/** "Chính thức v3" khi biết số phiên bản chính thức (Q-23); không thì nhãn trạng thái thường. */
+/** "#3 · Chính thức" khi biết số phiên bản chính thức (Q-23); không thì nhãn trạng thái thường. */
 export function statusLabel(node: DiagramNode, t: (key: string, options?: Record<string, unknown>) => string): string {
   return diagramStatusLabel(t, node.status, node.officialSeq);
 }
@@ -355,8 +354,6 @@ export interface CommentThread extends CommentRow {
 export interface Publications {
   officialVersionId: string | null;
   publishedVersionIds: string[];
-  /** Mỗi lần phát hành, cũ trước — thanh trượt thời gian. Thiếu → coi như rỗng. */
-  events?: PublicationEvent[];
 }
 
 /** `GET /diagrams/:id/compare?from=&to=` — tô màu theo ô trên ảnh xem của bản `to`. */

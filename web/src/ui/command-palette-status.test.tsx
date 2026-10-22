@@ -57,6 +57,8 @@ describe('Tìm nhanh — chip trạng thái cuối', () => {
     const devices = await screen.findByRole('group', { name: 'Thiết bị' });
     expect(within(devices).getByRole('option', { name: /^SW-E2E-OLD/ })).toHaveTextContent('Đã thanh lý');
     expect(within(devices).getByRole('option', { name: /^SW-E2E-NEW/ })).not.toHaveTextContent('Đã');
+    // ST-05: hồ sơ đang dùng lên trước, đã thanh lý xuống cuối nhóm — server trả máy cũ trước.
+    expect(within(devices).getAllByRole('option').map((opt) => opt.getAttribute('aria-label') ?? opt.textContent).slice(0, 2).map((name) => name?.slice(0, 10))).toEqual(['SW-E2E-NEW', 'SW-E2E-OLD']);
     const accounts = await screen.findByRole('group', { name: 'Tài khoản dịch vụ' });
     expect(within(accounts).getByRole('option', { name: /^VPN-E2E-01/ })).toHaveTextContent(
       'Đã ngừng dùng',

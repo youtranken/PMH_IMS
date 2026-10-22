@@ -133,20 +133,20 @@ beforeEach(() => narrow(false));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Bản đồ — gốc là băng, con là khu, cháu là ô', () => {
-  it('băng gốc: loại, tên, "v8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong", trạng thái CHỮ; khu và ô đúng chỗ', async () => {
+  it('băng gốc: loại, tên, "#8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong", trạng thái CHỮ; khu và ô đúng chỗ', async () => {
     routeFetch({});
     renderScreen('/diagrams');
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     const banner = within(map).getByRole('button', { name: /^Tổng công ty Toàn công ty E2E/ });
     expect(banner).toHaveTextContent('Tổng công ty');
-    expect(banner).toHaveTextContent('v8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong');
-    expect(banner).toHaveTextContent('Chính thức v8');
+    expect(banner).toHaveTextContent('#8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong');
+    expect(banner).toHaveTextContent('#8 · Chính thức');
     const t2Tiles = within(map).getByRole('list', { name: 'Bản vẽ trong "Tầng 2 E2E"' });
     const tiles = within(t2Tiles).getAllByRole('listitem');
     expect(tiles.map((li) => li.querySelector('.dmap-tile-name')?.textContent ?? li.textContent)).toEqual(['Phòng server E2E', 'Kế toán E2E', '+ Bản vẽ con vào Tầng 2 E2E']);
-    // Trạng thái có chữ, không chỉ màu; meta ngắn "v12 · 3 Bản nháp".
+    // Trạng thái có chữ, không chỉ màu; meta ngắn "#12 · 3 Bản nháp".
     expect(tiles[0]).toHaveTextContent('Chính thức · có bản nháp');
-    expect(tiles[0]).toHaveTextContent('v12 · 3 Bản nháp');
+    expect(tiles[0]).toHaveTextContent('#12 · 3 Bản nháp');
     expect(tiles[0]).toHaveAttribute('data-tone', 'warn');
     expect(tiles[1]).toHaveTextContent('Chờ duyệt');
     expect(tiles[1]).toHaveAttribute('data-tone', 'info');
@@ -189,6 +189,35 @@ describe('Bản đồ — gốc là băng, con là khu, cháu là ô', () => {
   });
 });
 
+/** UX-E07: hàng chờ duyệt bản vẽ nằm ở màn Sơ đồ mạng — nav "Sơ đồ mạng" mang badge, bấm là tới đây. */
+describe('Khối "Bản vẽ chờ duyệt"', () => {
+  const QUEUE = [
+    { approvalId: 'p1', diagramId: 'kt', name: 'Kế toán E2E', requester: 'tv@pmh.com.vn', requesterName: 'Thành viên E2E', seq: 4, submittedAt: '2026-10-05T01:00:00Z' },
+  ];
+
+  it('Admin/SA thấy bản vẽ đang chờ mình duyệt, link mở thẳng bản vẽ', async () => {
+    routeFetch({ '/api/v1/diagrams/reviews/pending': () => jsonResponse(200, QUEUE) });
+    renderScreen('/diagrams');
+    const block = await screen.findByRole('heading', { name: 'Bản vẽ chờ duyệt · 1' });
+    const card = block.closest('section') as HTMLElement;
+    expect(within(card).getByRole('link', { name: 'Mở Kế toán E2E' })).toHaveAttribute('href', '/diagrams/kt');
+    expect(card).toHaveTextContent('Phiên bản #4');
+    expect(card).toHaveTextContent('Thành viên E2E gửi lúc');
+  });
+
+  it('không có bản vẽ nào chờ thì không bày khối; Thành viên không hỏi hàng chờ', async () => {
+    const fetchMock = routeFetch({ '/api/v1/diagrams/reviews/pending': () => jsonResponse(200, []) });
+    const view = renderScreen('/diagrams');
+    await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(screen.queryByRole('heading', { name: /Bản vẽ chờ duyệt/ })).toBeNull();
+    view.unmount();
+    fetchMock.mockClear();
+    renderScreen('/diagrams', MEMBER);
+    await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/reviews/pending'))).toBe(false);
+  });
+});
+
 describe('Dải "Cần làm" và ô tìm', () => {
   it('đếm nháp / chờ duyệt / lệch kho; bấm chip thì nút không khớp mờ đi (không biến mất), ?todo= trong URL', async () => {
     routeFetch({});
@@ -206,7 +235,7 @@ describe('Dải "Cần làm" và ô tìm', () => {
     const sv = within(map).getByRole('button', { name: /^Phòng server E2E/ }).closest('li');
     expect(kt).not.toHaveAttribute('data-dim');
     expect(sv).toHaveAttribute('data-dim', 'true');
-    await user.click(screen.getByRole('button', { name: 'Bỏ lọc' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa bộ lọc' }));
     expect(location).not.toContain('todo=');
   });
 
@@ -234,6 +263,18 @@ describe('Dải "Cần làm" và ô tìm', () => {
     const found = await screen.findByRole('link', { name: 'SW-E2E-01 → "Phòng server E2E"' });
     expect(found).toHaveAttribute('href', '/diagrams/sv?focus=m1');
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/diagrams/find?q=phong+server'))).toBe(true);
+  });
+
+  // ST-07: lọc không ra bản vẽ nào thì cả bản đồ mờ kèm một dòng chữ nhạt — nói rõ và cho nút gỡ.
+  it('tìm không khớp bản vẽ nào: khung rỗng nói từ đã gõ + nút "Xóa bộ lọc"; không bày bản đồ mờ', async () => {
+    routeFetch({ '/api/v1/diagrams/find': () => jsonResponse(200, []) });
+    renderScreen('/diagrams?q=zzzz');
+    expect(await screen.findByText('Không có bản vẽ nào khớp "zzzz".')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Bản đồ bản vẽ' })).toBeNull();
+    expect(screen.queryByText(/Đang lọc: 0/)).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Xóa bộ lọc' }));
+    expect(location).not.toContain('q=');
+    expect(await screen.findByRole('region', { name: 'Bản đồ bản vẽ' })).toBeInTheDocument();
   });
 });
 
@@ -279,6 +320,33 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(aside.querySelector('.dpanel-top')).toBeNull();
   });
 
+  // PW-B23: "Chưa vẽ" đã là trạng thái — dòng "Chưa lưu lần nào" chỉ lặp lại; chưa vẽ thì việc
+  // chính là Sửa, không phải mở xem một bản vẽ trống.
+  it('bản vẽ chưa vẽ: không lặp "Chưa lưu lần nào"; Sửa là nút chính', async () => {
+    const LONE = node('lone', null, 'Một mình E2E');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(String(input).endsWith('/api/v1/diagrams') ? jsonResponse(200, [LONE]) : jsonResponse(404, { code: 'NOT_FOUND' })),
+      ),
+    );
+    renderScreen('/diagrams?node=lone');
+    const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
+    expect(within(map).getByText('Chưa vẽ')).toBeInTheDocument();
+    expect(screen.queryByText('Chưa lưu lần nào')).toBeNull();
+    const aside = await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    expect(within(aside).getByRole('button', { name: 'Sửa' })).toHaveClass('primary');
+    expect(within(aside).getByRole('button', { name: 'Mở xem' })).not.toHaveClass('primary');
+  });
+
+  it('bản vẽ đã có nội dung: Mở là nút chính, Sửa là nút thường', async () => {
+    routeFetch({});
+    renderScreen('/diagrams?node=t1');
+    const aside = await screen.findByRole('complementary', { name: 'Bản vẽ đang chọn' });
+    expect(await within(aside).findByRole('button', { name: 'Mở bản chính thức' })).toHaveClass('primary');
+    expect(within(aside).getByRole('button', { name: 'Sửa' })).not.toHaveClass('primary');
+  });
+
   it('bấm tab bản vẽ khác: panel đổi sang nó, ?node= đổi theo', async () => {
     routeFetch({});
     renderScreen('/diagrams?node=sv');
@@ -315,7 +383,7 @@ describe('Panel bản vẽ đang chọn', () => {
     await user.click(within(drafts).getByRole('checkbox', { name: 'Chọn nháp #14' }));
     await user.click(within(drafts).getByRole('button', { name: 'Xóa 2 bản nháp' }));
     const confirm = await screen.findByRole('dialog', { name: 'Bỏ 2 bản nháp của "Phòng server E2E"?' });
-    expect(confirm).toHaveTextContent('Xóa vĩnh viễn 2 lần lưu #14–#15, giữ bản chính thức v12, cùng các lần lưu trước #14.');
+    expect(confirm).toHaveTextContent('Xóa vĩnh viễn 2 lần lưu #14–#15, giữ bản chính thức #12, cùng các lần lưu trước #14.');
     await user.click(within(confirm).getByRole('button', { name: 'Bỏ bản nháp' }));
     expect(await screen.findByText('Đã bỏ 2 bản nháp (#14–#15) của "Phòng server E2E".')).toBeInTheDocument();
     const calls = fetchMock.mock.calls as unknown as Calls;
@@ -395,17 +463,17 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(published).toHaveTextContent('Giữ mãi, không xóa');
     const rows = within(published).getAllByRole('listitem');
     expect(rows).toHaveLength(4);
-    expect(rows[0]).toHaveTextContent('v12');
+    expect(rows[0]).toHaveTextContent('#12');
     expect(rows[0]).toHaveTextContent('Đang dùng');
-    expect(rows[2]).toHaveTextContent('v10 · “Trước khi đổi ISP”');
+    expect(rows[2]).toHaveTextContent('#10 · "Trước khi đổi ISP"');
     const user = userEvent.setup();
     await user.click(within(published).getByRole('button', { name: 'Xem thêm 2 phiên bản cũ' }));
     expect(within(published).getAllByRole('listitem')).toHaveLength(6);
-    await user.click(within(rows[1]).getByRole('button', { name: 'Thêm thao tác với v11' }));
+    await user.click(within(rows[1]).getByRole('button', { name: 'Thêm thao tác với #11' }));
     const names = (await screen.findAllByRole('menuitem')).map((el) => el.textContent);
     expect(names).toEqual(['Đặt tên', 'Khôi phục', 'Khôi phục làm chính thức']);
     await user.keyboard('{Escape}');
-    await user.click(within(rows[1]).getByRole('button', { name: 'So sánh v11 với bản mới nhất' }));
+    await user.click(within(rows[1]).getByRole('button', { name: 'So sánh #11 với bản mới nhất' }));
     expect(location).toBe('/diagrams/sv?version=v15&compare=v11');
   });
 
@@ -431,7 +499,7 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(await screen.findByRole('region', { name: 'Nháp chưa phát hành · 3' })).toBeInTheDocument();
   });
 
-  it('menu ⋮ của bản vẽ: Thành viên trình chiếu + thêm con (+ Xóa hẳn bản mình tạo chưa phát hành); SA thêm đổi tên / lưu trữ', async () => {
+  it('menu ⋮ của bản vẽ: Thành viên thêm con (+ Xóa hẳn bản mình tạo chưa phát hành); SA thêm đổi tên / lưu trữ; không còn Trình chiếu (Q-32)', async () => {
     const menuNames = async () =>
       (await screen.findAllByRole('menuitem')).map((el) => {
         const copy = el.cloneNode(true) as HTMLElement;
@@ -442,19 +510,15 @@ describe('Panel bản vẽ đang chọn', () => {
     const view = renderScreen('/diagrams?node=r1', MEMBER);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));
-    // Nhánh chưa có bản chính thức nào: "Trình chiếu" tắt kèm lý do, không mời bấm ra màn trống (D-06).
-    expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Xóa hẳn']);
-    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toBeDisabled();
-    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toHaveTextContent('Nhánh chưa có bản chính thức nào');
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con', 'Xóa hẳn']);
     view.unmount();
     renderScreen('/diagrams?node=lt', MEMBER);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Lễ tân E2E' }));
-    expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con']);
-    expect(screen.getByRole('menuitem', { name: 'Trình chiếu' })).toBeEnabled();
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con']);
     await user.keyboard('{Escape}');
     renderScreen('/diagrams?node=r1', ME);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với Tủ R1 E2E' }));
-    expect(await menuNames()).toEqual(['Trình chiếu', 'Thêm bản vẽ con', 'Đổi tên / chuyển nhánh', 'Lưu trữ', 'Xóa hẳn']);
+    expect(await menuNames()).toEqual(['Thêm bản vẽ con', 'Đổi tên / chuyển chỗ', 'Lưu trữ', 'Xóa hẳn']);
   });
 
   it('Xóa hẳn: gõ đúng tên mới bật nút; gửi tên lên server', async () => {
@@ -484,12 +548,14 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(kt).toHaveTextContent('4 Bản nháp');
   });
 
-  it('hai nút thêm cạnh nhau nói rõ đích: "+ Bản vẽ con vào <khu>" và "+ Khu mới trong <gốc>"', async () => {
+  // PW-B22: một từ "bản vẽ con" cho mọi lối thêm; không còn ô "+ Khu mới" kề ô thêm của khu cuối.
+  it('ô thêm trong khu nói rõ đích; gốc đã có khu không còn ô "+ Khu mới"', async () => {
     routeFetch({});
     renderScreen('/diagrams');
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     expect(within(map).getByRole('button', { name: 'Thêm bản vẽ con vào "Tầng 1 E2E"' })).toHaveTextContent('+ Bản vẽ con vào Tầng 1 E2E');
-    expect(within(map).getByRole('button', { name: 'Thêm bản vẽ con vào "Toàn công ty E2E"' })).toHaveTextContent('+ Khu mới trong Toàn công ty E2E');
+    expect(within(map).queryByRole('button', { name: 'Thêm bản vẽ con vào "Toàn công ty E2E"' })).toBeNull();
+    expect(within(map).queryByText(/Khu mới/)).toBeNull();
   });
 
   it('"+ Bản vẽ con" trên khu mở hộp thêm con đúng bản cha', async () => {

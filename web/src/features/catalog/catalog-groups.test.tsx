@@ -89,7 +89,10 @@ describe('Danh mục — 3 nhóm (Q-27)', () => {
     const card = await screen.findByRole('region', { name: 'Khai trước khi thêm thiết bị' });
     expect(await within(card).findByRole('button', { name: /^Site/ })).toHaveTextContent('1 · đủ');
     expect(within(card).getByRole('button', { name: /^Tủ mạng/ })).toHaveTextContent('chưa có');
-    expect(await within(card).findByRole('button', { name: /^Model thiết bị/ })).toHaveTextContent('1 chưa có ảnh');
+    // UX-E40: thiếu ảnh model là ghi chú, không phải "chưa khai" — ô vẫn đủ (không giữ thẻ mở mãi).
+    const model = await within(card).findByRole('button', { name: /^Model thiết bị/ });
+    await vi.waitFor(() => expect(model).toHaveTextContent('· 1 chưa có ảnh'));
+    expect(model).toHaveAttribute('data-ok', 'true');
     await userEvent.setup().click(within(card).getByRole('button', { name: /^Tủ mạng/ }));
     expect(screen.getByLabelText('địa chỉ')).toHaveTextContent('tab=cabinet');
   });

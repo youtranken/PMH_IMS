@@ -644,7 +644,7 @@ Biên bản: `_bmad-output/brainstorming/brainstorm-so-do-mang-2026-10-02/.memlo
     gắn trong cùng lượt (dữ liệu cũ tự sạch khi có người sửa, không sửa ngầm lúc chưa ai đụng).
   - **Bản vẽ chờ duyệt phải có chỗ cho người duyệt thấy** (D-07): mục "Sơ đồ mạng" trên menu mang
     số bản vẽ đang chờ Admin/SA này duyệt (không tính yêu cầu do chính họ gửi — bốn mắt); màn
-    "Duyệt" có khối "Bản vẽ chờ duyệt" (tên bản vẽ, người gửi, lúc gửi, bấm là mở). Bản đồ /diagrams
+    "Duyệt" có khối "Bản vẽ chờ duyệt" (tên bản vẽ, người gửi, lúc gửi, bấm là mở; nay ở màn Sơ đồ mạng — Q-32). Bản đồ /diagrams
     giữ chip "Chờ duyệt" sẵn có. Chỉ tên / trạng thái — không nội dung, không hỏi mã sơ đồ (cùng
     mức với bản đồ).
   - **Tìm nhanh (Ctrl+K) có nhóm Sơ đồ** (D-08): tên bản vẽ khớp, và "mã máy → bản vẽ có máy đó"
@@ -1346,6 +1346,31 @@ Member thấy như nhau.
   `me` kế tiếp.
 - **Thư không đổi:** thư hạn (người nhận do SA khai từng luật), thư nhắc ISO (người phụ trách + SA /
   Admin), thư sơ đồ và thư mở két vẫn gửi như cũ.
+
+### Q-32 · Soát giao diện doanh nghiệp (21/10/2026, chủ dự án duyệt mockup)
+
+Chủ dự án duyệt mockup bố cục ngày 21/10/2026 và cho làm toàn bộ kế hoạch soát giao diện. Mục nào
+đổi một quyết định cũ thì ghi ở đây, kèm quyết định bị đổi.
+
+- **Dải nút chọn một trong FORM xuống hàng khi hẹp** (đổi một phần Q-24). Vẫn trải hết bề ngang
+  ô và chia đều như Q-24, nhưng không đủ chỗ (điện thoại, phiếu 0206 có 5 lựa chọn) thì xuống hàng
+  thành lưới các ô bằng nhau, thay vì cuộn ngang làm mất lựa chọn cuối ("Other") và cắt chữ ("In
+  Pro…"). Dải nút LỌC trên thanh công cụ vẫn cuộn ngang như cũ.
+- **Bỏ "Dòng thời gian" của bản vẽ** (đổi một phần FR-040, UX-E03). Thanh trượt "bản chính thức
+  hiệu lực ngày X" là cách xem thứ ba cho cùng một câu hỏi: danh sách "Đã phát hành · n" và hộp
+  Phiên bản đã trả lời ngày nào bản nào. Phiên bản, so sánh, khôi phục của FR-040 giữ nguyên.
+- **Bỏ "Trình chiếu" cây bản vẽ** (đổi một phần FR-046, UX-E04). Ít dùng và dễ lẫn với "Bản trình
+  bày". Tìm, chỉ đường, lớp, điện thoại chỉ xem của FR-046 giữ nguyên.
+- **Bỏ ô "Tra IP hoặc máy…" ở màn Địa chỉ IP** (UX-E19). Trùng Tìm nhanh (Ctrl+K, cùng API, cùng
+  đích — tra được cả IP trống). Ô "Lọc trong dải" chỉ đường khi gõ đủ một IP của dải khác.
+- **Khối "Bản vẽ chờ duyệt" dời từ màn Duyệt sang đầu màn Sơ đồ mạng** (đổi một phần D-07,
+  UX-E07). Màn Duyệt chỉ còn yêu cầu mở két; mục "Sơ đồ mạng" trên menu vẫn mang số bản vẽ chờ
+  và nay dẫn thẳng tới khối đó. Ở tab "Chờ duyệt" của màn Duyệt, thẻ không đeo lại huy hiệu
+  "Chờ duyệt"; huy hiệu "Chờ lâu" giữ nguyên.
+- **Giao diện đổi ở một nơi trên thanh công cụ: menu tài khoản** (đổi một phần Q-20, UX-E18).
+  Topbar bỏ nút sáng/tối; menu tài khoản chỉ còn "Hồ sơ của tôi · Giao diện · Đăng xuất" (bỏ hai
+  mục "Đổi mật khẩu", "Xác thực 2 lớp" cùng dẫn vào Hồ sơ). Hồ sơ vẫn có thẻ Giao diện. Nút tài
+  khoản mang một mũi tên lên, cùng màu ở mọi giao diện (PW-C26).
 
 ### Q-09 · Tài liệu
 

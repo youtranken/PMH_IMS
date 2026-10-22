@@ -5,7 +5,7 @@ import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 
 /*
- * Dấu tích "đã lưu" trên nút Lưu chỉ thuộc về lượt bấm CHÍNH nút đó. Bấm "Ghi rồi khai cổng kế
+ * Dấu tích "đã lưu" trên nút Lưu chỉ thuộc về lượt bấm CHÍNH nút đó. Bấm "Lưu rồi khai cổng kế
  * tiếp" thì hộp ở lại để khai cổng sau — dấu tích nhảy lên nút Lưu đọc ra là đã lưu và đóng.
  */
 
@@ -58,13 +58,13 @@ describe('PortFormDialog — dấu tích ở đúng nút vừa bấm', () => {
     delete document.documentElement.dataset.motion;
   });
 
-  it('"Ghi rồi khai cổng kế tiếp" → nút Lưu KHÔNG hiện dấu tích', async () => {
+  it('"Lưu rồi khai cổng kế tiếp" → nút Lưu KHÔNG hiện dấu tích', async () => {
     document.documentElement.dataset.motion = 'on';
     mockFetch();
     renderDialog();
     const user = userEvent.setup();
     await user.type(portInput(), 'Gi1/0/1');
-    await user.click(screen.getByRole('button', { name: 'Ghi rồi khai cổng kế tiếp' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu rồi khai cổng kế tiếp' }));
     await waitFor(() => expect(portInput()).toHaveValue('Gi1/0/2'));
     expect(screen.getByRole('button', { name: /^Lưu$/ })).not.toHaveAttribute('data-done');
   });
@@ -130,7 +130,7 @@ describe('PortFormDialog ở màn sơ đồ (device = null)', () => {
       </ToastProvider>,
     );
     const user = userEvent.setup();
-    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ bản ghi' });
+    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ dòng này' });
     const b = screen.getByRole('group', { name: 'Đầu B — đầu kia' });
     // Dải chọn loại đầu nằm TRONG Đầu B, có nhãn.
     expect(within(b).getByRole('radiogroup', { name: 'Đầu kia là' })).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('PortFormDialog ở màn sơ đồ (device = null)', () => {
       </ToastProvider>,
     );
     const user = userEvent.setup();
-    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ bản ghi' });
+    const a = await screen.findByRole('group', { name: 'Đầu A — máy giữ dòng này' });
     const b = screen.getByRole('group', { name: 'Đầu B — đầu kia' });
     await user.click(within(a).getByRole('button', { name: 'SW-E2E-01' }));
     await user.type(portInput(), 'Gi1/0/5');

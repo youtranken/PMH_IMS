@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Chevron } from './chevron';
 import { Select } from './select';
 import { clampPage, lastPageOf, pageWindow } from '@/lib/paging';
+import { formatCount } from '@/lib/format';
 
 /**
  * Phân trang server-side dùng chung (AD-15) — đi cặp với API `{ items, total }`
@@ -11,6 +12,9 @@ import { clampPage, lastPageOf, pageWindow } from '@/lib/paging';
 
 /** Số dòng một trang cho người dùng chọn. 10 cho điện thoại, 100 cho lúc soi cả kho. */
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
+
+/** Cỡ trang mặc định của mọi danh sách (TB-15) — một chỗ, không lặp `DEFAULT_LIMIT` ở từng màn. */
+export const DEFAULT_PAGE_SIZE = 20;
 
 export function Pagination({
   page: requestedPage,
@@ -58,7 +62,7 @@ export function Pagination({
   return (
     <nav className="pager" aria-label={t('common.page')}>
       <span className="pager-info muted">
-        {from}–{to} {t('common.of')} {total} {t('common.rows')}
+        {formatCount(from)}–{formatCount(to)} {t('common.of')} {formatCount(total)} {t('common.rows')}
       </span>
 
       {onLimitChange ? (
@@ -84,6 +88,9 @@ export function Pagination({
         </span>
       ) : null}
 
+      {/* Một trang thì ‹ "Trang 1/1" › không bấm được gì (TB-15): chỉ còn dòng đếm. */}
+      {lastPage > 1 ? (
+      <>
       <button
         type="button"
         className="btn sm pager-nav"
@@ -94,7 +101,7 @@ export function Pagination({
         <Chevron direction="left" />
       </button>
       <span className="pager-page">
-        {t('common.page')} {page}/{lastPage}
+        {t('common.page')} {formatCount(page)}/{formatCount(lastPage)}
       </span>
       {pages.length > 0 ? (
         <ol className="pager-pages">
@@ -115,7 +122,7 @@ export function Pagination({
                     if (item !== page) onPageChange(item);
                   }}
                 >
-                  {item}
+                  {formatCount(item)}
                 </button>
               </li>
             ),
@@ -131,6 +138,8 @@ export function Pagination({
       >
         <Chevron direction="right" />
       </button>
+      </>
+      ) : null}
       {needsJump ? (
         <PageJump lastPage={lastPage} onJump={(target) => onPageChange(target)} />
       ) : null}
@@ -171,7 +180,7 @@ function PageJump({ lastPage, onJump }: { lastPage: number; onJump: (page: numbe
         value={value}
         onChange={(event) => setValue(event.target.value)}
       />
-      <button type="submit" className="btn sm" aria-label={t('pagination.jumpGoLabel')}>
+      <button type="submit" className="btn" aria-label={t('pagination.jumpGoLabel')}>
         {t('pagination.jumpGo')}
       </button>
     </form>

@@ -49,9 +49,16 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
    * DUYỆT (ai xin, đối tượng nào, lý do, ai quyết), không cột nào chạm giá trị trong két, và
    * FR-025 đòi nộp được cho auditor. Ngoại lệ khai ở đây, ngay cạnh luật, chứ không nằm trong
    * một chú thích ở file khác.
+   *
+   * NGOẠI LỆ THỨ HAI: `vault-access.controller.ts` có `export.xlsx` — ma trận QUYỀN (ai, nhóm nào,
+   * tầng, ai gán, lúc nào) để rà soát định kỳ (UX-E28). Đó là cấu hình, không cột nào chạm giá trị
+   * trong két; `vault-access-export.spec.ts` ghim đúng bộ cột.
    */
   it('không có route xuất/tải hàng loạt — quét MỌI controller của module', () => {
-    const ALLOWED = new Map([['break-glass.controller.ts', ["@Get('export.xlsx')"]]]);
+    const ALLOWED = new Map([
+      ['break-glass.controller.ts', ["@Get('export.xlsx')"]],
+      ['vault-access.controller.ts', ["@Get('export.xlsx')"]],
+    ]);
     const controllers = readdirSync(__dirname).filter((file) => file.endsWith('.controller.ts'));
 
     // Chốt sàn: quét 0 file thì bài này xanh mà chẳng kiểm gì — đúng bẫy mà chốt sàn ở cuối

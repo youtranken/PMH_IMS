@@ -25,13 +25,13 @@ const ROW = {
   status: 'active',
 };
 
-function mockFetch(status: 'active' | 'disabled') {
+function mockFetch(status: 'active' | 'disabled', endDate: string | null = null) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/v1/service-accounts/sa-1') {
-        return Promise.resolve(jsonResponse(200, { ...ROW, status }));
+        return Promise.resolve(jsonResponse(200, { ...ROW, status, endDate }));
       }
       if (url.startsWith('/api/v1/catalog')) return Promise.resolve(jsonResponse(200, {}));
       return Promise.resolve(jsonResponse(200, []));
@@ -97,6 +97,25 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
   });
 });
 
+// PW-A14: TK dịch vụ có hạn mà muốn gia hạn phải sang màn Sắp hết hạn.
+describe('Trang hồ sơ TKDV — Gia hạn tại chỗ', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('đang dùng, có hạn: nút "Gia hạn" mở hộp gia hạn đúng mã', async () => {
+    mockFetch('active', '2026-12-31');
+    renderAs('sa');
+    await userEvent.click(await screen.findByRole('button', { name: 'Gia hạn' }));
+    expect(await screen.findByRole('dialog', { name: /^Gia hạn — VPN-E2E-01/ })).toBeInTheDocument();
+  });
+
+  it('không có hạn: không có nút Gia hạn', async () => {
+    mockFetch('active', null);
+    renderAs('sa');
+    await screen.findByRole('button', { name: 'Sửa hồ sơ' });
+    expect(screen.queryByRole('button', { name: 'Gia hạn' })).toBeNull();
+  });
+});
+
 describe('Trang hồ sơ TKDV — thanh tab (NET-075)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -116,7 +135,7 @@ describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
     renderAs('sa');
     const strip = await screen.findByRole('group', { name: 'Tóm tắt tài khoản' });
     expect(strip).toHaveTextContent('Tên đăng nhậpketoan');
-    expect(screen.getByRole('button', { name: 'Chép tên đăng nhập' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sao chép tên đăng nhập' })).toBeInTheDocument();
     // VPN để trống dải IP là mở cho mọi IP — huy hiệu nằm ở ô thứ tư.
     expect(strip).toHaveTextContent('Mọi IP');
     // Chưa có người phụ trách: ô vẫn đứng, ghi "chưa khai".
@@ -125,7 +144,7 @@ describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
     expect(screen.getByText('Đang dùng')).toBeInTheDocument();
     const info = screen.getByRole('group', { name: 'Thông tin' });
     expect(info).toHaveTextContent('Nhóm VPNchưa khai');
-    expect(info).toHaveTextContent('Phòng banKế toán');
+    expect(info).toHaveTextContent('Người dùng / phòng banKế toán');
     // Chỉ đếm ô của khối Thông tin: Nhóm VPN, Ghi chú. Người phụ trách trống ở dải 4 ô không tính.
     expect(screen.getByRole('button', { name: 'Bổ sung 2 ô còn thiếu' })).toBeInTheDocument();
   });
@@ -145,7 +164,7 @@ describe('Trang hồ sơ TKDV — khuôn C (Q-27)', () => {
     );
     renderAs('sa');
     const info = await screen.findByRole('group', { name: 'Thông tin' });
-    expect(info).toHaveTextContent('Phòng banchưa khai');
+    expect(info).toHaveTextContent('Người dùng / phòng banchưa khai');
     expect(screen.getByRole('button', { name: 'Bổ sung 1 ô còn thiếu' })).toBeInTheDocument();
   });
 });

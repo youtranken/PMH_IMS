@@ -10,7 +10,6 @@ import type { Me } from '@/lib/me';
 import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExpiryBadge } from '@/ui/expiry-badge';
-import { LocationText } from '@/ui/location-text';
 import { FilterBar } from '@/ui/filter-bar';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -30,6 +29,7 @@ import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand
 import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
+import { DeviceBulkBar } from './device-bulk-bar';
 import { DeviceRowActions } from './device-actions';
 import { devicePhotoSrc } from './device-diagram-look';
 import { deviceModelPhotoSrc } from '@/lib/device-models';
@@ -44,8 +44,9 @@ import {
 } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { useOpenFromUrl } from '@/ui/use-open-from-url';
+import { useRowSelection } from '@/ui/use-row-selection';
 
-const DEFAULT_LIMIT = 20;
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
    TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `status` vẫn giữ union hẹp cho chỗ dùng. */
@@ -83,7 +84,6 @@ export function DevicesScreen({ me }: { me: Me }) {
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
@@ -104,6 +104,9 @@ export function DevicesScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const picked = useRowSelection();
+  // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
+  useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
   const [cloning, setCloning] = useState<DeviceRow | null>(null);
@@ -158,6 +161,7 @@ export function DevicesScreen({ me }: { me: Me }) {
     (cabinet) => !filters.siteId || cabinet.siteId === filters.siteId,
   );
   const rows = devices.data?.items ?? [];
+  const pickedIds = rows.filter((row) => picked.selected.has(row.id)).map((row) => row.id);
 
   /**
    * Máy nào đang cài license — hỏi MỘT lượt cho cả trang (không N+1) để biết dòng nào đáng
@@ -254,7 +258,18 @@ export function DevicesScreen({ me }: { me: Me }) {
       {
         id: 'location',
         header: t('devices.locationCol'),
-        cell: ({ row }) => <LocationText device={row.original} />,
+        /* Chữ thường, một dòng, cắt "…" và đủ chữ ở `title` (TB-18): mono gãy thành hai dòng làm
+           dòng này cao hơn dòng khác. Trang chi tiết vẫn `LocationText`. */
+        cell: ({ row }) => {
+          const label = row.original.siteCode
+            ? [locationLabel(row.original), rackUnitLabel(row.original.rackUStart, row.original.rackUSize)].filter(Boolean).join(' · ')
+            : locationLabel(row.original);
+          return (
+            <span className="cell-clip" title={label}>
+              {label}
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'status',
@@ -308,7 +323,7 @@ export function DevicesScreen({ me }: { me: Me }) {
           .filter(Boolean)
           .join(' · ') || null,
       aside: (item) => (
-        <ExpiryBadge end={item.warrantyEnd} notCounted={item.status === 'retired'} />
+        <ExpiryBadge end={item.warrantyEnd} notCounted={item.status === 'retired'} subject={t('devices.warrantyShort')} />
       ),
     }),
     [t, ipsOf],
@@ -318,7 +333,6 @@ export function DevicesScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('devices.title')}
-        subtitle={t('devices.subtitle')}
         actions={
           <>
             {/* File mẫu là bước con của Nhập nên nằm TRONG hộp nhập, không đứng ngang hàng ở
@@ -487,6 +501,8 @@ export function DevicesScreen({ me }: { me: Me }) {
             stackOnMobile
             stickyActions
             mobileCard={mobileCard}
+            /* Tick nhiều máy rồi làm một lượt (UX-E25): đổi trạng thái, đổi người dùng / phòng ban. */
+            selection={{ ...picked, rowLabel: (item) => t('devices.selectOne', { code: item.code }) }}
             rowClassName={(item) => (item.id === flashId ? 'row-flash' : '')}
             /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
                phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */
@@ -514,6 +530,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             /* Bấm vào dòng là mở hồ sơ — nhắm trúng mã 12px là quá khó. Ô Mã vẫn là `<Link>`
                thật cho Ctrl+bấm / mở tab mới; `DataTable` bỏ qua lượt bấm rơi vào link/nút. */
             onRowClick={(item) => navigate(PATHS.device(item.id))}
+            rowHref={(item) => PATHS.device(item.id)}
             expandLabel={(item, open) => {
               const count = installedCounts.data?.[item.id];
               const what = count
@@ -540,6 +557,19 @@ export function DevicesScreen({ me }: { me: Me }) {
             total={devices.data?.total ?? 0}
             onPageChange={setPage}
           />
+          {/* Lô chỉ gồm máy ĐANG BÀY ở trang này: sang trang / đổi bộ lọc thì máy đã tick mà khuất
+              không bị đổi theo (UX-E25). */}
+          {pickedIds.length > 0 ? (
+            <DeviceBulkBar
+              ids={pickedIds}
+              csrfToken={me.csrfToken}
+              onClear={picked.clear}
+              onDone={() => {
+                picked.clear();
+                void queryClient.invalidateQueries({ queryKey: ['devices'] });
+              }}
+            />
+          ) : null}
         </div>
       )}
 
@@ -557,6 +587,7 @@ export function DevicesScreen({ me }: { me: Me }) {
       {creating ? (
         <DeviceForm
           device={null}
+          presetSiteId={filters.siteId || undefined}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
           onSaved={(result, options) => {

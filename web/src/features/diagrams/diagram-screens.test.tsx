@@ -73,7 +73,7 @@ describe('Màn mở bản vẽ — nội dung đòi mã phạm vi sơ đồ (AD-
     // Hộp NHỎ (K-04): nói đang mở gì, không đoạn giải thích phạm vi.
     expect(dialog).toHaveTextContent('Nhập mã 6 số để mở bản vẽ "Tổng công ty E2E".');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Hủy' }));
-    expect(await screen.findByText('Nội dung bản vẽ cần mã 2 lớp')).toBeInTheDocument();
+    expect(await screen.findByText('Nội dung bản vẽ cần nhập mã 6 số')).toBeInTheDocument();
     // Tên bản vẽ đọc không cần mã — hiện cả khi nội dung còn khoá.
     expect(screen.getByRole('heading', { level: 1, name: 'Tổng công ty E2E' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nhập mã để mở' })).toBeInTheDocument();
@@ -261,6 +261,25 @@ describe('Lưu khi không có gì đổi (Q-23 05/10)', () => {
   });
 });
 
+// PW-B19: ở điện thoại không có tab Sửa — câu "Chuyển sang tab Sửa…" chỉ một lối không tồn tại.
+describe('Điện thoại: bản vẽ trống không bảo mở tab Sửa', () => {
+  afterEach(() => narrow(false));
+
+  it('chưa có nội dung → "Vẽ trên máy tính." thay "Chuyển sang tab Sửa…"', async () => {
+    narrow(true);
+    const empty = { ...ROOT, status: 'draft' as const, latestVersion: null, officialVersionId: null };
+    routeFetch({
+      '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
+      '/api/v1/diagrams/d1/content': () => jsonResponse(200, { diagram: empty, version: null }),
+      '/api/v1/diagrams/d1': () => jsonResponse(200, empty),
+    });
+    renderScreen('/diagrams/d1');
+    expect(await screen.findByText('Bản vẽ chưa có nội dung')).toBeInTheDocument();
+    expect(screen.getByText('Vẽ trên máy tính.')).toBeInTheDocument();
+    expect(screen.queryByText(/tab Sửa/)).toBeNull();
+  });
+});
+
 describe('Phiên bản dựng tự động chưa có ảnh xem (Dựng lại mặt tủ / Dựng nháp từ sơ đồ cổng)', () => {
   const built = { id: 'v4', seq: 4, summary: 'Dựng lại mặt tủ R1', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null };
 
@@ -383,7 +402,11 @@ describe('Lưu trùng bản mới nhất của người khác (Q-23 05/10)', () 
 describe('Thanh trình xem nói đang xem bản nào', () => {
   const saved = (id: string, seq: number) => ({ id, seq, summary: 'x', label: null, savedBy: 'a', savedByName: null, savedAt: '2026-10-03T01:00:00Z', basedOnVersionId: null, restoredFromSeq: null });
 
-  it('bản nháp mới hơn bản chính thức: "Nháp #2 · chưa phát hành" + nút xem bản chính thức', async () => {
+  /*
+   * UX-E35: nút "Mở bản chính thức" (Q-23) và mọi lối mở không kèm `?version` phải ra bản CHÍNH
+   * THỨC — người trực không được đọc nhầm nháp chưa duyệt. Nháp mới hơn mở bằng "Xem Nháp #2".
+   */
+  it('nháp mới hơn bản chính thức: mặc định mở bản chính thức, có nút "Xem Nháp #2"', async () => {
     const node = { ...ROOT, status: 'official_draft' as const, officialSeq: 1, officialVersionId: 'v1', latestVersion: { id: 'v2', seq: 2, savedAt: '2026-10-03T01:00:00Z', savedBy: 'a' } };
     const fetchMock = routeFetch({
       '/api/v1/diagrams/editor-settings': () => jsonResponse(200, { initTimeoutSeconds: 20, presenceTtlSeconds: 60 }),
@@ -393,10 +416,11 @@ describe('Thanh trình xem nói đang xem bản nào', () => {
     });
     renderScreen('/diagrams/d1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
-    expect(screen.getByText('Nháp #2 · chưa phát hành')).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Xem bản chính thức v1' }));
-    expect(await screen.findByText('Chính thức v1')).toBeInTheDocument();
+    expect(await screen.findByText('#1 · Chính thức')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('versionId=v1'))).toBe(true);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Xem Nháp #2' }));
+    expect(await screen.findByText('Nháp #2 · chưa phát hành')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xem bản chính thức #1' })).toBeInTheDocument();
   });
 
   it('chưa phát hành lần nào: chỉ "Nháp #n · chưa phát hành", không có nút xem bản chính thức', async () => {

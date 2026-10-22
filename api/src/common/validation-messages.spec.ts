@@ -136,7 +136,8 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
   it('MaxLength, IsIn, IsBoolean, IsEmail, Matches đều có câu tiếng Việt', async () => {
     expect(await errorMessagesFor({ code: 'A'.repeat(50) })).toContain('Mã hồ sơ tối đa 10 ký tự.');
     expect(await errorMessagesFor({ status: 'khong-co' })).toContain(
-      'Trạng thái chỉ nhận một trong: active, locked, disabled.',
+      // TX-26: không lộ mã enum (active, locked…) ra cho người dùng.
+      'Trạng thái không nằm trong danh sách cho phép.',
     );
     expect(await errorMessagesFor({ enabled: 'co' })).toContain('Trạng thái bật/tắt chỉ nhận đúng hoặc sai.');
     expect(await errorMessagesFor({ email: 'khong-phai-email' })).toContain('Email không hợp lệ.');

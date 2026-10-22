@@ -1,4 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import type { Response } from 'express';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
+import { dateTimeInTz } from '../../common/today';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { Audited } from '../audit/audited.decorator';
@@ -63,12 +68,47 @@ class IdParamDto {
 @FeatureFree()
 @Controller('api/v1/vault/access')
 export class VaultAccessController {
-  constructor(private readonly access: AccessListService) {}
+  constructor(
+    private readonly access: AccessListService,
+    private readonly excel: ExcelExportService,
+    private readonly config: SystemConfigService,
+  ) {}
 
   @Roles('sa', 'admin')
   @Get()
   list(@Query() query: { memberEmail?: string }) {
     return this.access.list(query.memberEmail?.trim().toLowerCase() || undefined);
+  }
+
+  /**
+   * Rà soát quyền két định kỳ (UX-E28, FR-026): mỗi lời gán một dòng — người, nhóm, tầng, người
+   * gán, ngày gán. Chỉ CẤU HÌNH quyền: không có giá trị két, không có tên ngăn. Cùng mức quyền
+   * với chính ma trận (SA/Admin); lượt xuất để vết trong nhật ký.
+   */
+  @Roles('sa', 'admin')
+  @Audited('vault.access.exported', 'access_list')
+  @Get('export.xlsx')
+  async exportAccess(@Res() res: Response) {
+    const [rules, people, timeZone] = await Promise.all([
+      this.access.list(),
+      this.access.people(),
+      this.config.getString('appTimezone'),
+    ]);
+    const nameOf = new Map(people.map((person) => [person.email, person.fullName]));
+    const buffer = await this.excel.build<(typeof rules)[number]>({
+      sheetName: 'Quyền két',
+      columns: [
+        { header: 'Người', width: 26, value: (r) => nameOf.get(r.memberEmail) ?? r.memberEmail },
+        { header: 'Email', width: 30, value: (r) => r.memberEmail },
+        { header: 'Nhóm đối tượng', width: 30, value: (r) => r.scopeLabel },
+        { header: 'Tầng', width: 14, value: (r) => (r.tier === 'whitelist' ? 'Xem thẳng' : 'Cần duyệt') },
+        { header: 'Người gán', width: 26, value: (r) => nameOf.get(r.grantedBy) ?? r.grantedBy },
+        { header: 'Ngày gán', width: 18, value: (r) => dateTimeInTz(r.createdAt, timeZone) },
+        { header: 'Ghi chú', width: 36, value: (r) => r.note ?? '' },
+      ],
+      rows: rules,
+    });
+    sendXlsx(res, buffer, 'quyen-ket.xlsx');
   }
 
   /**

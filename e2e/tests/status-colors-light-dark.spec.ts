@@ -10,6 +10,7 @@ import {
   resetUsers,
   writeHeaders,
   uniqueStamp,
+  switchTheme,
 } from './helpers';
 
 /**
@@ -136,11 +137,7 @@ function paintOf(target: Locator): Promise<Paint> {
 
 /** Bấm đúng cái nút người dùng bấm, rồi khẳng định theme đã thật sự đổi. */
 async function useTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  const button = page.getByRole('button', {
-    name: theme === 'dark' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng',
-  });
-  if ((await button.count()) > 0) await button.click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await switchTheme(page, theme);
 }
 
 /** Huy hiệu này có phải một huy hiệu THẬT, và có đọc được không — hỏi cả hai. */

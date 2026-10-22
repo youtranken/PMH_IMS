@@ -24,6 +24,8 @@ export interface SoftwareScreenSpec {
   titleKey: string;
   subtitleKey: string;
   addKey: string;
+  /** Tiêu đề hộp Nhập từ Excel của màn (UX-E30). */
+  importTitleKey: string;
   emptyKey: string;
   emptyHintKey: string;
   searchKey: string;
@@ -40,6 +42,7 @@ export const SOFTWARE_SCREENS: Record<SoftwareScreenKey, SoftwareScreenSpec> = {
     titleKey: 'software.title',
     subtitleKey: 'software.subtitle',
     addKey: 'software.add',
+    importTitleKey: 'software.importTitle',
     emptyKey: 'software.empty',
     emptyHintKey: 'software.emptyHint',
     searchKey: 'software.search',
@@ -55,6 +58,7 @@ export const SOFTWARE_SCREENS: Record<SoftwareScreenKey, SoftwareScreenSpec> = {
     titleKey: 'softwareScreens.domains.title',
     subtitleKey: 'softwareScreens.domains.subtitle',
     addKey: 'softwareScreens.domains.add',
+    importTitleKey: 'softwareScreens.domains.importTitle',
     emptyKey: 'softwareScreens.domains.empty',
     emptyHintKey: 'softwareScreens.domains.emptyHint',
     searchKey: 'softwareScreens.domains.search',
@@ -69,6 +73,7 @@ export const SOFTWARE_SCREENS: Record<SoftwareScreenKey, SoftwareScreenSpec> = {
     titleKey: 'softwareScreens.maintenance.title',
     subtitleKey: 'softwareScreens.maintenance.subtitle',
     addKey: 'softwareScreens.maintenance.add',
+    importTitleKey: 'softwareScreens.maintenance.importTitle',
     emptyKey: 'softwareScreens.maintenance.empty',
     emptyHintKey: 'softwareScreens.maintenance.emptyHint',
     searchKey: 'softwareScreens.maintenance.search',
@@ -83,6 +88,7 @@ export const SOFTWARE_SCREENS: Record<SoftwareScreenKey, SoftwareScreenSpec> = {
     titleKey: 'softwareScreens.services.title',
     subtitleKey: 'softwareScreens.services.subtitle',
     addKey: 'softwareScreens.services.add',
+    importTitleKey: 'softwareScreens.services.importTitle',
     emptyKey: 'softwareScreens.services.empty',
     emptyHintKey: 'softwareScreens.services.emptyHint',
     searchKey: 'softwareScreens.services.search',

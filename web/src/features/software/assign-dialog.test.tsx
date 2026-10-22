@@ -108,7 +108,7 @@ describe('AssignDialog — gán nhiều máy một lượt', () => {
     for (const name of ['Hợp đồng', 'Chi phí', 'Ghi chú']) {
       expect(screen.queryByRole('textbox', { name })).toBeNull();
     }
-    expect(screen.getByRole('note')).toHaveTextContent('nút "Sửa" ở dòng của máy đó');
+    expect(screen.getByRole('note')).toHaveTextContent('"Sửa" ở dòng máy đó');
     await userEvent.click(screen.getByRole('button', { name: 'Gán 2 máy' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith([], 2));
     expect(posts.map((body) => body.deviceId)).toEqual(['d1', 'd2']);
@@ -145,7 +145,7 @@ const chipCodes = () =>
     .getAllByRole('listitem')
     .map((item) => item.textContent);
 
-async function quickPick(by: 'Phòng ban' | 'Người sử dụng', value: string) {
+async function quickPick(by: 'Phòng ban' | 'Người dùng', value: string) {
   await userEvent.click(screen.getByRole('radio', { name: by }));
   const label = by === 'Phòng ban' ? 'Tên phòng ban' : 'Tên người sử dụng';
   await userEvent.type(screen.getByRole('combobox', { name: label }), value);
@@ -153,14 +153,14 @@ async function quickPick(by: 'Phòng ban' | 'Người sử dụng', value: strin
 }
 
 describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử dụng (Q-15)', () => {
-  it('ba chế độ Máy | Phòng ban | Người sử dụng — mỗi chế độ chỉ bày đúng ô của nó', async () => {
+  it('ba chế độ Máy | Phòng ban | Người dùng — mỗi chế độ chỉ bày đúng ô của nó', async () => {
     mockFetch();
     render();
     const modes = screen.getByRole('radiogroup', { name: 'Chọn máy theo' });
     expect(within(modes).getAllByRole('radio').map((r) => r.textContent)).toEqual([
       'Máy',
       'Phòng ban',
-      'Người sử dụng',
+      'Người dùng',
     ]);
     expect(within(modes).getByRole('radio', { name: 'Máy' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
@@ -171,7 +171,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
     expect(screen.getByRole('combobox', { name: 'Tên phòng ban' })).toBeInTheDocument();
 
-    await userEvent.click(within(modes).getByRole('radio', { name: 'Người sử dụng' }));
+    await userEvent.click(within(modes).getByRole('radio', { name: 'Người dùng' }));
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
     expect(screen.getByRole('combobox', { name: 'Tên người sử dụng' })).toBeInTheDocument();
   });
@@ -185,7 +185,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     expect(screen.getByText(/Thêm mọi máy đang dùng khớp đúng tên này/)).toBeInTheDocument();
   });
 
-  it('chế độ Người sử dụng gợi ý tên người đang giữ máy', async () => {
+  it('chế độ Người dùng gợi ý tên người đang giữ máy', async () => {
     mockFetch(undefined, {
       items: [
         { id: 'd1', code: 'PC-E2E-01', name: 'Máy 1', assignedTo: 'Chị Bình' },
@@ -194,7 +194,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
       ] as unknown as typeof DEVICES,
     });
     render();
-    await userEvent.click(screen.getByRole('radio', { name: 'Người sử dụng' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Người dùng' }));
     await userEvent.type(screen.getByRole('combobox', { name: 'Tên người sử dụng' }), 'bin');
     expect(await screen.findAllByRole('option')).toHaveLength(1);
     expect(screen.getByRole('option', { name: 'Chị Bình' })).toBeInTheDocument();
@@ -224,7 +224,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
   it('theo người sử dụng gửi assignedTo; không có máy nào thì nói rõ, không thêm gì', async () => {
     const calls = mockFetch(undefined, { items: [] });
     render();
-    await quickPick('Người sử dụng', 'Chị Bình');
+    await quickPick('Người dùng', 'Chị Bình');
     expect(await screen.findByText('Không có máy đang dùng nào của Chị Bình.')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Máy sẽ gán' })).toBeNull();
     expect(calls.gets.some((url) => url.includes(`assignedTo=${encodeURIComponent('Chị Bình')}`))).toBe(true);

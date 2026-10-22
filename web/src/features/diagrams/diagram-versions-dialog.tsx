@@ -12,7 +12,7 @@ import { useDisabledReason } from '@/ui/disabled-reason';
 import { HistoryPanel, type HistoryEntry } from '@/ui/history-panel';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { Tabs } from '@/ui/tabs';
+import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import {
@@ -357,33 +357,35 @@ export function DiagramVersionsDialog({
             { key: 'history', label: t('diagrams.versions.tabHistory') },
           ]}
         />
-        {tab === 'versions' ? (
-          <>
-            <div className="toolbar dialog-toolbar">
-              <label className="row">
-                <input type="checkbox" checked={onlyNamed} onChange={(event) => setOnlyNamed(event.target.checked)} />
-                {t('diagrams.versions.onlyNamed')}
-              </label>
-              <span className="grow muted">{t('diagrams.versions.compareHint')}</span>
-              <button
-                type="button"
-                className="btn sm"
-                disabled={picked.length !== 2}
-                {...compareReason.buttonProps}
-                onClick={() => {
-                  const [a, b] = [...picked].sort((x, y) => x.seq - y.seq);
-                  onCompare(a, b);
-                }}
-              >
-                {t('diagrams.versions.comparePicked', { count: picked.length })}
-              </button>
-              {compareReason.hint}
-            </div>
-            {versionsBody}
-          </>
-        ) : (
-          historyBody
-        )}
+        <TabPanel tabKey={tab}>
+          {tab === 'versions' ? (
+            <>
+              <div className="toolbar dialog-toolbar">
+                <label className="row">
+                  <input type="checkbox" checked={onlyNamed} onChange={(event) => setOnlyNamed(event.target.checked)} />
+                  {t('diagrams.versions.onlyNamed')}
+                </label>
+                <span className="grow muted">{t('diagrams.versions.compareHint')}</span>
+                <button
+                  type="button"
+                  className="btn sm"
+                  disabled={picked.length !== 2}
+                  {...compareReason.buttonProps}
+                  onClick={() => {
+                    const [a, b] = [...picked].sort((x, y) => x.seq - y.seq);
+                    onCompare(a, b);
+                  }}
+                >
+                  {t('diagrams.versions.comparePicked', { count: picked.length })}
+                </button>
+                {compareReason.hint}
+              </div>
+              {versionsBody}
+            </>
+          ) : (
+            historyBody
+          )}
+        </TabPanel>
       </Dialog>
       {actions.dialogs}
       {details ? <ChangesDialog diagramId={diagram.id} version={details} run={run} purpose={purpose} onClose={() => setDetails(null)} /> : null}

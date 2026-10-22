@@ -14,10 +14,6 @@ export function currentTheme(): Theme {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
-function setTheme(theme: Theme): void {
-  setThemePreference(theme);
-}
-
 /** Chưa chọn gì thì dùng giao diện sáng (Q-21). */
 const DEFAULT_THEME: Theme = 'light';
 
@@ -63,8 +59,3 @@ export function setThemePreference(pref: ThemePreference): void {
   window.dispatchEvent(new Event(THEME_EVENT));
 }
 
-export function toggleTheme(): Theme {
-  const next: Theme = currentTheme() === 'dark' ? 'light' : 'dark';
-  setTheme(next);
-  return next;
-}

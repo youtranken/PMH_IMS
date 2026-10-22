@@ -171,7 +171,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Lúc bảng có dòng thì mỗi tiêu đề sắp-xếp-được là một nút, mỗi dòng thêm một nút ba
      * chấm, và phân trang thêm ba nút nữa — không còn đếm được cái gì. Gõ một chuỗi chắc
      * chắn không khớp là dọn sạch phần đó đi, chỉ còn lại đúng bộ đồ cố định của phòng:
-     * hai nút đầu trang + bốn ô lọc, cộng nút "Xóa bộ lọc" của câu rỗng (Q-19: câu rỗng vì
+     * ba nút đầu trang + ba ô lọc + chip gỡ lọc, cộng nút "Xóa bộ lọc" của câu rỗng (Q-19: câu rỗng vì
      * lọc phải chỉ lối ra, không bắt người dùng tự dò xem mình đã lọc gì).
      */
     await search.fill(`KHONG-CO-HO-SO-NAO-E2E-${stamp}`);
@@ -183,17 +183,19 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Q-22: màn Phần mềm chỉ giữ license nên không còn ô lọc Loại.
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa lọc (1) · Xóa bộ lọc',
-    ).toHaveCount(7);
+      'Phòng Phần mềm lúc rỗng chỉ được có 8 nút: Xuất Excel · Nhập từ Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc (1) · Xóa bộ lọc',
+    ).toHaveCount(8);
     await expect(main.getByRole('button', { name: 'Loại hồ sơ', exact: true })).toHaveCount(0);
     for (const name of [
       'Xuất Excel',
+      // UX-E30: nhập Excel cùng sheet + cột với file Xuất của màn.
+      'Nhập từ Excel',
       'Thêm phần mềm',
       'Trạng thái',
       'Nhà cung cấp',
       'Kỳ hạn',
       // Chip gỡ lọc của thanh lọc (Q-27, như bảng thiết bị) — ô tìm đang có chữ là một bộ lọc.
-      'Xóa lọc (1)',
+      'Xóa bộ lọc (1)',
       'Xóa bộ lọc',
     ]) {
       await expect(
@@ -224,10 +226,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('row')).toHaveCount(3);
     expect(
       await columnTexts(page),
-      /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
-         1280px với cột Thao tác trong khung. */
+      /* Loại là dòng phụ dưới tên; "Hết hạn" là ngày, trạng thái xuống dòng phụ (TB-13) — để
+         bảng vừa 1280px với cột Thao tác trong khung. */
       'Bảng phần mềm phải có đúng 6 cột này, đúng thứ tự này',
-    ).toEqual(['Mã hồ sơ', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
+    ).toEqual(['Mã hồ sơ', 'Tên phần mềm', 'Nhà cung cấp', 'Ghế', 'Hết hạn', 'Thao tác']);
 
     // ===== SẮP XẾP: aria-sort phải lật, VÀ thứ tự dòng phải đảo theo =====
     const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ', exact: true });
@@ -374,20 +376,23 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, − / + của Số ghế, ô chọn file, và hai nút chân hộp =====
+     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, − / + của Số ghế, ô chọn file, và các nút chân hộp =====
+     *
+     * Ô Bắt đầu của hồ sơ mới điền sẵn hôm nay (FM-06), nên nó mang thêm nút "Xóa ngày".
      *
      * `<input type="file">` được trình duyệt phơi ra như một NÚT mang tên của nhãn — nên nó
      * nằm trong phép đếm này chứ không nằm trong phép đếm ô gõ chữ ở trên.
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 14 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(14);
+      'Hộp thêm hồ sơ có đúng 15 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(15);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
       'Giải thích: Kỳ hạn',
       'Bắt đầu',
+      'Xóa ngày',
       'Hết hạn',
       '+1 năm',
       '+2 năm',
@@ -467,11 +472,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       add.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }),
       'Lưu hồ sơ trống phải nói rõ thiếu gì, ngay dưới ô Mã',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    ).toHaveAccessibleDescription('Chưa nhập.');
     await expect(
       add.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }),
       'và dưới ô Tên',
-    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    ).toHaveAccessibleDescription('Chưa nhập.');
     // Kỳ hạn đang là Thuê bao mà chưa có ngày hết hạn: báo ngay tại ô (SW-028), nên là BA ô.
     await expect(
       add.getByText('Nhập ngày hết hạn để hệ thống nhắc gia hạn.'),
@@ -607,16 +612,16 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hộp gán không còn ô gõ chữ nào: chi phí, hợp đồng, ghi chú khai bằng nút "Sửa" ở dòng máy',
     ).toHaveCount(0);
     await expect(assign.getByRole('note'), 'Hộp gán nói rõ thông tin ghế khai ở đâu').toContainText(
-      'nút "Sửa" ở dòng của máy đó',
+      '"Sửa" ở dòng máy đó',
     );
 
     await expect(
       assign.getByRole('button'),
       'Hộp gán có đúng 3 nút: ✕ · Hủy · Gán vào máy',
     ).toHaveCount(3);
-    // Chọn máy theo Máy | Phòng ban | Người sử dụng (Q-15) — dải radio, mặc định là Máy.
+    // Chọn máy theo Máy | Phòng ban | Người dùng (Q-15) — dải radio, mặc định là Máy.
     const pickBy = assign.getByRole('radiogroup', { name: 'Chọn máy theo' });
-    await expect(pickBy.getByRole('radio')).toHaveText(['Máy', 'Phòng ban', 'Người sử dụng']);
+    await expect(pickBy.getByRole('radio')).toHaveText(['Máy', 'Phòng ban', 'Người dùng']);
     await expect(pickBy.getByRole('radio', { name: 'Máy', exact: true })).toBeChecked();
     for (const name of ['Đóng hộp thoại', 'Hủy', 'Gán vào máy']) {
       await expect(
@@ -857,11 +862,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // ===== TAB KÉT SẮT =====
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
-      page.getByText(/Nơi cất mật khẩu và license key/),
+      page.getByText(/Chưa cất mật khẩu hay key nào/),
       'Tab Két sắt phải nói ngay nó là gì — key KHÔNG nằm trong hồ sơ phần mềm',
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Cất mật khẩu/khóa', exact: true }),
+      page.getByRole('button', { name: 'Cất vào két', exact: true }),
       'SA phải cất được secret ngay tại hồ sơ',
     ).toHaveCount(1);
     await expect(
@@ -881,7 +886,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Bám vào KHU lịch sử: chữ "Gia hạn" còn nằm trên nút đầu trang, tìm toàn trang là trúng hai chỗ.
     const history = page.getByLabel('Lịch sử');
     await expect(
-      history.getByText('Tạo hồ sơ'),
+      history.getByText('Thêm hồ sơ'),
       'Lịch sử phải ghi lại việc hồ sơ được tạo — không có dòng đó thì sổ bắt đầu từ hư không',
     ).toBeVisible();
     await expect(
@@ -988,16 +993,12 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('button', { name: 'Khoảng thời gian', exact: true }).click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
-      'Sáu mốc cửa sổ ngày + ba mốc theo lịch (EX-003) — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
+      'Bốn mốc cửa sổ ngày + "tới ngày…" (UX-E24) — không cho gõ số tùy ý',
     ).toEqual([
-      'Quá hạn + 7 ngày tới',
       'Quá hạn + 30 ngày tới',
-      'Quá hạn + 60 ngày tới',
       'Quá hạn + 90 ngày tới',
       'Quá hạn + 180 ngày tới',
       'Quá hạn + 365 ngày tới',
-      'Quá hạn + tới hết tháng này',
-      'Quá hạn + tới hết quý này',
       'Quá hạn + tới ngày…',
     ]);
     await page.getByRole('option', { name: 'Quá hạn + 30 ngày tới', exact: true }).click();
@@ -1055,8 +1056,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(warrantyRow, 'Bảo hành sắp hết cũng phải có mặt').toBeVisible();
     await expect(
       warrantyRow.getByRole('link', { name: 'Mở hồ sơ', exact: true }),
-      'Bảo hành do nhà cung cấp quyết — cho lối sang hồ sơ để sửa ngày, không để nút chết',
-    ).toHaveCount(1);
+      'Bảo hành không gia hạn ở đây: ô trống — lối sang hồ sơ là link mã và bấm cả dòng (PW-A20)',
+    ).toHaveCount(0);
     await expect(
       warrantyRow.getByRole('button', { name: 'Gia hạn', exact: true }),
       'Không được bày nút gia hạn cho bảo hành: bấm vào là ăn lỗi EXPIRY_NOT_RENEWABLE',
@@ -1064,7 +1065,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== BÊN TRONG HỘP "GIA HẠN" =====
     await licenseRow.getByRole('button', { name: 'Gia hạn', exact: true }).click();
-    const renew = page.getByRole('dialog', { name: new RegExp(`^Gia hạn ${licenseCode}`) });
+    const renew = page.getByRole('dialog', { name: new RegExp(`^Gia hạn — ${licenseCode}`) });
     await expect(renew, 'Hộp gia hạn phải nói rõ đang gia hạn mục nào').toBeVisible();
 
     /*

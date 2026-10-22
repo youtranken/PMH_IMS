@@ -32,6 +32,8 @@ import type {
   ServiceAccountInput,
   ServiceAccountRecord,
 } from './service-account.types';
+import type { ServiceAccountParsedRow } from './service-account-import';
+import { normalizeKey, summarize, type ImportAction, type ImportSummary } from '../../common/import-plan';
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
 const TRACKED = [
@@ -363,6 +365,121 @@ export class ServiceAccountService {
     return { ...input, code: nextCode, name: name || login };
   }
 
+  /**
+   * Đối chiếu các dòng đọc từ file (UX-E30) — KHÔNG ghi gì. Mỗi dòng đi qua ĐÚNG `prepare()` của
+   * form (ghép với hồ sơ đang có, kiểm luật), nên file và form không bao giờ có hai luật. Khớp mã
+   * = sửa (chỉ cột có mặt), không khớp = thêm. Mã trống thì suy từ tên đăng nhập như form.
+   */
+  async planImport(parsed: ServiceAccountParsedRow[]): Promise<ServiceAccountImportPlan> {
+    const all = await this.db.select().from(serviceAccountTable);
+    const byCode = new Map(all.map((row) => [normalizeKey(row.code), row]));
+    const taken = new Set(all.map((row) => row.code.toUpperCase()));
+    const seen = new Map<string, number>();
+    const rows = parsed.map((item): ServiceAccountImportRow => {
+      const error = (message: string, label = `Dòng ${item.rowNumber}`): ServiceAccountImportRow => ({
+        rowNumber: item.rowNumber,
+        label,
+        action: 'error',
+        message,
+      });
+      if (!item.input) return error(item.error ?? 'Dòng không đọc được.');
+      const input = item.input;
+      let code = input.code?.trim() ?? '';
+      const before = code ? byCode.get(normalizeKey(code)) : undefined;
+      const kind = input.kind ?? (before?.kind as ServiceAccountKind | undefined);
+      if (!kind) return error('Thiếu cột "Loại" (Dùng chung hoặc VPN).', code || undefined);
+      if (!code) {
+        const login = input.login?.trim() ?? '';
+        if (!login) return error('Thiếu "Mã" — hoặc điền "Tên đăng nhập" để IMS tự đặt mã.');
+        const base = codeFromLogin(login);
+        code = base;
+        for (let n = 2; taken.has(code.toUpperCase()); n += 1) code = `${base}-${n}`;
+      }
+      const key = normalizeKey(code);
+      const first = seen.get(key);
+      if (first !== undefined) return error(`Mã "${code}" trùng với dòng ${first} trong file.`, code);
+      seen.set(key, item.rowNumber);
+      taken.add(code.toUpperCase());
+      // Cột Tên vắng khi sửa = giữ tên đang có; khi thêm thì lấy tên đăng nhập như form. Cột có mà
+      // trống thì để `validateServiceAccount` báo thiếu tên.
+      const name = before ? (input.name ?? before.name) : input.name?.trim() || input.login?.trim();
+      try {
+        const { values, warnings } = this.prepare({ ...input, code, kind, name }, before);
+        if (!before) {
+          return { rowNumber: item.rowNumber, label: code, action: 'create', values, warnings };
+        }
+        const changes = diffRecord(TRACKED, before, values);
+        if (!hasChanges(changes)) return { rowNumber: item.rowNumber, label: code, action: 'unchanged' };
+        return {
+          rowNumber: item.rowNumber,
+          label: code,
+          action: 'update',
+          existingId: before.id,
+          seenAt: before.updatedAt,
+          values,
+          changes,
+          warnings,
+        };
+      } catch (err) {
+        if (err instanceof BadRequestException) {
+          const body = err.getResponse() as { message?: string };
+          return error(body.message ?? err.message, code);
+        }
+        throw err;
+      }
+    });
+    return { rows, summary: summarize(rows) };
+  }
+
+  /**
+   * Ghi một lượt đối chiếu SẠCH lỗi: MỘT transaction cho cả file (thành công một nửa thì không ai
+   * biết phải làm gì tiếp), mỗi hồ sơ một dòng lịch sử + nhật ký như sửa tay, cộng một dòng nhật ký
+   * tổng kèm số dòng. Dòng sửa khóa FOR UPDATE và hỏi lại "có ai vừa sửa không" như luồng PATCH.
+   */
+  async commitImportWithin(
+    tx: Tx,
+    actor: string,
+    plan: ServiceAccountImportPlan,
+  ): Promise<{ created: number; updated: number }> {
+    let created = 0;
+    let updated = 0;
+    for (const row of plan.rows) {
+      if (row.action === 'create' && row.values) {
+        try {
+          const inserted = await tx.insert(serviceAccountTable).values({ ...row.values, createdBy: actor }).returning();
+          await this.recordWithin(tx, actor, inserted[0].id, 'created', { code: { before: null, after: inserted[0].code } });
+        } catch (error) {
+          throw this.translate(error, row.values.code);
+        }
+        created += 1;
+      } else if (row.action === 'update' && row.values && row.existingId) {
+        // So với mốc lúc lượt ghi ĐỐI CHIẾU LẠI file (ngay trước transaction), không với bản đọc
+        // trong transaction: người khác sửa xen vào khoảng đó thì huỷ cả file, không ghi đè.
+        requireUnchangedSince({ updatedAt: row.seenAt! }, await this.requireRowWithin(tx, row.existingId, 'update'), {
+          code: 'SERVICE_ACCOUNT_ALREADY_CHANGED',
+          message: `Tài khoản "${row.label}" vừa được người khác sửa — tải lên lại.`,
+        });
+        try {
+          await tx
+            .update(serviceAccountTable)
+            .set({ ...row.values, updatedAt: new Date() })
+            .where(eq(serviceAccountTable.id, row.existingId));
+        } catch (error) {
+          throw this.translate(error, row.values.code);
+        }
+        await this.recordWithin(tx, actor, row.existingId, 'updated', row.changes ?? {});
+        updated += 1;
+      }
+    }
+    await this.audit.appendWithin(tx, {
+      actor,
+      action: 'service_account.imported',
+      objectType: 'service_account',
+      detail: { created, updated, unchanged: plan.summary.unchanged, totalRows: plan.rows.length },
+    });
+    return { created, updated };
+  }
+
   /** Chuẩn hóa + kiểm luật thuần. Lỗi thì 400 kèm ĐỦ chỗ sai, không chỉ chỗ đầu tiên. */
   private prepare(
     input: ServiceAccountInput,
@@ -515,6 +632,25 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
     );
   }
   return parts.length === 0 ? undefined : and(...parts);
+}
+
+export interface ServiceAccountImportRow {
+  rowNumber: number;
+  /** Mã của dòng (hoặc "Dòng n" khi chưa có mã) — bảng đối chiếu hiện ra. */
+  label: string;
+  action: ImportAction;
+  message?: string;
+  existingId?: string;
+  /** `updatedAt` của hồ sơ lúc đối chiếu — lượt ghi hỏi lại "có ai sửa xen vào không". */
+  seenAt?: Date;
+  values?: ReturnType<ServiceAccountService['prepare']>['values'];
+  changes?: Record<string, unknown>;
+  warnings?: string[];
+}
+
+export interface ServiceAccountImportPlan {
+  rows: ServiceAccountImportRow[];
+  summary: ImportSummary;
 }
 
 /**

@@ -88,7 +88,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const toggle = nav.getByRole('button', { name: /Phiếu ISO/ });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
-    for (const name of ['Theo dõi backup · 0203', 'Theo dõi antivirus · 0208', 'Sự cố · 0206', 'Kỳ phiếu & chốt kỳ', 'Danh mục phiếu']) {
+    for (const name of ['Backup · 0203', 'Antivirus · 0208', 'Sự cố · 0206', 'Kỳ phiếu & chốt kỳ', 'Danh mục phiếu']) {
       await expect(nav.getByRole('link', { name })).toBeVisible();
     }
     await toggle.click();
@@ -100,11 +100,11 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await firstLogin(page, E2E_SA);
     const name = `E2E-FS-${uniqueStamp()}`;
     await page.goto('/iso/catalog');
-    await page.getByRole('button', { name: '+ Thêm job' }).click();
+    await page.getByRole('button', { name: '+ Job' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('textbox', { name: /Name Job Backup/ }).fill(name);
     await dialog.getByRole('textbox', { name: 'Đối tượng con 1' }).fill('OS');
-    await dialog.getByRole('button', { name: '+ Thêm đối tượng con' }).click();
+    await dialog.getByRole('button', { name: '+ Đối tượng con' }).click();
     await dialog.getByRole('textbox', { name: 'Đối tượng con 2' }).fill('Volume_E');
     // Points chỉ nhận số; Storage location tự ghi theo Points, không phải ô nhập.
     await dialog.getByRole('textbox', { name: 'Points NAS 1' }).fill('c');
@@ -143,8 +143,13 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await page.goto('/iso/backup?month=2021-02');
     await expect(page.getByRole('heading', { name: 'Theo dõi backup · 0203' })).toBeVisible();
 
+    // AX-07/09: lưới rộng vào được bằng bàn phím; không còn ô tiêu đề cột rỗng.
+    await expect(page.getByRole('region', { name: '0203 · Backup' })).toHaveAttribute('tabindex', '0');
+    await expect(page.getByRole('columnheader', { name: '', exact: true })).toHaveCount(0);
+
     await page.getByRole('button', { name: 'Đánh ✓ mọi ô trống ngày 01/02' }).click();
     await expect(page.getByRole('button', { name: `${name} ngày 1: Đạt` })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: '', exact: true })).toHaveCount(0);
 
     // Một lần bấm một bước, không bảng chọn: bỏ sót → ✓ → ✗ → trống → ✓ → ✗.
     const day2 = page.getByRole('button', { name: new RegExp(`^${name} ngày 2:`) });
@@ -184,7 +189,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(page).toHaveURL(/\/iso\/backup\?month=2021-02/);
     const linked = page.getByRole('button', { name: new RegExp(`^${name} ngày 2: Lỗi, đã có 0206-2021-\\d{3}`) });
     await linked.click();
-    await expect(page.getByRole('dialog', { name: /^Sửa phiếu 0206-2021-\d{3}$/ })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: /^Sửa phiếu — 0206-2021-\d{3}$/ })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click();
     await expect(linked).toBeVisible();
   });
@@ -248,7 +253,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const grid = page.getByRole('table');
     await expect(grid.getByRole('cell', { name: `E2E Division ${stamp}` })).toBeVisible();
     await expect(grid.getByRole('cell', { name: 'Other Division', exact: true })).toBeVisible();
-    await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('button', { name: 'Lập 0206 ›' })).toBeVisible();
+    await expect(grid.getByRole('row', { name: new RegExp(`E2E-PC-${stamp}`) }).getByRole('button', { name: 'Lập 0206' })).toBeVisible();
     // Ô ngày phát hiện luôn ✗, không bấm; ô chưa bấm của ngày đã ✓ Other Division hiện ✓ theo.
     const pc = `E2E-PC-${stamp}`;
     await expect(grid.getByRole('button', { name: new RegExp(`^${pc} ngày 02/03`) })).toHaveCount(0);
@@ -276,7 +281,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await fillMonth(page, '2021-04', 29);
 
     await page.goto('/iso/periods/0203/2021-04/review');
-    await expect(page.getByText('Còn 1 ô chưa có kết quả')).toBeVisible();
+    await expect(page.getByText('Còn 1 ô bỏ sót')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Gửi chốt phiếu tháng 04/2021' })).toBeDisabled();
     const early = await api(page, 'POST', '/api/v1/iso/periods/0203/2021-04/submit');
     expect(early.status()).toBe(400);
@@ -291,7 +296,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(paper.getByText('30 / 04 / 2021')).toBeVisible();
     await page.getByRole('button', { name: 'Gửi chốt phiếu tháng 04/2021' }).click();
     await confirmAction(page, 'Gửi chốt phiếu tháng 04/2021');
-    await expect(page.getByText('Đã gửi chốt kỳ — đang chờ SA/Admin duyệt.')).toBeVisible();
+    await expect(page.getByText('Đã gửi chốt kỳ — đang chờ Super Admin / Quản trị duyệt.')).toBeVisible();
 
     // Từ Chờ duyệt mọi ô bị khoá ở API, không chỉ ở giao diện.
     const locked = await api(page, 'PUT', '/api/v1/iso/backup/ticks', {
@@ -323,7 +328,8 @@ test.describe('Phiếu ISO · Epic 8', () => {
     const pdf = join(tmpdir(), `ky-E2E-${uniqueStamp()}.pdf`);
     writeFileSync(pdf, '%PDF-1.4\n%%EOF\n');
     await card.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
-    await expect(card.getByText('Hiện hành')).toBeVisible();
+    // exact: câu tóm tắt "Đã có bản ký hiện hành" cũng chứa chữ này khi kịp làm mới.
+    await expect(card.getByText('Hiện hành', { exact: true })).toBeVisible();
     await expect(card.getByText('Hoàn tất').first()).toBeVisible();
 
     await card.getByRole('button', { name: 'Xin mở lại…' }).click();
@@ -362,7 +368,7 @@ test.describe('Phiếu ISO · Epic 8', () => {
 
     await page.goto(`/iso/incidents/${id}`);
     await expect(page.getByRole('heading', { name: `Phiếu ${code}` })).toBeVisible();
-    await expect(page.getByText('Kỳ của phiếu đang chờ SA/Admin duyệt — chỉ xem.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Kỳ đang chờ duyệt · chỉ xem.', { exact: false })).toBeVisible();
     await expect(page.getByLabel('Chọn file để đính kèm')).toHaveCount(0);
     const res = await api(page, 'PATCH', `/api/v1/iso/incidents/${id}`, { ...content, description: 'E2E sửa khi chờ duyệt' });
     expect(res.status()).toBe(409);

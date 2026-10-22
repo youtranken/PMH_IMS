@@ -96,7 +96,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
      * kho KHÔNG trống, nên câu đúng là câu thứ hai.
      */
     // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009).
-    await expect(page.getByText('Không có thiết bị nào khớp “may chu ao hoa”.')).toBeVisible();
+    await expect(page.getByText('Không có thiết bị nào khớp "may chu ao hoa".')).toBeVisible();
   });
 
   test('danh mục: gõ không dấu ra đúng site — đường ims_norm tính tại chỗ', async ({ page }) => {

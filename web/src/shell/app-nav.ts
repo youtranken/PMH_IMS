@@ -7,6 +7,11 @@ interface NavItem {
   key: string;
   /** Nhãn riêng cho Member khi cùng một màn làm việc khác hẳn theo vai. */
   memberKey?: string;
+  /**
+   * Nhãn NGẮN chỉ cho menu trái (PW-B14): tên đủ "Theo dõi antivirus · 0208" bị cắt ở bề ngang
+   * sidebar. Tiêu đề trang, tab trình duyệt, Nhóm quyền vẫn dùng `key` (tên đủ).
+   */
+  shortKey?: string;
   to: string;
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
@@ -82,8 +87,8 @@ export const navGroups: NavGroup[] = [
     labelKey: 'nav.groupIso',
     collapsible: true,
     items: [
-      { key: 'nav.isoBackup', to: PATHS.isoBackup },
-      { key: 'nav.isoAntivirus', to: PATHS.isoAntivirus },
+      { key: 'nav.isoBackup', shortKey: 'nav.isoBackupShort', to: PATHS.isoBackup },
+      { key: 'nav.isoAntivirus', shortKey: 'nav.isoAntivirusShort', to: PATHS.isoAntivirus },
       { key: 'nav.isoIncidents', to: PATHS.isoIncidents, badge: 'isoUnlinked' },
       { key: 'nav.isoPeriods', to: PATHS.isoPeriods, badge: 'isoTodo' },
       { key: 'nav.isoCatalog', to: PATHS.isoCatalog },

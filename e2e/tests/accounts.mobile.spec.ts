@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, horizontalOverflow, resetUsers, rowAction, sql, searchAndWaitForFilter } from './helpers';
+import { E2E_SA, firstLogin, horizontalOverflow, resetUsers, sql, searchAndWaitForFilter } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -14,7 +14,9 @@ test('Phiên đang mở ở 390px: thẻ thiết bị · IP, nút Đóng phiên 
   await page.goto('/admin/accounts');
   const fullName = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
   await searchAndWaitForFilter(page, E2E_SA.email);
-  await rowAction(page, fullName, 'Phiên đang mở');
+  // Thẻ có `onRowClick` là một nút mang tên người; "Phiên đang mở" nằm trong hộp Chi tiết (UX-E15).
+  await page.getByRole('button', { name: fullName, exact: true }).click();
+  await page.getByRole('dialog', { name: fullName }).getByRole('button', { name: 'Phiên đang mở' }).click();
 
   const dialog = page.getByRole('dialog', { name: `Phiên đang mở: ${fullName}` });
   await expect(dialog).toBeVisible();

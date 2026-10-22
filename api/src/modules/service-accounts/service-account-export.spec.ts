@@ -22,7 +22,7 @@ describe('Xuất Excel tài khoản dịch vụ', () => {
   const res = { setHeader: () => undefined, end: () => undefined } as unknown as Response;
 
   it('có đủ cột người kiểm toán hỏi, và KHÔNG có cột mật khẩu nào (FR-026)', async () => {
-    await new ServiceAccountController(accounts, excel, {} as UsersApiService).export(
+    await new ServiceAccountController(accounts, excel, {} as UsersApiService, {} as never).export(
       { kind: 'vpn', status: 'active' },
       res,
     );
@@ -40,7 +40,7 @@ describe('Xuất Excel tài khoản dịch vụ', () => {
 
   // Q-20: hạn dùng của tài khoản (VPN cấp có thời hạn) — trống là không có hạn.
   it('có cột "Hết hạn" dạng YYYY-MM-DD như các file xuất khác; không có hạn thì để trống', async () => {
-    await new ServiceAccountController(accounts, excel, {} as UsersApiService).export({}, res);
+    await new ServiceAccountController(accounts, excel, {} as UsersApiService, {} as never).export({}, res);
     const end = captured.find((column) => column.header === 'Hết hạn');
     expect(end).toBeDefined();
     expect(end!.value({ endDate: '2027-03-31' })).toBe('2027-03-31');

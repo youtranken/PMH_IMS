@@ -140,7 +140,12 @@ describe('màn sơ đồ tự giải thích', () => {
     expect(items[2]).toHaveTextContent('Lưu');
     expect(items[3]).toHaveTextContent(/Phát hành|Gửi duyệt/);
     expect(screen.getByRole('button', { name: 'Giải thích: Thiết bị kho' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Giải thích: Lưu' })).toBeInTheDocument();
+    // PW-B21: Lưu là nút chính ở mép phải thanh — sau menu ⋮, không kẹp giữa hai nút (i).
+    expect(screen.queryByRole('button', { name: 'Giải thích: Lưu' })).toBeNull();
+    const save = screen.getByRole('button', { name: 'Lưu' });
+    expect(save).toHaveClass('primary');
+    const more = screen.getByRole('button', { name: /^Thao tác với / });
+    expect(more.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     act(() => {
       window.dispatchEvent(
         new MessageEvent('message', { data: JSON.stringify({ event: 'autosave', xml: '<mxfile/>' }), source: frame.contentWindow }),

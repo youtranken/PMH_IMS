@@ -160,6 +160,7 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
             <Routes>
               <Route path={`${PATHS.software}/:id`} element={<SoftwareDetail me={ME} screen="software" />} />
               <Route path={`${PATHS.domains}/:id`} element={<SoftwareDetail me={ME} screen="domains" />} />
+              <Route path={`${PATHS.maintenance}/:id`} element={<SoftwareDetail me={ME} screen="maintenance" />} />
             </Routes>
             <Where />
           </ConfirmProvider>
@@ -186,13 +187,45 @@ describe('Trang chi tiết — đúng màn theo loại hồ sơ', () => {
       `${PATHS.domains}?kind=ssl`,
     );
   });
+
+  // PW-A11: ô "1 Tên" khó hiểu; một tên miền thì thẻ cột phải lặp lại đúng tên đó; ô Giấy tờ trùng tab.
+  it('SSL một tên miền: ô "1 Tên miền", không thẻ Tên miền ở cột phải, ô 4 là Số hợp đồng', async () => {
+    mockFetch([], row({ id: 's9', code: 'SSL-E2E-09', websites: ['pmh.com.vn'], contract: 'HD-01' }));
+    renderDetail('/domains/s9');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(strip).toHaveTextContent('1 Tên miền');
+    expect(strip).toHaveTextContent('Số hợp đồng / PO');
+    expect(strip).toHaveTextContent('HD-01');
+    expect(strip).not.toHaveTextContent('Giấy tờ');
+    expect(screen.queryByRole('heading', { name: 'Tên miền' })).toBeNull();
+  });
+
+  // PW-A10: hợp đồng bảo trì — ô Bắt đầu lặp ngày đầu của khoảng hạn; "Loại hồ sơ" lặp tên màn.
+  it('hợp đồng bảo trì: ô 3 là Số hợp đồng, không ô Bắt đầu; tab Hồ sơ không có Loại hồ sơ', async () => {
+    mockFetch([], row({ id: 'm1', code: 'HD-E2E-01', kind: 'maintenance', startDate: '2026-01-01', contract: 'HD-77' }));
+    renderDetail('/maintenance/m1');
+    const strip = await screen.findByRole('group', { name: 'Tóm tắt hồ sơ' });
+    expect(strip).toHaveTextContent('Số hợp đồng / PO');
+    expect(strip).toHaveTextContent('HD-77');
+    expect(within(strip).queryByText('Bắt đầu')).toBeNull();
+    expect(screen.queryByText('Loại hồ sơ')).toBeNull();
+  });
+
+  // PW-A21: SSL / tên miền / hợp đồng không có ghế → chip "Ghế" ở tab Lịch sử là lọc ra rỗng.
+  it('tab Lịch sử của SSL không có chip "Ghế"', async () => {
+    mockFetch([], row({ id: 's9', code: 'SSL-E2E-09' }));
+    renderDetail('/domains/s9?tab=history');
+    const chips = await screen.findByRole('group', { name: 'Lọc lịch sử' });
+    expect(within(chips).queryByRole('button', { name: 'Ghế' })).toBeNull();
+    expect(within(chips).getByRole('button', { name: 'Hạn' })).toBeInTheDocument();
+  });
 });
 
 /** P-01: danh sách nói rõ cột, có ngày hết hạn và kỳ hạn, sắp được theo Ghế. */
 describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('tiêu đề "Mã" / "Tên phần mềm"; dòng phụ kỳ hạn dưới tên, ngày hết hạn dưới "Còn n ngày"; cột Ghế sắp được', async () => {
+  it('tiêu đề "Mã" / "Tên phần mềm" / "Hết hạn"; dòng phụ kỳ hạn dưới tên; ngày hết hạn là dòng chính (TB-13); cột Ghế sắp được', async () => {
     mockFetch([row({ id: 'l1', code: 'SW-E2E-01', name: 'Office E2E', kind: 'license', licenseModel: 'subscription', seatTotal: 10, seatUsed: 2, endDate: '2030-01-31' })]);
     renderList('software', '/software');
     const table = await screen.findByRole('table');
@@ -201,7 +234,9 @@ describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
     expect(headers.some((h) => h.startsWith('Tên phần mềm'))).toBe(true);
     const line = within(table).getByRole('link', { name: 'SW-E2E-01' }).closest('tr') as HTMLElement;
     expect(line).toHaveTextContent('Thuê bao');
-    expect(line).toHaveTextContent('đến 31/01/2030');
+    expect(headers.some((h) => h.startsWith('Hết hạn'))).toBe(true);
+    expect(line).toHaveTextContent('31/01/2030');
+    expect(line).not.toHaveTextContent('Đang dùng');
     expect(within(table).getByRole('button', { name: /Ghế/ })).toBeInTheDocument();
   });
 
@@ -216,11 +251,11 @@ describe('Danh sách Phần mềm — cột rõ nghĩa (P-01)', () => {
 
 /* Q-27: bảng phần mềm có chip "Xóa lọc (n)" như bảng thiết bị — cùng thanh lọc dùng chung. */
 describe('Bốn màn phần mềm — chip Xóa lọc', () => {
-  it('có bộ lọc đang bật thì hiện "Xóa lọc (1)"; bấm thì bỏ lọc khỏi địa chỉ', async () => {
+  it('có bộ lọc đang bật thì hiện "Xóa bộ lọc (1)"; bấm thì bỏ lọc khỏi địa chỉ', async () => {
     mockFetch();
     renderList('software', `${PATHS.software}?status=all`);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Xóa lọc (1)' }));
+    await user.click(await screen.findByRole('button', { name: 'Xóa bộ lọc (1)' }));
     expect(screen.getByLabelText('địa chỉ')).not.toHaveTextContent('status=all');
   });
 
@@ -229,5 +264,22 @@ describe('Bốn màn phần mềm — chip Xóa lọc', () => {
     renderList('software', PATHS.software);
     await screen.findByRole('heading', { level: 1, name: 'Phần mềm' });
     expect(screen.queryByRole('button', { name: /^Xóa lọc/ })).toBeNull();
+  });
+});
+
+// UX-E30: nhập dữ liệu thật trước go-live — bốn màn, file mẫu đúng loại của màn.
+describe('Phần mềm — Nhập từ Excel', () => {
+  it.each([
+    ['software', '/software', 'Nhập phần mềm từ Excel', 'license'],
+    ['domains', '/domains', 'Nhập tên miền & SSL từ Excel', 'domain,ssl'],
+  ] as const)('%s: nút "Nhập từ Excel" mở hộp; file mẫu hỏi đúng ?kind=', async (screenKey, at, title, kinds) => {
+    const urls = mockFetch();
+    renderList(screenKey, at);
+    await userEvent.click(await screen.findByRole('button', { name: 'Nhập từ Excel' }));
+    const dialog = await screen.findByRole('dialog', { name: title });
+    await userEvent.click(within(dialog).getByRole('button', { name: /Tải file mẫu/ }));
+    await vi.waitFor(() => expect(urls.some((url) => url.startsWith('/api/v1/software/template?'))).toBe(true));
+    const template = urls.find((url) => url.startsWith('/api/v1/software/template?'))!;
+    expect(new URLSearchParams(template.split('?')[1]).get('kind')).toBe(kinds);
   });
 });

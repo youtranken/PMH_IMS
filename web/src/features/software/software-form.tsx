@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
+import { todayIso } from '@/lib/format';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
+import { NoteField } from '@/ui/note-field';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
@@ -39,6 +41,9 @@ import {
   screenOfKind,
   type SoftwareScreenKey,
 } from '@/lib/software-screens';
+import { CodeInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { useSuggestedCode } from '@/ui/use-suggested-code';
 
 interface FormState {
   code: string;
@@ -77,7 +82,8 @@ function initialState(row: SoftwareRow | null, firstKind: SoftwareKind, batchFro
     licenseModel: row?.licenseModel ?? 'subscription',
     vendorId: row?.vendorId ?? '',
     seatTotal: row?.seatTotal != null ? String(row.seatTotal) : '',
-    startDate: row?.startDate ?? '',
+    // Hồ sơ mới: hôm nay (FM-06) — ô trống thì các nút +1 / +2 / +3 năm không có mốc để cộng.
+    startDate: row ? (row.startDate ?? '') : todayIso(),
     endDate: row?.endDate ?? '',
     note: row?.note ?? '',
     status: row?.status ?? 'active',
@@ -130,6 +136,7 @@ export function SoftwareForm({
   const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(row, kinds[0], batchFrom));
   const [error, setError] = useSubmitError([form]);
+  const server = useServerFieldErrors([form]);
   // Giấy tờ chọn kèm lúc THÊM MỚI (AD-15). Hồ sơ đang sửa thì đã có tab Giấy tờ ở trang
   // chi tiết — bày thêm một ô chọn ở đây chỉ làm người ta tưởng danh sách cũ biến mất.
   const draft = useAttachmentDraft();
@@ -168,6 +175,9 @@ export function SoftwareForm({
   // nút Lưu mở lại và bấm phát nữa là tạo hồ sơ thứ hai.
   const busy = save.isPending || uploading;
 
+  // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
+  const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
+  const codeGuard = useSuggestedCode(row || batchFrom ? null : `/api/v1/software/next-code?kind=${spec.kinds.join(',')}`, form.code, applyCode, 'sw-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Đổi sang loại không có seat thì xóa luôn ô seat — gửi lên sẽ bị API từ chối,
@@ -186,6 +196,14 @@ export function SoftwareForm({
       // Đánh dấu vĩnh viễn thì bỏ luôn ngày hết hạn — hai thứ đó ngược nhau.
       if (key === 'licenseModel' && value === 'perpetual') {
         return { ...current, licenseModel: 'perpetual', endDate: '' };
+      }
+      // Tên hồ sơ theo tên miền đầu tiên (FM-23) — chỉ khi ô tên còn trống hoặc vẫn đang là
+      // bản tự điền; người dùng đã sửa tay thì giữ nguyên.
+      if (key === 'websites') {
+        const before = websiteLines(current.websites)[0] ?? '';
+        const after = websiteLines(value as string)[0] ?? '';
+        const auto = current.name.trim() === '' || current.name === before;
+        return { ...current, websites: value as string, name: auto ? after : current.name };
       }
       // Ghế riêng cần từ 2 ghế: bớt xuống dưới 2 (hay xoá trống = không giới hạn) thì tự tắt.
       if (key === 'seatTotal' && !(Number(value) >= 2)) {
@@ -376,7 +394,9 @@ export function SoftwareForm({
                   onSaved({ id, assign });
                 })();
               },
-              onError: (err) => setError(errorMessage(err)),
+              onError: (err) => {
+                if (!server.claim(err, { SOFTWARE_CODE_TAKEN: 'sw-code' })) setError(errorMessage(err));
+              },
             },
           );
         }}
@@ -432,6 +452,25 @@ export function SoftwareForm({
               </div>
             </Field>
           ) : null}
+          {/* Tên miền / SSL: ô Tên miền đứng ĐẦU (FM-23) — thứ có sẵn trên tay; Tên hồ sơ tự điền theo nó. */}
+          {hasDomains ? (
+            <Field
+              label={t('software.domainNames')}
+              hint={t('software.domainNamesHint')}
+              htmlFor="sw-websites"
+              required
+              span={3}
+              error={check.error('websites')}
+            >
+              <textarea
+                id="sw-websites"
+                className="inp"
+                rows={3}
+                value={form.websites}
+                onChange={(e) => set('websites', e.target.value)}
+              />
+            </Field>
+          ) : null}
           {/* Một hàng ba ô (Q-27): tên · mã · nhà cung cấp — "cái gì, gọi là gì, mua của ai". */}
           <Field label={t('software.name')} required htmlFor="sw-name" error={check.error('name')}>
             <input
@@ -442,10 +481,11 @@ export function SoftwareForm({
               onChange={(e) => set('name', e.target.value)}
             />
           </Field>
-          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code')}>
-            <input
+          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code') ?? server.error('sw-code')}>
+            <CodeInput
+              caps
               id="sw-code"
-              className="inp mono"
+              data-guard-value={codeGuard}
               required
               placeholder={batchFrom ? suggestedCode : codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
               value={form.code}
@@ -561,9 +601,8 @@ export function SoftwareForm({
             </Field>
             {perSeat ? null : (
               <Field label={t('software.contract')} hint={t('software.contractHint')} htmlFor="sw-contract">
-                <input
+                <CodeInput
                   id="sw-contract"
-                  className="inp mono"
                   maxLength={200}
                   value={form.contract}
                   onChange={(e) => set('contract', e.target.value)}
@@ -606,41 +645,16 @@ export function SoftwareForm({
         {/* Ghi chú chung — với license bật ghế riêng thì ghi chú nằm ở từng ghế. */}
         {perSeat ? null : (
           <FormSection
-            title={hasDomains ? t('software.sectionWebsitesNote') : hasSeats ? t('software.sectionNoteFiles') : undefined}
+            title={hasSeats ? t('software.sectionNoteFiles') : undefined}
             columns={3}
           >
-            {hasDomains ? (
-              <Field
-                label={t('software.domainNames')}
-                hint={t('software.domainNamesHint')}
-                htmlFor="sw-websites"
-                required
-                error={check.error('websites')}
-              >
-                <textarea
-                  id="sw-websites"
-                  className="inp"
-                  rows={3}
-                  value={form.websites}
-                  onChange={(e) => set('websites', e.target.value)}
-                />
-              </Field>
-            ) : null}
-            <Field
-              label={t('software.note')}
-              hint={t('software.noteHint')}
-              htmlFor="sw-note"
-              span={hasDomains ? 2 : 3}
+            <NoteField
+              id="sw-note"
+              value={form.note}
+              onChange={(v) => set('note', v)}
+              span={3}
               error={check.error('note')}
-            >
-              <textarea
-                id="sw-note"
-                className="inp"
-                rows={3}
-                value={form.note}
-                onChange={(e) => set('note', e.target.value)}
-              />
-            </Field>
+            />
           </FormSection>
         )}
 

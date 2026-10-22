@@ -72,7 +72,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Két chưa có ngăn nào.')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
     const vaultForm = page.getByRole('dialog');
     await vaultForm.getByRole('textbox', { name: 'Tên gọi' }).fill(`mk-email-E2E-${stamp}`);
     await vaultForm.getByLabel('Giá trị').fill('MatKhau#2026');
@@ -347,7 +347,10 @@ test.describe('Tài khoản dịch vụ', () => {
 
     await page.goto('/service-accounts');
     const row = page.getByRole('row', { name: new RegExp(code) });
-    await expect(row.getByText('Đang dùng')).toBeVisible();
+    // Đang dùng thì ô Trạng thái để trống (PW-A24): đọc trạng thái qua menu dòng.
+    await expect(row).toBeVisible();
+    await expect(row.getByText('Đã ngừng dùng')).toHaveCount(0);
+    expect(await rowActionNames(page, code)).toEqual(['Ngừng dùng…']);
 
     // Cửa sau đã khóa: form Sửa KHÔNG có ô Trạng thái nào; Loại cũng chỉ đọc (chọn lúc tạo).
     await rowAction(page, code, 'Sửa');
@@ -372,7 +375,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
     // Cột Thao tác là menu ba chấm — mở ra mới đọc được có mục nào.
-    expect(await rowActionNames(page, code)).not.toContain('Ngừng dùng');
+    expect(await rowActionNames(page, code)).toEqual(['Dùng lại…']);
 
     // Lý do đi thẳng vào lịch sử, kèm chuyển trạng thái — đó mới là chỗ trả lời câu hỏi sáu tháng sau.
     await page.goto(`/service-accounts/${id}?tab=history`);
@@ -384,7 +387,7 @@ test.describe('Tài khoản dịch vụ', () => {
     // Và nói NGAY đầu trang hồ sơ — không bắt mở tab Lịch sử mới biết ai đóng, vì sao.
     await page.goto(`/service-accounts/${id}`);
     await expect(
-      page.getByText(/Ngừng dùng ngày \d{2}\/\d{2}\/\d{4} bởi .+ — lý do: nhân sự phụ trách đã nghỉ/),
+      page.getByText(/Ngừng dùng \d{2}\/\d{2}\/\d{4} · .+ · nhân sự phụ trách đã nghỉ/),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Dùng lại…' })).toBeVisible();
   });
@@ -486,7 +489,9 @@ test.describe('Tài khoản dịch vụ', () => {
     await onForm.getByRole('button', { name: 'Dùng lại' }).click();
 
     await expect(page.getByText('Đã dùng lại tài khoản.')).toBeVisible();
-    await expect(row.getByText('Đang dùng')).toBeVisible();
+    // Đang dùng thì ô Trạng thái để trống (PW-A24): huy hiệu đóng phải mất, menu đổi chiều.
+    await expect(row.getByText('Đã ngừng dùng')).toHaveCount(0);
+    expect(await rowActionNames(page, code)).toEqual(['Ngừng dùng…']);
 
     await page.goto(`/service-accounts/${id}?tab=history`);
     const entry = page.getByRole('listitem').filter({ hasText: 'Dùng lại' });
@@ -570,7 +575,7 @@ test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
     await form.getByRole('textbox', { name: 'Tên tài khoản' }).fill('VPN đối tác E2E');
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill(`vpn-han-${stamp}`);
     // Ô ngày: gõ chữ số trên nút mở lịch là mở ô gõ ngày dd/mm/yyyy.
-    await form.getByRole('button', { name: 'Hết hạn (tùy chọn)', exact: true }).focus();
+    await form.getByRole('button', { name: 'Hết hạn', exact: true }).focus();
     await page.keyboard.type(`${d}/${m}/${y}`);
     await page.keyboard.press('Enter');
     await form.getByRole('button', { name: 'Lưu' }).click();
@@ -587,7 +592,7 @@ test.describe('Tài khoản dịch vụ — hạn dùng (Q-20)', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('Tài khoản dịch vụ');
     await row.getByRole('button', { name: 'Gia hạn' }).click();
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
     const renewed = page.waitForResponse((r) => r.url().endsWith('/expiry/renew'));
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();

@@ -156,7 +156,7 @@ test.describe('Danh sách phần mềm', () => {
     await page.goto('/domains');
     await searchAndWaitForFilter(page, code);
     await rowAction(page, code, 'Gia hạn');
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await expect(dialog).toBeVisible();
     // Dòng "Hạn hiện tại: dd/mm/yyyy" — câu gợi ý của ô Hạn mới (SW-048) cũng nhắc chữ này.
     await expect(dialog.getByText(/^Hạn hiện tại: \d{2}\/\d{2}\/\d{4}/)).toBeVisible();
@@ -250,10 +250,10 @@ test.describe('Trang hồ sơ phần mềm', () => {
     await expect(history.getByText(/đổi deviceId/)).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Ghế', exact: true }).click();
-    await expect(history.getByText('Tạo hồ sơ')).toHaveCount(0);
+    await expect(history.getByText('Thêm hồ sơ')).toHaveCount(0);
     await expect(history.getByText('Gán license vào máy')).toBeVisible();
     await page.getByRole('button', { name: 'Hồ sơ', exact: true }).click();
-    await expect(history.getByText('Tạo hồ sơ')).toBeVisible();
+    await expect(history.getByText('Thêm hồ sơ')).toBeVisible();
   });
 
   test('SW-040: Thanh lý nằm trong menu ⋯ đầu trang, vẫn hỏi lại trước khi làm', async ({ page }) => {
@@ -302,8 +302,11 @@ test.describe('Sắp hết hạn', () => {
     await page.getByRole('tab', { name: 'Đã gia hạn' }).click();
     await expect(page.getByRole('row', { name: new RegExp(a) })).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(b) })).toBeVisible();
-    // Ô số và nút Xuất Excel thuộc về tab Danh sách.
-    await expect(page.getByRole('button', { name: 'Xuất Excel' })).toHaveCount(0);
+    // Ô số thuộc về tab Danh sách; nút Xuất ở tab này xuất danh sách đã gia hạn (PW-A29).
+    await expect(page.getByRole('button', { name: /Đã quá hạn/ })).toHaveCount(0);
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Xuất Excel', exact: true }).click();
+    expect((await download).suggestedFilename()).toBe('da-gia-han.xlsx');
   });
 
   test('EX-017/EX-018/EX-025: "Thêm luật" ở đầu trang; số ngày và email sai bị báo tại ô', async ({
@@ -352,7 +355,7 @@ test.describe('Kho thanh lý', () => {
     // Đường hỏng: tìm không ra thì có nút xoá bộ lọc, bấm là thấy lại.
     await page.goto('/disposal?kind=software');
     await searchAndWaitForFilter(page, `KHONG-CO-E2E-${uniqueStamp()}`);
-    await page.getByRole('button', { name: 'Xóa bộ lọc' }).click();
+    await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   });
 });

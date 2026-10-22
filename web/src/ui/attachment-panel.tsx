@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '@/lib/api-client';
+import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { downloadFile } from '@/lib/download-file';
 import { formatDateTime } from '@/lib/format';
@@ -166,6 +166,11 @@ export function AttachmentPanel({
 
   const queryKey = attachmentsKey(ownerType, ownerId);
   const files = useOwnerAttachments(ownerType, ownerId);
+  /*
+   * Giấy tờ của ISP / TK dịch vụ theo ma trận quyền két: không có quyền thì API trả 403. Khi đó
+   * không bày ô thả file (gửi lên cũng 403) và không khung lỗi đỏ có "Thử lại" — chỉ một dòng.
+   */
+  const forbidden = files.error instanceof ApiError && files.error.status === 403;
 
   const remove = useApiMutation<{ id: string }, unknown>(
     (input) => `/api/v1/files/${input.id}`,
@@ -243,7 +248,7 @@ export function AttachmentPanel({
 
   return (
     <div className="attachment-panel">
-      {canEdit ? (
+      {canEdit && !forbidden ? (
         <>
           <FilePicker
             accept={accept}
@@ -300,12 +305,14 @@ export function AttachmentPanel({
 
       {files.isLoading ? (
         <Loading />
+      ) : forbidden ? (
+        <p className="muted">{t('attachments.forbidden')}</p>
       ) : files.isError ? (
         <LoadError error={files.error} onRetry={() => void files.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState
           title={t('attachments.empty')}
-          hint={canEdit ? t('attachments.emptyHint', { examples: t(hintKey) }) : undefined}
+          /* Không gợi ý ở đây (PW-A28): câu ví dụ đã nằm ở ô thả file ngay trên. */
         />
       ) : (
         <div className="table-wrap">

@@ -36,7 +36,6 @@ const HELP: Record<string, string> = {
   path: 'diagrams.help.path',
   drift: 'diagrams.help.drift',
   export: 'diagrams.help.export',
-  timeline: 'diagrams.help.timeline',
   versions: 'diagrams.help.versions',
   presentation: 'diagrams.help.presentation',
   'rebuild-rack': 'diagrams.help.rebuild-rack',
@@ -76,7 +75,6 @@ const GROUP: Record<string, string> = {
   pins: 'diagrams.menuGroup.review',
   'pin-mode': 'diagrams.menuGroup.review',
   versions: 'diagrams.menuGroup.review',
-  timeline: 'diagrams.menuGroup.review',
   presentation: 'diagrams.menuGroup.review',
 };
 

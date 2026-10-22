@@ -56,7 +56,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
       if (row?.state === 'locked') {
         throw new ConflictException({
           code: 'ISO_SIGNED_LOCKED',
-          message: `Kỳ ${periodLabel(row.formType, row.year, row.month)} đã chốt nên không xoá được bản ký. Cần thay thì xin mở lại kỳ.`,
+          message: `Kỳ ${periodLabel(row.formType, row.year, row.month)} đã chốt nên không xóa được bản ký. Cần thay thì xin mở lại kỳ.`,
         });
       }
       return;
@@ -74,7 +74,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
     if (incident.locked) {
       throw new ConflictException({
         code: 'ISO_SIGNED_LOCKED',
-        message: `Phiếu ${incident.code} đã khoá nên không xoá được bản ký. Cần thay thì xin mở lại kỳ của phiếu.`,
+        message: `Phiếu ${incident.code} đã khóa nên không xóa được bản ký. Cần thay thì xin mở lại kỳ của phiếu.`,
       });
     }
   }
@@ -106,7 +106,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
       if (row?.state !== 'locked') {
         throw new ConflictException({
           code: 'ISO_SIGN_NOT_LOCKED',
-          message: 'Kỳ chưa được duyệt chốt — tải bản ký sau khi SA/Admin duyệt.',
+          message: 'Kỳ chưa được duyệt chốt — tải bản ký sau khi Super Admin / Quản trị duyệt.',
         });
       }
       await this.access.assertCanWrite(uploader, row.formType as IsoFormType);
@@ -120,7 +120,7 @@ export class IsoFileOwner implements OwnerResolver, OnModuleInit {
         message:
           incident.status === 'in_progress'
             ? `Phiếu ${incident.code} còn In Progress — đổi sang Resolved rồi mới in và tải bản ký.`
-            : `Phiếu ${incident.code} chưa khoá — tải bản ký sau khi kỳ của phiếu được duyệt chốt.`,
+            : `Phiếu ${incident.code} chưa khóa — tải bản ký sau khi kỳ của phiếu được duyệt chốt.`,
       });
     }
   }

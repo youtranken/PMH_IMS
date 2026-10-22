@@ -55,6 +55,7 @@ export function CatalogImportDialog({
           url="/api/v1/catalog/template"
           fileName="mau-danh-muc.xlsx"
           label={t('catalog.downloadTemplate')}
+          link
         />
       }
       mapRow={(row) => ({

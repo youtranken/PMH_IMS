@@ -24,6 +24,7 @@ import { hourSteps } from '@/ui/grant-hours';
 import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { canSee } from '@/lib/features';
+import { LAST_APPROVER_KEY } from '@/lib/after-logout';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -195,7 +196,7 @@ export function VaultPanel({
   ownerId: string;
   me: Me;
   canEdit?: boolean;
-  /** Mã hồ sơ chủ — tiêu đề hộp "Cất mật khẩu/khóa — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
+  /** Mã hồ sơ chủ — tiêu đề hộp "Cất vào két — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
   ownerLabel?: string;
   /**
    * Hồ sơ đã khóa (thanh lý): két chỉ còn để đọc, câu rỗng không mời "cất vào đây" nữa (DEV-057).
@@ -393,16 +394,11 @@ export function VaultPanel({
       return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
     if (!allowed) {
       return (
+        // Một câu + người cần liên hệ (TX-04): câu giữa và nhãn "Liên hệ:" cũ nói lại cùng ý
+        // lần hai, lần ba ("Liên hệ: Liên hệ Super Admin…").
         <EmptyState
           title={t('vault.noPermissionTitle')}
-          hint={t('vault.noPermission')}
-          action={
-            contact.data?.contact ? (
-              <span>
-                <strong>{t('auth.supportContactLabel')}:</strong> {contact.data.contact}
-              </span>
-            ) : undefined
-          }
+          action={contact.data?.contact ? <span>{contact.data.contact}</span> : undefined}
         />
       );
     }
@@ -465,19 +461,22 @@ export function VaultPanel({
       ) : !isAdmin && verdict.data?.claimable ? (
         /* Đã duyệt, chưa xem lần nào (Q-15): không có nút riêng — bấm "Xem" ở ngăn như thường,
            lần xem đầu (qua mã 6 số) gắn quyền vào phiên này. Giờ đếm từ lúc duyệt. */
-        <div className="alert ok" role="status">
-          <p>
-            <strong>{t('vault.approvedReady')}</strong>
+        /* Một dòng (UX-E17): giờ tuyệt đối và câu "gắn phiên này" (Q-15) nằm ở `title`. */
+        <div className="alert ok row" role="status" style={{ gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <p
+            title={[
+              verdict.data.claimable.expiresAt
+                ? t('vault.approvedReadyUntil', { until: formatDateTime(verdict.data.claimable.expiresAt) })
+                : null,
+              t('vault.approvedReadyNote'),
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {verdict.data.claimable.expiresAt && grantLeft !== null
+              ? t('vault.approvedReadyLeft', { left: clockText(grantLeft) })
+              : t('vault.approvedReady')}
           </p>
-          {verdict.data.claimable.expiresAt && grantLeft !== null ? (
-            <p>
-              {t('vault.approvedReadyLeft', {
-                left: leftText(grantLeft, t),
-                until: formatDateTime(verdict.data.claimable.expiresAt),
-              })}
-            </p>
-          ) : null}
-          <p className="muted">{t('vault.approvedReadyNote')}</p>
           <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -508,10 +507,13 @@ export function VaultPanel({
             </p>
           ) : null}
           {verdict.data.otherSessionHeld ? <p>{t('vault.otherSessionHeld')}</p> : null}
-          <p>{t('vault.requestBlock', { count: rows.length })}</p>
-          <button type="button" className="btn primary" onClick={() => setRequesting(true)}>
-            {t('vault.request')}
-          </button>
+          {/* Một dòng "Cần duyệt · n Ngăn" cạnh nút (UX-E17). */}
+          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <p>{t('vault.requestBlock', { count: rows.length })}</p>
+            <button type="button" className="btn primary" onClick={() => setRequesting(true)}>
+              {t('vault.request')}
+            </button>
+          </div>
         </div>
       ) : !isAdmin && verdict.data?.grant ? (
         /* Quyền đang chạy (Q-30, gọn chữ): một dòng đếm lùi + Trả quyền. Giờ tuyệt đối và câu "gắn
@@ -1255,19 +1257,27 @@ function PendingCodeBox({
 /** Số lượt nhập mã của một yêu cầu (Q-30) — "còn N lần" chỉ hiện khi đã dùng bớt. */
 const CODE_ATTEMPTS = 5;
 
+function readLastApprover(): string | null {
+  try {
+    return localStorage.getItem(LAST_APPROVER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLastApprover(email: string): void {
+  try {
+    localStorage.setItem(LAST_APPROVER_KEY, email);
+  } catch {
+    /* Trình duyệt chặn bộ nhớ: lần sau chỉ không chọn sẵn được. */
+  }
+}
+
 /** Đếm lùi kiểu đồng hồ: "1:59" khi còn giờ (giờ:phút), "9:12" khi dưới một giờ (phút:giây). */
 function clockText(seconds: number): string {
   const { hours, minutes, seconds: secs } = remainingParts(seconds);
   const pad = (n: number) => String(n).padStart(2, '0');
   return hours > 0 ? `${hours}:${pad(minutes)}` : `${minutes}:${pad(secs)}`;
-}
-
-/** "3 giờ 52 phút" / "12 phút" / "45 giây" — đơn vị lớn nhất còn khác 0 quyết định cách nói. */
-function leftText(seconds: number, t: (key: string, options?: Record<string, unknown>) => string) {
-  const parts = remainingParts(seconds);
-  if (parts.hours > 0) return t('vault.leftHm', parts);
-  if (parts.minutes > 0) return t('vault.leftM', parts);
-  return t('vault.leftS', parts);
 }
 
 /**
@@ -1304,19 +1314,28 @@ function BreakGlassDialog({
   const [reason, setReason] = useState('');
   const [hours, setHours] = useState(String(Math.min(4, maxGrantHours ?? 4)));
   const [approver, setApprover] = useState('');
+  /* Người xin thường xin cùng một người duyệt: chọn sẵn người lần trước nếu họ còn trong danh sách
+     server đưa (UX-E17). Chỉ là tiện ích của trình duyệt này — không phải dữ liệu nghiệp vụ. */
+  const remembered = useRef(readLastApprover());
   const [error, setError] = useSubmitError([reason, hours, approver]);
   /* Danh sách chọn do server dựng (SA/Admin đang hoạt động trừ chính mình) — client không tự lọc vai. */
   const approvers = useQuery({
     queryKey: ['vault', 'break-glass', 'approvers'],
     queryFn: () => apiFetch<{ email: string; name: string }[]>('/api/v1/vault/break-glass/approvers'),
   });
-  /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
+  useEffect(() => {
+    const last = remembered.current;
+    if (!last || approver || !approvers.data?.some((a) => a.email === last)) return;
+    // Chọn sẵn MỘT lần: người xin bỏ chọn thì không bị điền lại.
+    remembered.current = null;
+    setApprover(last);
+  }, [approvers.data, approver]);
+  /* Chỉ đặt từ các nấc của `hourSteps` nên luôn là số nguyên dương — không cần nhánh kiểm. */
   const askedHours = Number(hours.trim());
   const check = useFormErrors({
     reason:
       (reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired')) ||
       secretTextRule(t, reason),
-    hours: (!Number.isInteger(askedHours) || askedHours <= 0) && t('vault.requestHoursInvalid'),
     approver: !approver && t('vault.requestApproverRequired'),
   });
 
@@ -1359,8 +1378,10 @@ function BreakGlassDialog({
           send.mutate(
             { ownerType, ownerId, reason: reason.trim(), hours: askedHours, approver },
             {
-              onSuccess: (result) =>
-                onSent({ askedHours, grantedHours: result.payload?.hours ?? askedHours }),
+              onSuccess: (result) => {
+                writeLastApprover(approver);
+                onSent({ askedHours, grantedHours: result.payload?.hours ?? askedHours });
+              },
               onError: (err) => setError(errorMessage(err)),
             },
           );
@@ -1404,7 +1425,7 @@ function BreakGlassDialog({
           />
         </Field>
         {/* Chỉ chọn nấc, không ô gõ số (Q-30 gọn chữ): nấc lớn nhất là trần server đưa. */}
-        <Field label={t('vault.requestHours')} required error={check.error('hours')}>
+        <Field label={t('vault.requestHours')} required>
           <div className="segmented fill" role="group" aria-label={t('vault.requestHours')}>
             {hourSteps(maxGrantHours).map((h) => (
               <button

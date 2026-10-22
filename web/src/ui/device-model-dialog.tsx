@@ -13,6 +13,7 @@ import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { CodeInput } from '@/ui/code-input';
 
 /** Ảnh cho sơ đồ: JPG/PNG — bộ vẽ ảnh của server không giải mã WebP. */
 const PHOTO_ACCEPT = '.jpg,.jpeg,.png';
@@ -230,8 +231,8 @@ export function DeviceModelDialog({
             />
           </Field>
           <Field label={t('deviceModels.model')} required hint={t('deviceModels.modelHint')} error={errors.model}>
-            <input
-              className="inp mono"
+            <CodeInput
+              caps
               required
               maxLength={120}
               value={form.model}
@@ -292,8 +293,7 @@ export function DeviceModelDialog({
             </div>
             {form.portTemplate.map((group, index) => (
               <div key={index} className="row" role="group" aria-label={t('deviceModels.portGroup', { n: index + 1 })}>
-                <input
-                  className="inp mono"
+                <CodeInput
                   aria-label={t('deviceModels.portPattern', { n: index + 1 })}
                   placeholder="Gi1/0/[1-48]"
                   maxLength={60}

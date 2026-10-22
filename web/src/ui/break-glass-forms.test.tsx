@@ -261,7 +261,7 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
       return call;
     });
     expect(JSON.parse(String(post[1]!.body))).toEqual({ code: '012345' });
-    expect(await screen.findByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeInTheDocument();
+    expect(await screen.findByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/)).toBeInTheDocument();
   });
 
   it('sai mã → câu lỗi của server dưới ô, ô được xoá để gõ lại', async () => {
@@ -296,7 +296,7 @@ describe('Khung Két phía người xin (VLT-FLOW)', () => {
 
   it('người duyệt đã mất quyền duyệt: nói ai, bảo rút và chọn người khác; không còn ô nhập mã', async () => {
     renderMemberPanel({ ...PENDING, pendingCode: { ...CODE, approverActive: false } });
-    expect(await screen.findByText(/Cao Thuận không còn là SA\/Quản trị đang hoạt động/)).toBeInTheDocument();
+    expect(await screen.findByText(/Cao Thuận không còn là Super Admin \/ Quản trị đang hoạt động/)).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: /Mã duyệt/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Gửi lại mã/ })).not.toBeInTheDocument();
   });

@@ -570,15 +570,32 @@ export async function stepUpViaApi(
 }
 
 /**
- * Đưa trang về đúng theme bằng nút ở topbar. Mặc định là SÁNG (Q-21) nhưng trang có thể đang ở
- * theme khác do lựa chọn đã lưu, nên bấm khi cần rồi chờ `<html data-theme>` khớp.
+ * Đưa trang về đúng theme bằng hàng Giao diện của menu tài khoản (topbar không còn nút đổi —
+ * UX-E18). Mặc định là SÁNG (Q-21) nhưng trang có thể đang ở theme khác do lựa chọn đã lưu, nên
+ * chỉ bấm khi cần rồi chờ `<html data-theme>` khớp. Trang không có menu tài khoản (đăng nhập)
+ * thì chỉ khẳng định.
  */
 export async function switchTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  const button = page.getByRole('button', {
-    name: theme === 'dark' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng',
-  });
-  if ((await button.count()) > 0) await button.click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  const html = page.locator('html');
+  if ((await html.getAttribute('data-theme')) !== theme) {
+    // Điện thoại: menu tài khoản nằm trong drawer điều hướng — mở drawer trước, chọn xong đóng lại.
+    const drawer = page.getByRole('button', { name: 'Mở menu' });
+    const viaDrawer = (await drawer.count()) > 0 && (await drawer.isVisible());
+    if (viaDrawer) await drawer.click();
+    const account = page.getByRole('button', { name: /^Menu tài khoản của / });
+    if ((await account.count()) > 0) {
+      await account.click();
+      await page.getByRole('menu').getByRole('menuitemradio', { name: theme === 'dark' ? 'Tối' : 'Sáng' }).click();
+      if (await page.getByRole('menu').isVisible()) await page.keyboard.press('Escape');
+    }
+    // Đóng drawer bằng Esc: nút "Đóng menu" ở thanh trên nằm DƯỚI lớp drawer, bấm chuột bị che.
+    const drawerPanel = page.getByRole('dialog', { name: 'Điều hướng chính' });
+    if (viaDrawer && (await drawerPanel.isVisible())) {
+      await page.keyboard.press('Escape');
+      await expect(drawerPanel).toBeHidden();
+    }
+  }
+  await expect(html).toHaveAttribute('data-theme', theme);
 }
 
 export async function fillLogin(page: Page, email: string, password: string): Promise<void> {

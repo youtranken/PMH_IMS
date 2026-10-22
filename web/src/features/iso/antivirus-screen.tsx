@@ -7,6 +7,9 @@ import { apiFetch } from '@/lib/api-client';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { useConfirm } from '@/ui/confirm-provider';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
@@ -34,6 +37,8 @@ import {
 import { useTickQueue } from './use-tick-queue';
 import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
 import type { AntivirusGrid, AvIssue, IncidentCell, TickResult } from './iso-types';
+import { CodeInput } from '@/ui/code-input';
+import { InfoTip } from '@/ui/info-tip';
 
 /**
  * Lưới 0208 — Theo dõi antivirus. Dòng issue (một máy × một ngày phát hiện) gom theo bộ phận, chỉ bộ
@@ -56,11 +61,17 @@ export function AntivirusScreen({ me }: { me: Me }) {
         title={t('nav.isoAntivirus')}
         subtitle={t('iso.av.subtitle')}
         actions={
-          grid.data ? (
-            <Link className={`linkbtn${grid.data.state === 'open' ? ' primary' : ''}`} to={PATHS.isoReview('0208', key)}>
-              {t('iso.viewForm')}
+          <>
+            {/* Cùng khuôn với 0203 (PW-B15): lối sang danh mục của chính phiếu này. */}
+            <Link className="linkbtn" to={`${PATHS.isoCatalog}?tab=divisions`}>
+              {t('iso.av.divisionsLink')}
             </Link>
-          ) : null
+            {grid.data ? (
+              <Link className={`linkbtn${grid.data.state === 'open' ? ' primary' : ''}`} to={PATHS.isoReview('0208', key)}>
+                {t('iso.viewForm')}
+              </Link>
+            ) : null}
+          </>
         }
       />
       <div className="sheet-toolbar">
@@ -93,6 +104,7 @@ export function AntivirusScreen({ me }: { me: Me }) {
 
 function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid; ownerNotice: React.ReactNode }) {
   const { t } = useTranslation();
+  const phone = useMediaQuery(BREAKPOINTS.cards);
   const toast = useToast();
   const askConfirm = useConfirm();
   const [editing, setEditing] = useState<AvIssue | 'new' | null>(null);
@@ -181,24 +193,20 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
       {!open ? <LockedBanner form="0208" year={data.year} month={data.month} state={data.state} /> : null}
       {ownerNotice}
       {editable ? (
-        <section className="card" aria-label={t('iso.av.recordSection')}>
-          <p>
-            <strong>
-              {data.summary.pendingDays.length === 0
-                ? t('iso.av.everyDayRecorded')
-                : data.summary.missedDays.length > 0
-                  ? t(todayPending ? 'iso.av.missedAndToday' : 'iso.av.missedTitle', { count: data.summary.missedDays.length })
-                  : t('iso.av.todayPending')}
-            </strong>
-          </p>
-          <p className="muted small">{t('iso.av.recordHint')}</p>
+        <section aria-label={t('iso.av.recordSection')}>
+          {/* Hàng ô số cùng khuôn 0203 (PW-B15) thay một câu đậm tự ghép. */}
+          <KpiStrip>
+            <KpiTile value={data.summary.missedDays.length} tone="warn" label={t('iso.av.missedKpi')} />
+            <KpiTile value={data.summary.unlinkedIssues.length} tone="danger" label={t('iso.av.unlinkedKpi')} />
+          </KpiStrip>
+          {todayPending ? <p className="muted small">{t('iso.av.todayPending')}</p> : null}
           <div className="chip-row">
             {data.summary.missedDays.length > 1 ? (
               <button type="button" className="btn sm" disabled={markingAll || markClear.isPending} onClick={() => void markAllPast()}>
                 {t('iso.av.markAll', { count: data.summary.missedDays.length })}
               </button>
             ) : null}
-            <button type="button" className="btn sm primary" onClick={() => setEditing('new')}>
+            <button type="button" className="btn sm" onClick={() => setEditing('new')}>
               {t('iso.av.addIssue')}
             </button>
           </div>
@@ -207,12 +215,24 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
 
       <section aria-labelledby="iso-av-grid">
         <div className="sheet-toolbar">
-          <h2 id="iso-av-grid">{t('iso.grid')}</h2>
+          {/* Cách ghi + ghi chú phiếu vào (i) (TX-14). */}
+          <div className="page-header-title">
+            <h2 id="iso-av-grid">{t('iso.grid')}</h2>
+            <InfoTip subject={t('iso.grid')}>
+              <p>{t('iso.av.recordHint')}</p>
+              <p>{t('iso.av.note')}</p>
+            </InfoTip>
+          </div>
           <span className="muted small">
             {t('iso.av.summary', { issues: data.issues.length, divisions: groups.length, missed: data.summary.missedDays.length })}
           </span>
         </div>
-        <div className="sheet-scroll">
+        {/* Lưới rộng hơn màn: vùng cuộn phải vào được bằng bàn phím (AX-07). Điện thoại: cột cố định
+            chiếm hết bề ngang, không còn ô ngày nào để bấm — chỉ nói làm ở máy tính (PW-B18). */}
+        {phone ? (
+          <p className="alert info">{t('iso.gridDesktopOnly')}</p>
+        ) : (
+        <div className="sheet-scroll" tabIndex={0} role="region" aria-label={t('iso.field.tab0208')}>
           <table className="sheet-grid">
             <thead>
               <tr>
@@ -285,6 +305,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
                                       void askConfirm({
                                         title: t('common.titleOf', { action: t('common.delete'), subject: issue.computerName }),
                                         message: t('iso.av.deleteConfirm', { name: issue.computerName, day: shortDay(issue.reportedOn) }),
+                                        confirmLabel: t('common.delete'),
                                         danger: true,
                                       }).then((ok) => {
                                         if (ok) removeIssue.mutate({ id: issue.id }, { onError: fail });
@@ -378,7 +399,7 @@ function AntivirusBody({ me, data, ownerNotice }: { me: Me; data: AntivirusGrid;
             </tbody>
           </table>
         </div>
-        <p className="muted small">{t('iso.av.note')}</p>
+        )}
       </section>
 
       <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
@@ -519,7 +540,7 @@ function IssueDialog({
             </Field>
           ) : null}
           <Field label={t('iso.field.computerName')} required htmlFor="iso-av-pc" error={check.error('computerName')}>
-            <input id="iso-av-pc" className="inp mono" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
+            <CodeInput id="iso-av-pc" value={form.computerName} onChange={(e) => set('computerName', e.target.value)} />
           </Field>
           <Field label={t('iso.field.handled')} hint={t('iso.av.handledHint')}>
             {/* Dòng cũ chưa có Handled thì để trống: API không ghi lại khi sửa, hiện tên người đang

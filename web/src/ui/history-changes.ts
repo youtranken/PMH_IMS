@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { formatDate } from '@/lib/format';
 
 export type FieldChanges = Record<string, { before: unknown; after: unknown }> | null;
 
@@ -64,6 +65,8 @@ export function describeFieldChanges(
     const custom = options.display?.(field, value);
     if (custom !== undefined) return custom;
     if (value === null || value === undefined || value === '') return t('history.blank');
+    // Ngày lưu dạng ISO ("2026-10-04") đọc như mọi chỗ khác trong app: dd/mm/yyyy (PW-A13).
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDate(value);
     return String(value);
   };
 

@@ -101,6 +101,28 @@ export class DeviceBodyDto {
   @IsOptional() @IsArray({ message: 'Truy cập quản trị phải là danh sách.' }) accessPoints?: unknown[];
 }
 
+/** Trạng thái đổi hàng loạt được — KHÔNG có Thanh lý: thanh lý đi luồng riêng (tài sản đang giữ, biên bản). */
+const BULK_STATUSES = DEVICE_STATUSES.filter((status) => status !== 'retired');
+const BULK_MAX = 200;
+
+class BulkStatusDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(BULK_MAX, { message: `Một lượt tối đa ${BULK_MAX} thiết bị.` })
+  @IsUUID(undefined, { each: true, message: 'Mã thiết bị không hợp lệ.' })
+  ids!: string[];
+
+  @IsIn(BULK_STATUSES, { message: 'Đổi hàng loạt chỉ sang Đang dùng / Dự phòng / Hỏng — thanh lý làm từng máy.' })
+  status!: DeviceStatus;
+}
+
+class BulkUpdateDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(BULK_MAX, { message: `Một lượt tối đa ${BULK_MAX} thiết bị.` })
+  @IsUUID(undefined, { each: true, message: 'Mã thiết bị không hợp lệ.' })
+  ids!: string[];
+
+  @IsOptional() @IsString() @Length(0, 120) assignedTo?: string;
+  @IsOptional() @IsString() @Length(0, 120) department?: string;
+}
+
 class StatusDto {
   @IsIn([...DEVICE_STATUSES], { message: 'Trạng thái thiết bị không hợp lệ.' })
   status!: DeviceStatus;
@@ -293,6 +315,13 @@ export class DevicesController {
     return this.imports.commit(actor(req), requireXlsx(file));
   }
 
+  /** Mã gợi ý cho form Thêm (FM-21). ĐẶT TRƯỚC `@Get(':id')`. */
+  @Roles('sa', 'admin', 'member')
+  @Get('next-code')
+  async nextCode() {
+    return { code: await this.devices.suggestCode() };
+  }
+
   @Roles('sa', 'admin', 'member')
   @Feature('assets', 'network')
   @Get(':id')
@@ -356,6 +385,27 @@ export class DevicesController {
     @Req() req: AuthedRequest,
   ) {
     return this.devices.update(actor(req), params.id, body);
+  }
+
+  /**
+   * Thao tác hàng loạt (UX-E25): cùng vai với đổi tay; một transaction cho cả lô, mỗi máy một
+   * dòng lịch sử + nhật ký như làm tay.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Post('bulk/status')
+  @Audited('device.status-changed', 'device', { writtenByService: true })
+  bulkStatus(@Body() body: BulkStatusDto, @Req() req: AuthedRequest) {
+    return this.devices.bulkSetStatus(actor(req), body.ids, body.status);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('bulk/update')
+  @Audited('device.updated', 'device', { writtenByService: true })
+  bulkUpdate(@Body() body: BulkUpdateDto, @Req() req: AuthedRequest) {
+    if (body.assignedTo === undefined && body.department === undefined) {
+      throw new BadRequestException({ code: 'FIELD_REQUIRED', message: 'Chọn ít nhất một ô để đổi: người dùng hoặc phòng ban.' });
+    }
+    return this.devices.bulkUpdate(actor(req), body.ids, { assignedTo: body.assignedTo, department: body.department });
   }
 
   @Roles('sa', 'admin', 'member')

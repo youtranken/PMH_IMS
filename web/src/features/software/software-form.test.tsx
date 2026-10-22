@@ -1,3 +1,4 @@
+import { formatDate, todayIso } from '@/lib/format';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
@@ -58,6 +59,13 @@ describe('Form hồ sơ phần mềm', () => {
     expect(screen.getByRole('dialog', { name: 'Thêm phần mềm' })).toBeInTheDocument();
   });
 
+  // FM-06: ô Bắt đầu trống thì các nút +1 / +2 / +3 năm xám — hồ sơ mới mặc định hôm nay.
+  it('thêm mới: ô Bắt đầu mặc định hôm nay', () => {
+    mockFetch();
+    render(null);
+    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toHaveTextContent(formatDate(todayIso()));
+  });
+
   it('câu giải thích kỳ hạn nằm sau nút (i), không in thẳng dưới ô', async () => {
     mockFetch();
     render(null);
@@ -68,7 +76,8 @@ describe('Form hồ sơ phần mềm', () => {
 
   it('+1 năm tính từ ngày bắt đầu (29/02 lùi về 28/02); chưa có ngày bắt đầu thì tắt', async () => {
     mockFetch();
-    const { unmount } = render(null);
+    // Hồ sơ mới đã có Bắt đầu = hôm nay (FM-06); "chưa có ngày bắt đầu" là hồ sơ cũ để trống ô đó.
+    const { unmount } = render({ ...ROW, startDate: null });
     expect(screen.getByRole('button', { name: '+1 năm' })).toBeDisabled();
     unmount();
 
@@ -143,6 +152,22 @@ describe('Form theo màn (Q-22)', () => {
     // Không còn ô của license.
     expect(screen.queryByRole('textbox', { name: 'Số ghế' })).toBeNull();
     expect(screen.queryByRole('radiogroup', { name: 'Kỳ hạn' })).toBeNull();
+  });
+
+  // FM-23: tên miền là thứ người ta có trên tay đầu tiên — ô đứng đầu, Tên hồ sơ tự điền theo nó.
+  it('Tên miền & SSL: ô Tên miền đứng trước Tên hồ sơ; gõ tên miền → Tên hồ sơ tự điền, sửa tay thì giữ', async () => {
+    mockFetch();
+    renderOn('domains');
+    const user = userEvent.setup();
+    const domains = screen.getByRole('textbox', { name: /^Tên miền/ });
+    const name = screen.getByRole('textbox', { name: /Tên hồ sơ/ });
+    expect(domains.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.type(domains, 'pmh.com.vn{Enter}mail.pmh.com.vn');
+    expect(name).toHaveValue('pmh.com.vn');
+    await user.clear(name);
+    await user.type(name, 'Tên miền chính');
+    await user.type(domains, '{Enter}vpn.pmh.com.vn');
+    expect(name).toHaveValue('Tên miền chính');
   });
 
   it('Tên miền & SSL: phải có ít nhất một tên miền — ô "Tên miền" báo lỗi, không gửi', async () => {

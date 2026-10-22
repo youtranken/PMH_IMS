@@ -47,6 +47,7 @@ export function DeviceImportDialog({
           url="/api/v1/devices/template"
           fileName="mau-thiet-bi.xlsx"
           label={t('devices.downloadTemplate')}
+          link
         />
       }
     />

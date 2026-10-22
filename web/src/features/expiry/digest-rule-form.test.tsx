@@ -93,6 +93,13 @@ describe('Form luật gửi báo cáo — chip người nhận, gợi ý, công 
     expect(within(dialog).getByText('Đang tạm ngưng')).toBeInTheDocument();
   });
 
+  // PW-A30: "Đang chạy" vừa là nhãn ô vừa là chữ cạnh công tắc — nhãn ô nói "Trạng thái".
+  it('chữ "Đang chạy" chỉ hiện một lần; nhãn ô là "Trạng thái"', async () => {
+    const dialog = await renderForm();
+    expect(within(dialog).getAllByText('Đang chạy')).toHaveLength(1);
+    expect(within(dialog).getByText('Trạng thái')).toBeInTheDocument();
+  });
+
   it('lưới 2 cột trong hộp đủ rộng cho hai ô cạnh nhau', async () => {
     const dialog = await renderForm();
     expect(dialog.querySelector('form.form-grid')).toHaveAttribute('data-columns', '2');

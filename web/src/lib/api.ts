@@ -47,7 +47,13 @@ export function errorMessage(
       }
       return body.message;
     }
+    // FM-07: không có câu của API thì nói theo nguyên nhân, không rơi về "Có lỗi xảy ra.".
+    if (error.status >= 500) return i18n.t('common.errorServer');
+    if (error.status === 403) return i18n.t('common.errorForbidden');
   }
+  // `fetch` chỉ reject TypeError khi chưa tới được máy chủ (mạng đứt, DNS, bị chặn). AbortError
+  // (người dùng tự hủy) không phải lỗi mạng nên rơi về câu của nơi gọi.
+  if (error instanceof TypeError) return i18n.t('common.errorNetwork');
   return fallback;
 }
 

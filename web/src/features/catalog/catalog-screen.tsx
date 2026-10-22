@@ -1,4 +1,5 @@
 import { formatPhone } from '@/lib/phone-format';
+import { AuditLogLink } from '@/ui/audit-log-link';
 import { PhoneLink } from '@/ui/phone-link';
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +25,7 @@ import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { PageHeader } from '@/ui/page-header';
-import { Pagination } from '@/ui/pagination';
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/ui/pagination';
 import { RowActions, type RowAction, type RowPrimaryAction } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
@@ -55,7 +56,6 @@ import { CableSwatch } from '@/ui/cable-swatch';
 import { lowerFirstAfterNumber } from '@/lib/count-label';
 import { CatalogSetup, useSetupModels } from './catalog-setup';
 
-const DEFAULT_LIMIT = 20;
 
 /* Thứ tự = ba nhóm của Q-27 (Vị trí · Thiết bị · Đối tác & tổ chức); tab Model chen sau Loại
    thiết bị lúc dựng thanh tab. Đổi thứ tự ở đây là đổi thứ tự trên màn. */
@@ -445,7 +445,6 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const url = useListUrlState<CatalogFilters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     searchKey: 'search',
   });
   const { page, limit, filters } = url;
@@ -468,6 +467,8 @@ export function CatalogScreen({ me }: { me: Me }) {
   /* Điện thoại: Xuất / Nhập vào menu ⋮ như trang chi tiết thiết bị — ba nút một hàng không vừa
      390px, nút Thêm (việc chính) rơi xuống hàng riêng. */
   const narrow = useMediaQuery(BREAKPOINTS.cards);
+  // ≥1024px: 9 tab xuống dòng thay vì cuộn ngang (PW-A17) — ba tab cuối từng phải bấm mũi tên mới thấy.
+  const tabsWrap = !useMediaQuery(BREAKPOINTS.editor);
   const xlsx = useXlsxDownload();
 
   /* Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng, và số mục trên nhãn từng tab
@@ -550,12 +551,6 @@ export function CatalogScreen({ me }: { me: Me }) {
         : []),
       ...(canManage
         ? [
-            {
-              key: 'audit',
-              label: t('catalog.auditLog'),
-              onSelect: () =>
-                navigate(`${PATHS.adminAuditLog}?objectId=${encodeURIComponent(catalogRow.id)}`),
-            },
             ...manageItems(catalogRow, name),
           ]
         : []),
@@ -709,7 +704,6 @@ export function CatalogScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('catalog.title')}
-        subtitle={t('catalog.subtitle')}
         actions={
           modelTab ? (
             <button type="button" className="btn primary catalog-add" onClick={() => setAddingModel(true)}>
@@ -772,6 +766,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         value={modelTab ? MODEL_TAB : entity}
         onChange={switchTab}
         ariaLabel={t('catalog.title')}
+        wrap={tabsWrap}
       />
 
       {modelTab ? (
@@ -889,6 +884,7 @@ export function CatalogScreen({ me }: { me: Me }) {
 
       {historyOf ? (
         <CatalogHistoryDialog
+          role={me.role}
           entity={entity}
           id={historyOf.id}
           name={historyOf.name}
@@ -912,11 +908,13 @@ export function CatalogScreen({ me }: { me: Me }) {
 
 /** Sổ thay đổi của một mục — ai đổi địa chỉ site, ai tắt "Có port map" (AD-13, `HistoryPanel`). */
 function CatalogHistoryDialog({
+  role,
   entity,
   id,
   name,
   onClose,
 }: {
+  role: Me['role'];
   entity: CatalogEntity;
   id: string;
   name: string;
@@ -942,10 +940,14 @@ function CatalogHistoryDialog({
       ) : history.isError ? (
         <LoadError error={history.error} onRetry={() => void history.refetch()} />
       ) : (
-        <HistoryPanel
-          entries={toCatalogHistory(history.data ?? [], t, lists.data?.sites)}
-          emptyText={t('catalog.historyEmpty')}
-        />
+        <>
+          {/* Một mục "Lịch sử" trong ⋮ (PW-A23); từ đây sang Nhật ký thao tác nếu cần cả lượt xuất / nhập. */}
+          <AuditLogLink role={role} objectType={entity} objectId={id} />
+          <HistoryPanel
+            entries={toCatalogHistory(history.data ?? [], t, lists.data?.sites)}
+            emptyText={t('catalog.historyEmpty')}
+          />
+        </>
       )}
     </Dialog>
   );
@@ -976,7 +978,7 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
 
 /** Tham số của file xuất — cùng bộ lọc với bảng, không phân trang. */
 function exportQuery(search: string, status: string, siteId: string, sorting: SortingState): string {
-  return buildQuery(1, DEFAULT_LIMIT, search, status, siteId, sorting)
+  return buildQuery(1, DEFAULT_PAGE_SIZE, search, status, siteId, sorting)
     .split('&')
     .filter((part) => !part.startsWith('page=') && !part.startsWith('limit='))
     .join('&');

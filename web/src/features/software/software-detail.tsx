@@ -53,6 +53,7 @@ import {
   screenOfKind,
   type SoftwareScreenKey,
 } from "@/lib/software-screens";
+import { RecordStamp } from "@/ui/record-stamp";
 
 /**
  * Trang chi tiết hồ sơ phần mềm — dùng chung cho bốn màn của Q-22, `screen` là màn của route.
@@ -122,7 +123,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
     queryKey: ["software", id, "history"],
     queryFn: () =>
       apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
-    enabled: tab === "history",
+    // Hỏi sổ ngay khi mở trang: dòng "sửa lần cuối … bởi …" dưới dải 4 ô cần lượt mới nhất (UX-E26).
   });
 
   /* Cùng khoá cache với tab Máy đang dùng (`LicenseAssignmentsPanel`): mở hộp Gia hạn sau khi
@@ -222,10 +223,9 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
   /* Thông tin = thứ CHƯA nói ở đầu trang (Q-27 bổ sung: một thông tin nói một lần). Mã, tên là
-     tiêu đề; nhà cung cấp, hạn, ghế, hợp đồng ở dải 4 ô. Ngày bắt đầu đã nằm trong khoảng ngày của
-     ô Hết hạn, và loại không có ghế / tên miền thì dải 4 ô có hẳn ô "Bắt đầu" — chỉ còn license
-     hay SSL / tên miền KHÔNG có ngày hết hạn mới cần dòng riêng ở đây. */
-  const stripShowsStart = Boolean(item.endDate) || (!supportsSeats(item.kind) && !supportsWebsites(item.kind));
+     tiêu đề; nhà cung cấp, hạn, ghế / tên miền, hợp đồng ở dải 4 ô. Ngày bắt đầu nằm trong khoảng
+     ngày của ô Hết hạn — hồ sơ KHÔNG có ngày hết hạn mới cần dòng riêng ở đây. */
+  const stripShowsStart = Boolean(item.endDate);
   const startItem = stripShowsStart
     ? []
     : [{ label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null }];
@@ -239,13 +239,14 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         { label: t("software.note"), value: item.perSeat ? t("software.notePerSeat") : item.note },
       ]
     : [
-        { label: t("software.kind"), value: t(KIND_KEY[item.kind]) },
+        // Không "Loại hồ sơ" (PW-A10): tên màn và mắt xích loại ở đầu trang đã nói.
         ...startItem,
         { label: t("software.note"), value: item.note },
       ];
   const specBlank = specItems.filter((entry) => !entry.value).length;
   const showBatches = supportsSeats(item.kind) && siblings.length > 1;
-  const showWebsites = supportsWebsites(item.kind);
+  // Một tên miền thì ô Tên miền ở dải 4 ô đã ghi đúng tên đó — thẻ cột phải chỉ lặp lại (PW-A11).
+  const showWebsites = supportsWebsites(item.kind) && (item.websites ?? []).length > 1;
   const hasRail = showBatches || showWebsites;
 
   return (
@@ -298,7 +299,6 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               item={item}
               retired={retired}
               csrfToken={me.csrfToken}
-              onRestore={() => setRestoring(true)}
               onBatch={() => setBatching(true)}
               onDone={() => void refresh()}
             />
@@ -375,7 +375,8 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   value: (item.websites ?? []).length > 0 ? t("software.siteCount", { count: (item.websites ?? []).length }) : null,
                   note: item.websites?.[0],
                 }
-              : { key: "start", label: t("software.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
+              : /* Hợp đồng / dịch vụ: ô Bắt đầu chỉ lặp ngày đầu của khoảng hạn (PW-A10). */
+                { key: "contract", label: t("software.contract"), value: item.contract },
           supportsSeats(item.kind)
             ? {
                 key: "contract",
@@ -384,13 +385,17 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   ? t("software.contractPerSeat", { count: item.seats?.length ?? 0 })
                   : item.contract,
               }
-            : {
-                key: "files",
-                label: t("software.tabAttachments"),
-                value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
-              },
+            : supportsWebsites(item.kind)
+              ? /* Ô Giấy tờ trùng tab Giấy tờ (PW-A11) — tên miền / SSL dùng ô này cho số hợp đồng. */
+                { key: "contract", label: t("software.contract"), value: item.contract }
+              : {
+                  key: "files",
+                  label: t("software.tabAttachments"),
+                  value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
+                },
         ]}
       />
+      <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />
 
       <DetailLayout
         /* Không còn "Thẻ định danh" (Q-27 bổ sung): trạng thái ở đầu trang, hạn và ghế ở dải 4 ô.
@@ -418,11 +423,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   </li>
                 ))}
               </ul>
-              {retired ? null : (
-                <button type="button" className="btn sm" onClick={() => setBatching(true)}>
-                  {t("software.addBatch")}
-                </button>
-              )}
+              {/* "Mua thêm đợt mới…" chỉ ở menu ⋮ đầu trang (UX-E22) — một lối cho một việc. */}
             </RailCard>
           ) : null}
           {/* Tên miền nằm ở cột phải, không trong tab Hồ sơ: SSL mở sẵn tab Giấy tờ, mà "cert
@@ -512,7 +513,10 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
               role="group"
               aria-label={t("software.historyFilter")}
             >
-              {(["", "renew", "seat", "profile"] as const).map((group) => (
+              {/* Loại không có ghế (SSL, tên miền, hợp đồng…) thì chip "Ghế" chỉ lọc ra rỗng (PW-A21). */}
+              {(["", "renew", "seat", "profile"] as const)
+                .filter((group) => group !== "seat" || supportsSeats(item.kind))
+                .map((group) => (
                 <button
                   key={group || "all"}
                   type="button"
@@ -632,14 +636,12 @@ function DetailMoreActions({
   item,
   retired,
   csrfToken,
-  onRestore,
   onBatch,
   onDone,
 }: {
   item: SoftwareRow;
   retired: boolean;
   csrfToken: string;
-  onRestore: () => void;
   onBatch: () => void;
   onDone: () => void;
 }) {
@@ -657,25 +659,23 @@ function DetailMoreActions({
     csrfToken,
     onDone,
   });
+  // Đã thanh lý: "Khôi phục…" ở băng Thanh lý là lối duy nhất (UX-E22) — không còn việc nào cho ⋮.
+  if (retired) return null;
   return (
     <RowActions
       label={t("common.actionsOf", { subject: item.code })}
-      items={
-        retired
-          ? [{ key: "restore", label: t("software.restore"), onSelect: onRestore, ok: true }]
-          : [
-              ...(supportsSeats(item.kind)
-                ? [{ key: "batch", label: t("software.addBatch"), onSelect: onBatch }]
-                : []),
-              {
-                key: "dispose",
-                label: t("software.disposeMenu"),
-                onSelect: dispose.run,
-                danger: true,
-                disabled: dispose.isPending,
-              },
-            ]
-      }
+      items={[
+        ...(supportsSeats(item.kind)
+          ? [{ key: "batch", label: t("software.addBatch"), onSelect: onBatch }]
+          : []),
+        {
+          key: "dispose",
+          label: t("software.disposeMenu"),
+          onSelect: dispose.run,
+          danger: true,
+          disabled: dispose.isPending,
+        },
+      ]}
     />
   );
 }

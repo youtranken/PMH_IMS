@@ -16,6 +16,7 @@ import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useDepartments } from '@/ui/use-departments';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { CodeInput } from '@/ui/code-input';
 
 type PeerMode = 'device' | 'free';
 
@@ -47,7 +48,7 @@ export function PortFormDialog({
   csrfToken: string;
   onClose: () => void;
   /**
-   * `keepOpen`: người dùng chọn "Ghi rồi khai cổng kế tiếp" — hộp đã tự chuẩn bị cổng kế tiếp.
+   * `keepOpen`: người dùng chọn "Lưu rồi khai cổng kế tiếp" — hộp đã tự chuẩn bị cổng kế tiếp.
    * `saved` + `deviceId` (máy giữ bản ghi) để màn sơ đồ chèn nét cho dây vừa khai.
    */
   onSaved: (keepOpen: boolean, saved: PortRow, deviceId: string) => void;
@@ -276,10 +277,9 @@ export function PortFormDialog({
                   ariaLabel={t('ports.port')}
                 />
               ) : (
-                <input
+                <CodeInput
                   ref={labelRef}
                   id="port-label"
-                  className="inp mono"
                   required
                   placeholder={t('ports.phPort')}
                   value={portLabel}
@@ -372,7 +372,7 @@ export function PortFormDialog({
                     ariaLabel={t('ports.peerPort')}
                   />
                 ) : (
-                  <input id="port-peer-port" className="inp mono" value={connectedPort} onChange={(e) => setConnectedPort(e.target.value)} />
+                  <CodeInput id="port-peer-port" value={connectedPort} onChange={(e) => setConnectedPort(e.target.value)} />
                 )}
               </Field>
               {peer && outsideLayout(peerPanel.data, connectedPort) ? (
@@ -430,7 +430,7 @@ export function PortFormDialog({
             ]}
           />
         </Field>
-        <Field label={t('ports.vlan')} hint={t('ports.vlanHint')} htmlFor="port-vlan">
+        <Field label={t('ports.vlan')} hint={t('ports.vlanHint')} size="xs" htmlFor="port-vlan">
           <input id="port-vlan" className="inp mono" placeholder={t('ports.phVlan')} value={vlan} onChange={(e) => setVlan(e.target.value)} />
         </Field>
 

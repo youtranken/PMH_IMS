@@ -21,6 +21,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useDebouncedValue } from '@/ui/use-debounced-value';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 
 const LIMIT = 20;
 
@@ -49,6 +50,9 @@ export function DeviceModelsPanel({ me, adding, onAddingChange }: { me: Me; addi
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (settled.trim()) params.set('search', settled.trim());
   if (deviceTypeId) params.set('deviceTypeId', deviceTypeId);
+  const exportParams = new URLSearchParams();
+  if (settled.trim()) exportParams.set('search', settled.trim());
+  if (deviceTypeId) exportParams.set('deviceTypeId', deviceTypeId);
   const rows = useQuery({
     queryKey: [...DEVICE_MODELS_KEY, params.toString()],
     queryFn: () => apiFetch<{ items: DeviceModel[]; total: number }>(`/api/v1/device-models?${params.toString()}`),
@@ -165,6 +169,8 @@ export function DeviceModelsPanel({ me, adding, onAddingChange }: { me: Me; addi
         }}
         searchPlaceholder={t('deviceModels.search')}
         activeCount={activeCount}
+        /* Xuất đúng bộ lọc đang xem, như các tab danh mục khác (UX-E30). */
+        actions={<ExportXlsxButton url={`/api/v1/device-models/export.xlsx?${exportParams.toString()}`} fileName="model-thiet-bi.xlsx" />}
         onClear={() => {
           setSearch('');
           setDeviceTypeId('');

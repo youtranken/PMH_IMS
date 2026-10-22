@@ -104,7 +104,8 @@
   width: 100%;
   text-align: left;
   position: relative;
-  padding: var(--space-5) var(--space-6);
+  /* Mục cao ~40px (ST-06): 55px thì ~20 mục "Đi tới" kín cả màn điện thoại. */
+  padding: var(--space-2) var(--space-6);
   border: none;
   background: transparent;
   color: var(--ink);
@@ -113,8 +114,8 @@
   transition: background 0.12s var(--ease);
 }
 .cp-item .it-ic {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--ink-2);

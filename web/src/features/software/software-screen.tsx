@@ -26,12 +26,14 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { RenewDialog } from '@/ui/renew-dialog';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { useOpenFromUrl } from '@/ui/use-open-from-url';
+import { ExcelImportDialog } from '@/ui/excel-import-dialog';
 import { RestoreDialog } from './software-restore-dialog';
 import { AssignDialog } from './assign-dialog';
 import { SoftwareForm } from './software-form';
 import { activeSeatCodes, softwareDisposeMessage } from './software-dispose-message';
 import { standingOf } from './software-standing';
-import { SeatUsage, SoftwareStanding } from './software-standing-cell';
+import { SeatUsage, SoftwareEndCell, SoftwareStanding } from './software-standing-cell';
 import {
   KIND_KEY,
   SOFTWARE_STATUSES,
@@ -54,7 +56,6 @@ import {
   type SoftwareScreenSpec,
 } from '@/lib/software-screens';
 
-const DEFAULT_LIMIT = 20;
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
    TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `kind`/`status` vẫn giữ union hẹp cho chỗ
@@ -108,7 +109,6 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
@@ -135,6 +135,9 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
+  useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
   const navigate = useNavigate();
   /** "Mua thêm đợt mới" (Q-27): hồ sơ mới điền sẵn theo đợt này. */
@@ -253,11 +256,11 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
           ]
         : []),
       {
-        /* MỘT cột "Tình trạng" thay cho "Tình trạng hạn" + "Trạng thái" — xem
-           `software-standing.ts`. Id `endDate` để bấm tiêu đề là sắp theo hạn. */
+        /* Cột "Hết hạn": ngày là dòng chính vì cột sắp theo ngày; trạng thái xuống dòng phụ
+           (PW-A07 / TB-13) — xem `SoftwareEndCell`. */
         accessorKey: 'endDate',
-        header: t('software.standing'),
-        cell: ({ row }) => <SoftwareStanding item={row.original} />,
+        header: t('expiry.end'),
+        cell: ({ row }) => <SoftwareEndCell item={row.original} />,
       },
       {
         id: 'actions',
@@ -294,6 +297,10 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
                 .join('&')}`}
               fileName={spec.exportFile}
             />
+          {/* Nhập chỉ trên máy tính như Thiết bị: bảng đối chiếu rộng (UX-E30). */}
+          <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
+            {t('software.importExcel')}
+          </button>
           <button type="button" className="btn primary" onClick={() => setCreating(true)}>
             {t(spec.addKey)}
           </button>
@@ -397,6 +404,8 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
             data={rows}
             columns={columns}
             emptyText={url.isFiltered ? t('software.emptyFiltered') : t(spec.emptyKey)}
+            onRowClick={(item) => navigate(softwareItemPath(item.kind, item.id))}
+            rowHref={(item) => softwareItemPath(item.kind, item.id)}
             stackOnMobile
             stickyActions
             /* ≤600px: thẻ 3 dòng để quét "cái gì sắp hết hạn" trên điện thoại. Thẻ không bung
@@ -459,6 +468,23 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
         </>
       )}
 
+      {importing ? (
+        <ExcelImportDialog
+          base="/api/v1/software"
+          title={t(spec.importTitleKey)}
+          hint={t('software.importHint')}
+          group={t(spec.titleKey)}
+          fileStem={spec.exportFile.replace(/\.xlsx$/, '')}
+          templateLabel={t('software.downloadTemplate')}
+          templateQuery={`kind=${spec.kinds.join(',')}`}
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['software'] });
+          }}
+        />
+      ) : null}
       {creating || batching ? (
         <SoftwareForm
           row={null}

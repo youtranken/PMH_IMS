@@ -90,6 +90,13 @@ interface DataTableProps<T> {
   /** Bấm cả dòng (vd mở chi tiết). Kèm bàn phím (Enter/Space) cho a11y. */
   onRowClick?: (row: T) => void;
   /**
+   * Đường tới trang chi tiết của dòng (TB-07): Ctrl/Cmd + bấm hoặc chuột giữa mở TAB MỚI như một
+   * link thật; thẻ điện thoại dùng làm link. Bấm thường vẫn đi qua `onRowClick` (SPA).
+   */
+  rowHref?: (row: T) => string;
+  /** Dòng đang được trỏ tới (mở bằng link `?rule=`…): `aria-current="true"` trên dòng / thẻ. */
+  rowCurrent?: (row: T) => boolean;
+  /**
    * Có giá trị → thêm cột ▸ để BUNG 1 hàng chi tiết in-context ngay dưới dòng
    * (trang Tài sản). Không truyền → bảng giữ nguyên như cũ (mọi trang khác).
    */
@@ -117,6 +124,8 @@ interface DataTableProps<T> {
     selected: Set<string>;
     onToggle: (id: string) => void;
     onToggleAll: (ids: string[], checked: boolean) => void;
+    /** Tên ô tick của từng dòng ("Chọn PC-01") — vắng thì "Chọn dòng" như nhau cho mọi dòng. */
+    rowLabel?: (row: T) => string;
   };
   /**
    * Cột CUỐI (thao tác) dính mép phải khi bảng cuộn ngang, kèm bóng mép khi còn cột khuất.
@@ -172,6 +181,8 @@ export function TableWrap({ children }: { children: ReactNode }) {
       className="table-wrap"
       data-more-start={edges.start ? 'true' : undefined}
       data-more-end={edges.end ? 'true' : undefined}
+      // Vừa bề ngang = không cuộn ngang: CSS đổi khung sang `clip` để tiêu đề cột dính trang.
+      data-fit={!edges.start && !edges.end ? 'true' : undefined}
     >
       {children}
     </div>
@@ -196,6 +207,8 @@ export function DataTable<T>({
   sorting: controlledSorting,
   onSortingChange: controlledOnSortingChange,
   onRowClick,
+  rowHref,
+  rowCurrent,
   renderExpanded,
   canExpand,
   expandLabel,
@@ -271,9 +284,10 @@ export function DataTable<T>({
           <MobileCardList
             rows={rows.map((row) => row.original)}
             rowKey={(_, index) => rows[index].id}
-            card={mobileCard}
+            card={rowHref && !mobileCard.href ? { ...mobileCard, href: rowHref } : mobileCard}
             rowClassName={rowClassName}
             onRowClick={onRowClick}
+            rowCurrent={rowCurrent}
             groupBy={groupBy}
           />
         )}
@@ -435,11 +449,24 @@ export function DataTable<T>({
                         onRowClick
                           ? (event) => {
                               if (isInnerControlClick(event)) return;
+                              if (rowHref && (event.ctrlKey || event.metaKey)) {
+                                window.open(rowHref(row.original), '_blank', 'noopener');
+                                return;
+                              }
                               onRowClick(row.original);
                             }
                           : undefined
                       }
+                      onAuxClick={
+                        rowHref
+                          ? (event) => {
+                              if (event.button !== 1 || isInnerControlClick(event)) return;
+                              window.open(rowHref(row.original), '_blank', 'noopener');
+                            }
+                          : undefined
+                      }
                       style={onRowClick ? { cursor: 'pointer' } : undefined}
+                      aria-current={rowCurrent?.(row.original) ? 'true' : undefined}
                     >
                       {selection && (
                         <td
@@ -448,7 +475,7 @@ export function DataTable<T>({
                         >
                           <input
                             type="checkbox"
-                            aria-label={t('dataTable.selectRow')}
+                            aria-label={selection.rowLabel?.(row.original) ?? t('dataTable.selectRow')}
                             checked={selection.selected.has(row.id)}
                             onChange={() => selection.onToggle(row.id)}
                           />
@@ -549,6 +576,7 @@ export function MobileCardList<T>({
   card,
   rowClassName,
   onRowClick,
+  rowCurrent,
   groupBy,
 }: {
   rows: readonly T[];
@@ -556,29 +584,47 @@ export function MobileCardList<T>({
   card: MobileCard<T>;
   rowClassName?: (row: T) => string;
   onRowClick?: (row: T) => void;
+  rowCurrent?: (row: T) => boolean;
   groupBy?: TableGroupBy<T>;
 }) {
-  const starts = groupBy ? groupStarts(rows, groupBy.key) : null;
+  const item = (row: T, index: number) => (
+    <MobileCardItem
+      key={rowKey(row, index)}
+      row={row}
+      card={card}
+      className={rowClassName?.(row)}
+      onRowClick={onRowClick}
+      current={rowCurrent?.(row) ?? false}
+    />
+  );
+  if (!groupBy) return <ul className="list-cards">{rows.map(item)}</ul>;
+  /*
+   * Có nhóm thì mỗi nhóm một <section> (tiêu đề + <ul> thẻ của nó). Tiêu đề nhóm không phải một
+   * thẻ: đặt nó làm <li> anh em thì trình đọc màn hình đếm sai số mục; `role="presentation"` lên
+   * <li> thì <ul> chứa con không hợp lệ (axe `list`); bọc nhóm trong <li> thì <li> nhóm cũng
+   * "chứa" mọi link của thẻ — lọc thẻ theo link ra hai phần tử.
+   */
+  const starts = groupStarts(rows, groupBy.key);
+  const groups: { first: number; rows: { row: T; index: number }[] }[] = [];
+  rows.forEach((row, index) => {
+    if (starts[index] || groups.length === 0) groups.push({ first: index, rows: [] });
+    groups[groups.length - 1].rows.push({ row, index });
+  });
   return (
-    <ul className="list-cards">
-      {rows.map((row, index) => (
-        <Fragment key={rowKey(row, index)}>
-          {groupBy && starts?.[index] ? (
-            <li className="list-cards-group" role="presentation">
-              <span role="heading" aria-level={3}>
-                {groupBy.label(groupBy.key(row), row)}
-              </span>
-            </li>
-          ) : null}
-          <MobileCardItem
-            row={row}
-            card={card}
-            className={rowClassName?.(row)}
-            onRowClick={onRowClick}
-          />
-        </Fragment>
+    <div className="list-cards">
+      {groups.map((group) => (
+        <section key={rowKey(rows[group.first], group.first)} className="list-cards-section">
+          <div className="list-cards-group">
+            {/* Cấp 2: danh sách nằm ngay dưới h1 của màn (Nhật ký, Sắp hết hạn) — cấp 3 là nhảy
+                cấp (AX-04, axe heading-order). */}
+            <span role="heading" aria-level={2}>
+              {groupBy.label(groupBy.key(rows[group.first]), rows[group.first])}
+            </span>
+          </div>
+          <ul className="list-cards-sub">{group.rows.map(({ row, index }) => item(row, index))}</ul>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -592,11 +638,13 @@ function MobileCardItem<T>({
   card,
   className,
   onRowClick,
+  current = false,
 }: {
   row: T;
   card: MobileCard<T>;
   className?: string;
   onRowClick?: (row: T) => void;
+  current?: boolean;
 }) {
   const title = card.title(row);
   /* Tiêu đề xuống tối đa hai dòng rồi "…" (`.list-card-title`): chữ đủ nằm ở `title` khi nó là
@@ -609,7 +657,7 @@ function MobileCardItem<T>({
   const meta = card.meta?.(row);
   const aside = card.aside?.(row);
   return (
-    <li className={['list-card', className].filter(Boolean).join(' ')}>
+    <li className={['list-card', className].filter(Boolean).join(' ')} aria-current={current ? 'true' : undefined}>
       <div className="list-card-top">
         <span className={card.titleIsCode ? 'list-card-title mono' : 'list-card-title'} title={titleText}>
           {href ? (

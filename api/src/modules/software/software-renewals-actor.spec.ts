@@ -31,6 +31,7 @@ describe('GET /software/:id/renewals — kèm họ tên người gia hạn', () 
       {} as ExcelExportService,
       users,
       {} as SystemConfigService,
+      {} as never,
     );
 
     const rows = await controller.renewals({ id: '0b7c6a43-4f1e-4d7e-9a43-2f6d1c1b9e10' });

@@ -78,8 +78,8 @@ describe('Quyền két sắt — số trong dòng tổng là lối lọc, Kiểm
 
   it('"1 nhóm chưa gán cho ai" bấm được: sang Ma trận, chỉ còn đúng cột trống', async () => {
     renderAt('/admin/vault-access');
-    await userEvent.click(await screen.findByRole('button', { name: '1 nhóm chưa gán cho ai' }));
-    expect(await screen.findByRole('checkbox', { name: 'Chỉ nhóm chưa ai được gán' })).toBeChecked();
+    await userEvent.click(await screen.findByRole('button', { name: '1 phạm vi chưa gán cho ai' }));
+    expect(await screen.findByRole('checkbox', { name: 'Chỉ phạm vi chưa ai được gán' })).toBeChecked();
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
     expect(headers.some((text) => text.includes('Chứng chỉ SSL'))).toBe(true);
     expect(headers.some((text) => text.includes('Switch'))).toBe(false);
@@ -94,7 +94,7 @@ describe('Quyền két sắt — số trong dòng tổng là lối lọc, Kiểm
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Mã hồ sơ' }), 'SW-E2E-01');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Kiểm tra' }));
     expect(
-      await within(dialog).findByText('Hồ sơ này thuộc nhóm: Thiết bị tại E2E-HN · Thiết bị loại Switch.'),
+      await within(dialog).findByText('Hồ sơ này thuộc phạm vi: Thiết bị tại E2E-HN · Thiết bị loại Switch.'),
     ).toBeInTheDocument();
     expect(within(dialog).getByText('Vì dòng quyền: Thiết bị loại Switch · Xem thẳng.')).toBeInTheDocument();
     expect(within(dialog).getByText(/Còn 1 dòng khớp khác nhưng hẹp hơn\./)).toBeInTheDocument();

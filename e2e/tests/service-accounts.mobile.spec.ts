@@ -64,6 +64,6 @@ test('danh sách và hồ sơ tài khoản dịch vụ đọc được ở 390px
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await page.getByRole('tab', { name: 'Lịch sử' }).click();
-  await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
+  await expect(page.getByText('Thêm hồ sơ')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });

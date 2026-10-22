@@ -122,6 +122,11 @@ export class ExpiryService {
     return this.registry.list();
   }
 
+  /** Múi giờ hệ thống — file xuất in giờ đúng như màn hình, không in UTC. */
+  timezone(): Promise<string> {
+    return this.config.getString('appTimezone');
+  }
+
   /** Hai ngưỡng đang hiệu lực — giao diện đọc để huy hiệu và chip đếm cùng một luật. */
   async thresholds(): Promise<ExpiryThresholds> {
     const [criticalDays, warningDays] = await Promise.all([

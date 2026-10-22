@@ -66,7 +66,7 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
   await page.getByRole('tab', { name: /Két sắt/ }).click();
   await expect(page.getByRole('tab', { name: /Két sắt/, selected: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Lịch sử' }).click();
-  await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
+  await expect(page.getByText('Thêm hồ sơ')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });
 

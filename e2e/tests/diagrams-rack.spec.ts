@@ -291,7 +291,7 @@ test.describe('Sơ đồ mạng — mặt tủ không đè U, dây không đứt
     const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
     await box.getByRole('button', { name: 'Tủ mạng', exact: true }).click();
     await page.getByRole('option', { name: `E2E-T${stamp} · ${cabinetCode}` }).click();
-    await box.getByRole('button', { name: 'Chèn tủ mạng' }).click();
+    await box.getByRole('button', { name: 'Chèn tủ mạng', exact: true }).click();
     await expect(page.getByText(`Đã chèn khung tủ ${cabinetCode} (2 thiết bị) — 2 máy đã có trên bản vẽ được dời vào khung, dây giữ nguyên.`)).toBeVisible();
     if (process.env.IMS_SHOT_DIR) await page.screenshot({ path: `${process.env.IMS_SHOT_DIR}/tu-chen-giu-day.png` });
     const [saved] = await Promise.all([

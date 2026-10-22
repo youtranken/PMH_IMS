@@ -65,6 +65,46 @@ export function SoftwareStanding({ item, compact = false }: { item: SoftwareRow;
 }
 
 /**
+ * Ô "Hết hạn" của DANH SÁCH phần mềm (PW-A07 / TB-13). Cột sắp theo ngày nên ngày là dòng chính
+ * — trộn "Còn 349 ngày" với "Hết hạn" trên dòng chính thì mắt không quét theo hạn được. Dòng phụ:
+ * huy hiệu đếm ngày khi đang dùng, huy hiệu trạng thái khi khác Đang dùng. Trang chi tiết và thẻ
+ * điện thoại vẫn dùng `SoftwareStanding`.
+ */
+export function SoftwareEndCell({ item }: { item: SoftwareRow }) {
+  const { t } = useTranslation();
+  const standing = standingOf(item);
+  if (standing.kind === 'perpetual') return <PerpetualBadge plain />;
+  if (standing.kind === 'noEnd') return <span className="muted">{t('expiry.labelNone')}</span>;
+  const main = item.endDate ? formatDate(item.endDate) : '—';
+  if (standing.kind === 'countdown') {
+    return (
+      <>
+        {main}
+        <span className="cell-sub">
+          <ExpiryBadge end={item.endDate} />
+        </span>
+      </>
+    );
+  }
+  // Hết hạn: ngày ở dòng chính đã nói quá bao lâu; chỉ thêm mốc tự thanh lý nếu đang bật.
+  const retire =
+    standing.kind !== 'expired' || standing.retireInDays === null
+      ? null
+      : standing.retireInDays === 0
+        ? t('software.autoRetireNext')
+        : t('software.autoRetireIn', { count: standing.retireInDays });
+  return (
+    <>
+      {main}
+      <span className="cell-sub">
+        <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
+        {retire ? ` ${retire}` : null}
+      </span>
+    </>
+  );
+}
+
+/**
  * Ô "Ghế": thanh đo nói tỉ lệ, chữ chỉ in phân số. Dùng đủ hoặc vượt thì thêm dòng đỏ —
  * đó là lúc phải mua thêm hoặc gỡ bớt.
  */

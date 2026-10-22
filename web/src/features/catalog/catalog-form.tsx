@@ -11,7 +11,7 @@ import { Field } from '@/ui/page-header';
 import { NumberStepper } from '@/ui/number-stepper';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import { CableSwatch } from '@/ui/cable-swatch';
@@ -29,6 +29,7 @@ import {
 import { cabinetNumber, suggestCabinetCode } from './cabinet-code';
 import { deviceUsage } from './catalog-usage';
 import { DeviceTypeDiagramIcon } from './device-type-diagram-icon';
+import { CodeInput } from '@/ui/code-input';
 
 /** `GET /catalog/diagram-shapes` — danh sách hình ĐÓNG, server kiểm đúng danh sách này khi ghi. */
 interface DiagramShapes {
@@ -318,7 +319,7 @@ export function CatalogForm({
               options={activeOptions(
                 lists.data?.sites,
                 (row as CabinetRow | null)?.siteId,
-                (site) => `${site.code} — ${site.name}`,
+                (site) => siteFormLabel(site),
               )}
               onChange={pickSite}
             />
@@ -329,6 +330,7 @@ export function CatalogForm({
           <Field
             label={t('catalog.code')}
             required
+            size="s"
             htmlFor="catalog-code"
             hint={
               cabinetNo !== null
@@ -340,10 +342,10 @@ export function CatalogForm({
             error={fieldError('code')}
           >
             {codeUnlocked ? (
-              <input
+              <CodeInput
+                caps
                 id="catalog-code"
                 name="catalog-code"
-                className="inp mono"
                 required
                 value={form.code}
                 onChange={(e) => {

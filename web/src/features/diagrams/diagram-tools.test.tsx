@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
@@ -187,7 +186,7 @@ describe('So sánh hai phiên bản (Q-23)', () => {
     await pickMenuItem(user, /^Thao tác với/, 'Phiên bản');
     const dialog = await screen.findByRole('dialog', { name: 'Phiên bản và lịch sử' });
     // Ô tick có lời dặn để làm gì; nút đếm số đã chọn (D-05).
-    expect(within(dialog).getByText('Tick 2 phiên bản rồi bấm So sánh.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Chọn 2 phiên bản rồi bấm So sánh.')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'So sánh (0/2)' })).toBeDisabled();
     await user.click(await within(dialog).findByRole('checkbox', { name: 'Chọn phiên bản #3 để so sánh' }));
     expect(within(dialog).getByRole('button', { name: 'So sánh (1/2)' })).toBeDisabled();
@@ -224,24 +223,4 @@ describe('So sánh hai phiên bản (Q-23)', () => {
   });
 });
 
-describe('Thanh trượt thời gian', () => {
-  it('kéo về một ngày → xem bản chính thức hiệu lực ngày đó; trước bản đầu tiên → "chưa có"', async () => {
-    const fetchMock = routeFetch(base());
-    renderScreen('/diagrams/g1');
-    await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
-    const user = userEvent.setup({ advanceTimers: () => undefined });
-    await pickMenuItem(user, /^Thao tác với/, 'Dòng thời gian');
-    const slider = await screen.findByRole('slider', { name: 'Chọn ngày' });
-    // Thang bắt đầu từ 31/08 (hôm trước lần phát hành đầu): nấc 5 = 05/09 → bản chính thức #1.
-    fireEvent.change(slider, { target: { value: '5' } });
-    expect(where).toBe('/diagrams/g1?version=v1&at=2026-09-05');
-    expect((await screen.findAllByText(/Bản chính thức hiệu lực ngày 05\/09\/2026 — phiên bản 1/)).length).toBeGreaterThan(0);
-    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/content?mode=view&versionId=v1'))).toBe(true));
-
-    fireEvent.change(await screen.findByRole('slider', { name: 'Chọn ngày' }), { target: { value: '0' } });
-    expect(where).toBe('/diagrams/g1?at=2026-08-31');
-    // Màn (và hộp thanh trượt) báo chưa có; không tải nội dung nào cho ngày đó.
-    expect((await screen.findAllByText('Chưa có bản chính thức vào ngày này')).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeNull();
-  });
-});
+/* UX-E03 (Q-32): "Dòng thời gian" đã bỏ — link cũ `?at=` mở bản chính thức như mọi lối mở khác. */

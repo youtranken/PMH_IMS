@@ -81,12 +81,6 @@ function footerOf(headers: Record<string, string>): string {
   return decodeURIComponent(headers['x-diagram-export-footer'] ?? '');
 }
 
-/** "dd/mm/yyyy" theo giờ Việt Nam của một mốc. */
-function vnDate(at: Date): string {
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' }).format(at);
-  return parts;
-}
-
 async function exportVia(page: Page, format: 'PNG' | 'PDF') {
   await diagramBarAction(page, 'Xuất');
   const [download, response] = await Promise.all([
@@ -289,38 +283,22 @@ test.describe('Sơ đồ mạng — so sánh phiên bản', () => {
   });
 });
 
-test.describe('Sơ đồ mạng — thanh trượt thời gian', () => {
-  test('kéo về ngày cũ → bản chính thức hiệu lực ngày đó; trước bản đầu tiên → "chưa có"', async ({ page }) => {
+test.describe('Sơ đồ mạng — không còn Dòng thời gian (UX-E03, Q-32)', () => {
+  test('link cũ ?at= mở bản chính thức như mọi lối mở khác; menu ⋮ không còn mục Dòng thời gian', async ({ page }) => {
     const stamp = uniqueStamp();
     const secret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, secret, 'diagram');
-    const id = await createDiagram(page, `E2E Dòng thời gian ${stamp}`);
+    const id = await createDiagram(page, `E2E Bản cũ ${stamp}`);
     const v1 = await save(page, id, V1);
     await publish(page, id, v1.id);
-    /*
-     * Lần phát hành đầu lùi 10 ngày. `diagram_history` chỉ-thêm: trigger chặn mọi UPDATE (AD-13),
-     * kể cả với superuser — chỉ bài kiểm mới được tắt trigger trong đúng phiên lệnh này để giả mốc.
-     */
-    sql(
-      `SET session_replication_role = replica; UPDATE diagram_history SET created_at = created_at - interval '10 days' WHERE diagram_id = '${id}' AND action = 'version.published'`,
-    );
     const v2 = await save(page, id, V2, v1.id);
     await publish(page, id, v2.id);
 
-    await page.goto(`/diagrams/${id}`);
-    await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toBeVisible();
-    await diagramBarAction(page, 'Dòng thời gian');
-    const slider = page.getByRole('slider', { name: 'Chọn ngày' });
-    // Thang bắt đầu HÔM TRƯỚC lần phát hành đầu: nấc 1 = ngày phát hành đầu → bản #1.
-    await slider.fill('1');
-    const day = vnDate(new Date(Date.now() - 10 * 86_400_000));
-    await expect(page).toHaveURL(new RegExp(`version=${v1.id}`));
-    await expect(page.getByText(`Bản chính thức hiệu lực ngày ${day} — phiên bản 1`).first()).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toContainText('Bỏ E2E');
-    expect(Number(sql(`SELECT count(*) FROM audit_log WHERE object_id = '${id}' AND action = 'diagram.viewed' AND detail->>'versionId' = '${v1.id}'`))).toBeGreaterThan(0);
-
-    await page.getByRole('slider', { name: 'Chọn ngày' }).fill('0');
-    await expect(page.getByText('Chưa có bản chính thức vào ngày này').first()).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Bản vẽ, chỉ xem' })).toHaveCount(0);
+    await page.goto(`/diagrams/${id}?at=2020-01-01`);
+    const viewer = page.getByRole('region', { name: 'Bản vẽ, chỉ xem' });
+    await expect(viewer).toBeVisible();
+    await expect(page.getByText('Chưa có bản chính thức vào ngày này.')).toHaveCount(0);
+    await page.getByRole('button', { name: /^Thao tác với / }).click();
+    await expect(page.getByRole('menuitem', { name: /Dòng thời gian/ })).toHaveCount(0);
   });
 });

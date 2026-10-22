@@ -84,9 +84,9 @@ test.describe('Két sắt', () => {
 
     // Thanh công cụ của tab: tiêu đề khu + số ngăn + nút cất cùng hàng (DEV-079).
     await expect(page.getByRole('heading', { name: 'Ngăn két' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    await page.getByRole('button', { name: 'Cất vào két' }).click();
     // Tiêu đề hộp nói cất vào MÁY NÀO (DEV-035).
-    const form = page.getByRole('dialog', { name: `Cất mật khẩu/khóa — ${code}` });
+    const form = page.getByRole('dialog', { name: `Cất vào két — ${code}` });
     await expect(form).toBeVisible();
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');
@@ -205,7 +205,7 @@ test.describe('Két sắt', () => {
     await expect(page.getByRole('tab', { name: 'Tổng quan' })).toBeVisible();
     // Tab CÓ hiện nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText(/không có quyền/i)).toBeVisible();
+    await expect(page.getByText(/chưa có quyền/i)).toBeVisible();
   });
 
   /**

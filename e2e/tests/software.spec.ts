@@ -99,7 +99,7 @@ test.describe('Hồ sơ phần mềm', () => {
     // là trúng hai chỗ và Playwright từ chối ở chế độ strict.
     const history = page.getByLabel('Lịch sử');
     await expect(history.getByText('Gia hạn')).toBeVisible();
-    await expect(history.getByText(/ngày hết hạn: 2026-12-31 → 2027-12-31/)).toBeVisible();
+    await expect(history.getByText(/ngày hết hạn: 31\/12\/2026 → 31\/12\/2027/)).toBeVisible();
   });
 
   test('license/SSL/tên miền KHÔNG có hạn thì bị từ chối, nói rõ vì sao cần', async ({ page }) => {

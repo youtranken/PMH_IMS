@@ -42,7 +42,7 @@ test.describe('Quyền két sắt — theo người', () => {
     await dialog.getByRole('button', { name: 'Lưu' }).click();
     await confirmAction(page);
 
-    await expect(page.getByText('Đã gán 2 nhóm.')).toBeVisible();
+    await expect(page.getByText('Đã gán 2 phạm vi.')).toBeVisible();
     await expect(page.getByRole('button', { name: /Phần mềm: License: Cần duyệt/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Chứng chỉ SSL: Cần duyệt/ })).toBeVisible();
     await expect(
@@ -58,7 +58,7 @@ test.describe('Quyền két sắt — theo người', () => {
     await page.goto(`/admin/vault-access?user=${memberId}`);
     await page.getByRole('button', { name: '+ Gán quyền' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click();
-    await expect(page.getByRole('dialog').getByRole('alert')).toHaveText('Chọn ít nhất một nhóm.');
+    await expect(page.getByRole('dialog').getByRole('alert')).toHaveText('Chọn ít nhất một phạm vi.');
     expect(
       sql(`SELECT count(*) FROM access_list WHERE member_email = '${E2E_MEMBER.email}'`),
     ).toBe('0');

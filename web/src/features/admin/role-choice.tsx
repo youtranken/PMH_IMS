@@ -29,7 +29,8 @@ export function RoleChoice({
   const { t } = useTranslation();
   return (
     <fieldset className="ff-contents">
-      <legend className="lbl-t">{t('accounts.role')}</legend>
+      {/* Cùng dáng nhãn các ô khác của hộp (PW-C27) — `lbl-t` chỉ có luật trong `.auth-form`. */}
+      <legend className="field-label">{t('accounts.role')}</legend>
       <ul className="pick-list role-choice">
         {ROLES.map((item) => (
           <li key={item.role}>

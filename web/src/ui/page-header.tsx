@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
+import { Crumbs, type Crumb } from '@/ui/detail-header';
 import { InfoTip } from '@/ui/info-tip';
 
 /**
@@ -10,8 +11,14 @@ export function PageHeader({
   titleTip,
   subtitle,
   actions,
+  crumbs,
 }: {
   title: string;
+  /**
+   * Màn CON của một màn khác (Xem lại kỳ phiếu…): breadcrumb trên tiêu đề, mục đầu là nút quay
+   * lại — cùng một kiểu với trang chi tiết (PW-B12). Không đặt link "‹ Quay lại" ở cụm nút.
+   */
+  crumbs?: Crumb[];
   /**
    * Câu giải thích "màn này để làm gì" sau nút (i) cạnh tiêu đề — cho màn mà câu ấy chỉ in ở
    * trạng thái rỗng: có dữ liệu rồi thì người mới vào vẫn cần một chỗ đọc được nó.
@@ -24,6 +31,7 @@ export function PageHeader({
   return (
     <header className="page-header">
       <div className="grow">
+        {crumbs ? <Crumbs crumbs={crumbs} /> : null}
         {/* Nút (i) đứng NGOÀI `<h1>`: đặt trong thì tên của tiêu đề thành "… Giải thích: …". */}
         {titleTip ? (
           <div className="page-header-title">
@@ -123,9 +131,15 @@ export function Field({
   htmlFor,
   span,
   tip,
+  size,
   children,
 }: {
   label: string;
+  /**
+   * Bề ngang ô theo độ dài NỘI DUNG (FM-16), không theo ô lưới: `xs` ~8 ký tự (số thứ tự, VLAN,
+   * U), `s` ~18 ký tự (mã, cổng). Bỏ trống = rộng hết ô lưới như cũ.
+   */
+  size?: 'xs' | 's';
   /**
    * Ô bắt buộc — vẽ dấu `*` và, với `Select`/`Combobox`, kéo theo `aria-required`/`required`.
    *
@@ -189,6 +203,10 @@ export function Field({
         'aria-invalid':
           (children.props as { 'aria-invalid'?: boolean })['aria-invalid'] ??
           (error ? true : undefined),
+        // Dấu * là aria-hidden, nên "bắt buộc" phải đi bằng thuộc tính của chính ô (FM-08).
+        'aria-required':
+          (children.props as { 'aria-required'?: boolean })['aria-required'] ??
+          (required ? true : undefined),
       })
     : children;
 
@@ -197,7 +215,8 @@ export function Field({
       {label}{' '}
       {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
           đúng nhãn ("Email"), không thành "Email *". Chặn thật nằm ở `useFormErrors` của
-          form (form đặt `noValidate`); `required` trên ô để trình đọc màn hình đọc "bắt buộc". */}
+          form (form đặt `noValidate`); `aria-required` gắn lên ô (cloneElement ở trên) để trình đọc
+          màn hình đọc "bắt buộc". */}
       {/*
         `field-req`, KHÔNG phải `req`.
 
@@ -215,7 +234,7 @@ export function Field({
   );
 
   return (
-    <div className={`field${span ? ` span-${span}` : ''}`}>
+    <div className={`field${span ? ` span-${span}` : ''}`} data-size={size}>
       {/* Nút (i) đứng NGOÀI `<label>`: nằm trong thì tên của nút lọt vào tên trợ năng của ô
           ("Serial Giải thích: Serial"), `getByLabel('Serial', { exact: true })` hết khớp. */}
       {tip ? (

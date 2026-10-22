@@ -123,7 +123,8 @@ test.describe('Break-glass', () => {
     await member.goto(`/devices/${deviceId}`);
     await member.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(member.getByText(`admin web E2E ${stamp}`)).toBeVisible();
-    await expect(member.getByText(/cần được duyệt trước khi xem/i)).toBeVisible();
+    // Một dòng "Cần duyệt · n Ngăn" cạnh nút xin (UX-E17).
+    await expect(member.getByText(/^Cần duyệt · \d+ Ngăn$/)).toBeVisible();
 
     await member.getByRole('button', { name: 'Xin mở két' }).click();
     const form = member.getByRole('dialog');
@@ -151,7 +152,7 @@ test.describe('Break-glass', () => {
 
     // --- Member, CÙNG phiên đã xin: nhập mã SA đọc cho, rồi xem — mỗi lần xem vẫn gõ TOTP (4.2).
     await fillOtp(member, await mailedApprovalCode(requestId), 'Mã duyệt');
-    await expect(member.getByText('Đã được duyệt — bấm "Xem" ở ngăn cần mở.')).toBeVisible();
+    await expect(member.getByText(/^Đã duyệt( · còn [\d:]+)? — bấm Xem ở ngăn cần mở\.$/).first()).toBeVisible();
     expireStepUp(E2E_MEMBER.email);
 
     await member.getByRole('button', { name: 'Xem' }).click();
@@ -410,8 +411,8 @@ test.describe('Break-glass', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByRole('button', { name: 'Xem' })).toBeVisible();
 
-    // "Cất mật khẩu/khóa" vẫn là nút phẳng trên đầu panel.
-    await expect(page.getByRole('button', { name: 'Cất mật khẩu/khóa' })).toHaveCount(0);
+    // "Cất vào két" vẫn là nút phẳng trên đầu panel.
+    await expect(page.getByRole('button', { name: 'Cất vào két' })).toHaveCount(0);
     /*
      * Sửa · Xoay · Thu hồi nằm trong menu ba chấm, nên bám theo chữ trên nút
      * đã thành một khẳng định luôn xanh: mục menu không có trong DOM khi menu đóng, kể cả

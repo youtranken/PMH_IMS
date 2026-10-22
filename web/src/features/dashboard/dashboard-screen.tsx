@@ -27,8 +27,9 @@ import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
-import { DISPOSAL_KIND_KEY, disposalDetailText, type DisposalKind } from '@/lib/disposal-kinds';
+import { disposalDetailText, disposalItemKindLabel, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
+import { cutExpiryBoard } from './expiry-board-cut';
 
 interface Block<T> {
   available: boolean;
@@ -149,11 +150,8 @@ export function DashboardScreen({ me }: { me: Me }) {
       title={t('dashboard.title')}
       subtitle={
         data.dataUpdatedAt
-          ? t('dashboard.greetingAt', {
-              name: me.fullName,
-              time: formatDateTime(new Date(data.dataUpdatedAt).toISOString()),
-            })
-          : t('dashboard.greeting', { name: me.fullName })
+          ? t('dashboard.updatedAt', { time: formatDateTime(new Date(data.dataUpdatedAt).toISOString()) })
+          : undefined
       }
       actions={
         /* Nút phụ có viền như "Xuất Excel" ở các màn khác — nút `ghost` trơn đọc thành chữ thường. */
@@ -195,15 +193,16 @@ export function DashboardScreen({ me }: { me: Me }) {
    *
    * Khối đang có việc (`total > 0`) mới được chiếm chỗ: làn chính (2 phần) cho khối hạn — danh
    * sách dài nhất; làn phụ (1 phần) xếp chồng các khối nhỏ theo độ ưu tiên (số nhỏ đứng trên).
-   * Khối đang YÊN, khối lỗi và khối chưa có thì gom xuống dải mỏng ở chân trang, mỗi khối một
-   * dòng — lỗi đứng ĐẦU dải để không lẫn vào tin tốt.
+   * Khối LỖI gom xuống dải mỏng ở chân trang, mỗi khối một dòng, có Thử lại. Khối đang YÊN thì
+   * không hiện (UX-E05) — ô số 0 ở hàng KPI đã nói tin tốt.
    */
   const main: ReactNode[] = [];
   const side: { rank: number; node: ReactNode }[] = [];
   const quiet: { rank: number; node: ReactNode }[] = [];
   const place = (block: Block<unknown>, node: ReactNode, lane: 'main' | number) => {
     if (!block.available) quiet.push({ rank: 0, node });
-    else if (block.total === 0) quiet.push({ rank: 1, node });
+    // Mảng yên không thành khối (UX-E05): ô số 0 ở hàng KPI đã nói tin tốt đó.
+    else if (block.total === 0) return;
     else if (lane === 'main') main.push(node);
     else side.push({ rank: lane, node });
   };
@@ -218,7 +217,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.expiring.available}
       moreTo={PATHS.expiry}
       moreLabel={t('dashboard.seeAllExpiring')}
-      emptyText={t('dashboard.expiringEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -242,7 +240,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.subnetLoad.available}
       moreTo={PATHS.ipAddresses}
       moreLabel={t('dashboard.seeAllSubnets')}
-      emptyText={t('dashboard.subnetLoadEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -293,7 +290,6 @@ export function DashboardScreen({ me }: { me: Me }) {
         available
         moreTo={PATHS.approvals}
         moreLabel={t('dashboard.seeAllBreakGlass')}
-        emptyText={t('dashboard.breakGlassEmpty')}
         unavailableText={t('dashboard.blockError')}
         onRetry={retry}
       >
@@ -320,7 +316,6 @@ export function DashboardScreen({ me }: { me: Me }) {
         available
         moreTo={PATHS.vault}
         moreLabel={t('dashboard.seeAllVault')}
-        emptyText={t('dashboard.staleSecretsEmpty')}
         unavailableText={t('dashboard.blockError')}
         onRetry={retry}
       >
@@ -361,7 +356,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.disposed.available}
       moreTo={PATHS.disposal}
       moreLabel={t('dashboard.seeAllDisposed')}
-      emptyText={t('dashboard.disposedEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -377,7 +371,7 @@ export function DashboardScreen({ me }: { me: Me }) {
                   <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
                   <span className="dash-line-sub">{item.name}</span>
                 </span>
-                <span className="badge muted">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
+                <span className="badge muted">{disposalItemKindLabel(item.kind, item.detail, t)}</span>
               </div>
               <span className="muted">
                 {[detail, item.disposedAt ? formatDate(item.disposedAt) : null]
@@ -402,7 +396,6 @@ export function DashboardScreen({ me }: { me: Me }) {
       available={board.incidents.available}
       moreTo={PATHS.isoIncidents}
       moreLabel={t('dashboard.seeAllIncidents')}
-      emptyText={t('dashboard.incidentsEmpty')}
       unavailableText={t('dashboard.blockError')}
       onRetry={retry}
     >
@@ -807,20 +800,13 @@ function BoardKpis({ board }: { board: Dashboard }) {
           <KpiTile key={tile.key} value={tile.total} label={tile.label} tone={tile.tone} to={tile.to} />
         ))}
       </KpiStrip>
-      {tiles.every((tile) => tile.total === 0) ? (
-        <p className="dash-calm">{t('dashboard.kpiCalm')}</p>
-      ) : null}
     </>
   );
 }
 
 /**
- * Một khối có BA trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
- *  - không tải được → tông cảnh báo, có Thử lại (đứng đầu dải yên);
- *  - có phần này, không có gì → tin tốt, dấu ✓;
- *  - có dữ liệu.
- *
- * Gộp lỗi với tin tốt thành cùng một dải xám là cách nhanh nhất để sếp yên tâm nhầm.
+ * Một khối có HAI dạng: không tải được → dải mỏng tông cảnh báo, có Thử lại; có dữ liệu → thẻ.
+ * Khối không có gì thì nơi gọi đã bỏ (UX-E05) — lỗi tải không bao giờ được trông như "không có gì".
  */
 function BlockCard({
   title,
@@ -828,7 +814,6 @@ function BlockCard({
   available,
   moreTo,
   moreLabel,
-  emptyText,
   unavailableText,
   onRetry,
   children,
@@ -838,23 +823,20 @@ function BlockCard({
   available: boolean;
   moreTo?: string;
   moreLabel?: string;
-  emptyText: string;
   unavailableText: string;
   onRetry?: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const tone = !available ? 'error' : total === 0 ? 'good' : null;
-
-  if (tone) {
+  if (!available) {
     return (
-      <section className={`card dash-card slim tone-${tone}`}>
+      <section className="card dash-card slim tone-error">
         <span className="dash-tone-ic" aria-hidden="true">
-          <ToneIcon tone={tone} />
+          <ToneIcon tone="error" />
         </span>
         <h2 className="dash-slim-title">{title}</h2>
-        <p>{tone === 'good' ? emptyText : unavailableText}</p>
-        {tone === 'error' && onRetry ? (
+        <p>{unavailableText}</p>
+        {onRetry ? (
           <button type="button" className="sm" onClick={onRetry}>
             {t('app.retry')}
           </button>
@@ -900,12 +882,12 @@ function ExpiringBlock({
   const [renewing, setRenewing] = useState<ExpiringItem | null>(null);
   const narrow = useMediaQuery(MOBILE_QUERY);
   const [all, setAll] = useState(false);
-  // Điện thoại: 3 mục đầu (quá hạn đứng trước) + "Xem thêm N" bung tại chỗ.
-  const cut = narrow && !all && board.items.length > MOBILE_ITEMS;
-  const visible = cut ? board.items.slice(0, MOBILE_ITEMS) : board.items;
-
-  const overdueItems = visible.filter((item) => item.daysLeft < 0);
-  const upcomingItems = visible.filter((item) => item.daysLeft >= 0);
+  // Điện thoại: mỗi nhóm 3 mục đầu + "Xem thêm N" bung tại chỗ.
+  const { overdue: overdueItems, upcoming: upcomingItems, hidden } = cutExpiryBoard(board.items, {
+    narrow,
+    all,
+    per: MOBILE_ITEMS,
+  });
   const overdueTotal = board.overdueTotal ?? board.items.filter((item) => item.daysLeft < 0).length;
   const upcomingTotal = Math.max(0, board.total - overdueTotal);
 
@@ -913,7 +895,7 @@ function ExpiringBlock({
     () => [
       {
         id: 'label',
-        header: t('dashboard.expiringSubject'),
+        header: t('expiry.item'),
         enableSorting: false,
         cell: ({ row }) =>
           row.original.link ? (
@@ -935,17 +917,17 @@ function ExpiringBlock({
         cell: ({ row }) => formatDate(row.original.endDate),
       },
       {
+        // Nút Gia hạn đứng cạnh huy hiệu (PW-A06): cột Thao tác riêng thì trống gần hết các dòng
+        // — đa số mục ở đây (bảo hành…) không gia hạn tại chỗ được.
         id: 'left',
-        header: t('dashboard.expiringLeft'),
+        header: t('expiry.state'),
         enableSorting: false,
-        cell: ({ row }) => <ExpiryBadge end={row.original.endDate} />,
-      },
-      {
-        id: 'actions',
-        header: t('common.actions'),
-        enableSorting: false,
-        meta: { className: 'col-center' },
-        cell: ({ row }) => <RenewButton item={row.original} onRenew={setRenewing} />,
+        cell: ({ row }) => (
+          <span className="row nowrap">
+            <ExpiryBadge end={row.original.endDate} />
+            <RenewButton item={row.original} onRenew={setRenewing} />
+          </span>
+        ),
       },
     ],
     [t, kinds],
@@ -981,9 +963,9 @@ function ExpiringBlock({
           {table(upcomingItems)}
         </>
       ) : null}
-      {cut ? (
+      {hidden > 0 ? (
         <button type="button" className="ghost sm dash-more" onClick={() => setAll(true)}>
-          {t('dashboard.showMore', { count: board.items.length - MOBILE_ITEMS })}
+          {t('dashboard.showMore', { count: hidden })}
         </button>
       ) : null}
       {renewing ? (

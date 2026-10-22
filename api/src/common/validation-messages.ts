@@ -249,12 +249,10 @@ export function vietnameseFor(
       if (/shorter than/.test(englishDefault) && limit) return `${label} tối đa ${limit} ký tự.`;
       return `${label} có độ dài không hợp lệ.`;
     }
-    case 'isIn': {
-      const allowed = /values:\s*(.+)$/.exec(englishDefault)?.[1];
-      return allowed
-        ? `${label} chỉ nhận một trong: ${allowed}.`
-        : `${label} không nằm trong danh sách cho phép.`;
-    }
+    case 'isIn':
+      // Không liệt kê giá trị cho phép (TX-26): đó là mã enum (in_use, spare…), người dùng không
+      // gõ được, và ô chọn ở web vốn chỉ bày giá trị đúng.
+      return `${label} không nằm trong danh sách cho phép.`;
     case 'matches':
       return `${label} sai định dạng.`;
     case 'whitelistValidation':
@@ -263,7 +261,7 @@ export function vietnameseFor(
        * phải lỗi người dùng nhập, nên câu nói thẳng ra như vậy: người vận hành đọc xong biết
        * là phải báo IT chứ không ngồi sửa ô nhập.
        */
-      return `Yêu cầu chứa trường không hợp lệ: ${property}. Đây là lỗi của phần mềm, hãy báo IT.`;
+      return `Yêu cầu chứa trường không hợp lệ: ${property}. Đây là lỗi của phần mềm, hãy báo Super Admin.`;
     default:
       /*
        * Ràng buộc chưa có bản dịch. KHÔNG trả câu tiếng Anh ra ngoài: nói chung chung mà đúng

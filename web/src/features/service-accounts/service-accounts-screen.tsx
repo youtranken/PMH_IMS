@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -24,12 +24,12 @@ import { ALL_STATUSES, lifecycleStatusOptions } from '@/ui/lifecycle-status-opti
 import { LifecycleHiddenEmpty } from '@/ui/lifecycle-hidden-empty';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
+import { ExcelImportDialog } from '@/ui/excel-import-dialog';
 import { ServiceAccountForm } from './service-account-form';
 import { ServiceAccountStatusDialog } from './service-account-status-dialog';
 import {
   KIND_KEY,
   KIND_SHORT_KEY,
-  KIND_TONE,
   SERVICE_ACCOUNT_KINDS,
   SERVICE_ACCOUNT_STATUSES,
   STATUS_KEY,
@@ -39,7 +39,6 @@ import {
   type ServiceAccountStatus,
 } from './service-account-types';
 
-const DEFAULT_LIMIT = 20;
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
    TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `kind`/`status` vẫn giữ union hẹp cho
@@ -64,6 +63,7 @@ const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '', anyIp: '' };
  */
 export function ServiceAccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();
   /*
@@ -74,7 +74,6 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
@@ -94,6 +93,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<ServiceAccountRow | null>(null);
   /** Hồ sơ đang chờ đổi trạng thái, kèm chiều đổi — cùng một hộp cho cả đóng lẫn mở lại. */
   const [switching, setSwitching] = useState<{
@@ -143,18 +143,25 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
             <Link className="mono" to={PATHS.serviceAccount(row.original.id)}>
               {row.original.code}
             </Link>
-            <span className="cell-sub">{row.original.name}</span>
           </>
         ),
       },
       {
-        accessorKey: 'kind',
-        header: t('serviceAccounts.kind'),
+        /* Tên là cột riêng, sắp được (TB-16): trước kia là dòng phụ dưới mã, phải sắp qua một ô
+           "Sắp theo" riêng — hai bộ sắp xếp ghi lệch nhau. API đã nhận `sort=name`. */
+        accessorKey: 'name',
+        header: t('serviceAccounts.name'),
         cell: ({ row }) => (
-          <span className={`badge ${KIND_TONE[row.original.kind]}`}>
-            {t(KIND_SHORT_KEY[row.original.kind])}
+          <span className="cell-clip" title={row.original.name}>
+            {row.original.name}
           </span>
         ),
+      },
+      {
+        // Chữ thường (PW-A24): ba huy hiệu trên mỗi dòng thì không cái nào còn nổi.
+        accessorKey: 'kind',
+        header: t('serviceAccounts.kind'),
+        cell: ({ row }) => t(KIND_SHORT_KEY[row.original.kind]),
       },
       {
         id: 'login',
@@ -176,20 +183,26 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       {
         accessorKey: 'status',
         header: t('serviceAccounts.status'),
-        cell: ({ row }) => (
-          <span className={`badge ${STATUS_TONE[row.original.status]}`}>
-            {t(STATUS_KEY[row.original.status])}
-          </span>
-        ),
+        // Chỉ nói khi khác "Đang dùng" (PW-A24) — đa số dòng đang dùng, huy hiệu ở đó là nhiễu.
+        cell: ({ row }) =>
+          row.original.status === 'active' ? null : (
+            <span className={`badge ${STATUS_TONE[row.original.status]}`}>
+              {t(STATUS_KEY[row.original.status])}
+            </span>
+          ),
       },
       /* Hạn dùng (Q-20). Ngừng dùng thì "Không tính hạn": nguồn hạn bên API không nhắc tài
          khoản đã ngừng dùng, màn này không được kêu "Quá hạn" trái với /expiry. */
       {
         id: 'endDate',
         header: t('serviceAccounts.endDate'),
-        cell: ({ row }) => (
-          <ExpiryBadge end={row.original.endDate} notCounted={row.original.status === 'disabled'} />
-        ),
+        // Không có hạn → "—" (PW-A24): huy hiệu "Không có hạn" viền chấm trên gần mọi dòng.
+        cell: ({ row }) =>
+          row.original.endDate ? (
+            <ExpiryBadge end={row.original.endDate} notCounted={row.original.status === 'disabled'} />
+          ) : (
+            <span className="muted">—</span>
+          ),
       },
       ...(canEdit
         ? [
@@ -225,14 +238,14 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                     row.original.status === 'active'
                       ? {
                           key: 'disable',
-                          label: t('serviceAccounts.disable'),
+                          label: t('serviceAccounts.disableMenu'),
                           onSelect: () =>
                             setSwitching({ row: row.original, next: 'disabled' }),
                           warn: true,
                         }
                       : {
                           key: 'enable',
-                          label: t('serviceAccounts.enable'),
+                          label: t('serviceAccounts.enableMenu'),
                           onSelect: () =>
                             setSwitching({ row: row.original, next: 'active' }),
                           ok: true,
@@ -253,7 +266,6 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         title={t('serviceAccounts.title')}
         /* Cùng câu với trạng thái rỗng: có dữ liệu thì câu ấy không còn in ra nữa. */
         titleTip={t('serviceAccounts.emptyHint')}
-        subtitle={t('serviceAccounts.subtitle')}
         actions={
           <>
             {/* FR-028: xuất đúng bộ lọc và thứ tự đang xem. File KHÔNG có mật khẩu (FR-026) —
@@ -263,9 +275,15 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
               fileName="tai-khoan-dich-vu.xlsx"
             />
             {canEdit ? (
-              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-                {t('serviceAccounts.add')}
-              </button>
+              <>
+                {/* Nhập chỉ trên máy tính như Thiết bị: bảng đối chiếu rộng (UX-E30). */}
+                <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
+                  {t('serviceAccounts.importExcel')}
+                </button>
+                <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                  {t('serviceAccounts.add')}
+                </button>
+              </>
             ) : null}
           </>
         }
@@ -275,6 +293,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('serviceAccounts.search')}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.kind}
@@ -292,19 +312,6 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           placeholder={statusOptions[0].label}
           options={statusOptions}
           onChange={(value) => setFilter('status', value as Filters['status'])}
-        />
-        {/* Tên chỉ là dòng phụ dưới mã nên không có tiêu đề cột để bấm — sắp theo tên đi ô này.
-            API đã nhận `sort=name`. */}
-        <Select
-          value={url.sorting.key === 'name' ? 'name' : 'code'}
-          ariaLabel={t('serviceAccounts.sortBy')}
-          /* Sắp xếp không phải bộ lọc: tô xanh thì người dùng tìm nút "xóa lọc" không có. */
-          indicateFilled={false}
-          options={[
-            { value: 'code', label: t('serviceAccounts.sortByCode') },
-            { value: 'name', label: t('serviceAccounts.sortByName') },
-          ]}
-          onChange={(value) => url.setSorting({ key: value, desc: false })}
         />
         {/* VPN mở cho mọi IP là câu kiểm toán hỏi đầu tiên — một chip bật/tắt, cùng kiểu chip
             "Chỉ cổng nhạy cảm" của sổ NAT. */}
@@ -352,6 +359,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
             data={rows}
             columns={columns}
             emptyText={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
+            onRowClick={(row) => navigate(PATHS.serviceAccount(row.id))}
+            rowHref={(row) => PATHS.serviceAccount(row.id)}
             stackOnMobile
             /* Điện thoại: thẻ 2 dòng (mã + trạng thái; tên đăng nhập · loại · bộ phận) thay cho
                5 hàng nhãn–giá trị ~270px một tài khoản. */
@@ -405,6 +414,22 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         </>
       )}
 
+      {importing ? (
+        <ExcelImportDialog
+          base="/api/v1/service-accounts"
+          title={t('serviceAccounts.importTitle')}
+          hint={t('serviceAccounts.importHint')}
+          group={t('serviceAccounts.title')}
+          fileStem="tai-khoan-dich-vu"
+          templateLabel={t('serviceAccounts.downloadTemplate')}
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
+          }}
+        />
+      ) : null}
       {creating ? (
         <ServiceAccountForm
           row={null}

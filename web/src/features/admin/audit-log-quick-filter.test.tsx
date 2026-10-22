@@ -84,13 +84,14 @@ describe('Nhật ký — lọc nhanh theo ngày, nhóm theo ngày, chọn hành 
     expect(await screen.findByRole('rowheader', { name: '21/09/2026' })).toBeInTheDocument();
     expect(screen.getByRole('rowheader', { name: '20/09/2026' })).toBeInTheDocument();
     expect(screen.getByText('Đang xem 20/09/2026 08:30 → 21/09/2026 09:00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Tới ngày…' })).toBeInTheDocument();
+    // PW-C10: chân bảng một dòng — ô ngày thứ hai bỏ, nhảy ngày dùng ô "Đến ngày" của bộ lọc.
+    expect(screen.queryByRole('button', { name: 'Tới ngày…' })).toBeNull();
   });
 
   it('ô Hành động chia nhóm theo module', async () => {
     stubFetch();
     renderAt('/admin/audit-log');
-    await screen.findAllByText('Lê Minh', { selector: 'td' });
+    await screen.findAllByText('Lê Minh', { selector: 'td span' });
     await userEvent.click(screen.getByRole('button', { name: 'Hành động' }));
     const titles = Array.from(document.querySelectorAll('.fsel-group')).map((node) => node.textContent);
     expect(titles).toEqual(['Đăng nhập & phiên', 'Két sắt']);

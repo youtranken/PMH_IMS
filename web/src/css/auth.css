@@ -87,7 +87,8 @@
   inset: -40px;
   z-index: 0;
   background: url('/brand/login-photo.webp') 70% 60% / cover no-repeat;
-  filter: blur(28px) brightness(0.45) saturate(1.1);
+  /* 0,32 chứ không sáng hơn: chữ "Phu My Hung" của logo là xám sáng, nền sáng hơn thì chìm (PW-C21). */
+  filter: blur(28px) brightness(0.32) saturate(1.1);
   pointer-events: none;
 }
 /* Màn rộng đã có logo đầy đủ trên card (`.auth-head`), nên khối biểu tượng + tên TRONG card chỉ

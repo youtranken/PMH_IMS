@@ -177,6 +177,18 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     );
   }
 
+  /** Bảy loại chủ thể của trang tổng Két sắt, theo thứ tự khai (`OWNER_GROUPS`), và nhãn chip. */
+  const KIND_KEYS = ['device', 'software', 'domains', 'maintenance', 'services', 'service_account', 'isp'];
+  const KIND_NAMES = [
+    'Thiết bị',
+    'Phần mềm',
+    'Tên miền & SSL',
+    'Hợp đồng bảo trì',
+    'Dịch vụ có hạn khác',
+    'Tài khoản dịch vụ',
+    'Đường truyền',
+  ];
+
   /** Sắp xếp một danh sách tên để so tập hợp mà không phụ thuộc thứ tự vẽ trên màn. */
   function asSet(names: string[]): string[] {
     return [...names].sort();
@@ -222,8 +234,29 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(sw.status(), 'không dựng được hồ sơ phần mềm').toBe(201);
     await stash(page, 'software', ((await sw.json()) as { id: string }).id, `key E2E ${stamp}`);
 
-    await page.goto('/vault');
     const main = page.getByRole('main');
+
+    /*
+     * ĐỦ BẢY LOẠI: ba loại chủ thể không phải phần mềm + bốn màn phần mềm của Q-22 (K-01).
+     *
+     * Chip đếm 0 không bày (PW-C25), nên ở trang trơn số chip đi theo dữ liệu gieo. Chip đang
+     * bật từ URL thì luôn hiện, dù đếm 0 — bật cả bảy qua `?kinds=` là cách hỏi "giao diện có
+     * biết đủ mọi loại API có không" mà không phải gieo một két cho từng loại. Thiếu một loại ở
+     * đây là bật lọc nào cũng làm mọi dòng của loại đó biến mất im lặng.
+     */
+    await page.goto(`/vault?kinds=${KIND_KEYS.join(',')}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Két sắt' })).toBeVisible();
+    await expect(main.getByRole('table'), 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
+    await expect
+      .poll(() => toggleButtons(main), {
+        message: 'bật cả bảy loại qua URL: đủ tám chip, "Tất cả" tắt, bảy chip loại đều bật, đúng thứ tự khai',
+      })
+      .toEqual([
+        { toggleName: 'Tất cả', enabled: false },
+        ...KIND_NAMES.map((toggleName) => ({ toggleName, enabled: true })),
+      ]);
+
+    await page.goto('/vault');
     await expect(page.getByRole('heading', { level: 1, name: 'Két sắt' })).toBeVisible();
 
     /*
@@ -238,20 +271,25 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      */
     const table = main.getByRole('table');
     await expect(table, 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
+    await expect(main.getByRole('button', { name: /^Phần mềm \d+$/ })).toBeVisible();
+    const initial = await toggleButtons(main);
+    /* Chip bày ra theo dữ liệu (PW-C25): bài đã gieo thiết bị + phần mềm nên hai chip đó chắc
+       chắn có; loại khác có hay không tùy phần còn lại của DB — nhưng thứ tự vẫn là thứ tự khai. */
     expect(
-      await toggleButtons(main),
-      'trang tổng phải có ĐÚNG bảy nút lọc — ba loại chủ thể không phải phần mềm + bốn màn phần mềm ' +
-        'của Q-22 (K-01) — lúc mới vào đều TẮT; đứng đầu là chip "Tất cả" đang bật (soát UX 10/10)',
+      initial,
+      'lúc mới vào: "Tất cả" đứng đầu và đang bật, mọi chip loại TẮT, đúng thứ tự khai, không chip lạ (soát UX 10/10)',
     ).toEqual([
       { toggleName: 'Tất cả', enabled: true },
-      { toggleName: 'Thiết bị', enabled: false },
-      { toggleName: 'Phần mềm', enabled: false },
-      { toggleName: 'Tên miền & SSL', enabled: false },
-      { toggleName: 'Hợp đồng bảo trì', enabled: false },
-      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
-      { toggleName: 'Tài khoản dịch vụ', enabled: false },
-      { toggleName: 'Đường truyền', enabled: false },
+      ...KIND_NAMES.filter((name) => initial.some((chip) => chip.toggleName === name)).map((toggleName) => ({
+        toggleName,
+        enabled: false,
+      })),
     ]);
+    expect(initial.map((chip) => chip.toggleName)).toEqual(expect.arrayContaining(['Thiết bị', 'Phần mềm']));
+    await expect(
+      main.getByRole('group', { name: 'Lọc theo loại hồ sơ' }).getByRole('button', { name: /\s0$/ }),
+      'chip đếm 0 không bày khi không ai bật nó (PW-C25)',
+    ).toHaveCount(0);
 
     const deviceRow = table.getByRole('row', { name: new RegExp(deviceCode) });
     const swRow = table.getByRole('row', { name: new RegExp(swCode) });
@@ -275,17 +313,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     // `poll`: đọc `aria-pressed` ngay sau cú bấm là đua với lượt render của React.
     await expect.poll(
       () => toggleButtons(main),
-      { message: 'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt' },
-    ).toEqual([
-      { toggleName: 'Tất cả', enabled: false },
-      { toggleName: 'Thiết bị', enabled: true },
-      { toggleName: 'Phần mềm', enabled: false },
-      { toggleName: 'Tên miền & SSL', enabled: false },
-      { toggleName: 'Hợp đồng bảo trì', enabled: false },
-      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
-      { toggleName: 'Tài khoản dịch vụ', enabled: false },
-      { toggleName: 'Đường truyền', enabled: false },
-    ]);
+      { message: 'bấm "Thiết bị" thì đúng một nút được bật, các nút kia phải giữ nguyên trạng thái tắt' },
+    ).toEqual(initial.map(({ toggleName }) => ({ toggleName, enabled: toggleName === 'Thiết bị' })));
 
     const rowsAfter = await table.getByRole('row').count();
     expect(
@@ -419,7 +448,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .toBeVisible();
 
     // Lọc CỘT về đúng họ "Phần mềm & dịch vụ có hạn" — danh sách cố định, so được nguyên văn.
-    await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
+    await page.getByRole('button', { name: 'Phạm vi', exact: true }).click();
     await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
 
     /*
@@ -584,8 +613,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .toBeVisible();
     await expect(
       panel.getByText('Chờ duyệt', { exact: true }),
-      'phiếu phải đeo huy hiệu trạng thái "Chờ duyệt"',
-    ).toBeVisible();
+      'tab Chờ duyệt: thẻ không đeo lại huy hiệu "Chờ duyệt" — cả tab đều đang chờ (UX-E07)',
+    ).toHaveCount(0);
     await expect(panel.getByText(E2E_MEMBER.email), 'phiếu phải nói rõ AI xin').toBeVisible();
     await expect(
       panel.getByRole('link', { name: new RegExp(`^${deviceCode} · `) }),
@@ -608,7 +637,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * thái hiện tại cho phép, chứ không phải một khuôn cứng vẽ sẵn mọi ô rồi để trống.
      */
     await expect(
-      panel.getByText('Người quyết', { exact: true }),
+      panel.getByText('Người duyệt', { exact: true }),
       'phiếu đang treo thì chưa có ai quyết — hiện ô đó ra là nói dối',
     ).toHaveCount(0);
     await expect(
@@ -683,7 +712,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * ĐỎ KHI: thêm/bớt một khối mà quên; một khối rụng khỏi bảng của SA; hoặc một khối chỉ dành
    * cho SA xuất hiện ở bảng của Member.
    */
-  test('Bảng điều khiển: SA thấy đủ sáu khối, Member thiếu đúng hai khối an ninh', async ({
+  test('Bảng điều khiển: mỗi vai thấy đúng khối có dữ liệu, Member không bao giờ thấy hai khối an ninh', async ({
     page,
   }) => {
     // Hai luồng đăng nhập lần đầu đầy đủ (SA rồi Member) trong cùng một bài.
@@ -705,20 +734,33 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         .map((title) => title.replace(/^Dải mạng ≥ \d+%$/, 'Dải mạng ≥ N%'))
         .filter((title) => !/^(Cần bạn duyệt|Yêu cầu mở két của tôi)/.test(title));
 
+    /*
+     * Khối nào hiện tùy dữ liệu (UX-E05: mảng 0 mục không thành khối — ô số 0 ở hàng KPI đã
+     * nói). Nên tập khối mong đợi tính từ CHÍNH phản hồi API của vai đó: khối có dữ liệu thì
+     * phải có mặt; không còn khối nào ngoài sáu tên này.
+     */
+    const TITLE: Record<string, string> = {
+      expiring: 'Tổng hợp hết hạn cần xử lý',
+      subnetLoad: 'Dải mạng ≥ N%',
+      staleSecrets: 'Két lâu chưa đổi',
+      incidents: 'Sự cố · 7 ngày',
+      breakGlass: 'Yêu cầu mở két · 7 ngày',
+      disposed: 'Kho thanh lý · 7 ngày',
+    };
+    const expectedBlocks = async () => {
+      const board = (await (await page.request.get('/api/v1/dashboard')).json()) as Record<
+        string,
+        { available?: boolean; total?: number } | undefined
+      >;
+      return Object.entries(TITLE)
+        .filter(([key]) => (board[key]?.available ?? false) && (board[key]?.total ?? 0) > 0)
+        .map(([, title]) => title);
+    };
     const saBlocks = await blockTitles();
     expect(
       asSet(saBlocks),
-      'SA phải thấy đủ sáu khối — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
-    ).toEqual(
-      asSet([
-        'Tổng hợp hết hạn cần xử lý',
-        'Dải mạng ≥ N%',
-        'Két lâu chưa đổi',
-        'Sự cố tuần qua',
-        'Yêu cầu mở két tuần qua',
-        'Tổng hợp kho thanh lý (7 ngày)',
-      ]),
-    );
+      'SA thấy đúng các khối đang có dữ liệu — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
+    ).toEqual(asSet(await expectedBlocks()));
 
     // Khối "Sự cố tuần qua" đọc phiếu 0206 thật, không còn câu "chưa theo dõi" của lúc chưa có phiếu.
     await expect(page.getByText(/IMS chưa theo dõi sự cố/), 'phiếu 0206 đã có, khối không được nói "chưa theo dõi"').toHaveCount(0);
@@ -729,38 +771,25 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await stepUpViaApi(page, await firstLogin(page, E2E_MEMBER));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
-    // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Tổng hợp hết hạn cần xử lý' }),
-      'Member vẫn phải thấy khối "Sắp hết hạn" — cắt theo vai không phải là cắt sạch',
-    ).toBeVisible();
+    // Chờ hàng KPI, để không đếm lúc trang mới dựng được nửa.
+    await expect(page.getByRole('link', { name: /Đã quá hạn/ })).toBeVisible();
 
     const memberBlocks = await blockTitles();
-    expect(
-      asSet(memberBlocks),
-      'Member phải thấy đúng bốn khối không dính bí mật',
-    ).toEqual(
-      asSet([
-        'Tổng hợp hết hạn cần xử lý',
-        'Dải mạng ≥ N%',
-        'Sự cố tuần qua',
-        'Tổng hợp kho thanh lý (7 ngày)',
-      ]),
-    );
+    const memberExpected = await expectedBlocks();
+    expect(asSet(memberBlocks), 'Member thấy đúng các khối có dữ liệu của vai mình').toEqual(asSet(memberExpected));
 
     /*
-     * SO HAI TẬP HỢP, không so hai chuỗi.
-     *
-     * Hiệu của chúng phải đúng bằng hai cái tên dưới đây. Viết thành hai lượt
-     * `toHaveCount(0)` thì một khối THỨ BA rò sang Member sẽ không làm đỏ gì cả — mà đó chính
-     * là kiểu rò rỉ bài này sinh ra để chặn.
+     * Hai khối an ninh: server rút gọn theo vai — với Member chúng KHÔNG BAO GIỜ có dữ liệu
+     * (dù SA đang thấy), nên cũng không bao giờ thành khối. Một khối thứ ba rò sang Member sẽ
+     * làm `memberBlocks` lệch `memberExpected` ở trên.
      */
-    const missing = saBlocks.filter((title) => !memberBlocks.includes(title));
+    expect(memberExpected, 'API không được trả dữ liệu hai khối an ninh cho Member').not.toContain('Két lâu chưa đổi');
+    expect(memberExpected).not.toContain('Yêu cầu mở két · 7 ngày');
+    const leaked = memberBlocks.filter((title) => ['Két lâu chưa đổi', 'Yêu cầu mở két · 7 ngày'].includes(title));
     expect(
-      asSet(missing),
-      'Member KHÔNG được thấy hai khối an ninh — và cũng không được thiếu khối nào khác: ' +
-        `SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
-    ).toEqual(asSet(['Két lâu chưa đổi', 'Yêu cầu mở két tuần qua']));
+      leaked,
+      `Member KHÔNG được thấy khối an ninh: SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
+    ).toEqual([]);
   });
 
   /* ================================================================== *
@@ -770,11 +799,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   /*
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * Ba hộp thoại đứng ngay cửa két — Cất mật khẩu/khóa, Xác nhận danh tính, Hiện secret — và cả ba
+   * Ba hộp thoại đứng ngay cửa két — Cất vào két, Nhập mã 6 số, Hiện secret — và cả ba
    * đều đã có bài kiểm ĐƯỜNG ĐI (`vault.spec.ts`, `vault-reveal.spec.ts`,
    * `vault-write-stepup-ui.spec.ts`). Không bài nào trong đó mở hộp ra rồi ĐẾM xem bên trong
    * có ô nào. Nghĩa là:
-   *   - Một ô thứ năm mọc thêm vào hộp "Cất mật khẩu/khóa" (một ô "dán từ file", một ô "gửi mail
+   *   - Một ô thứ năm mọc thêm vào hộp "Cất vào két" (một ô "dán từ file", một ô "gửi mail
    *     cho") sẽ đi qua sạch sẽ.
    *   - Ô "Giá trị" đổi từ `type=password` sang `type=text` — mật khẩu hiện nguyên trên màn
    *     lúc gõ — không làm đỏ gì cả, vì mọi bài đều `fill()` được như nhau.
@@ -787,7 +816,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * Đi vào bằng popup của `/vault` chứ không bằng tab của trang chi tiết: đó là cửa của phòng
    * này, và `VaultPanel` nhúng trong popup phải cư xử y hệt bản nhúng ở trang chi tiết (AD-15).
    */
-  test('Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
+  test('Bên trong hộp Cất vào két, hộp Nhập mã 6 số và hộp Hiện secret', async ({ page }) => {
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
     await stepUpViaApi(page, totpSecret);
@@ -809,19 +838,19 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "CẤT SECRET": có ô nào, ô nào bắt buộc ---------- */
 
-    await popup.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
-    const form = page.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    await popup.getByRole('button', { name: 'Cất vào két' }).click();
+    const form = page.getByRole('dialog', { name: 'Cất vào két' });
     await expect(form).toBeVisible();
 
     expect(
       await textboxLabels(form),
-      'hộp "Cất mật khẩu/khóa" phải có ĐÚNG bốn ô chữ. Một ô thứ năm ở đây là một quyết định về nơi ' +
+      'hộp "Cất vào két" phải có ĐÚNG bốn ô chữ. Một ô thứ năm ở đây là một quyết định về nơi ' +
         'chứa bí mật, không phải một cải tiến giao diện',
     ).toEqual(['Tên gọi', 'Tên đăng nhập', 'Giá trị', 'Ghi chú']);
 
     expect(
       await selectLabels(form),
-      'hộp "Cất mật khẩu/khóa" phải có ĐÚNG một ô chọn: Loại',
+      'hộp "Cất vào két" phải có ĐÚNG một ô chọn: Loại',
     ).toEqual(['Loại']);
 
     /*
@@ -1160,7 +1189,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.goto('/admin/vault-access?view=matrix');
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
-    await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
+    await page.getByRole('button', { name: 'Phạm vi', exact: true }).click();
     await page.getByRole('option', { name: 'Phần mềm & dịch vụ có hạn', exact: true }).click();
     await grid.getByRole('button', { name: 'Gán "Phần mềm: License" cho nhiều người' }).click();
 
@@ -1277,9 +1306,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         .getByRole('button', { name: `Mở két của ${deviceCode}` })
         .click();
       const popup = page.getByRole('dialog', { name: new RegExp(`^Két sắt — ${deviceCode}`) });
-      await popup.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+      await popup.getByRole('button', { name: 'Cất vào két' }).click();
 
-      const form = page.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+      const form = page.getByRole('dialog', { name: 'Cất vào két' });
       await expect(form).toBeVisible();
       // Gõ sẵn một thứ vào form: đó chính là thứ người dùng mất khi hộp bị đóng oan.
       await form.getByLabel('Tên gọi').fill(`admin web E2E ${stamp}`);

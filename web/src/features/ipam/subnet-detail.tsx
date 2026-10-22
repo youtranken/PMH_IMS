@@ -5,8 +5,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
-import { maskOfCidr } from "@/lib/ipv4";
+import { cidrContains, maskOfCidr, parseIpv4, subnetOf } from "@/lib/ipv4";
 import type { Me } from "@/lib/me";
+import { NoteField } from "@/ui/note-field";
 import { AttachmentPanel, useOwnerAttachments } from "@/ui/attachment-panel";
 import { CellNote } from "@/ui/cell-note";
 import { CopyButton } from "@/ui/copy-button";
@@ -19,6 +20,9 @@ import { Pagination } from "@/ui/pagination";
 import { SegmentedRadio } from "@/ui/segmented-radio";
 import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
+import { MobileCardList, type MobileCard } from "@/ui/data-table";
+import { BREAKPOINTS } from "@/ui/breakpoints";
+import { useMediaQuery } from "@/ui/use-media-query";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
 import { reasonRule, secretTextRule, useFormErrors, useSubmitError } from "@/ui/use-form-errors";
@@ -58,6 +62,7 @@ import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
 import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
 import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
+import { paletteShortcut } from "@/ui/command-palette";
 import { clampPage } from "@/lib/paging";
 
 /** Rule NAT đọc ở hộp Thu hồi — chỉ những trường cần để nói "rule nào đang trỏ vào IP này". */
@@ -83,9 +88,12 @@ interface NatRef {
  */
 export function SubnetPane({
   subnet: item,
+  subnets = [],
   me,
 }: {
   subnet: SubnetRow;
+  /** Mọi dải (kể cả đã ngừng) — để ô lọc chỉ đường khi người ta gõ IP của dải khác (UX-E19). */
+  subnets?: SubnetRow[];
   me: Me;
 }) {
   const { t } = useTranslation();
@@ -115,6 +123,13 @@ export function SubnetPane({
   );
   /** Ô tìm ngay trên bảng — lọc tại chỗ trên cả dải. */
   const [needle, setNeedle] = useState("");
+  const jump = useMemo(() => {
+    const ip = needle.trim();
+    if (parseIpv4(ip) === null || cidrContains(item.cidr, ip)) return null;
+    // Chỉ dải còn dùng: dải đã ngừng thì bảng chỉ đọc, sang đó cũng không cấp được.
+    const other = subnetOf(ip, subnets.filter((row) => row.voidedAt === null && row.id !== item.id));
+    return { ip, other };
+  }, [needle, item.cidr, item.id, subnets]);
   /**
    * `?ip=` — đến từ ô tra cứu cấp trang, hộp Tìm nhanh hoặc panel IP của trang thiết bị: nhảy
    * tới đúng trang chứa địa chỉ và tô sáng dòng. Đọc từ URL để link gửi cho nhau mở ra đúng chỗ.
@@ -126,6 +141,8 @@ export function SubnetPane({
   const [expandedRuns, setExpandedRuns] = useState<ReadonlySet<string>>(() => new Set());
   const appliedFocus = useRef<string | null>(null);
   const highlightRow = useRef<HTMLTableRowElement | null>(null);
+  /** Danh sách THẺ (≤600px): không gắn ref từng thẻ được, nên tìm thẻ đang tô sáng trong khung. */
+  const cardList = useRef<HTMLDivElement | null>(null);
   const scrolledTo = useRef<string | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
   /** Hồ sơ IP nhập nhầm đang chờ XÓA (kèm lý do) — khác `moving` vốn là bước vòng đời. */
@@ -270,6 +287,7 @@ export function SubnetPane({
     [filtered, shown, needle, highlight, item.gateway, expandedRuns],
   );
   const rows = pageSlots(lines, page);
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
 
   // Đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào một bảng
   // rỗng và tưởng không có gì.
@@ -280,9 +298,12 @@ export function SubnetPane({
   // Cuộn tới dòng được tô sáng một lần — trên điện thoại nó thường nằm dưới mép màn hình.
   useEffect(() => {
     if (!highlight || scrolledTo.current === highlight) return;
-    if (!highlightRow.current) return;
+    const target = narrow
+      ? cardList.current?.querySelector<HTMLElement>(".list-card.row-highlight")
+      : highlightRow.current;
+    if (!target) return;
     scrolledTo.current = highlight;
-    highlightRow.current.scrollIntoView?.({ block: "center" });
+    target.scrollIntoView?.({ block: "center" });
   });
 
   /** Chỗ trống nhỏ nhất (bỏ qua gateway) cho nút "Cấp IP trống kế tiếp". */
@@ -312,6 +333,91 @@ export function SubnetPane({
         {t("ipam.assign")}
       </button>
     ) : null;
+
+  /** Ô thao tác của một HỒ SƠ IP — dùng chung cho dòng bảng và thẻ điện thoại. */
+  const recordActions = (slot: IpRow) => (
+    <div className="action-cell">
+      {isFreeRecord(slot) ? assignButton(slot.address, slot) : null}
+      {/*
+        Gom vào một menu: bày từng nút cạnh nhau làm cột cuối rộng hơn cả các
+        cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ.
+      */}
+      <RowActions
+        primary={
+          // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
+          canWrite && !slot.voidedAt && !isFreeRecord(slot)
+            ? {
+                label: t("common.edit"),
+                ariaLabel: t("common.editOf", { subject: slot.address }),
+                onClick: () => setEditing(slot),
+              }
+            : undefined
+        }
+        label={t("common.actionsOf", { subject: slot.address })}
+        items={rowActions(slot)}
+      />
+    </div>
+  );
+
+  /*
+   * ≤600px: mỗi IP một thẻ ~70px (địa chỉ + trạng thái, máy / người dùng, site · ngày cấp) thay
+   * cho bảng gập nhãn–giá trị ~196px một IP — 50 IP từng là trang dài 10.625px (PW-B01, TB-06).
+   */
+  const slotCard: MobileCard<SlotLine> = {
+    title: (slot) => (slot.kind === "run" ? runLabel(slot) : slot.address),
+    titleIsCode: true,
+    badge: (slot) =>
+      slot.kind !== "run" && slot.kind !== "free" && slot.voidedAt ? (
+        <span className="badge danger" title={slot.voidReason ?? undefined}>
+          {t("ipam.voidedBadge")}
+        </span>
+      ) : slot.kind !== "run" && slot.kind !== "free" ? (
+        <span className={`badge ${STATUS_TONE[slot.status]}`}>{t(STATUS_KEY[slot.status])}</span>
+      ) : (
+        <span className="badge muted">{t("ipam.statusFree")}</span>
+      ),
+    actions: (slot) =>
+      slot.kind === "run" || slot.kind === "free" ? assignButton(slot.address, null) : recordActions(slot),
+    // Thẻ không có link phủ (không href / onRowClick), nên link mã máy trong dòng 2 bấm được.
+    subtitle: (slot) =>
+      slot.kind === "run" ? (
+        t("ipam.freeRunCount", { count: slot.count })
+      ) : slot.kind === "free" ? null : slot.deviceId ? (
+        <>
+          <Link className="mono" to={PATHS.device(slot.deviceId)}>
+            {slot.deviceCode}
+          </Link>
+          {slot.usedBy ? ` · ${slot.usedBy}` : null}
+        </>
+      ) : (
+        slot.usedBy || null
+      ),
+    meta: (slot) =>
+      slot.kind === "run" || slot.kind === "free"
+        ? null
+        : isFreeRecord(slot)
+          ? [
+              t("ipam.freedOn", { date: formatDate(slot.updatedAt) }),
+              slot.previousOwner ? t("ipam.previousOwner", { owner: slot.previousOwner }) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : [slot.deviceSiteCode, slot.assignedAt ? t("ipam.assignedOn", { date: formatDate(slot.assignedAt) }) : null]
+              .filter(Boolean)
+              .join(" · ") || null,
+    aside: (slot) =>
+      slot.kind === "run" ? (
+        <button
+          type="button"
+          className="btn sm ghost"
+          onClick={() => setExpandedRuns((current) => new Set([...current, ...runMembers(filtered, slot)]))}
+        >
+          {t("ipam.freeRunExpand")}
+        </button>
+      ) : slot.kind !== "free" && slot.note ? (
+        <CellNote text={slot.note} />
+      ) : null,
+  };
 
   const ipHead = (
     <thead>
@@ -467,6 +573,22 @@ export function SubnetPane({
           searchPlaceholder={t("ipam.paneSearch")}
         />
       ) : null}
+      {/* Ô "Tra IP" cấp trang đã bỏ (UX-E19, trùng Tìm nhanh): gõ đủ một IP không thuộc dải này
+          thì chỉ đường sang dải chứa nó — kể cả IP chưa có hồ sơ, thứ Tìm nhanh không tra được. */}
+      {view === "list" && jump ? (
+        <p className="muted small" role="status">
+          {jump.other ? (
+            <>
+              {t("ipam.jumpTo", { ip: jump.ip })}{" "}
+              <Link to={PATHS.subnetAt(jump.other.id, jump.ip)}>
+                {jump.other.name} · <span className="mono">{jump.other.cidr}</span>
+              </Link>
+            </>
+          ) : (
+            t("ipam.jumpNone", { ip: jump.ip, keys: paletteShortcut() })
+          )}
+        </p>
+      ) : null}
 
       {slots.isLoading ? (
         /* Khung xương đúng hình bảng IP: dữ liệu về thì bảng "đầy lên" tại chỗ, cột trái và
@@ -494,6 +616,22 @@ export function SubnetPane({
         />
       ) : (
         <>
+          {narrow ? (
+            <div ref={cardList}>
+            <MobileCardList
+              rows={rows}
+              rowKey={(slot) => (slot.kind === "run" ? `run-${slot.address}` : slot.kind === "free" ? slot.address : slot.id)}
+              card={slotCard}
+              rowClassName={(slot) =>
+                slot.address === highlight
+                  ? "row-highlight"
+                  : slot.kind === "run" || slot.kind === "free" || isFreeRecord(slot)
+                    ? "row-muted"
+                    : ""
+              }
+            />
+            </div>
+          ) : (
           <div className="table-wrap">
             <table className="table table-stack ip-table">
               {ipHead}
@@ -674,27 +812,7 @@ export function SubnetPane({
                         )}
                       </td>
                       <td data-label={t("common.actions")} className="col-actions">
-                        <div className="action-cell">
-                          {isFreeRecord(slot) ? assignButton(slot.address, slot) : null}
-                          {/*
-                            Gom vào một menu: bày từng nút cạnh nhau làm cột cuối rộng hơn cả các
-                            cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ.
-                          */}
-                          <RowActions
-                            primary={
-                              // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
-                              canWrite && !slot.voidedAt && !isFreeRecord(slot)
-                                ? {
-                                    label: t("common.edit"),
-                                    ariaLabel: t("common.editOf", { subject: slot.address }),
-                                    onClick: () => setEditing(slot),
-                                  }
-                                : undefined
-                            }
-                            label={t("common.actionsOf", { subject: slot.address })}
-                            items={rowActions(slot)}
-                          />
-                        </div>
+                        {recordActions(slot)}
                       </td>
                     </tr>
                   ),
@@ -702,6 +820,7 @@ export function SubnetPane({
               </tbody>
             </table>
           </div>
+          )}
 
           {/*
             BẢNG RỖNG PHẢI NÓI VÌ SAO RỖNG: lọc "Đang dùng" trên một dải chưa cấp ô nào mà chỉ ra
@@ -996,15 +1115,7 @@ export function IpForm({
           />
         </Field>
 
-        <Field label={t("ipam.note")} hint={t("ipam.noteHint")} htmlFor="ip-note" span={2} error={check.error("note")}>
-          <textarea
-            id="ip-note"
-            className="inp"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
+        <NoteField id="ip-note" value={note} onChange={setNote} span={2} error={check.error("note")} />
 
         {error ? (
           <p className="alert error span-2" role="alert">

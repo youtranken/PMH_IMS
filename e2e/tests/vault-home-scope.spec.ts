@@ -365,7 +365,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     await page.goto('/admin/vault-access?view=matrix');
     // Chỗ hổng của ma trận là những nhóm chưa ai được gán — rà từng thẻ thì không thấy ra.
-    await expect(page.getByText(/\d+ nhóm chưa gán cho ai/)).toBeVisible();
+    await expect(page.getByText(/\d+ phạm vi chưa gán cho ai/)).toBeVisible();
   });
 
   test('gỡ quyền ngay trên thẻ nhóm, không phải quay về chiều theo người', async ({ page }) => {

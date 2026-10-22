@@ -86,7 +86,7 @@ describe('Khu "Đã lưu trữ" của /diagrams (Q-23, 05/10)', () => {
     const rows = within(section).getAllByRole('listitem');
     expect(rows[0]).toHaveTextContent('Tầng cũ E2E');
     expect(rows[0]).toHaveTextContent('Trong "Toàn công ty E2E"');
-    expect(rows[0]).toHaveTextContent('Lưu trữ bởi An');
+    expect(rows[0]).toHaveTextContent('· An');
     expect(rows[1]).toHaveTextContent('Bản trình bày');
     await user.click(screen.getByRole('radio', { name: 'Danh sách' }));
     expect(screen.getByRole('region', { name: 'Bản vẽ đã lưu trữ (2)' })).toBeInTheDocument();

@@ -1,19 +1,8 @@
 import { FEATURE_TICKS, type FeatureTick } from '@/lib/features';
 import type { FeatureGroup } from '@/ui/use-feature-groups';
 
-/**
- * Hàng của bảng Nhóm quyền (Q-31), đúng thứ tự mockup đã duyệt. Nhãn dùng lại khóa `nav.*`: tên
- * trên bảng phải là tên SA thấy trên menu.
- */
-export const FEATURE_ROWS: { tick: FeatureTick; labelKey: string; underIso: boolean }[] = [
-  { tick: 'overview', labelKey: 'nav.groupOverview', underIso: false },
-  { tick: 'assets', labelKey: 'nav.groupAssets', underIso: false },
-  { tick: 'network', labelKey: 'nav.groupNetwork', underIso: false },
-  { tick: 'iso_0203', labelKey: 'nav.isoBackup', underIso: true },
-  { tick: 'iso_0206', labelKey: 'nav.isoIncidents', underIso: true },
-  { tick: 'iso_0208', labelKey: 'nav.isoAntivirus', underIso: true },
-  { tick: 'break_glass', labelKey: 'nav.approvalsMine', underIso: false },
-];
+/* `FEATURE_ROWS` dời sang `lib/features` (bảng Nhóm quyền và Hồ sơ của tôi cùng dùng, AD-15). */
+export { FEATURE_ROWS } from '@/lib/features';
 
 type Drafts = Record<string, string[]>;
 

@@ -180,13 +180,6 @@ const STATUS_TONE: Record<AccountStatus, string> = {
  * KHÔNG dùng đỏ / cam: hai màu đó là lỗi và cảnh báo — "Super Admin" đỏ cạnh "Còn 1 ngày" đỏ
  * đọc thành tài khoản đang có vấn đề.
  */
-const ROLE_TONE: Record<Me['role'], string> = {
-  sa: 'brand',
-  admin: 'info',
-  member: 'muted',
-};
-
-const DEFAULT_LIMIT = 20;
 
 interface AccountFilters extends Record<string, string> {
   search: string;
@@ -221,7 +214,6 @@ export function AccountsScreen({ me }: { me: Me }) {
   /* Trạng thái danh sách sống trên THANH ĐỊA CHỈ: chia sẻ được link đã lọc, Back gỡ bộ lọc. */
   const url = useListUrlState<AccountFilters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'fullName', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn người đã vô hiệu hóa), không gửi chữ lạ lên API (Q-20).
@@ -418,18 +410,9 @@ export function AccountsScreen({ me }: { me: Me }) {
 
   const actionsFor = (account: AccountRow): RowAction[] => {
     const self = account.id === me.id;
-    const busy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
-    const temp = tempLockOf(account, now);
     const items: RowAction[] = [
-      { key: 'detail', label: t('accounts.detail'), onSelect: () => setDetailFor(account) },
-      {
-        key: 'sessions',
-        label: t('accounts.sessions'),
-        disabled: busy,
-        onSelect: () => setSessionsFor(account),
-      },
-      /* Đi xem Quyền két / Nhật ký nằm trong hộp Chi tiết (Q-21): menu dòng chỉ còn VIỆC LÀM,
-         đủ ngắn để không phải cuộn trong menu. */
+      /* Bấm dòng đã mở Chi tiết; "Phiên đang mở", "Gỡ tạm chặn", Quyền két, Nhật ký nằm trong hộp
+         Chi tiết (Q-21, UX-E15) — menu dòng chỉ còn VIỆC LÀM không lặp chỗ khác. */
       {
         key: 'reset-password',
         label: t('accounts.resetPassword'),
@@ -437,23 +420,6 @@ export function AccountsScreen({ me }: { me: Me }) {
         onSelect: () => void doResetPassword(account),
       },
     ];
-    if (temp) {
-      items.push({
-        key: 'clear-lockout',
-        label: t('accounts.clearLockout'),
-        ok: true,
-        disabled: setStatus.isPending,
-        onSelect: () =>
-          void confirmThenRun({
-            title: t('common.titleOf', { action: t('accounts.clearLockout'), subject: account.fullName }),
-            message: t('accounts.confirmClearLockout', { name: account.fullName }),
-            danger: false,
-            confirmLabel: t('accounts.clearLockout'),
-            run: () => setStatus.mutateAsync({ id: account.id, status: 'active' }),
-            done: t('accounts.toastClearLockout', { name: account.fullName }),
-          }),
-      });
-    }
     if (!self) {
       items.push(
         {
@@ -616,7 +582,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         header: t('accounts.role'),
         cell: ({ row }) => (
           <>
-            <span className={`badge plain ${ROLE_TONE[row.original.role]}`}>
+            <span className="tag">
               {roleLabel(row.original.role, t)}
             </span>
             {row.original.role === 'member' && groupName(row.original.featureGroupId) ? (
@@ -686,7 +652,7 @@ export function AccountsScreen({ me }: { me: Me }) {
   const mobileCard: MobileCard<AccountRow> = {
     title: (row) => row.fullName,
     badge: (row) => (
-      <span className={`badge plain ${ROLE_TONE[row.role]}`}>{roleLabel(row.role, t)}</span>
+      <span className="tag">{roleLabel(row.role, t)}</span>
     ),
     actions: (row) => (
       <RowActions
@@ -717,7 +683,6 @@ export function AccountsScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('accounts.title')}
-        subtitle={t('accounts.subtitle')}
         actions={
           <>
             <ExportXlsxButton url={exportUrl} fileName="tai-khoan.xlsx" />
@@ -942,7 +907,7 @@ export function AccountsScreen({ me }: { me: Me }) {
             {
               label: t('accounts.role'),
               value: (
-                <span className={`badge plain ${ROLE_TONE[detailFor.role]}`}>
+                <span className="tag">
                   {roleLabel(detailFor.role, t)}
                 </span>
               ),
@@ -1120,7 +1085,7 @@ export function TemporaryPasswordDialog({
               className="btn"
               onClick={() => {
                 onClose();
-                // Mở sẵn tìm theo tên người: ô tìm thiết bị khớp cả "Người sử dụng" (DEV-013).
+                // Mở sẵn tìm theo tên người: ô tìm thiết bị khớp cả "Người dùng" (DEV-013).
                 navigate(`${PATHS.devices}?q=${encodeURIComponent(created.fullName)}`);
               }}
             >
@@ -1310,37 +1275,45 @@ function BlockedNow() {
     refetchInterval: 60_000,
   });
   const rows = Array.isArray(blocked.data) ? blocked.data : [];
+  const blockedColumns: ColumnDef<BlockedRow, unknown>[] = [
+    {
+      id: 'account',
+      header: t('accounts.blockedAccount'),
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span title={row.original.email ?? undefined}>{row.original.fullName ?? row.original.email ?? row.original.userId}</span>
+      ),
+    },
+    { id: 'ip', header: t('accounts.lockoutIp'), enableSorting: false, meta: { className: 'mono' }, cell: ({ row }) => row.original.ip },
+    { id: 'attempts', header: t('accounts.lockoutAttempts'), enableSorting: false, cell: ({ row }) => row.original.failedAttempts },
+    {
+      id: 'until',
+      header: t('accounts.lockoutUntil'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="badge warn">{formatDateTime(row.original.lockedUntil)}</span>,
+    },
+    { id: 'last', header: t('accounts.lockoutLastFail'), enableSorting: false, cell: ({ row }) => formatDateTime(row.original.updatedAt) },
+  ];
   if (rows.length === 0) return null;
   return (
     <section className="card account-blocked">
       <h2 className="form-section-title">{t('accounts.blockedNowTitle', { count: rows.length })}</h2>
       <p className="muted small">{t('accounts.blockedNowHint')}</p>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('accounts.blockedAccount')}</th>
-              <th>{t('accounts.lockoutIp')}</th>
-              <th>{t('accounts.lockoutAttempts')}</th>
-              <th>{t('accounts.lockoutUntil')}</th>
-              <th>{t('accounts.lockoutLastFail')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={`${row.userId}-${row.ip}`}>
-                <td title={row.email ?? undefined}>{row.fullName ?? row.email ?? row.userId}</td>
-                <td className="mono">{row.ip}</td>
-                <td>{row.failedAttempts}</td>
-                <td>
-                  <span className="badge warn">{formatDateTime(row.lockedUntil)}</span>
-                </td>
-                <td>{formatDateTime(row.updatedAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* DataTable (TB-14): đúng lúc bị dò mật khẩu thì khối này phải đọc được trên điện thoại —
+          bảng 5 cột cố định thì cuộn ngang. ≤600px thành thẻ "IP · chặn tới … · tài khoản". */}
+      <DataTable
+        data={rows}
+        columns={blockedColumns}
+        emptyText="—"
+        mobileCard={{
+          title: (row) => row.ip,
+          titleIsCode: true,
+          badge: (row) => <span className="badge warn">{formatDateTime(row.lockedUntil)}</span>,
+          subtitle: (row) =>
+            `${row.fullName ?? row.email ?? row.userId} · ${t('accounts.lockoutAttempts')} ${row.failedAttempts}`,
+          meta: (row) => `${t('accounts.lockoutLastFail')} ${formatDateTime(row.updatedAt)}`,
+        }}
+      />
     </section>
   );
 }

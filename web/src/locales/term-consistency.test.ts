@@ -392,8 +392,8 @@ describe('Q-18: "Phòng ban", không còn "Bộ phận"', () => {
   it('tab danh mục, nút thêm, ô trên hồ sơ thiết bị và ô "ai đang dùng" của IP', () => {
     expect(lookup('catalog.tabDepartment')).toBe('Phòng ban');
     expect(lookup('catalog.addDepartment')).toBe('Thêm phòng ban');
-    expect(lookup('devices.department')).toBe('Phòng ban sử dụng');
-    expect(lookup('ipam.usedBy')).toBe('Người / phòng ban dùng');
+    expect(lookup('devices.department')).toBe('Phòng ban');
+    expect(lookup('ipam.usedBy')).toBe('Người dùng / phòng ban');
   });
 });
 
@@ -416,7 +416,6 @@ describe('Q-04: "Tốc độ gói cước" của đường truyền', () => {
     const add = lookup('access.add');
     expect(lookup('access.addRules')).toContain(add);
     expect(lookup('access.addFor')).toContain(add);
-    expect(lookup('access.noRulesYet')).toContain(lookup('access.addRules'));
     for (const key of ['access.addRules', 'access.noRulesYet']) {
       expect(lookup(key), key).not.toContain('Thêm quyền');
     }
@@ -589,5 +588,59 @@ describe('T-07: mục bỏ lọc viết "Tất cả …"', () => {
       .filter(([, text]) => /^Mọi\b/.test(text))
       .map(([key]) => key);
     expect(bad).toEqual([]);
+  });
+});
+
+/**
+ * Q-30: thư mang mã chỉ gửi cho đúng người duyệt mà người xin chọn, và không còn thư nhắc.
+ * Câu nào ở luồng mở két còn hứa "gửi email cho Quản trị" hay "mail nhắc" là nói sai với
+ * người đọc — Super Admin chỉnh tham số tin là có thư đi, nhưng không có.
+ */
+describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
+  it('approvals / access / vault không nhắc thư cho Quản trị hay thư nhắc', () => {
+    const bad = leaves()
+      .filter(([key]) => /^(approvals|access|vault)\./.test(key))
+      .filter(([, text]) => /gửi email cho Quản trị|chờ Quản trị duyệt|mốc nhắc|mail nhắc người duyệt/i.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+
+  it('tham số "Nhắc duyệt sau" nói rõ mở két không gửi mail (thư nhắc chỉ còn cho bản vẽ / TK dịch vụ)', () => {
+    expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két[^.]*không gửi mail/);
+  });
+});
+
+/**
+ * TX-05 / PW-C08: tên vai trò bị trộn 5 kiểu ("SA/Admin", "Admin/SA", "Admin", "Member", "báo IT").
+ * Ba vai chỉ có ba tên: Super Admin, Quản trị, Thành viên; cặp hai vai viết "Super Admin / Quản trị".
+ */
+describe('Tên vai trò thống nhất', () => {
+  it('không còn SA/Admin, Admin/SA, Admin trần, Member, team IT trong chữ giao diện', () => {
+    const bad = leaves()
+      .filter(([, text]) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|(?<!Super )\bAdmin\b|\bMember\b|team IT/.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+
+  it('câu báo của API cũng vậy (api/src, trừ spec)', async () => {
+    const { readFileSync, readdirSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const root = join(__dirname, '..', '..', '..', 'api', 'src');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (name.endsWith('.ts') && !name.endsWith('.spec.ts') && !path.includes('migrations')) files.push(path);
+      }
+    };
+    walk(root);
+    const bad = files.filter((file) => {
+      const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+      const strings = code.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? [];
+      // Q-20: "khóa / xóa / hóa" (dấu trên chữ cái chính) như giao diện; TX-26.
+      return strings.some((text) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|báo IT|team IT|(?<![\p{L}])(khoá|xoá|hoá)(?![\p{L}])/iu.test(text));
+    });
+    expect(bad.map((file) => file.slice(root.length + 1))).toEqual([]);
   });
 });

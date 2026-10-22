@@ -10,7 +10,7 @@ import { Field } from '@/ui/page-header';
 import { Select, type SelectOption } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { formatDateTime } from '@/lib/format';
 import { NODE_TYPES, NODE_TYPE_KEY, TREE_KEY, nodeKey, type DiagramNode, type DiagramNodeType, type Publications, type VersionItem } from './diagram-api';
 import { copySources, type CopySource } from './diagram-copy-source';
@@ -287,7 +287,7 @@ export function DiagramNodeDialog({
                 failed={lists.isError}
                 options={[
                   { value: NONE, label: t('diagrams.form.none') },
-                  ...activeOptions(lists.data?.sites, node?.siteId, (site) => `${site.code} — ${site.name}`),
+                  ...activeOptions(lists.data?.sites, node?.siteId, (site) => siteFormLabel(site)),
                 ]}
                 onChange={(value) => setForm({ ...form, siteId: value === NONE ? null : value, cabinetId: null })}
               />

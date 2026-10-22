@@ -22,8 +22,10 @@ describe('lọc và đếm', () => {
     expect(countNat(rows)).toEqual({ open: 2, off: 1, voided: 1 });
   });
 
-  it('mặc định hiện rule còn trong sổ (đang mở + đã tắt), giấu rule đã gỡ', () => {
-    expect(filterNat(rows, NAT_DEFAULT_SHOWN)).toHaveLength(3);
+  // PW-B10: mặc định chỉ luật đang dùng — luật tạm tắt (88 / 801) nằm xen giữa làm khó đọc sổ.
+  it('mặc định chỉ hiện luật đang dùng; tạm tắt và đã gỡ bật bằng chip', () => {
+    expect(filterNat(rows, NAT_DEFAULT_SHOWN).every((r) => r.enabled && !r.voidedAt)).toBe(true);
+    expect(NAT_DEFAULT_SHOWN).toEqual({ open: true, off: false, voided: false });
   });
 
   it('chỉ bật "Đã gỡ" → chỉ còn rule đã gỡ', () => {

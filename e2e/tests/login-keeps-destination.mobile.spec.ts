@@ -186,6 +186,6 @@ test('bấm Đăng nhập khi trống: lỗi tiếng Việt dưới từng ô, k
 }) => {
   await page.goto('/login');
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
-  await expect(page.getByText('Bắt buộc — chưa nhập ô này.')).toHaveCount(2);
+  await expect(page.getByText('Chưa nhập.')).toHaveCount(2);
   await expect(page.getByLabel('Email')).toBeFocused();
 });

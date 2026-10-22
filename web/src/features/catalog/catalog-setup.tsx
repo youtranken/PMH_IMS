@@ -52,8 +52,10 @@ export function CatalogSetup({
     ? { text: '…', ok: true }
     : models.data.total === 0
       ? ready(0)
-      : noPhoto > 0
-        ? { text: t('catalog.setupNoPhoto', { count: noPhoto }), ok: false }
+      : /* Thiếu ảnh model là ghi chú, không phải "chưa khai": thêm thiết bị vẫn được, nên ô vẫn
+           đủ và thẻ vẫn gập được (UX-E40). */
+        noPhoto > 0
+        ? { text: `${ready(models.data.total).text} · ${t('catalog.setupNoPhoto', { count: noPhoto })}`, ok: true }
         : ready(models.data.total);
   const tiles = [
     { key: 'site', label: t('catalog.tabSite'), state: ready(active(lists?.sites)) },

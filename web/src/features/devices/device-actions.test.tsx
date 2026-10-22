@@ -53,16 +53,16 @@ describe('Cột Thao tác của danh sách thiết bị (Q-18)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sửa máy PC-01' }));
     expect(handlers.onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }));
 
-    expect(await menuNames()).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
-    expect(screen.getByRole('menuitem', { name: 'Thanh lý' })).toHaveClass('danger');
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Thanh lý' }));
+    expect(await menuNames()).toEqual(['Đổi trạng thái…', 'Nhân bản', 'Thanh lý…']);
+    expect(screen.getByRole('menuitem', { name: 'Thanh lý…' })).toHaveClass('danger');
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Thanh lý…' }));
     expect(handlers.onRetire).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1' }));
   });
 
   it('đổi trạng thái / nhân bản gọi đúng việc, không lan lên dòng', async () => {
     const handlers = setup('broken');
     await menuNames();
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi trạng thái' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi trạng thái…' }));
     expect(handlers.onStatus).toHaveBeenCalledTimes(1);
     await menuNames();
     await userEvent.click(screen.getByRole('menuitem', { name: 'Nhân bản' }));
@@ -72,9 +72,9 @@ describe('Cột Thao tác của danh sách thiết bị (Q-18)', () => {
   it('đường hỏng: máy đã thanh lý thì Sửa tắt, menu chỉ còn Đổi trạng thái · Nhân bản (Q-20)', async () => {
     const handlers = setup('retired');
     expect(screen.getByRole('button', { name: 'Sửa máy PC-01' })).toBeDisabled();
-    expect(await menuNames()).toEqual(['Đổi trạng thái', 'Nhân bản']);
-    expect(screen.getByRole('menuitem', { name: 'Đổi trạng thái' })).toHaveClass('ok');
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi trạng thái' }));
+    expect(await menuNames()).toEqual(['Đổi trạng thái…', 'Nhân bản']);
+    expect(screen.getByRole('menuitem', { name: 'Đổi trạng thái…' })).toHaveClass('ok');
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi trạng thái…' }));
     expect(handlers.onStatus).toHaveBeenCalledTimes(1);
     expect(handlers.onRetire).not.toHaveBeenCalled();
   });

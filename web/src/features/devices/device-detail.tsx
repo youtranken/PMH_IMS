@@ -64,6 +64,7 @@ import {
   type DeviceStatus,
 } from "@/lib/device-types";
 import { PATHS } from "@/lib/routes";
+import { RecordStamp } from "@/ui/record-stamp";
 
 type HeldKey = "ipam" | "ports" | "nat" | "isp" | "software" | "vault" | "attachments";
 
@@ -282,16 +283,17 @@ export function DeviceDetail({ me }: { me: Me }) {
         ? ((panels.data ?? []).find((panel) => panel.key === "software")?.items.length ?? 0)
         : undefined,
     },
-    {
-      key: "attachments",
-      label: t("devices.tabAttachments"),
-      count: counts.files,
-    },
+    // Một thứ tự cho mọi trang chi tiết (PW-A27): Tổng quan · (tab riêng) · Két sắt · Giấy tờ · Lịch sử.
     // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
     // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
     ...(canVault
       ? [{ key: "vault", label: t("vault.tab"), count: counts.secrets }]
       : []),
+    {
+      key: "attachments",
+      label: t("devices.tabAttachments"),
+      count: counts.files,
+    },
     { key: "history", label: t("devices.tabHistory") },
   ];
   const safeTab = useVisibleTab(
@@ -587,9 +589,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         );
       }),
     },
-    { label: t("devices.vendor"), value: item.vendorName },
+    /* Không lặp Nhà cung cấp (thẻ riêng ở cột phải) và Phòng ban (dòng phụ của ô Người dùng) — PW-A04. */
     { label: t("devices.purchaseDate"), value: item.purchaseDate ? formatDate(item.purchaseDate) : null },
-    { label: t("devices.department"), value: item.department },
     { label: t("devices.note"), value: item.note },
   ];
   const blankCount = specItems.filter((entry) =>
@@ -849,24 +850,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                   <span className="muted">{t("detail.notDeclared")}</span>
                 )}
               </div>
-              {/* Hồ sơ cũ hay mới — người đọc cần biết trước khi tin số liệu. */}
-              <p className="rail-foot">
-                {t("devices.createdAt", { date: formatDate(item.createdAt) })}
-                {lastEdit
-                  ? (
-                      <>
-                        {" · "}
-                        {/* Tên người như mọi chỗ khác (sơ đồ, lịch sử, phiên bản); email để khi rê chuột (T-09). */}
-                        <span title={lastEdit.actor}>
-                          {t("devices.lastEditBy", {
-                            date: formatDate(lastEdit.createdAt),
-                            actor: lastEdit.actorName ?? lastEdit.actor,
-                          })}
-                        </span>
-                      </>
-                    )
-                  : null}
-              </p>
+              <RecordStamp createdAt={item.createdAt} last={lastEdit} onOpenHistory={() => setTab("history")} />
             </RailCard>
           </>
         }
@@ -1117,7 +1101,7 @@ export function DeviceDetail({ me }: { me: Me }) {
 
       {assigningIp ? (
         <DeviceIpAssign
-          device={{ id: item.id, code: item.code }}
+          device={{ id: item.id, code: item.code, assignedTo: item.assignedTo, department: item.department }}
           change={!!firstIp}
           csrfToken={me.csrfToken}
           onClose={() => setAssigningIp(false)}

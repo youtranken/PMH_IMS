@@ -66,19 +66,34 @@ export function DeviceTypeFilter({
   onChange: (next: string[]) => void;
 }) {
   const { t } = useTranslation();
-  const shown = (types ?? []).filter((type) => type.active);
+  const [expanded, setExpanded] = useState(false);
+  const active = (types ?? []).filter((type) => type.active);
+  /* Mặc định chỉ bày chip loại cờ Router/Firewall và loại đang chọn (PW-B09): 16 chip chiếm năm
+     hàng ở 390px, đẩy cả form xuống. Loại khác sau nút "Mọi loại…". Danh mục chưa có loại nào
+     mang cờ thì bày hết — không có gì để rút gọn. */
+  const hasRouter = active.some((type) => type.isRouter);
+  const shown =
+    expanded || !hasRouter ? active : active.filter((type) => type.isRouter || value.includes(type.id));
+  const more = shown.length < active.length;
   return (
-    <ChipToggleGroup
-      wrap
-      label={t('deviceTypeFilter.label')}
-      allLabel={t('deviceTypeFilter.all')}
-      options={shown.map((type) => ({ value: type.id, label: type.name }))}
-      value={value}
-      onChange={(next) => {
-        // `toggleChip` chỉ giữ giá trị có chip; giữ lại loại ẩn (đã ngừng) đang được lọc ngầm.
-        const hidden = value.filter((id) => !shown.some((type) => type.id === id));
-        onChange(next.length === 0 ? [] : [...next, ...hidden]);
-      }}
-    />
+    <>
+      <ChipToggleGroup
+        wrap
+        label={t('deviceTypeFilter.label')}
+        allLabel={t('deviceTypeFilter.all')}
+        options={shown.map((type) => ({ value: type.id, label: type.name }))}
+        value={value}
+        onChange={(next) => {
+          // `toggleChip` chỉ giữ giá trị có chip; giữ lại loại ẩn (đã ngừng / chưa bày) đang được lọc ngầm.
+          const hidden = value.filter((id) => !shown.some((type) => type.id === id));
+          onChange(next.length === 0 ? [] : [...next, ...hidden]);
+        }}
+      />
+      {more ? (
+        <button type="button" className="linkbtn sm" onClick={() => setExpanded(true)}>
+          {t('deviceTypeFilter.more')}
+        </button>
+      ) : null}
+    </>
   );
 }

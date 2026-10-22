@@ -111,6 +111,28 @@ describe('AttachmentPanel — quyền xoá theo phiên hiện tại', () => {
     ).toBeInTheDocument();
   });
 
+  /*
+   * Giấy tờ của ISP / TK dịch vụ theo ma trận quyền két: Member không có quyền thì API trả 403.
+   * Bày ô thả file rồi một khung lỗi đỏ có "Thử lại" là bảo người ta làm một việc không bao giờ
+   * thành — chỉ nói một dòng, không ô thả, không khung lỗi.
+   */
+  it('403 khi đọc danh sách → một dòng "chưa có quyền", không ô thả file, không khung lỗi', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          String(url).includes('/auth/me')
+            ? jsonResponse(200, { id: 'u1', email: 'a@pmh.com.vn', role: 'member' })
+            : jsonResponse(403, { code: 'FORBIDDEN', message: 'Bạn không có quyền trên đối tượng này.' }),
+        ),
+      ),
+    );
+    renderPanel();
+    expect(await screen.findByText('Bạn chưa có quyền xem giấy tờ của hồ sơ này.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chọn file để đính kèm')).not.toBeInTheDocument();
+  });
+
   it('Member: không có nút thao tác xoá', async () => {
     vi.stubGlobal('fetch', withMe('member'));
     renderPanel();
@@ -279,10 +301,10 @@ describe('AttachmentPanel — luật tải về nằm trong nút (i)', () => {
 });
 
 /*
- * Gợi ý khi chưa có giấy tờ phải nói đúng loại hồ sơ, như ô thả file: tài khoản dịch vụ không có
- * "hóa đơn", và ở đó còn phải nhắc KHÔNG đính mật khẩu.
+ * Gợi ý ví dụ phải nói đúng loại hồ sơ: tài khoản dịch vụ không có "hóa đơn", và ở đó còn phải
+ * nhắc KHÔNG đính mật khẩu. Câu đó nằm ở ô thả file; khung trống không lặp lại (PW-A28).
  */
-describe('AttachmentPanel — gợi ý khi trống theo loại hồ sơ', () => {
+describe('AttachmentPanel — gợi ý theo loại hồ sơ ở ô thả; khung trống một câu', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each([
@@ -302,7 +324,8 @@ describe('AttachmentPanel — gợi ý khi trống theo loại hồ sơ', () => 
       </ToastProvider>,
     );
     const empty = (await screen.findByText('Chưa có giấy tờ nào.')).parentElement!;
-    expect(empty).toHaveTextContent(expected);
-    if (ownerType !== 'device') expect(empty).not.toHaveTextContent(/hóa đơn/i);
+    expect(empty).not.toHaveTextContent(expected);
+    expect(screen.getByText(expected)).toHaveClass('file-picker-hint');
+    if (ownerType !== 'device') expect(screen.queryByText(/hóa đơn/i)).toBeNull();
   });
 });

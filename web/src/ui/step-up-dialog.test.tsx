@@ -31,7 +31,7 @@ function mockStepUp(status: number, body: unknown) {
 
 /** Đủ 6 số là ô tự gửi — bấm thêm nút là lượt thứ hai (bị chặn), và nút lúc đó đã thành "Đã xác thực". */
 async function typeCodeAndSubmit(): Promise<void> {
-  await userEvent.type(screen.getByLabelText(/mã/i), '123456');
+  await userEvent.type(screen.getByLabelText('Mã xác thực'), '123456');
 }
 
 afterEach(() => {
@@ -108,6 +108,15 @@ describe('StepUpDialog — phạm vi két / sơ đồ', () => {
     renderWithI18n(<StepUpDialog csrfToken="t" scope="diagram" onClose={vi.fn()} onDone={vi.fn()} />);
     expect(screen.getByText('Nhập mã 6 số trên điện thoại để xem sơ đồ.')).toBeInTheDocument();
     expect(screen.getByText('Mã này chỉ mở phần xem sơ đồ, không mở két.')).toBeInTheDocument();
+  });
+
+  // UX-E38: hộp đã nói việc cụ thể (gán quyền, đổi thiết bị xác thực…) thì câu phạm vi mã là nhiễu.
+  it('có `purpose` → không kèm câu phạm vi mã', () => {
+    renderWithI18n(
+      <StepUpDialog csrfToken="t" scope="vault" purpose="Nhập mã 6 số để xác nhận gán quyền két." onClose={vi.fn()} onDone={vi.fn()} />,
+    );
+    expect(screen.getByText('Nhập mã 6 số để xác nhận gán quyền két.')).toBeInTheDocument();
+    expect(screen.queryByText(/^Mã này /)).toBeNull();
   });
 
   it('phạm vi két nói rõ mã không mở sơ đồ', () => {

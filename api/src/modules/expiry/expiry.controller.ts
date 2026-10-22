@@ -31,6 +31,7 @@ import { RealDate } from '../../common/real-date';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
+import { dateTimeInTz } from '../../common/today';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { ExpiryDigestService } from './expiry-digest.service';
@@ -273,6 +274,46 @@ export class ExpiryController {
     return withActorNames(await this.expiry.recentRenewals(query), (emails) =>
       this.users.namesByEmails(emails),
     );
+  }
+
+  /**
+   * PW-A29: tab "Đã gia hạn" xuất đúng khoảng ngày đang xem, cùng cột với màn. Loại theo NHÃN của
+   * sổ nguồn hạn, người làm theo họ tên, giờ theo múi giờ hệ thống — không in mã máy hay UTC.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('expiry.renewals_exported', 'expiry')
+  @Get('renewals/export.xlsx')
+  async exportRenewals(@Query() query: RenewalsQueryDto, @Res() res: Response) {
+    if (query.from && query.to && query.to < query.from) {
+      throw new BadRequestException({
+        code: 'RANGE_INVALID',
+        message: '"Đến ngày" không được trước "Từ ngày".',
+      });
+    }
+    const [rows, timeZone] = await Promise.all([
+      this.expiry.recentRenewals({ from: query.from, to: query.to }).then((list) =>
+        withActorNames(list, (emails) => this.users.namesByEmails(emails)),
+      ),
+      this.expiry.timezone(),
+    ]);
+    const kindLabel = new Map(this.expiry.kinds().map((k) => [k.kind, k.label]));
+    type Row = (typeof rows)[number];
+    const buffer = await this.excel.build<Row>({
+      sheetName: 'Đã gia hạn',
+      columns: [
+        { header: 'Ngày gia hạn', width: 18, value: (r) => dateTimeInTz(new Date(r.createdAt), timeZone) },
+        { header: 'Hồ sơ', width: 36, value: (r) => r.label },
+        { header: 'Loại', width: 18, value: (r) => kindLabel.get(r.objectKind) ?? r.objectKind },
+        { header: 'Hạn cũ', width: 14, value: (r) => r.oldEnd ?? '' },
+        { header: 'Hạn mới', width: 14, value: (r) => r.newEnd },
+        { header: 'Chi phí', width: 14, value: (r) => r.cost ?? null },
+        { header: 'Hợp đồng', width: 24, value: (r) => r.contract ?? '' },
+        { header: 'Website', width: 28, value: (r) => (r.websites ?? []).join(', ') },
+        { header: 'Người làm', width: 24, value: (r) => r.actorName ?? r.actor },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'da-gia-han.xlsx');
   }
 
   // ───────────── Luật gửi báo cáo (FR-013) ─────────────

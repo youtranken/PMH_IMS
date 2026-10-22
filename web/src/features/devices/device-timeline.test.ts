@@ -8,7 +8,7 @@ const t = i18n.t;
 
 const PROFILE: HistoryEntry[] = [
   { id: 'h2', at: '2026-09-05T01:00:00Z', actor: 'a@pmh.com.vn', action: 'Sửa hồ sơ' },
-  { id: 'h1', at: '2026-09-01T01:00:00Z', actor: 'a@pmh.com.vn', action: 'Tạo hồ sơ' },
+  { id: 'h1', at: '2026-09-01T01:00:00Z', actor: 'a@pmh.com.vn', action: 'Thêm hồ sơ' },
 ];
 const OTHERS: TimelineItem[] = [
   {

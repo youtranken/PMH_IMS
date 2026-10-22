@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { useMe } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { NoteField } from '@/ui/note-field';
 import { DeviceCombobox } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import {
@@ -20,11 +21,14 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { IspRow } from './isp-types';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
+import { CodeInput, IpInput } from '@/ui/code-input';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { useSuggestedCode } from '@/ui/use-suggested-code';
 
 const WAN_ISSUE_KEY: Record<Exclude<WanIpIssue, null>, string> = {
   range: 'isp.wanIpRange',
@@ -85,6 +89,7 @@ export function IspForm({
   );
   const [query, setQuery] = useState(row?.deviceCode ?? '');
   const [error, setError] = useSubmitError([form, device]);
+  const server = useServerFieldErrors([form, device]);
   // Bản scan hợp đồng ISP đi kèm ngay lúc khai đường mới (AD-15 — cùng khối với thiết bị và
   // phần mềm). Sửa đường thì tab "Giấy tờ" ở trang chi tiết mới là chỗ xem cả danh sách.
   const draft = useAttachmentDraft();
@@ -122,6 +127,9 @@ export function IspForm({
   // mở lại và bấm thêm phát nữa là khai trùng một đường truyền.
   const busy = save.isPending || uploading;
 
+  // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
+  const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
+  const codeGuard = useSuggestedCode(row ? null : '/api/v1/isp-lines/next-code', form.code, applyCode, 'isp-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -227,7 +235,9 @@ export function IspForm({
                   onSaved();
                 })();
               },
-              onError: (err) => setError(errorMessage(err)),
+              onError: (err) => {
+                if (!server.claim(err, { ISP_CODE_TAKEN: 'isp-code' })) setError(errorMessage(err));
+              },
             },
           );
         }}
@@ -246,10 +256,11 @@ export function IspForm({
         ) : null}
         {check.summary}
         <FormSection title={t('isp.tabProfile')} columns={4}>
-          <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code')}>
-            <input
+          <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code') ?? server.error('isp-code')}>
+            <CodeInput
+              caps
               id="isp-code"
-              className="inp mono"
+              data-guard-value={codeGuard}
               required
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
@@ -313,13 +324,11 @@ export function IspForm({
                 return (
                   <div key={index}>
                     <div className="row" style={{ gap: 'var(--space-2)' }}>
-                      <input
+                      <IpInput
                         id={`isp-wanip-${index}`}
                         ref={(node) => {
                           wanInputs.current[index] = node;
                         }}
-                        className="inp mono"
-                        inputMode="decimal"
                         aria-label={t('isp.wanIpRow', { n: index + 1 })}
                         aria-invalid={issue ? true : undefined}
                         aria-describedby={issue ? `${errorId} isp-wanip-0-hint` : 'isp-wanip-0-hint'}
@@ -375,7 +384,7 @@ export function IspForm({
               options={activeOptions(
                 lists.data?.sites,
                 row?.siteId,
-                (site) => `${site.code} — ${site.name}`,
+                (site) => siteFormLabel(site),
               )}
               onChange={(value) => set('siteId', value)}
             />
@@ -436,9 +445,8 @@ export function IspForm({
             />
           </Field>
           <Field label={t('isp.contractNo')} htmlFor="isp-contract">
-            <input
+            <CodeInput
               id="isp-contract"
-              className="inp mono"
               value={form.contractNo}
               onChange={(e) => set('contractNo', e.target.value)}
             />
@@ -450,14 +458,7 @@ export function IspForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          <Field label={t('isp.note')} hint={t('isp.noteHint')} htmlFor="isp-note" error={check.error('note')}>
-            <input
-              id="isp-note"
-              className="inp"
-              value={form.note}
-              onChange={(e) => set('note', e.target.value)}
-            />
-          </Field>
+          <NoteField id="isp-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
         {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id.

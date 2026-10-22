@@ -20,7 +20,7 @@ import {
 
 test.beforeEach(() => resetUsers());
 
-const EXPIRED_NOTICE = 'Hết thời gian nhập mã, vui lòng đăng nhập lại.';
+const EXPIRED_NOTICE = 'Hết thời gian nhập mã. Đăng nhập lại.';
 
 /** Tài khoản đã cài xong 2 lớp, đang đứng ở màn nhập mã. Trả secret TOTP. */
 async function atChallenge(page: Page): Promise<string> {
@@ -35,11 +35,11 @@ async function pendingSessionIsDead(page: Page): Promise<void> {
   expect((await page.request.get('/api/v1/auth/me')).status()).toBe(401);
 }
 
-test('ô trống bấm Xác nhận → "Vui lòng nhập mã xác thực."; không còn câu gợi ý dưới ô', async ({ page }) => {
+test('ô trống bấm Xác nhận → "Chưa nhập mã xác thực."; không còn câu gợi ý dưới ô', async ({ page }) => {
   await atChallenge(page);
   await expect(page.getByText('Mã 6 số đang hiện trong ứng dụng. Nhập mã mới nhất.')).toHaveCount(0);
   await page.getByRole('button', { name: 'Xác nhận' }).click();
-  await expect(page.getByText('Vui lòng nhập mã xác thực.')).toBeVisible();
+  await expect(page.getByText('Chưa nhập mã xác thực.')).toBeVisible();
   await expect(page.getByText('Còn thiếu 6 số.')).toHaveCount(0);
 });
 

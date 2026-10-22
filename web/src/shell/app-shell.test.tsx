@@ -63,7 +63,8 @@ async function logoutViaMenu() {
 }
 
 describe('AppShell — menu tài khoản (SHELL-001)', () => {
-  it('bấm tên → menu mở, tiêu điểm vào mục đầu, có đủ lối vào Hồ sơ / Đổi mật khẩu / 2 lớp / Giao diện / Đăng xuất', async () => {
+  // UX-E18: "Đổi mật khẩu" và "Xác thực 2 lớp" chỉ là hai lối nữa vào Hồ sơ — menu còn ba thứ.
+  it('bấm tên → menu mở, tiêu điểm vào mục đầu; chỉ còn Hồ sơ của tôi · Giao diện · Đăng xuất', async () => {
     renderShell();
     const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -71,24 +72,24 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const menu = screen.getByRole('menu');
     expect(within(menu).getByRole('menuitem', { name: 'Hồ sơ của tôi' })).toHaveFocus();
-    for (const name of ['Đổi mật khẩu', 'Xác thực 2 lớp', 'Đăng xuất']) {
-      expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
-    }
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Hồ sơ của tôi', 'Đăng xuất']);
     expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(3);
   });
 
   /*
-   * Nút tài khoản từng có một `Chevron` lấy màu `--ink` của vùng nội dung: sáng thì gần trùng
-   * nền sidebar (vô hình), tối thì hiện rõ — người dùng thấy "mũi tên" xuất hiện tuỳ giao diện.
-   * Chủ dự án chốt dáng của bản Sáng: nút chỉ có avatar + tên + vai, ở mọi giao diện.
+   * PW-C26: Đăng xuất chỉ nằm trong menu này, nên nút phải trông như mở được menu — mũi tên lên.
+   * Mũi tên cũ lấy `--ink` của vùng nội dung nên chỉ hiện ở giao diện tối; mũi tên này mang lớp
+   * `sb-caret` (màu token sidebar), giống nhau ở mọi giao diện.
    */
   it.each(['light', 'dark', 'system'] as const)(
-    'nút tài khoản không có mũi tên/biểu tượng nào, kể cả khi giao diện là %s',
+    'nút tài khoản có MỘT mũi tên lên màu sidebar, ở giao diện %s',
     (pref) => {
       localStorage.setItem('ims_theme', pref);
       renderShell();
       const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
-      expect(trigger.querySelector('svg')).toBeNull();
+      const icons = trigger.querySelectorAll('svg');
+      expect(icons).toHaveLength(1);
+      expect(icons[0]).toHaveClass('sb-caret');
     },
   );
 
@@ -103,10 +104,10 @@ describe('AppShell — menu tài khoản (SHELL-001)', () => {
     const user = userEvent.setup();
     const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
     await user.click(trigger);
-    await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('menuitem', { name: 'Đổi mật khẩu' })).toHaveFocus();
-    await user.keyboard('{ArrowUp}{ArrowUp}');
+    await user.keyboard('{ArrowUp}');
     expect(screen.getByRole('menuitem', { name: 'Đăng xuất' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Hồ sơ của tôi' })).toHaveFocus();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
@@ -165,6 +166,27 @@ describe('AppShell — topbar', () => {
    * Tên màn đã là `<h1>` của chính trang (PageHeader) — topbar nhắc lại lần nữa thì người dùng
    * đọc cùng một chữ hai lần ngay đầu màn (Q-18).
    */
+  // UX-E40: "/" vào ô tìm của màn như các ứng dụng quen thuộc; đang gõ trong ô khác thì "/" là chữ.
+  it('phím "/" đưa tiêu điểm vào ô tìm đầu tiên của màn; đang ở ô nhập thì không cướp', async () => {
+    renderWithI18n(
+      <ToastProvider>
+        <MemoryRouter>
+          <AppShell me={ME}>
+            <input aria-label="Ghi chú" />
+            <input type="search" aria-label="Tìm thiết bị" />
+          </AppShell>
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await user.keyboard('/');
+    expect(screen.getByRole('searchbox', { name: 'Tìm thiết bị' })).toHaveFocus();
+    expect(screen.getByRole('searchbox', { name: 'Tìm thiết bị' })).toHaveValue('');
+    await user.click(screen.getByRole('textbox', { name: 'Ghi chú' }));
+    await user.keyboard('a/b');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('a/b');
+  });
+
   it('topbar KHÔNG lặp tên màn; chỉ có tên NHÓM làm ngữ cảnh; có ô tìm kèm phím tắt', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
     renderShell('/devices');
@@ -174,6 +196,8 @@ describe('AppShell — topbar', () => {
     expect(within(banner).queryByText(/Nguyễn Văn A/)).toBeNull();
     const search = within(banner).getByRole('button', { name: /^Tìm nhanh \((Ctrl K|⌘K)\)$/ });
     expect(search).toHaveTextContent('Tìm mã, tên, serial, IP…');
+    // UX-E18: giao diện đổi ở menu tài khoản và Hồ sơ — topbar không lặp nút thứ ba.
+    expect(within(banner).queryByRole('button', { name: /chế độ (tối|sáng)/ })).toBeNull();
   });
 
   it('trang chi tiết đội nhóm của danh sách nó thuộc về', () => {

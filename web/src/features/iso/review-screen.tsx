@@ -7,7 +7,7 @@ import { PATHS } from '@/lib/routes';
 import { useConfirm } from '@/ui/confirm-provider';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
-import { Tabs } from '@/ui/tabs';
+import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useAntivirusGrid, useBackupGrid, useIsoWrite, usePeriodDetail } from './iso-api';
 import { PeriodStateBadge, PeriodSteps } from './iso-parts';
@@ -37,13 +37,11 @@ export function ReviewScreen({ me }: { me: Me }) {
         <PageHeader
           title={t('iso.review.title', { form, month: monthLabel(year, mon) })}
           subtitle={t('iso.review.subtitle')}
+          crumbs={[{ label: t('iso.review.crumbPeriods'), to: PATHS.isoPeriod(form, month) }, { label: t('iso.review.crumbHere') }]}
           actions={
-            <>
-              <Link to={PATHS.isoPeriod(form, month)}>{t('iso.review.backToPeriods')}</Link>
-              <button type="button" className="btn" onClick={() => window.print()}>
-                {t('iso.print')}
-              </button>
-            </>
+            <button type="button" className="btn" onClick={() => window.print()}>
+              {t('iso.print')}
+            </button>
           }
         />
         <Tabs
@@ -56,7 +54,9 @@ export function ReviewScreen({ me }: { me: Me }) {
           onChange={(key) => navigate(PATHS.isoReview(key, month), { replace: true })}
         />
       </div>
-      <ReviewBody key={`${form}-${month}`} me={me} form={form} month={month} year={year} mon={mon} />
+      <TabPanel tabKey={form}>
+        <ReviewBody key={`${form}-${month}`} me={me} form={form} month={month} year={year} mon={mon} />
+      </TabPanel>
     </>
   );
 }
@@ -124,7 +124,8 @@ function ReviewAside({ me, detail, month }: { me: Me; detail: PeriodDetail; mont
         <section className="card" aria-labelledby="iso-review-checks">
           <h2 id="iso-review-checks">{t('iso.review.checksTitle')}</h2>
           <ul className="sheet-checks">
-            {detail.checklist.items.map((item) => (
+            {/* Dòng "In Progress" chỉ khi > 0 (PW-B25) — nó không chặn gửi, 0 thì không có gì để đọc. */}
+            {detail.checklist.items.filter((item) => item.key !== 'in_progress' || item.count > 0).map((item) => (
               <li key={item.key} data-bad={item.ok ? undefined : ''}>
                 <span className="sheet-check-icon" aria-hidden="true">
                   {item.key === 'in_progress' ? 'i' : item.ok ? '✓' : '✗'}
@@ -146,12 +147,6 @@ function ReviewAside({ me, detail, month }: { me: Me; detail: PeriodDetail; mont
                 </span>
               </li>
             ))}
-            <li>
-              <span className="sheet-check-icon" aria-hidden="true">
-                i
-              </span>
-              <span>{t(detail.formType === '0203' ? 'iso.review.jobCount' : 'iso.review.divisionCount', { count: detail.counts.rows })}</span>
-            </li>
           </ul>
           {detail.canWrite ? (
             <div className="chip-row">

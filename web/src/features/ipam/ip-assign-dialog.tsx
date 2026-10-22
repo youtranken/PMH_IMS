@@ -5,9 +5,10 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 import { maskOfCidr } from '@/lib/ipv4';
+import { NoteField } from '@/ui/note-field';
 import { CopyButton } from '@/ui/copy-button';
 import { DataItemIfSet } from '@/ui/detail-header';
-import { DeviceCombobox } from '@/ui/device-combobox';
+import { DeviceCombobox, deviceOwnerText, type DeviceOption } from '@/ui/device-combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
@@ -39,7 +40,7 @@ export function IpDeviceCombobox({
 }: {
   deviceId: string;
   term: string;
-  onChange: (next: { deviceId: string; term: string }) => void;
+  onChange: (next: { deviceId: string; term: string; device?: DeviceOption }) => void;
   /** Ba thuộc tính `Field` tự gắn vào đứa con — chuyển thẳng xuống ô gõ thật. */
   id?: string;
   'aria-describedby'?: string;
@@ -54,7 +55,7 @@ export function IpDeviceCombobox({
       ariaLabel={t('ipam.device')}
       placeholder={t('ipam.deviceSearch')}
       value={{ deviceId, term }}
-      onChange={(next) => onChange({ deviceId: next.deviceId, term: next.term })}
+      onChange={(next) => onChange({ deviceId: next.deviceId, term: next.term, device: next.device })}
       annotate={(ids) => ({
         queryKey: ['ipam', 'devices', 'addresses', ids],
         queryFn: async () => {
@@ -114,6 +115,7 @@ export function AssignIpDialog({
   record: initialRecord,
   network,
   initialDevice,
+  initialUsedBy,
   replacing,
   choices,
   csrfToken,
@@ -131,6 +133,8 @@ export function AssignIpDialog({
   network?: { cidr: string; gateway: string | null; vlan: number | null };
   /** Máy điền sẵn — mở từ trang thiết bị thì máy đã biết, không bắt gõ lại mã. */
   initialDevice?: { deviceId: string; term: string };
+  /** Người dùng / phòng ban điền sẵn khi cấp MỚI từ trang máy (LF-04) — lấy theo máy. */
+  initialUsedBy?: string;
   /**
    * Đổi IP (Q-20): IP máy đang giữ. Có thì hộp gửi MỘT lượt `change` — API thu hồi IP này và
    * cấp địa chỉ mới trong cùng transaction — và máy không đổi được trong hộp. Người/bộ phận
@@ -153,7 +157,7 @@ export function AssignIpDialog({
   const [device, setDevice] = useState(initialDevice ?? { deviceId: '', term: '' });
   // Hồ sơ Trống đã bị gỡ chủ lúc thu hồi, nên ô người dùng mở ra trống — điền lại tên chủ cũ
   // là hồi sinh một chủ không còn. Đổi IP thì khác: chủ vẫn là máy đó, người dùng máy không đổi.
-  const [usedBy, setUsedBy] = useState(replacing?.usedBy ?? '');
+  const [usedBy, setUsedBy] = useState(replacing?.usedBy ?? initialUsedBy ?? '');
   const [assignedAt, setAssignedAt] = useState(todayIso());
   const [note, setNote] = useState(
     replacing ? (replacing.note ?? '') : (initialRecord?.note ?? ''),
@@ -278,7 +282,12 @@ export function AssignIpDialog({
             <IpDeviceCombobox
               deviceId={device.deviceId}
               term={device.term}
-              onChange={setDevice}
+              onChange={(next) => {
+                setDevice({ deviceId: next.deviceId, term: next.term });
+                // Chọn máy thì ô người dùng theo máy (LF-04) — chỉ khi ô còn trống, gõ tay rồi thì giữ.
+                const owner = next.device ? deviceOwnerText(next.device) : '';
+                if (owner && !usedBy.trim()) setUsedBy(owner);
+              }}
             />
           </Field>
         )}
@@ -300,15 +309,7 @@ export function AssignIpDialog({
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />
         </Field>
 
-        <Field label={t('ipam.note')} hint={t('ipam.noteHint')} htmlFor="ip-assign-note" span={2} error={check.error('note')}>
-          <textarea
-            id="ip-assign-note"
-            className="inp"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
+        <NoteField id="ip-assign-note" value={note} onChange={setNote} span={2} error={check.error('note')} />
 
         <Field
           label={t('ipam.reason')}

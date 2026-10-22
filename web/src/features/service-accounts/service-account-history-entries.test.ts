@@ -26,7 +26,7 @@ function row(over: Partial<ServiceAccountHistoryRow> = {}): ServiceAccountHistor
 
 describe('toServiceAccountHistory — dịch lịch sử thô thành câu người đọc được', () => {
   const actions: { action: string; label: string }[] = [
-    { action: 'created', label: 'Tạo hồ sơ' },
+    { action: 'created', label: 'Thêm hồ sơ' },
     { action: 'updated', label: 'Sửa hồ sơ' },
     { action: 'disabled', label: 'Ngừng dùng' },
     { action: 'enabled', label: 'Dùng lại' },
@@ -111,7 +111,7 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
     expect(entry.actor).toBe('sa@pmh.com.vn');
   });
 
-  it('dòng "Tạo hồ sơ" liệt kê giá trị ban đầu, không "(trống) →"', () => {
+  it('dòng "Thêm hồ sơ" liệt kê giá trị ban đầu, không "(trống) →"', () => {
     const [entry] = toServiceAccountHistory(
       [
         row({

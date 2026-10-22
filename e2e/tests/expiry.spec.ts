@@ -227,7 +227,7 @@ test.describe('Cỗ máy Expiry', () => {
     await page.goto('/expiry');
     const row = page.getByRole('row', { name: new RegExp(code) });
     await row.getByRole('button', { name: 'Gia hạn' }).click();
-    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
     await dialog.getByRole('textbox', { name: 'Số hợp đồng', exact: true }).fill(contract);
     await dialog.getByRole('textbox', { name: 'Chi phí kỳ mới', exact: true }).fill('4tr');
@@ -292,8 +292,11 @@ test.describe('Cỗ máy Expiry', () => {
 
     await page.goto('/expiry');
     const row = page.getByRole('row', { name: new RegExp(`PC-E2E-NOREN-${stamp}`) });
-    await expect(row.getByRole('link', { name: 'Mở hồ sơ', exact: true })).toBeVisible();
+    // PW-A20: không còn link "Mở hồ sơ" lặp lại — bấm dòng là mở hồ sơ.
+    await expect(row.getByRole('link', { name: 'Mở hồ sơ', exact: true })).toHaveCount(0);
     await expect(row.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
+    await row.getByRole('cell').nth(2).click();
+    await expect(page).toHaveURL(/\/devices\//);
   });
 
   test('mục đã QUÁ HẠN vẫn hiện — đó mới là thứ nguy hiểm', async ({ page }) => {

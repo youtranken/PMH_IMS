@@ -98,21 +98,18 @@ describe('Trang tổng Két sắt', () => {
 
   it('tìm không ra: có nút "Xoá tìm kiếm", không gợi ý bỏ lọc khi không bật lọc nào', async () => {
     renderHome('/vault?q=khong-co-gi');
-    expect(await screen.findByText('Không có hồ sơ nào khớp bộ lọc')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Xóa tìm kiếm' })).toBeInTheDocument();
+    expect(await screen.findByText('Không có hồ sơ nào khớp bộ lọc.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xóa bộ lọc' })).toBeInTheDocument();
     expect(screen.queryByText(/bỏ bớt bộ lọc loại/)).not.toBeInTheDocument();
     // Dòng tổng kết "0 hồ sơ · 0 ngăn" thừa ngay trên khối rỗng.
     expect(screen.queryByText(/hồ sơ đang giữ két/)).not.toBeInTheDocument();
   });
 
   /* Q-21: luật két nằm sau một nút mở hộp đọc, không chiếm chỗ cố định cuối trang. */
-  it('phụ đề liệt kê bốn loại hồ sơ; luật két chỉ hiện khi bấm nút "Luật két"', async () => {
+  it('không có phụ đề (UX-E01); luật két chỉ hiện khi bấm nút "Luật két"', async () => {
     renderHome();
-    expect(
-      await screen.findByText(
-        'Mọi hồ sơ đang cất mật khẩu trong két — lọc theo loại ở dưới.',
-      ),
-    ).toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Luật két' });
+    expect(screen.queryByText('Mọi hồ sơ đang cất mật khẩu trong két — lọc theo loại ở dưới.')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Luật của két' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Mỗi lần mở đều ghi nhật ký/)).not.toBeInTheDocument();
 
@@ -157,6 +154,18 @@ describe('Trang tổng Két sắt — theo màn của hồ sơ (K-01, K-02)', ()
     const ssl = within(table).getByRole('link', { name: 'SSL-E2E-01' });
     expect(ssl).toHaveAttribute('href', '/domains/ssl');
     expect(within(ssl.closest('tr') as HTMLElement).getByText('Tên miền & SSL')).toHaveClass('badge', 'outline');
+  });
+
+  // PW-C25: 8 chip mà 7 chip đếm 0 — trên điện thoại phải cuộn ngang qua chip rỗng.
+  it('chip đếm 0 không bày; "Tất cả" luôn còn; chip đang bật từ URL vẫn hiện dù 0', async () => {
+    const view = renderMixed();
+    const group = await screen.findByRole('group', { name: 'Lọc theo loại hồ sơ' });
+    await within(group).findByRole('button', { name: 'Tên miền & SSL 1' });
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tất cả', 'Thiết bị 1', 'Phần mềm 1', 'Tên miền & SSL 1']);
+    view.unmount();
+    renderMixed('/vault?kinds=isp');
+    const again = await screen.findByRole('group', { name: 'Lọc theo loại hồ sơ' });
+    expect(await within(again).findByRole('button', { name: /^Đường truyền 0$/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('mã thiết bị là link về hồ sơ máy', async () => {

@@ -112,12 +112,12 @@ describe('Gửi duyệt (Thành viên) và tự kiểm', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Gửi duyệt' }));
     expect(screen.queryByRole('button', { name: 'Phát hành' })).toBeNull();
-    const dialog = await screen.findByRole('dialog', { name: 'Gửi bản vẽ "Tầng 3 E2E" cho Admin duyệt' });
+    const dialog = await screen.findByRole('dialog', { name: 'Gửi bản vẽ "Tầng 3 E2E" cho Quản trị duyệt' });
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
-    expect(within(dialog).getByText('Không được để trống.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Chưa nhập.')).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/Lý do/), 'Vẽ xong tầng 3');
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
-    expect(await screen.findByText('Đã gửi duyệt. Admin sẽ nhận email.')).toBeInTheDocument();
+    expect(await screen.findByText('Đã gửi duyệt. Quản trị sẽ nhận email.')).toBeInTheDocument();
     expect(posted(fetchMock, '/g1/submit')).toEqual([{ reason: 'Vẽ xong tầng 3' }]);
   });
 
@@ -147,7 +147,7 @@ describe('Gửi duyệt (Thành viên) và tự kiểm', () => {
     await viewerReady();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Gửi duyệt' }));
-    const dialog = await screen.findByRole('dialog', { name: /cho Admin duyệt/ });
+    const dialog = await screen.findByRole('dialog', { name: /cho Quản trị duyệt/ });
     await user.type(within(dialog).getByLabelText(/Lý do/), 'Gửi');
     await user.click(within(dialog).getByRole('button', { name: 'Gửi duyệt' }));
     const found = await screen.findByRole('dialog', { name: 'Tự kiểm còn lỗi đỏ' });
@@ -191,7 +191,7 @@ describe('Yêu cầu đang chờ', () => {
     expect(screen.queryByRole('button', { name: 'Gửi duyệt' })).toBeNull();
     await user.click(await screen.findByRole('button', { name: 'Duyệt…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Duyệt phiên bản #2' });
-    expect(dialog).toHaveTextContent('Thay đổi so với bản chính thức v1');
+    expect(dialog).toHaveTextContent('Thay đổi so với bản chính thức #1');
     expect(dialog).toHaveTextContent('Thêm 1 thiết bị');
     expect(dialog).toHaveTextContent('nằm trong khung tủ khác');
     expect(within(dialog).getByRole('button', { name: 'Xem so sánh với bản chính thức' })).toBeEnabled();
@@ -287,7 +287,7 @@ describe('Ghim bình luận', () => {
 });
 
 describe('Bản đồ — trạng thái duyệt', () => {
-  it('"Chờ duyệt" và "Chính thức v3" (chữ, không chỉ màu)', async () => {
+  it('"Chờ duyệt" và "#3 · Chính thức" (chữ, không chỉ màu)', async () => {
     routeFetch([
       ['/versions', () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })],
       ['/publications', () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })],
@@ -305,13 +305,13 @@ describe('Bản đồ — trạng thái duyệt', () => {
     renderScreen('/diagrams?node=g0', SA);
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     expect(within(map).getByRole('button', { name: /^A E2E/ })).toHaveTextContent('Chờ duyệt');
-    expect(within(map).getByRole('button', { name: /^B E2E/ })).toHaveTextContent('Chính thức v3');
-    expect(within(map).getByRole('button', { name: /^C E2E/ })).toHaveTextContent('Chính thức v3 · có bản nháp');
+    expect(within(map).getByRole('button', { name: /^B E2E/ })).toHaveTextContent('#3 · Chính thức');
+    expect(within(map).getByRole('button', { name: /^C E2E/ })).toHaveTextContent('#3 · Chính thức · có bản nháp');
   });
 });
 
 describe('Thanh mảnh (Q-23 một dòng, Q-18 việc chính ngoài, còn lại vào ⋮)', () => {
-  it('SA chế độ Xem: chỉ "Phát hành" đứng ngoài; Gửi duyệt, ghim, Kiểm tra khớp, Xuất, Dòng thời gian, Phiên bản nằm trong menu', async () => {
+  it('SA chế độ Xem: chỉ "Phát hành" đứng ngoài; Gửi duyệt, ghim, Kiểm tra khớp, Xuất, Phiên bản nằm trong menu; không còn Dòng thời gian (Q-32)', async () => {
     routeFetch(base(diagram()));
     renderScreen('/diagrams/g1', SA);
     await viewerReady();
@@ -321,8 +321,9 @@ describe('Thanh mảnh (Q-23 một dòng, Q-18 việc chính ngoài, còn lại 
     }
     await userEvent.setup().click(screen.getByRole('button', { name: 'Thao tác với Tầng 3 E2E' }));
     const items = screen.getAllByRole('menuitem').map((item) => item.getAttribute('aria-label') ?? item.textContent);
-    for (const name of ['Gửi duyệt', 'Ghim bình luận mới', 'Bình luận đã ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Dòng thời gian', 'Phiên bản']) {
+    for (const name of ['Gửi duyệt', 'Ghim bình luận mới', 'Bình luận đã ghim (0)', 'Kiểm tra khớp', 'Xuất', 'Phiên bản']) {
       expect(items.some((label) => label?.startsWith(name))).toBe(true);
     }
+    expect(items.some((label) => label?.startsWith('Dòng thời gian'))).toBe(false);
   });
 });

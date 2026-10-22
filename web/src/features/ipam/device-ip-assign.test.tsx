@@ -106,6 +106,29 @@ describe('DeviceIpAssign', () => {
     expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2', deviceId: 'dev-1' });
   });
 
+  // LF-04: cấp IP mới từ trang máy — hộp thứ hai điền sẵn người dùng / phòng ban của máy.
+  it('cấp mới: ô Người dùng / phòng ban điền sẵn theo máy', async () => {
+    mockFetch();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <DeviceIpAssign
+            device={{ id: 'dev-1', code: 'PC-E2E-1', assignedTo: 'Chị Lan', department: 'Kế toán' }}
+            csrfToken="t"
+            onClose={vi.fn()}
+            onDone={vi.fn()}
+          />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'IP trống' })).toHaveTextContent('10.77.1.2'),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    await screen.findByRole('dialog', { name: 'Cấp IP — 10.77.1.2' });
+    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Chị Lan — Kế toán');
+  });
+
   it('chỉ có một dải thì chọn sẵn — IP gợi ý hiện ngay, không bắt chọn lại', async () => {
     mockFetch();
     renderWithI18n(
@@ -156,7 +179,7 @@ describe('DeviceIpAssign', () => {
     // Máy không đổi được trong hộp Đổi IP — chỉ địa chỉ đổi.
     expect(screen.queryByRole('combobox', { name: 'Thiết bị' })).toBeNull();
     // Người/bộ phận và ghi chú của IP cũ đi theo máy — điền sẵn, sửa được.
-    expect(screen.getByRole('combobox', { name: 'Người / phòng ban dùng' })).toHaveValue('Phòng Kế toán');
+    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Phòng Kế toán');
     expect(screen.getByLabelText('Ghi chú')).toHaveValue('Cổng 3 switch tầng 2');
     await userEvent.click(screen.getByRole('button', { name: 'Đổi IP' }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());

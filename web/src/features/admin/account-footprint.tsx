@@ -14,7 +14,7 @@ import type { AccountRef } from './account-dialogs';
  * KHÔNG tự gỡ các thứ này: gỡ quyền két hay huỷ yêu cầu là quyết định riêng của người quản trị,
  * và mỗi việc đã có màn của nó với hộp hỏi lại + ghi vết.
  *
- * Thiết bị đếm theo ô "Người sử dụng" khớp ĐÚNG họ tên (ô chữ tự do, không nối với tài khoản) và
+ * Thiết bị đếm theo ô "Người dùng" khớp ĐÚNG họ tên (ô chữ tự do, không nối với tài khoản) và
  * bỏ máy đã thanh lý: tìm chữ tự do đếm cả máy chỉ nhắc tên người này trong ghi chú, còn máy đã
  * thanh lý thì không còn gì phải thu. Nguồn nào hỏng thì nói không đếm được — không in 0.
  */

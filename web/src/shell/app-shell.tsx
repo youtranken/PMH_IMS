@@ -9,13 +9,13 @@ import { ErrorBoundary } from '@/ui/error-boundary';
 import { groupOfPath, visibleGroups, type NavGroup } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { usePendingDiagramReviews } from '@/shell/use-pending-diagram-reviews';
+import { isAnyDialogOpen } from '@/ui/dialog';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { canSee } from '@/lib/features';
 import { useFailedMailCount } from '@/shell/use-failed-mail-count';
 import { useIsoTodo } from '@/shell/use-iso-todo';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette, paletteShortcut } from '@/ui/command-palette';
-import { ThemeSwitch } from '@/ui/switches';
 import { useFocusTrap } from '@/ui/focus-trap';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { AccountMenu } from '@/shell/account-menu';
@@ -25,6 +25,8 @@ const PENDING_APPROVALS_ID = 'nav-pending-approvals';
 const DIAGRAM_REVIEWS_ID = 'nav-diagram-reviews';
 /** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
 const OVERDUE_ID = 'nav-overdue';
+/** Badge menu rộng tối đa 4 ký tự: số thật nằm ở câu mô tả (`aria-describedby`) và `title`. */
+const badgeText = (count: number) => (count > 999 ? '999+' : String(count));
 const FAILED_MAIL_ID = 'nav-failed-mail';
 const ISO_TODO_ID = 'nav-iso-todo';
 const ISO_PERIODS_ID = 'nav-iso-periods';
@@ -67,6 +69,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const overdue = useOverdueExpiryCount(canSee(me, 'expiry'));
   const failedMail = useFailedMailCount(me);
   const isoTodo = useIsoTodo(canSee(me, 'iso'));
+  const anyBadge =
+    pendingApprovals > 0 || diagramReviews > 0 || overdue > 0 || failedMail > 0 || isoTodo.periods > 0 || isoTodo.unlinked > 0;
   const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
@@ -93,6 +97,25 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [pathname, drawerOpen]);
+
+  /* "/" vào ô tìm đầu tiên của màn (UX-E40), như các ứng dụng quen thuộc. Đang gõ trong một ô,
+     đang có hộp thoại, hay kèm phím bổ trợ thì "/" là chữ thường — không cướp. */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || isAnyDialogOpen()) return;
+      const target = event.target as HTMLElement | null;
+      // Ô nhập, vùng soạn thảo, và mọi lớp đè (Tìm nhanh tự dựng hộp, menu ⋮, ô chọn): "/" không cướp
+      // tiêu điểm ra khỏi chúng.
+      if (target?.isContentEditable || target?.closest('input, textarea, select, [role="dialog"], [role="menu"], [role="listbox"]')) return;
+      const box = document.querySelector<HTMLInputElement>('#noi-dung input[type="search"]');
+      // Drawer điện thoại đang mở thì <main> inert: focus không đi được — để "/" yên.
+      if (!box || box.closest('[inert]')) return;
+      box.focus();
+      if (document.activeElement === box) event.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Esc là đường thoát mà người dùng bàn phím luôn thử trước.
   useEffect(() => {
@@ -204,7 +227,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                   key={item.key}
                   to={item.to}
                   /* Thu gọn thì chữ chỉ còn cho trình đọc màn hình; người dùng chuột cần tooltip. */
-                  title={compact ? t(me.role === 'member' && item.memberKey ? item.memberKey : item.key) : undefined}
+                  title={compact ? t(me.role === 'member' && item.memberKey ? item.memberKey : (item.shortKey ?? item.key)) : undefined}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                   end={item.to === '/'}
                   aria-describedby={
@@ -227,43 +250,44 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 >
                   <NavIcon navKey={item.key} />
                   <span className="lbl">
-                    {t(me.role === 'member' && item.memberKey ? item.memberKey : item.key)}
+                    {t(me.role === 'member' && item.memberKey ? item.memberKey : (item.shortKey ?? item.key))}
                   </span>
                   {item.badge === 'approvals' && pendingApprovals > 0 ? (
                     /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn
                        là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {pendingApprovals}
+                      {badgeText(pendingApprovals)}
                     </span>
                   ) : null}
                   {item.badge === 'overdue' && overdue > 0 ? (
-                    /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
-                    <span className="nav-badge" aria-hidden="true">
-                      {overdue}
+                    /* Đỏ, không cam: số này là việc ĐÃ trễ hạn (cam dành cho việc chờ một người
+                       quyết). Xám trung tính trước đây làm nó trông như số "sắp hết hạn". */
+                    <span className="nav-badge danger" aria-hidden="true" title={t('expiry.navBadge', { count: overdue })}>
+                      {badgeText(overdue)}
                     </span>
                   ) : null}
                   {item.badge === 'diagramReviews' && diagramReviews > 0 ? (
                     /* Cam như badge duyệt mở két: một bản vẽ đang chờ chính người này quyết. */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {diagramReviews}
+                      {badgeText(diagramReviews)}
                     </span>
                   ) : null}
                   {item.badge === 'isoTodo' && isoTodo.periods > 0 ? (
                     /* Cam: kỳ phiếu đang chờ chính người này (duyệt, tải bản ký). */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {isoTodo.periods}
+                      {badgeText(isoTodo.periods)}
                     </span>
                   ) : null}
                   {item.badge === 'isoUnlinked' && isoTodo.unlinked > 0 ? (
                     /* Cam: ô ✗ của phiếu người này ghi được còn chưa có 0206 — lập ở mục này. */
                     <span className="nav-badge warn" aria-hidden="true">
-                      {isoTodo.unlinked}
+                      {badgeText(isoTodo.unlinked)}
                     </span>
                   ) : null}
                   {item.badge === 'failedMail' && failedMail > 0 ? (
                     /* Đỏ: thư không tới người nhận là một sự cố đang diễn ra, không phải việc chờ. */
                     <span className="nav-badge danger" aria-hidden="true">
-                      {failedMail}
+                      {badgeText(failedMail)}
                     </span>
                   ) : null}
                 </NavLink>
@@ -297,8 +321,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 onClick={() => setDrawerOpen((open) => !open)}
               >
                 {/* Menu đóng trên điện thoại thì badge nằm khuất — chấm cam trên nút mở là tín
-                    hiệu duy nhất người duyệt thấy khi mở app. */}
-                {pendingApprovals > 0 ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
+                    hiệu duy nhất người dùng thấy khi mở app; có badge NÀO thì có chấm (UX-E40). */}
+                {anyBadge ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -346,45 +370,46 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 <kbd aria-hidden="true">{shortcut}</kbd>
               </button>
             )}
-            <ThemeSwitch />
+            {/* Câu đọc số đếm của badge menu (đích `aria-describedby`) nằm TRONG landmark: để
+                ngoài mọi landmark thì axe báo `region` ở mọi màn (AX-03). */}
+            {pendingApprovals > 0 ? (
+              <span id={PENDING_APPROVALS_ID} className="sr-only">
+                {t('approvals.navBadge', { count: pendingApprovals })}
+              </span>
+            ) : null}
+            {overdue > 0 ? (
+              <span id={OVERDUE_ID} className="sr-only">
+                {t('expiry.navBadge', { count: overdue })}
+              </span>
+            ) : null}
+            {diagramReviews > 0 ? (
+              <span id={DIAGRAM_REVIEWS_ID} className="sr-only">
+                {t('diagrams.reviewQueue.navBadge', { count: diagramReviews })}
+              </span>
+            ) : null}
+            {failedMail > 0 ? (
+              <span id={FAILED_MAIL_ID} className="sr-only">
+                {t('failedMail.navBadge', { count: failedMail })}
+              </span>
+            ) : null}
+            {isoTodo.count > 0 ? (
+              <span id={ISO_TODO_ID} className="sr-only">
+                {t('iso.navBadge', { count: isoTodo.count })}
+              </span>
+            ) : null}
+            {isoTodo.periods > 0 ? (
+              <span id={ISO_PERIODS_ID} className="sr-only">
+                {t('iso.navBadgePeriods', { count: isoTodo.periods })}
+              </span>
+            ) : null}
+            {isoTodo.unlinked > 0 ? (
+              <span id={ISO_UNLINKED_ID} className="sr-only">
+                {t('iso.navBadgeUnlinked', { count: isoTodo.unlinked })}
+              </span>
+            ) : null}
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
           <CommandPalette me={me} />
-          {pendingApprovals > 0 ? (
-            <span id={PENDING_APPROVALS_ID} className="sr-only">
-              {t('approvals.navBadge', { count: pendingApprovals })}
-            </span>
-          ) : null}
-          {overdue > 0 ? (
-            <span id={OVERDUE_ID} className="sr-only">
-              {t('expiry.navBadge', { count: overdue })}
-            </span>
-          ) : null}
-          {diagramReviews > 0 ? (
-            <span id={DIAGRAM_REVIEWS_ID} className="sr-only">
-              {t('diagrams.reviewQueue.navBadge', { count: diagramReviews })}
-            </span>
-          ) : null}
-          {failedMail > 0 ? (
-            <span id={FAILED_MAIL_ID} className="sr-only">
-              {t('failedMail.navBadge', { count: failedMail })}
-            </span>
-          ) : null}
-          {isoTodo.count > 0 ? (
-            <span id={ISO_TODO_ID} className="sr-only">
-              {t('iso.navBadge', { count: isoTodo.count })}
-            </span>
-          ) : null}
-          {isoTodo.periods > 0 ? (
-            <span id={ISO_PERIODS_ID} className="sr-only">
-              {t('iso.navBadgePeriods', { count: isoTodo.periods })}
-            </span>
-          ) : null}
-          {isoTodo.unlinked > 0 ? (
-            <span id={ISO_UNLINKED_ID} className="sr-only">
-              {t('iso.navBadgeUnlinked', { count: isoTodo.unlinked })}
-            </span>
-          ) : null}
           {/*
             `inert` khi drawer đang mở ở màn hẹp — nội dung trang thôi nhận chuột,
             tiêu điểm và trình đọc màn hình.

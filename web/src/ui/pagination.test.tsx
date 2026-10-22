@@ -51,9 +51,9 @@ describe('Pagination — nhảy thẳng tới trang', () => {
     renderWithI18n(<Pagination page={1} limit={20} total={12} onPageChange={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'Trang 1' })).not.toBeInTheDocument();
     expect(screen.queryByRole('spinbutton', { name: 'Tới trang' })).not.toBeInTheDocument();
-    // Hai nút ‹ › vẫn giữ nguyên — bài E2E "đúng bộ nút" của các màn đếm đúng chúng.
-    expect(screen.getByRole('button', { name: 'Trang trước' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Trang sau' })).toBeDisabled();
+    // ‹ › cũng không (TB-15): một trang thì chúng không bấm được gì.
+    expect(screen.queryByRole('button', { name: 'Trang trước' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Trang sau' })).toBeNull();
   });
 
   it('ít trang (không có "…") thì có số trang nhưng không cần ô "Tới trang"', () => {
@@ -75,5 +75,30 @@ describe('Pagination — biến thể gọn', () => {
     expect(screen.queryByRole('button', { name: 'Trang 499' })).not.toBeInTheDocument();
     expect(screen.queryByRole('spinbutton', { name: 'Tới trang' })).not.toBeInTheDocument();
     expect(screen.getByText(/81–100/)).toBeInTheDocument();
+  });
+});
+
+describe('Pagination — số lớn có dấu ngăn nghìn (TB-03)', () => {
+  it('"1–20 trên 28.805 dòng", không phải 28805', () => {
+    renderWithI18n(<Pagination page={1} limit={20} total={28805} onPageChange={vi.fn()} />);
+    expect(screen.getByText(/1–20 trên 28\.805/)).toBeInTheDocument();
+  });
+});
+
+describe('Pagination — số trang cũng có dấu ngăn nghìn', () => {
+  it('"Trang 1/1.441"', () => {
+    renderWithI18n(<Pagination page={1} limit={20} total={28805} onPageChange={vi.fn()} />);
+    expect(screen.getByText(/Trang 1\/1\.441/)).toBeInTheDocument();
+  });
+});
+
+/** TB-15: danh sách 1 dòng vẫn có ‹ "Trang 1/1" › — ba thứ không bấm được gì. */
+describe('Pagination — một trang thì không có nút chuyển trang', () => {
+  it('chỉ còn dòng đếm (và ô số dòng nếu có)', () => {
+    renderWithI18n(<Pagination page={1} limit={20} total={1} onPageChange={vi.fn()} onLimitChange={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Trang trước' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Trang sau' })).toBeNull();
+    expect(screen.queryByText(/Trang 1\/1/)).toBeNull();
+    expect(screen.getByText(/1–1 trên 1/)).toBeInTheDocument();
   });
 });

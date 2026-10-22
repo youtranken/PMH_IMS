@@ -201,7 +201,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.5');
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('3389');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kế toán');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('P. Kế toán');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Máy chấm công ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
@@ -237,7 +237,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.9');
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Web nội bộ ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
@@ -277,7 +277,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.4');
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('443');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Thiếu port ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(form.getByText('Thêm ít nhất một cổng ngoài.')).toBeVisible();
@@ -377,7 +377,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
     }
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.8');
     await form.getByRole('textbox', { name: 'Cổng trong' }).fill('80');
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Hỏng một phần ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
@@ -463,7 +463,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     await form.getByRole('button', { name: 'IP trong' }).click();
     await page.getByRole('option', { name: new RegExp(targetIp) }).click();
 
-    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`NAS cho đối tác ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByText('Đã lưu luật NAT.')).toBeVisible();

@@ -53,6 +53,14 @@ function renderAt(entry: string, me: Me = ME) {
   return { ...view, fetchMock };
 }
 
+// UX-E28: rà soát quyền két định kỳ cần một file — nút ở đầu trang, cùng chỗ mọi màn.
+describe('Quyền két — Xuất Excel', () => {
+  it('đầu trang có "Xuất Excel" trỏ tới /vault/access/export.xlsx', () => {
+    renderAt('/admin/vault-access');
+    expect(screen.getByRole('button', { name: /Xuất Excel/ })).toBeInTheDocument();
+  });
+});
+
 describe('Quyền xem két sắt — theo người', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -295,9 +303,9 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     );
     await userEvent.click(screen.getByRole('button', { name: 'Chọn tất cả' }));
     await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
-    const ask = await screen.findByRole('dialog', { name: 'Xác nhận danh tính' });
+    const ask = await screen.findByRole('dialog', { name: 'Nhập mã 6 số' });
     await userEvent.click(within(ask).getByRole('button', { name: 'Hủy' }));
-    expect(screen.queryByRole('dialog', { name: 'Xác nhận danh tính' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Nhập mã 6 số' })).toBeNull();
     expect(writes.filter((write) => write.method === 'POST')).toHaveLength(1);
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -311,7 +319,7 @@ describe('Quyền xem két sắt — gán / gỡ hỏi mã 6 số khi hết ân 
     await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền' }));
     expect(await screen.findByText('Nhập mã 6 số để xác nhận cấp quyền két.')).toBeInTheDocument();
     await userEvent.type(codeInput(), '123456');
-    expect(await screen.findByText('Đã gán 2 nhóm.')).toBeInTheDocument();
+    expect(await screen.findByText('Đã gán 2 phạm vi.')).toBeInTheDocument();
     expect(writes.filter((write) => write.method === 'POST')).toHaveLength(3);
   });
 });

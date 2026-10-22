@@ -105,7 +105,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
     await chips.getByRole('button', { name: /^Đã gỡ/ }).click();
     await expect(row).toBeVisible();
-    await expect(row.getByText(/Đã gỡ \d{2}\/\d{2}\/\d{4} · bởi .* · dịch vụ đã ngừng E2E/)).toBeVisible();
+    await expect(row.getByText(/Đã gỡ \d{2}\/\d{2}\/\d{4} · .* · dịch vụ đã ngừng E2E/)).toBeVisible();
     expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử', 'Sao chép link']);
     // Rule đã gỡ chỉ còn để tra: không có nút Sửa đứng ngoài.
     await expect(row.getByRole('button', { name: /^Sửa / })).toHaveCount(0);
@@ -115,7 +115,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await expect(history.getByText(/dịch vụ đã ngừng E2E/)).toBeVisible();
   });
 
-  test('rule còn sống có thêm Lịch sử trong menu; tắt chip "Đang mở" thì nó biến khỏi bảng', async ({
+  test('rule còn sống có thêm Lịch sử trong menu; tắt chip "Đang dùng" thì nó biến khỏi bảng', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -126,7 +126,7 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     expect(await rowActionNames(page, f.ports)).toEqual(['Lịch sử', 'Sao chép link', 'Ngừng dùng', 'Gỡ']);
 
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
-    await chips.getByRole('button', { name: /^Đang mở/ }).click();
+    await chips.getByRole('button', { name: /^Đang dùng/ }).click();
     await expect(page.getByRole('row', { name: new RegExp(f.ports) })).toHaveCount(0);
   });
 
@@ -135,23 +135,28 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     const f = await setUp(page);
     await page.goto('/nat');
     const row = page.getByRole('row', { name: new RegExp(f.ports) });
-    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+    await expect(row.getByText('Đang dùng', { exact: true })).toBeVisible();
 
     // Đường hỏng: hỏi lại rồi bấm Hủy thì KHÔNG đổi gì.
     await rowAction(page, f.ports, 'Ngừng dùng');
     // Nút ✕ của hộp hỏi lại cũng mang tên "Hủy" — bấm nút ở chân hộp.
     await page.getByRole('dialog').getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
-    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+    await expect(row.getByText('Đang dùng', { exact: true })).toBeVisible();
 
     await rowAction(page, f.ports, 'Ngừng dùng');
     await page.getByRole('dialog').getByRole('button', { name: 'Ngừng dùng' }).click();
     await expect(page.getByText('Đã đổi trạng thái luật.')).toBeVisible();
-    // "Đã tắt" là huy hiệu ở cột Trạng thái riêng, dòng KHÔNG bị làm mờ cả.
+    // Sổ mặc định chỉ bày luật đang dùng (PW-B10): luật vừa ngừng rời bảng, chip "Đã ngừng dùng"
+    // đếm nó và bật chip đó thì thấy lại.
+    await expect(row).toHaveCount(0);
+    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
+    await chips.getByRole('button', { name: /^Đã ngừng dùng/ }).click();
+    // "Đã ngừng dùng" là huy hiệu ở cột Trạng thái riêng, dòng KHÔNG bị làm mờ cả.
     await expect(row.getByText('Đã ngừng dùng', { exact: true })).toBeVisible();
 
     await rowAction(page, f.ports, 'Dùng lại');
     await page.getByRole('dialog').getByRole('button', { name: 'Dùng lại' }).click();
-    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+    await expect(row.getByText('Đang dùng', { exact: true })).toBeVisible();
   });
 
   test('tìm không ra thì nói "không khớp bộ lọc", không nói sổ trống; bộ lọc nằm trên URL', async ({

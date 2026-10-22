@@ -9,12 +9,12 @@
   all: unset;
   cursor: pointer;
   color: var(--ink-2);
-  /* Ô bấm VUÔNG 28px, không phải một con chữ: ký tự › cỡ --fs-xs với padding 2px thì vùng
+  /* Ô bấm VUÔNG --h-ctl-sm, không phải một con chữ: ký tự › cỡ --fs-xs với padding 2px thì vùng
      bấm chưa tới 12px, trượt tay là bấm trúng link mã thiết bị ngay bên cạnh. */
   display: inline-grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   font-size: var(--fs-md);
   border-radius: 6px;
 }
@@ -311,12 +311,6 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 .subnet-link .sub.subnet-gw {
   font-size: var(--fs-sm);
   color: var(--ink-2);
-}
-.subnet-usage {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  font-size: var(--fs-sm);
 }
 /* Điện thoại: ô chọn dải + thẻ của dải đang chọn thay cho dãy thẻ cuộn ngang. */
 .subnet-picker {
@@ -890,8 +884,8 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 button.btn-x {
   display: inline-grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: var(--h-ctl-sm);
+  height: var(--h-ctl-sm);
   padding: 0;
   flex: none;
   background: transparent;
@@ -1809,9 +1803,10 @@ button.tree-summary:hover:not(:disabled) {
 .dmap-tile[data-tone='danger'] {
   border-top-color: var(--danger);
 }
+/* Ô đang chọn: viền 2px primary là đủ — vòng sáng + viền đỏ trạng thái đè nhau trông quá nặng (PW-B23). */
 .dmap-tile[data-selected] {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 .dmap-tile-main {
   display: flex;
@@ -1876,18 +1871,6 @@ button.tree-summary:hover:not(:disabled) {
   background: transparent;
   color: var(--ink-2);
   font-size: var(--fs-xs);
-}
-/* Thêm KHU (con của gốc) khác thêm ô trong khu: viền dày hơn để hai nút cạnh nhau không trông như một. */
-.dmap-add-area > button {
-  border-width: 2px;
-}
-.dmap-add-area {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.dmap-add-area p {
-  margin: 0;
 }
 .dmap-presentations .form-section-title {
   margin: 0 0 var(--space-3);
@@ -2025,7 +2008,7 @@ button.tree-summary:hover:not(:disabled) {
 }
 /* Nền nhạt màu cảnh báo: khu NHÁP là chỗ có việc phải quyết (phát hành hay bỏ). */
 .dpanel-drafts {
-  background: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
+  background: var(--warn-tint);
 }
 .dpanel-section-head {
   display: flex;
@@ -2219,8 +2202,8 @@ button.tree-summary:hover:not(:disabled) {
 }
 .dmap-add-inline > button {
   width: auto;
-  min-height: 0;
-  padding: 0 var(--space-6);
+  /* Chữ dài xuống dòng: đệm dọc nhỏ để hai dòng không dính viền; một dòng vẫn cao --h-ctl. */
+  padding: var(--space-2) var(--space-6);
 }
 
 /* Mặt cổng của thiết bị (`features/devices/port-face.tsx`): mỗi cổng một ô; đang dùng / trống khác

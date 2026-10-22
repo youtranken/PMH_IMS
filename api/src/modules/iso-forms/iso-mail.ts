@@ -93,16 +93,16 @@ export class IsoMailContent implements OnModuleInit {
       };
     }
 
-    const decidedBy = request.decidedBy ? await this.nameOf(request.decidedBy) : 'SA/Admin';
+    const decidedBy = request.decidedBy ? await this.nameOf(request.decidedBy) : 'Super Admin / Quản trị';
     const noteRows = request.decisionNote ? [{ label: 'Ghi chú', value: request.decisionNote }] : [];
-    const common = { to: [request.requester], rows: [{ label: 'Kỳ', value: label }, { label: 'Người quyết', value: decidedBy }, ...noteRows] };
+    const common = { to: [request.requester], rows: [{ label: 'Kỳ', value: label }, { label: 'Người duyệt', value: decidedBy }, ...noteRows] };
     switch (event) {
       case 'close_approved':
         return {
           ...common,
           subject: `[IMS] Đã duyệt chốt kỳ ${label}`,
           title: 'Kỳ phiếu đã được duyệt chốt',
-          intro: 'Kỳ đã khoá. In bản phiếu, ký, scan rồi tải bản ký lên ở màn Kỳ phiếu.',
+          intro: 'Kỳ đã khóa. In bản phiếu, ký, scan rồi tải bản ký lên ở màn Kỳ phiếu.',
           ctaLabel: 'Mở Kỳ phiếu',
           ctaPath: UI_PATHS.isoPeriod(form, month),
         };
@@ -192,7 +192,7 @@ export class IsoMailContent implements OnModuleInit {
       to,
       subject: `[IMS] Gửi chốt kỳ ${label}`,
       title: 'Tới lúc gửi chốt kỳ phiếu',
-      intro: `Kỳ ${label} đã tới ngày cuối tháng. Vào Xem lại để kiểm bản in rồi gửi chốt cho SA/Admin duyệt.`,
+      intro: `Kỳ ${label} đã tới ngày cuối tháng. Vào Xem lại để kiểm bản in rồi gửi chốt cho Super Admin / Quản trị duyệt.`,
       rows: [{ label: 'Phiếu', value: FORM_NAME[form] }],
       ctaLabel: 'Xem lại & gửi chốt',
       ctaPath: UI_PATHS.isoReview(form, month),
@@ -250,7 +250,7 @@ export class IsoMailContent implements OnModuleInit {
       to: [incident.createdBy],
       subject: `[IMS] Phiếu ${incident.code} vẫn In Progress`,
       title: 'Phiếu sự cố chưa xử lý xong',
-      intro: 'Sửa xong thì đổi Current Status sang Resolved, phiếu tự khoá rồi in và tải bản ký.',
+      intro: 'Sửa xong thì đổi Current Status sang Resolved, phiếu tự khóa rồi in và tải bản ký.',
       rows: [
         { label: 'Phiếu', value: incident.code },
         { label: 'Mô tả', value: incident.description.slice(0, 160) },

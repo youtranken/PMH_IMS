@@ -5,6 +5,8 @@ import { errorMessage } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -25,6 +27,7 @@ import {
 import { IncidentDialogHost, type IncidentDialogTarget } from './incident-dialog';
 import { useTickQueue } from './use-tick-queue';
 import type { BackupGrid, IncidentCell, TickCell, TickResult } from './iso-types';
+import { InfoTip } from '@/ui/info-tip';
 
 /** Khoá viết thẳng (không ghép chuỗi) để bài "khoá dịch chết" đọc được. */
 const STATE_KEY: Record<BackupCellState, string> = {
@@ -109,6 +112,7 @@ export function BackupScreen({ me }: { me: Me }) {
 
 function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; ownerNotice: React.ReactNode }) {
   const { t } = useTranslation();
+  const phone = useMediaQuery(BREAKPOINTS.cards);
   const toast = useToast();
   const [dialog, setDialog] = useState<IncidentDialogTarget | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -190,7 +194,6 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
     }
   };
 
-  const missedDays = [...new Set(data.summary.missed.map((m) => m.day))];
 
   return (
     <>
@@ -202,12 +205,20 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
             {data.today.slice(0, 7) === monthKey(data.year, data.month) ? (
               <KpiTile value={data.summary.todayDone} label={t('iso.backup.todayDone', { total: data.summary.todayTotal, day: shortDay(data.today) })} />
             ) : null}
-            <KpiTile value={data.summary.missed.length} tone="warn" label={t('iso.backup.missed')} />
+            {/* Bấm ô số là tới ô bỏ sót đầu tiên trên lưới (PW-B17) — thay dòng liệt kê ngày nói
+                lại đúng con số này. */}
+            <KpiTile
+              value={data.summary.missed.length}
+              tone="warn"
+              label={t('iso.backup.missed')}
+              onClick={
+                data.summary.missed.length > 0
+                  ? () => scrollRef.current?.querySelector<HTMLButtonElement>('button.sheet-mark[data-state="missed"]')?.focus()
+                  : undefined
+              }
+            />
             <KpiTile value={data.summary.unlinkedFails.length} tone="danger" label={t('iso.backup.unlinked')} />
           </KpiStrip>
-          {missedDays.length > 0 ? (
-            <p className="muted small">{t('iso.backup.missedDays', { days: missedDays.map(shortDay).join(', ') })}</p>
-          ) : null}
           {editable && data.summary.unlinkedFails.length > 0 ? (
             <ul className="sheet-checks" aria-label={t('iso.backup.unlinked')}>
               {data.summary.unlinkedFails.map((c) => (
@@ -231,16 +242,33 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
 
       <section aria-labelledby="iso-backup-grid">
         <div className="sheet-toolbar">
-          <h2 id="iso-backup-grid">{t('iso.grid')}</h2>
+          {/* Cách đánh ô + ghi chú phiếu vào (i) (TX-14): hai đoạn 200+ ký tự luôn hiện chiếm 5–6
+              dòng ở 390px trước khi tới lưới. */}
+          <div className="page-header-title">
+            <h2 id="iso-backup-grid">{t('iso.grid')}</h2>
+            <InfoTip subject={t('iso.grid')}>
+              {editable ? <p>{t('iso.backup.howTo')}</p> : null}
+              <p>{t('iso.backup.note')}</p>
+            </InfoTip>
+          </div>
           <Legend />
         </div>
-        {editable ? <p className="muted small">{t('iso.backup.howTo')}</p> : null}
         {rows.length === 0 ? (
           <p className="muted">
             {t('iso.backup.noJobs')} <Link to={PATHS.isoCatalog}>{t('iso.backup.jobsLink')}</Link>
           </p>
+        ) : phone ? (
+          /* Điện thoại: cột cố định chiếm hết bề ngang, không còn ô ngày nào để bấm (PW-B18). */
+          <p className="alert info">{t('iso.gridDesktopOnly')}</p>
         ) : (
-          <div className="sheet-scroll" ref={scrollRef}>
+          <div
+            className="sheet-scroll"
+            ref={scrollRef}
+            // Lưới rộng hơn màn: vùng cuộn phải vào được bằng bàn phím (AX-07).
+            tabIndex={0}
+            role="region"
+            aria-label={t('iso.field.tab0203')}
+          >
             <table className="sheet-grid sheet-grid-0203" style={{ '--sheet-days': days.length } as React.CSSProperties}>
               <colgroup>
                 <col className="sheet-col-no" />
@@ -273,9 +301,12 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                 </tr>
                 {editable ? (
                   <tr>
-                    {days.map((d) => (
-                      <th key={d.day} scope="col" className="sheet-day">
-                        {blankDays.has(d.day) ? (
+                    {days.map((d) =>
+                      // Ngày không còn ô trống thì không có nút: ô tiêu đề rỗng là lỗi trợ năng (AX-09).
+                      !blankDays.has(d.day) ? (
+                        <td key={d.day} className="sheet-day" />
+                      ) : (
+                        <th key={d.day} scope="col" className="sheet-day">
                           <button
                             type="button"
                             className="sheet-fill"
@@ -294,9 +325,9 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                           >
                             ✓
                           </button>
-                        ) : null}
-                      </th>
-                    ))}
+                        </th>
+                      ),
+                    )}
                   </tr>
                 ) : null}
               </thead>
@@ -361,7 +392,13 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
                           ) : state === 'fail-linked' && tick?.incident ? (
                             <IncidentMark label={label} onOpen={() => setDialog({ incidentId: tick.incident?.id ?? '' })} />
                           ) : (
-                            <span className="sheet-mark" data-state={state} aria-label={state === 'off' || state === 'future' ? undefined : label}>
+                            <span
+                              className="sheet-mark"
+                              data-state={state}
+                              // aria-label trên span trần không có tác dụng (axe aria-prohibited-attr): cần role (AX-08).
+                              role={state === 'off' || state === 'future' ? undefined : 'img'}
+                              aria-label={state === 'off' || state === 'future' ? undefined : label}
+                            >
                               {MARK[state]}
                             </span>
                           )}
@@ -374,7 +411,6 @@ function BackupBody({ me, data, ownerNotice }: { me: Me; data: BackupGrid; owner
             </table>
           </div>
         )}
-        <p className="muted small">{t('iso.backup.note')}</p>
       </section>
       <IncidentDialogHost me={me} target={dialog} onClose={() => setDialog(null)} />
     </>

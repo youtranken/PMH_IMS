@@ -1,11 +1,12 @@
 import { SecretDueSub } from '@/ui/secret-due';
 import { useSecretDue } from '@/ui/use-secret-due';
 import { PhoneLink } from '@/ui/phone-link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import { bandwidthLabel } from '@/lib/bandwidth';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -26,9 +27,10 @@ import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { CopyButton } from '@/ui/copy-button';
 import { RowActions } from '@/ui/row-actions';
+import { useOpenFromUrl } from '@/ui/use-open-from-url';
+import { ExcelImportDialog } from '@/ui/excel-import-dialog';
 import { ispMenuItems } from './isp-status-menu';
 
-const DEFAULT_LIMIT = 20;
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
    TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `status` vẫn giữ union hẹp cho chỗ dùng. */
@@ -67,7 +69,6 @@ export function IspScreen({ me }: { me: Me }) {
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,
-    defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
     searchKey: 'search',
     // `?status=abc` đọc ra mặc định (ẩn hồ sơ cuối đời), không gửi chữ lạ lên API (Q-20).
@@ -88,6 +89,9 @@ export function IspScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
+  useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [editing, setEditing] = useState<IspRow | null>(null);
   const navigate = useNavigate();
 
@@ -157,7 +161,7 @@ export function IspScreen({ me }: { me: Me }) {
           <>
             {row.original.provider}
             {row.original.bandwidth ? (
-              <span className="cell-sub">{row.original.bandwidth}</span>
+              <span className="cell-sub">{bandwidthLabel(row.original.bandwidth)}</span>
             ) : null}
           </>
         ),
@@ -243,7 +247,6 @@ export function IspScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('isp.title')}
-        subtitle={t('isp.subtitle')}
         actions={
           <>
             {/* FR-028: xuất đúng bộ lọc VÀ đúng thứ tự đang xem — cùng query với bảng dưới. */}
@@ -253,6 +256,10 @@ export function IspScreen({ me }: { me: Me }) {
                 .join('&')}`}
               fileName="duong-truyen.xlsx"
             />
+            {/* Nhập chỉ trên máy tính như Thiết bị: bảng đối chiếu rộng (UX-E30). */}
+            <button type="button" className="btn hide-narrow" onClick={() => setImporting(true)}>
+              {t('isp.importExcel')}
+            </button>
             <button type="button" className="btn primary" onClick={() => setCreating(true)}>
               {t('isp.add')}
             </button>
@@ -264,6 +271,8 @@ export function IspScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('isp.search')}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.siteId}
@@ -338,6 +347,8 @@ export function IspScreen({ me }: { me: Me }) {
             data={rows}
             columns={columns}
             emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
+            onRowClick={(row) => navigate(PATHS.ispLine(row.id))}
+            rowHref={(row) => PATHS.ispLine(row.id)}
             stackOnMobile
             /* Màn này hay được mở trên điện thoại lúc mất mạng: thẻ gọn với nút gọi hotline ở
                góc thay cho bảng gập bảy dòng toàn nhãn. */
@@ -348,7 +359,7 @@ export function IspScreen({ me }: { me: Me }) {
               badge: (row) => (
                 <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
               ),
-              subtitle: (row) => [row.provider, row.bandwidth].filter(Boolean).join(' · '),
+              subtitle: (row) => [row.provider, bandwidthLabel(row.bandwidth)].filter(Boolean).join(' · '),
               meta: (row) =>
                 [row.siteCode, row.deviceCode, row.wanIps.join(', ')].filter(Boolean).join(' · '),
               aside: (row) => (row.hotline ? <PhoneLink value={row.hotline} /> : null),
@@ -390,6 +401,22 @@ export function IspScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {importing ? (
+        <ExcelImportDialog
+          base="/api/v1/isp-lines"
+          title={t('isp.importTitle')}
+          hint={t('isp.importHint')}
+          group={t('isp.title')}
+          fileStem="duong-truyen"
+          templateLabel={t('isp.downloadTemplate')}
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['isp'] });
+          }}
+        />
+      ) : null}
       {creating ? (
         <IspForm
           row={null}

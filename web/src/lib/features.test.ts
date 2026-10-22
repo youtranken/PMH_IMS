@@ -29,7 +29,7 @@ describe('Nhóm quyền phía web (Q-31)', () => {
     [PATHS.adminCatalog, ['assets']],
     [PATHS.disposal, ['assets']],
     ['/ip-addresses/xyz', ['network']],
-    ['/diagrams/1/present', ['network']],
+    ['/diagrams/1', ['network']],
     [PATHS.isoBackup, ['iso_0203']],
     [PATHS.isoIncidentNew, ['iso_0206']],
     [PATHS.isoPeriods, ['iso']],

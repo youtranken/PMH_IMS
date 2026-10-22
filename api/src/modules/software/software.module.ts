@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { ExcelImportService } from '../../common/excel/excel-import.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExpiryModule } from '../expiry/expiry.module';
 import { CatalogModule } from '../catalog/catalog.module';
@@ -13,6 +14,8 @@ import { SoftwareOwnerResolver } from './software-owner-resolver';
 import { SoftwareAuditLabeler } from './software-audit-labeler';
 import { IspLineController } from './isp-line.controller';
 import { IspLineService } from './isp-line.service';
+import { IspImportService } from './isp-import.service';
+import { SoftwareImportService } from './software-import.service';
 import { LicenseAssignmentService } from './license-assignment.service';
 import { SoftwareDevicePanel } from './software-device-panel';
 import { LicenseDeviceTimeline } from './license-device-timeline';
@@ -31,6 +34,9 @@ import { SoftwareCatalogUsage } from './software-catalog-usage';
   controllers: [SoftwareController, IspLineController],
   providers: [
     ExcelExportService,
+    ExcelImportService,
+    IspImportService,
+    SoftwareImportService,
     SoftwareService,
     LicenseAssignmentService,
     IspLineService,

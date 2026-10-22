@@ -9,15 +9,15 @@ describe('FactStrip — dải 4 ô đầu trang chi tiết (Q-27)', () => {
         label="Tóm tắt thiết bị"
         facts={[
           { key: 'loc', label: 'Vị trí', value: 'LST · T-1', note: 'Lầu 3' },
-          { key: 'user', label: 'Người sử dụng', value: null, blankText: 'chưa gán người' },
+          { key: 'user', label: 'Người dùng', value: null, blankText: 'chưa khai' },
         ]}
       />,
     );
     const strip = screen.getByRole('group', { name: 'Tóm tắt thiết bị' });
     const terms = within(strip).getAllByRole('term').map((node) => node.textContent);
-    expect(terms).toEqual(['Vị trí', 'Người sử dụng']);
+    expect(terms).toEqual(['Vị trí', 'Người dùng']);
     expect(within(strip).getByText('Lầu 3')).toBeInTheDocument();
-    const blank = within(strip).getByText('chưa gán người');
+    const blank = within(strip).getByText('chưa khai');
     expect(blank.closest('dd')).toHaveAttribute('data-blank', 'true');
   });
 });

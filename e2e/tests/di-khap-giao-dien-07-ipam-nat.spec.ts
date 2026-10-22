@@ -270,9 +270,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 6 nút "Cấp IP", 2 nút lật trang — cộng nút "Tra" của ô tra
-     * IP/máy cấp trang, và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp"
-     * (NET-007). 3 lựa chọn lọc (dải đang dùng không có chip hồ sơ tắt, Q-15) và cặp "Danh sách
+     * phần bảng là con số biết trước: 6 nút "Cấp IP" (một trang nên không có nút lật trang, TB-15) — cộng
+     * ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp" (NET-007). Ô "Tra IP" cấp
+     * trang đã bỏ (UX-E19: trùng Tìm nhanh Ctrl K), nên nút "Tra" phải vắng hẳn. 3 lựa chọn lọc (dải đang dùng không có chip hồ sơ tắt, Q-15) và cặp "Danh sách
      * | Bản đồ" (NET-006) là radio, đếm riêng ngay dưới.
      */
     await expectHandleCounts(
@@ -282,13 +282,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Xuất Excel', 1],
         ['Thêm dải mạng', 1],
         ['Lọc theo site', siteFilter],
-        ['Tra', 1],
+        ['Tra', 0],
         [/^Thao tác với /, cards],
         ['Giấy tờ (0)', 1],
         ['Cấp IP trống kế tiếp', 1],
         ['Cấp IP', 6],
-        ['Trang trước', 1],
-        ['Trang sau', 1],
       ],
       'Màn Địa chỉ IP, dải đang chọn còn trống hoàn toàn',
     );
@@ -417,7 +415,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Trạng thái',
       'Thiết bị',
       'Site',
-      'Người / phòng ban dùng',
+      'Người dùng / phòng ban',
       'Thao tác',
     ]);
     await expect(table.getByRole('row'), 'một hàng tiêu đề + 6 địa chỉ').toHaveCount(7);
@@ -496,20 +494,20 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toBeVisible();
 
     await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
-    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người / phòng ban dùng".
+    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người dùng / phòng ban".
     await expectHandles(
       assign,
       'combobox',
-      ['Thiết bị', 'Người / phòng ban dùng'],
+      ['Thiết bị', 'Người dùng / phòng ban'],
       'Hộp "Cấp IP"',
     );
     // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày; nó điền sẵn hôm nay nên có nút "Xóa ngày".
     // Nút chính mang đúng tên việc: "Cấp IP".
-    // "Chép Mask": khối "Cấu hình cho máy" — thứ người cắm máy gõ vào card mạng.
+    // "Sao chép Mask": khối "Cấu hình cho máy" — thứ người cắm máy gõ vào card mạng.
     await expectHandles(
       assign,
       'button',
-      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP', 'Chép Mask'],
+      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP', 'Sao chép Mask'],
       'Hộp "Cấp IP"',
     );
 
@@ -523,7 +521,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await ipRow(page, first).getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const again = page.getByRole('dialog', { name: `Cấp IP — ${first}` });
     await again
-      .getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true })
+      .getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true })
       .fill('Chị Lan — Kế toán');
     await again
       .getByRole('textbox', { name: 'Ghi chú', exact: true })
@@ -546,7 +544,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Hộp "Sửa hồ sơ IP"',
     );
     await expect(
-      edit.getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true }),
+      edit.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }),
       'mở Sửa mà ô trống thì bấm Lưu là xóa sạch chủ cũ, im lặng',
     ).toHaveValue('Chị Lan — Kế toán');
     await expect(edit.getByRole('textbox', { name: 'Ghi chú', exact: true })).toHaveValue(
@@ -637,11 +635,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       assign,
       'combobox',
-      ['Thiết bị', 'Người / phòng ban dùng'],
+      ['Thiết bị', 'Người dùng / phòng ban'],
       'Hộp "Cấp IP"',
     );
     await expect(
-      assign.getByRole('combobox', { name: 'Người / phòng ban dùng', exact: true }),
+      assign.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }),
       'chủ cũ đã đi khỏi lúc thu hồi — điền sẵn tên họ là hồi sinh một chủ không còn',
     ).toHaveValue('');
     await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
@@ -718,7 +716,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp VÔ HIỆU HÓA DẢI ----- */
     await rowAction(page, cidr, 'Ngừng dùng');
-    const hide = page.getByRole('dialog', { name: `Ngừng dùng dải ${cidr}` });
+    const hide = page.getByRole('dialog', { name: `Ngừng dùng dải — ${cidr}` });
     await expect(hide).toBeVisible();
     await expect(
       hide.getByText('Dải vẫn ở danh sách', { exact: false }),
@@ -788,7 +786,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Tất cả site',
       'Tất cả router',
       'Tất cả giao thức',
-      /^Đang mở \d+$/,
+      /^Đang dùng \d+$/,
       /^Đã ngừng dùng \d+$/,
       /^Đã gỡ \d+$/,
       'Chỉ cổng nhạy cảm',
@@ -797,10 +795,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ]);
     // Sổ mặc định chỉ bày rule còn hiệu lực: rule đã gỡ phải bật chip mới thấy.
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
-    await expect(chips.getByRole('button', { name: /^Đang mở/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(chips.getByRole('button', { name: /^Đang dùng/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(chips.getByRole('button', { name: /^Đã gỡ/ })).toHaveAttribute('aria-pressed', 'false');
     await expect(
-      page.getByRole('searchbox', { name: 'Tìm theo cổng, IP, người dùng hoặc lý do…' }),
+      page.getByRole('searchbox', { name: 'Tìm cổng, IP, người dùng' }),
       'ô tìm phải mang tên trợ năng = chính dòng gợi ý của nó',
     ).toBeVisible();
 
@@ -827,12 +825,16 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       table.getByRole('columnheader'),
       'mất cột "Mở cho ai" hoặc "Lý do mở" là cuốn sổ mất đúng thứ nó sinh ra để giữ',
-      /* "Chuyển tiếp" đọc ngang ngoài → trong; trạng thái là cột riêng, không dính vào số port. */
-    ).toHaveText(['Router', 'Chuyển tiếp', 'Mở cho ai', 'Lý do mở', 'Trạng thái', 'Thao tác']);
+      /* "Chuyển tiếp" đọc ngang ngoài → trong; trạng thái là cột riêng, không dính vào số port.
+         Cột đầu là ô tick chọn nhiều luật để gỡ một lượt (UX-E25), không có chữ. */
+    ).toHaveText(['', 'Router', 'Chuyển tiếp', 'Người dùng / phòng ban', 'Lý do mở', 'Trạng thái', 'Thao tác']);
+    await expect(
+      table.getByRole('columnheader').first().getByRole('checkbox', { name: 'Chọn tất cả' }),
+    ).toBeVisible();
     const row = page.getByRole('row', { name: new RegExp(esc(fixture.routerCode)) });
     await expect(row.getByText('TCP 8080')).toBeVisible();
     await expect(row.getByText(`${fixture.internalIp}:80`)).toBeVisible();
-    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+    await expect(row.getByText('Đang dùng', { exact: true })).toBeVisible();
 
     await expect(
       page.getByRole('navigation', { name: 'Trang' }),
@@ -915,7 +917,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         'Lọc dịch vụ cho Cổng ngoài',
         'Lọc dịch vụ cho Cổng trong',
         'Máy đích (được NAT)',
-        'Mở cho ai',
+        'Người dùng / phòng ban',
       ],
       'Hộp "Thêm luật NAT"',
     );
@@ -925,12 +927,16 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       ['Cổng ngoài', 'Cổng trong', 'IP trong', 'Lý do mở', 'Ghi chú'],
       'Hộp "Thêm luật NAT"',
     );
-    /* Dải chip lọc loại dưới ô Router (Q-20): "Tất cả loại" + mỗi loại thiết bị đang dùng —
-       danh mục của máy chạy test, nên đọc tại chỗ. */
+    /* Dải chip lọc loại dưới ô Router (Q-20): "Tất cả loại" + loại đang dùng mang cờ
+       Router/Firewall; loại khác nằm sau "Mọi loại…" (PW-B09). Danh mục chưa loại nào mang cờ
+       thì bày hết, không có "Mọi loại…". Danh mục của máy chạy test, nên đọc tại chỗ. */
     const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
-      deviceTypes: { name: string; active: boolean }[];
+      deviceTypes: { name: string; active: boolean; isRouter: boolean }[];
     };
-    const typeChips = catalog.deviceTypes.filter((type) => type.active).map((type) => type.name);
+    const activeTypes = catalog.deviceTypes.filter((type) => type.active);
+    const routerTypes = activeTypes.filter((type) => type.isRouter);
+    const typeChips = (routerTypes.length > 0 ? routerTypes : activeTypes).map((type) => type.name);
+    const moreChip = typeChips.length < activeTypes.length ? ['Mọi loại…'] : [];
     await expectHandles(
       form,
       'button',
@@ -939,6 +945,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       [
         'Tất cả loại',
         ...typeChips,
+        ...moreChip,
         'Đóng hộp thoại',
         'Giải thích: Cổng ngoài',
         'Thêm',
@@ -994,7 +1001,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toBeVisible();
 
     /* ----- Hộp con 1: "Thêm thiết bị mới" — hộp CHA phải sống ----- */
-    await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('Phòng Nhân sự');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }).fill('Phòng Nhân sự');
     await form.getByRole('combobox', { name: 'Router', exact: true }).click();
     await form.getByRole('button', { name: 'Thêm thiết bị mới', exact: true }).click();
     const deviceForm = page.getByRole('dialog', { name: 'Thêm thiết bị' });
@@ -1010,7 +1017,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       form.getByRole('button', { name: 'Bỏ cổng 8000-8010' }),
       'và form đang khai dở phải còn nguyên — mất nó là gõ lại từ đầu',
     ).toBeVisible();
-    await expect(form.getByRole('combobox', { name: 'Mở cho ai', exact: true })).toHaveValue(
+    await expect(form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true })).toHaveValue(
       'Phòng Nhân sự',
     );
 
@@ -1030,7 +1037,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await form.getByRole('textbox', { name: 'IP trong', exact: true }).fill(fixture.internalIp);
     await form.getByRole('textbox', { name: 'Cổng trong', exact: true }).fill('80');
     // "Mở cho ai" cũng bắt buộc (API từ chối rule không có người dùng) — điền để chỉ còn đúng lỗi port.
-    await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('P. Kỹ thuật');
+    await form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở', exact: true }).fill(`thử E2E ${stamp}`);
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(
@@ -1119,7 +1126,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       fixture.internalIp,
     );
     await expect(form.getByRole('textbox', { name: 'Cổng trong', exact: true })).toHaveValue('9000');
-    await expect(form.getByRole('combobox', { name: 'Mở cho ai', exact: true })).toHaveValue(
+    await expect(form.getByRole('combobox', { name: 'Người dùng / phòng ban', exact: true })).toHaveValue(
       'Phòng Nhân sự',
     );
     await expect(form.getByRole('textbox', { name: 'Lý do mở', exact: true })).toHaveValue(reason);
@@ -1145,7 +1152,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp GỠ: vẫn hỏi lý do, không phải một câu có/không ----- */
     await rowAction(page, 'UDP 9000-9010', 'Gỡ');
-    const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT UDP 9000-9010' });
+    const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT — UDP 9000-9010' });
     await expect(remove).toBeVisible();
     await expect(
       remove.getByText('vẫn xem lại được', { exact: false }),

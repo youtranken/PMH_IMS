@@ -61,7 +61,7 @@ describe('Hộp Xem két, bước giá trị — ngăn Mã 2 lớp', () => {
     const qr = screen.getByRole('img', { name: /Mã QR/ });
     expect(qr).toHaveAttribute('src', TOTP.qrDataUrl);
     expect(screen.getByTestId('totp-code')).toHaveTextContent('287 082');
-    expect(screen.getByTestId('totp-code-left')).toHaveTextContent('12s');
+    expect(screen.getByTestId('totp-code-left')).toHaveTextContent('12 giây');
     // Chuỗi otpauth thô không in ra: người dùng cần khóa + QR, không cần URI.
     expect(screen.queryByTestId('secret-value')).toBeNull();
   });
@@ -79,7 +79,7 @@ describe('Hộp Xem két, bước giá trị — ngăn Mã 2 lớp', () => {
     renderTotp();
     advance(12);
     expect(screen.getByTestId('totp-code')).toHaveTextContent('359 152');
-    expect(screen.getByTestId('totp-code-left')).toHaveTextContent('30s');
+    expect(screen.getByTestId('totp-code-left')).toHaveTextContent('30 giây');
     advance(31);
     expect(screen.getByTestId('totp-code')).toHaveTextContent('969 429');
   });
@@ -87,8 +87,8 @@ describe('Hộp Xem két, bước giá trị — ngăn Mã 2 lớp', () => {
   it('có nút chép khóa và chép mã hiện tại', () => {
     renderTotp();
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('button', { name: 'Chép khóa bí mật' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Chép mã hiện tại' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Sao chép khóa bí mật' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Sao chép mã hiện tại' })).toBeInTheDocument();
   });
 
   it('vẫn tự ẩn sau đúng số giây như mọi ngăn', () => {

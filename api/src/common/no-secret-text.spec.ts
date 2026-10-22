@@ -107,6 +107,8 @@ describe('Điểm danh @NoSecretText trên DTO', () => {
     // Mạng.
     'cidr', 'gateway', 'internalIp', 'wanIps', 'allowedIps', 'externalPorts',
     'ipam/ipam.controller.ts#address',
+    // Chip trạng thái của file xuất Sổ NAT (UX-E29) — @Matches chỉ nhận open/off/voided.
+    'ipam/ipam.controller.ts#states',
     // Tệp draw.io nguyên khối: chữ trong hình nằm lẫn trong XML, luật một-ô-một-câu của
     // `@NoSecretText` không đọc được nó. Service soi chữ TỪNG hình khi lưu (`secretLabelReason`).
     'diagrams/diagrams.controller.ts#xml',

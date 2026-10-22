@@ -39,6 +39,7 @@ export function ExportXlsxButton({
   allUrl,
   allFileName,
   allLabel,
+  link = false,
 }: {
   /** Ví dụ: `/api/v1/devices/export?site=HN`. Giữ nguyên query của bộ lọc đang xem. */
   url: string;
@@ -51,6 +52,8 @@ export function ExportXlsxButton({
   allFileName?: string;
   /** Chữ của mục "tất cả" (mặc định "Xuất tất cả"). */
   allLabel?: string;
+  /** Vẽ như link nhỏ (vd "Tải file mẫu" cạnh ô chọn file — PW-A31), không phải nút viền. */
+  link?: boolean;
 }) {
   const { t } = useTranslation();
   const { busy, run } = useXlsxDownload();
@@ -82,7 +85,7 @@ export function ExportXlsxButton({
   return (
     <button
       type="button"
-      className="btn"
+      className={link ? 'linkbtn sm' : 'btn'}
       disabled={disabled || busy}
       onClick={() => run(url, fileName)}
     >

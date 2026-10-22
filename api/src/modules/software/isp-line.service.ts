@@ -1,15 +1,17 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { isRealDateOnly } from '../../common/real-date';
+import { nextCode } from '../../common/next-code';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -28,6 +30,8 @@ import { CATALOG_REF_INACTIVE, CatalogApiService, inactiveRefMessage } from '../
 import { DevicesApiService } from '../devices/devices.api';
 import { ispLineHistoryTable, ispLineTable, ispLineWanIpTable } from './software.schema';
 import { MAX_WAN_IPS, wanIpsOf } from './wan-ip';
+import { requireUnchangedSince } from '../../common/cas';
+import { summarize, type ImportAction, type ImportSummary } from '../../common/import-plan';
 
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
@@ -66,6 +70,46 @@ const TRACKED = [
   'note',
   'status',
 ] as const;
+
+/** Ô của một dòng: tham chiếu còn ở dạng TÊN / MÃ — service dịch ra id rồi đi qua `prepare()`. */
+export interface IspImportCells {
+  code?: string;
+  provider?: string;
+  bandwidth?: string;
+  wanIps?: string[];
+  site?: string;
+  device?: string;
+  hotline?: string;
+  contractNo?: string;
+  startDate?: string;
+  status?: IspStatus;
+  note?: string;
+}
+
+export interface IspParsedRow {
+  rowNumber: number;
+  cells?: IspImportCells;
+  error?: string;
+}
+
+export interface IspImportRow {
+  rowNumber: number;
+  label: string;
+  action: ImportAction;
+  message?: string;
+  existingId?: string;
+  /** `updatedAt` lúc đối chiếu — lượt ghi hỏi lại "có ai sửa xen vào không". */
+  seenAt?: Date;
+  values?: Record<string, unknown>;
+  /** `undefined` = file không có cột IP WAN → giữ nguyên IP đang có. */
+  wanIps?: string[];
+  changes?: RecordChanges;
+}
+
+export interface IspImportPlan {
+  rows: IspImportRow[];
+  summary: ImportSummary;
+}
 
 export interface IspLineRecord {
   id: string;
@@ -238,45 +282,204 @@ export class IspLineService {
     return rows as IspLineHistoryRecord[];
   }
 
+  /** Mã gợi ý cho form Thêm (FM-21) — kế tiếp mã của đường thêm GẦN NHẤT; `null` = không đoán. */
+  async suggestCode(): Promise<string | null> {
+    const [last] = await this.db.select({ code: ispLineTable.code }).from(ispLineTable).orderBy(desc(ispLineTable.createdAt), desc(ispLineTable.code)).limit(1);
+    const prefix = last ? /^(.*?)\d+$/.exec(last.code)?.[1] : undefined;
+    if (prefix === undefined) return null;
+    const taken = await this.db.select({ code: ispLineTable.code }).from(ispLineTable).where(ilike(ispLineTable.code, `${escapeLike(prefix)}%`));
+    return nextCode(last.code, taken.map((row) => row.code));
+  }
+
   // ─────────────────────────── Ghi ───────────────────────────
 
   async create(actor: string, input: IspLineInput): Promise<IspLineRecord> {
     const values = await this.prepare(input, null);
     const wanIps = requireWanIps(input.wanIps) ?? [];
-    return this.db.transaction(async (tx) => {
-      await this.assertDeviceWithin(tx, values, null);
-      const created = await this.insertWithin(tx, values);
-      await this.replaceWanIpsWithin(tx, created.id, wanIps);
-      await this.recordWithin(tx, actor, created.id, 'created', {
-        code: { before: null, after: created.code },
-      });
-      return toRecord(created, wanIps);
-    });
+    return this.db.transaction((tx) => this.createLineWithin(tx, actor, values, wanIps));
   }
 
   async update(actor: string, id: string, input: IspLineInput): Promise<IspLineRecord> {
     const values = await this.prepare(input, id);
     const nextWanIps = requireWanIps(input.wanIps);
-    return this.db.transaction(async (tx) => {
-      // Ảnh "trước" đọc SAU khi khoá hàng cha: đọc ngoài transaction thì một lượt sửa khác commit
-      // vào giữa, và dòng lịch sử của lượt này ghi "before" là thứ đã không còn — sổ nói sai
-      // IP WAN đã đổi từ đâu. Khoá này cũng xếp hàng hai lượt thay IP cùng một đường.
-      const before = await this.lockRowWithin(tx, id);
-      const beforeWanIps = (await this.wanIpsByLine([id], tx)).get(id) ?? [];
-      const changes = diffRecord(
-        TRACKED,
-        { ...before, wanIps: joinWanIps(beforeWanIps) },
-        nextWanIps === undefined ? values : { ...values, wanIps: joinWanIps(nextWanIps) },
-      );
-      if (!hasChanges(changes)) return toRecord(before, beforeWanIps);
+    return this.db.transaction((tx) => this.updateLineWithin(tx, actor, id, values, nextWanIps));
+  }
 
-      const wanChanged = 'wanIps' in changes && nextWanIps !== undefined;
-      await this.assertDeviceWithin(tx, values, before.deviceId);
-      const updated = await this.updateWithin(tx, id, values);
-      if (wanChanged) await this.replaceWanIpsWithin(tx, id, nextWanIps);
-      await this.recordWithin(tx, actor, id, 'updated', changes);
-      return toRecord(updated, wanChanged ? nextWanIps : beforeWanIps);
+  /** Lõi ghi của Thêm — form và file nhập (UX-E30) đi chung một đường. */
+  private async createLineWithin(
+    tx: Tx,
+    actor: string,
+    values: Record<string, unknown>,
+    wanIps: string[],
+  ): Promise<IspLineRecord> {
+    await this.assertDeviceWithin(tx, values, null);
+    const created = await this.insertWithin(tx, values);
+    await this.replaceWanIpsWithin(tx, created.id, wanIps);
+    await this.recordWithin(tx, actor, created.id, 'created', {
+      code: { before: null, after: created.code },
     });
+    return toRecord(created, wanIps);
+  }
+
+  /**
+   * Lõi ghi của Sửa — form và file nhập đi chung một đường. `seenAt` (chỉ file nhập): `updatedAt`
+   * lúc lượt ghi ĐỐI CHIẾU LẠI file ngay trước transaction; khác bản đang khoá nghĩa là có người sửa
+   * xen vào khoảng đó → huỷ, không ghi đè. Bảng đối chiếu xem trước đó không được chốt.
+   */
+  private async updateLineWithin(
+    tx: Tx,
+    actor: string,
+    id: string,
+    values: Record<string, unknown>,
+    nextWanIps: string[] | undefined,
+    seenAt?: Date,
+  ): Promise<IspLineRecord> {
+    // Ảnh "trước" đọc SAU khi khoá hàng cha: đọc ngoài transaction thì một lượt sửa khác commit
+    // vào giữa, và dòng lịch sử của lượt này ghi "before" là thứ đã không còn — sổ nói sai
+    // IP WAN đã đổi từ đâu. Khoá này cũng xếp hàng hai lượt thay IP cùng một đường.
+    const before = await this.lockRowWithin(tx, id);
+    if (seenAt) {
+      requireUnchangedSince({ updatedAt: seenAt }, before, {
+        code: 'ISP_ALREADY_CHANGED',
+        message: `Đường truyền "${before.code}" vừa được người khác sửa — tải lên lại.`,
+      });
+    }
+    const beforeWanIps = (await this.wanIpsByLine([id], tx)).get(id) ?? [];
+    const changes = diffRecord(
+      TRACKED,
+      { ...before, wanIps: joinWanIps(beforeWanIps) },
+      nextWanIps === undefined ? values : { ...values, wanIps: joinWanIps(nextWanIps) },
+    );
+    if (!hasChanges(changes)) return toRecord(before, beforeWanIps);
+
+    const wanChanged = 'wanIps' in changes && nextWanIps !== undefined;
+    await this.assertDeviceWithin(tx, values, before.deviceId);
+    const updated = await this.updateWithin(tx, id, values);
+    if (wanChanged) await this.replaceWanIpsWithin(tx, id, nextWanIps);
+    await this.recordWithin(tx, actor, id, 'updated', changes);
+    return toRecord(updated, wanChanged ? nextWanIps : beforeWanIps);
+  }
+
+  /**
+   * Đối chiếu các dòng đọc từ file (UX-E30) — KHÔNG ghi gì. Nhà mạng / site / thiết bị trong file
+   * là TÊN / MÃ, dịch ra id; rồi mỗi dòng đi qua ĐÚNG `prepare()` + `requireWanIps` của form. Trùng
+   * mã = sửa (chỉ cột có mặt), không trùng = thêm.
+   */
+  async planImport(parsed: IspParsedRow[]): Promise<IspImportPlan> {
+    const [existing, lists] = await Promise.all([
+      this.db.select().from(ispLineTable),
+      this.catalog.lists({ includeInactive: true }),
+    ]);
+    const wanBefore = await this.wanIpsByLine(existing.map((row) => row.id));
+    const key = (text: string) => text.trim().toLowerCase();
+    const byCode = new Map(existing.map((row) => [key(row.code), row]));
+    const providers = new Map(lists.ispProviders.map((p) => [key(p.name), p.id]));
+    const sites = new Map(lists.sites.map((site) => [key(site.code), site.id]));
+    const deviceCodes = parsed.flatMap((row) => (row.cells?.device ? [row.cells.device] : []));
+    const devices = await this.devices.idsByCodes(deviceCodes);
+    const seen = new Map<string, number>();
+    const rows: IspImportRow[] = [];
+    for (const item of parsed) {
+      const label = item.cells?.code?.trim() || `Dòng ${item.rowNumber}`;
+      const error = (message: string): IspImportRow => ({ rowNumber: item.rowNumber, label, action: 'error', message });
+      if (!item.cells) {
+        rows.push(error(item.error ?? 'Dòng không đọc được.'));
+        continue;
+      }
+      const cells = item.cells;
+      const code = cells.code?.trim() ?? '';
+      if (!code) {
+        rows.push(error('Thiếu cột "Mã".'));
+        continue;
+      }
+      const first = seen.get(key(code));
+      if (first !== undefined) {
+        rows.push(error(`Mã "${code}" trùng với dòng ${first} trong file.`));
+        continue;
+      }
+      seen.set(key(code), item.rowNumber);
+      const ref = (text: string | undefined, map: Map<string, string>, what: string) => {
+        if (text === undefined) return { id: undefined };
+        if (text.trim() === '') return { id: '' };
+        const id = map.get(key(text));
+        return id ? { id } : { problem: `${what} "${text.trim()}" không có trong ${what === 'Thiết bị' ? 'kho' : 'danh mục'}.` };
+      };
+      const provider = ref(cells.provider, providers, 'Nhà mạng');
+      const site = ref(cells.site, sites, 'Site');
+      const device = ref(cells.device, devices, 'Thiết bị');
+      const problem = provider.problem ?? site.problem ?? device.problem;
+      if (problem) {
+        rows.push(error(problem));
+        continue;
+      }
+      const before = byCode.get(key(code));
+      const input: IspLineInput = {
+        code,
+        providerId: provider.id || undefined,
+        bandwidth: cells.bandwidth,
+        wanIps: cells.wanIps,
+        siteId: site.id,
+        deviceId: device.id,
+        hotline: cells.hotline,
+        contractNo: cells.contractNo,
+        startDate: cells.startDate,
+        note: cells.note,
+        status: cells.status,
+      };
+      try {
+        const values = await this.prepare(input, before?.id ?? null);
+        const wanIps = requireWanIps(input.wanIps);
+        // Máy đã thanh lý / không còn: báo NGAY ở dòng này như form, không để lượt ghi từ chối cả file.
+        if (device.id && device.id !== before?.deviceId) await this.devices.assertUsable(device.id);
+        if (!before) {
+          rows.push({ rowNumber: item.rowNumber, label: code, action: 'create', values, wanIps: wanIps ?? [] });
+          continue;
+        }
+        const changes = diffRecord(
+          TRACKED,
+          { ...before, wanIps: joinWanIps(wanBefore.get(before.id) ?? []) },
+          wanIps === undefined ? values : { ...values, wanIps: joinWanIps(wanIps) },
+        );
+        rows.push(
+          hasChanges(changes)
+            ? { rowNumber: item.rowNumber, label: code, action: 'update', existingId: before.id, seenAt: before.updatedAt, values, wanIps, changes }
+            : { rowNumber: item.rowNumber, label: code, action: 'unchanged' },
+        );
+      } catch (err) {
+        if (err instanceof HttpException && err.getStatus() < 500) {
+          const body = err.getResponse() as { message?: string };
+          rows.push(error(body.message ?? err.message));
+          continue;
+        }
+        throw err;
+      }
+    }
+    return { rows, summary: summarize(rows) };
+  }
+
+  /**
+   * Ghi một lượt đối chiếu SẠCH lỗi: MỘT transaction cho cả file; mỗi đường đi qua đúng lõi ghi của
+   * form (lịch sử + nhật ký từng đường), cộng một dòng nhật ký tổng `isp.imported` kèm số dòng.
+   */
+  async commitImportWithin(tx: Tx, actor: string, plan: IspImportPlan): Promise<{ created: number; updated: number }> {
+    let created = 0;
+    let updated = 0;
+    for (const row of plan.rows) {
+      if (row.action === 'create' && row.values) {
+        await this.createLineWithin(tx, actor, row.values, row.wanIps ?? []);
+        created += 1;
+      } else if (row.action === 'update' && row.values && row.existingId) {
+        await this.updateLineWithin(tx, actor, row.existingId, row.values, row.wanIps, row.seenAt);
+        updated += 1;
+      }
+    }
+    await this.audit.appendWithin(tx, {
+      actor,
+      action: 'isp.imported',
+      objectType: 'isp_line',
+      detail: { created, updated, unchanged: plan.summary.unchanged, totalRows: plan.rows.length },
+    });
+    return { created, updated };
   }
 
   async recordWithin(

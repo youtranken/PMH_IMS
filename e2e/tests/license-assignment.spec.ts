@@ -280,7 +280,7 @@ test.describe('Gán license theo seat', () => {
 
     // Gán ngay từ trang máy: chọn license → đúng hộp Gán của license, máy nằm sẵn.
     await page.getByRole('button', { name: 'Gán phần mềm vào máy này' }).click();
-    const pick = page.getByRole('dialog', { name: `Gán phần mềm vào PC-E2E-P1-${stamp}` });
+    const pick = page.getByRole('dialog', { name: `Gán phần mềm — PC-E2E-P1-${stamp}` });
     await pick.getByRole('combobox', { name: 'Tìm license' }).fill(`LIC-E2E-PANEL-${stamp}`);
     await page.getByRole('option', { name: new RegExp(`LIC-E2E-PANEL-${stamp}`) }).click();
     const assignBox = page.getByRole('dialog', { name: `Gán license vào máy — LIC-E2E-PANEL-${stamp}` });

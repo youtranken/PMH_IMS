@@ -18,7 +18,7 @@
 .nav-badge {
   flex: none;
   font-size: var(--fs-2xs);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   min-width: 20px;
   height: 18px;
   padding: 0 var(--space-2);
@@ -31,7 +31,8 @@
 }
 .nav-badge.warn {
   background: var(--warm);
-  color: var(--ink);
+  /* Chữ tối cố định: --ink ở giao diện tối là chữ SÁNG, trên cam chỉ ~1,4:1. */
+  color: var(--on-brand);
 }
 .nav-badge.danger {
   background: var(--danger-soft);
@@ -95,6 +96,13 @@
   cursor: pointer;
   text-align: left;
 }
+/* Mũi tên của nút tài khoản: màu token sidebar — giống nhau ở mọi giao diện (PW-C26). */
+.sb-caret {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--sidebar-label);
+}
 .sb-foot .sb-userbtn:hover:not(:disabled),
 .sb-foot .sb-userbtn[aria-expanded='true'] {
   background: var(--sidebar-chip);
@@ -149,7 +157,7 @@
   color: var(--danger);
 }
 .sb-foot .sb-act.danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  background: var(--danger-tint);
   color: var(--danger);
 }
 /* Menu tài khoản: nhãn nhóm "Giao diện", ô dấu chọn cố định bề rộng để ba lựa chọn thẳng hàng. */
@@ -214,7 +222,7 @@
   display: grid;
   place-items: center;
   font-size: var(--fs-2xs);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   background: var(--sidebar-chip-strong);
   color: var(--sidebar-ink-2);
 }
@@ -556,21 +564,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-}
-/* Trình chiếu sơ đồ: phủ cả khung nhìn, đè lên shell nhưng nằm DƯỚI lớp hộp thoại — hộp nhập mã
-   khi hết ân hạn giữa chừng phải nổi lên trên trang đang chiếu. Hoạt ảnh mờ-hiện của `.page` giữ
-   trạng thái cuối nên biến `.page` thành ngữ cảnh xếp lớp riêng: còn nó thì `z-index` của khung
-   chiếu không vượt được thanh trên của shell (thanh đó đè lên tên trang đang chiếu). */
-.page:has(.slideshow) {
-  animation: none;
-}
-.slideshow {
-  position: fixed;
-  inset: 0;
-  z-index: calc(var(--z-modal-backdrop) - 1);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
 }
 /* Màn sửa sơ đồ chỉ dành cho máy tính (`BREAKPOINTS.editor`): hẹp hơn thì thanh trên chỉ còn tab
    và chế độ xem, ô chọn thiết bị không cần giữ bề ngang cố định. */

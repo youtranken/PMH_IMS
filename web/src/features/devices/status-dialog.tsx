@@ -23,8 +23,10 @@ export function StatusDialog({
   onCancel,
   onConfirm,
 }: {
+  /** Mã máy — hoặc "n máy" khi đổi hàng loạt (UX-E25). */
   code: string;
-  current: DeviceStatus;
+  /** `null` = nhiều máy, không có một trạng thái hiện tại. */
+  current: DeviceStatus | null;
   /** Hồ sơ đang thanh lý — hộp mở lại hồ sơ. */
   reopen: boolean;
   busy: boolean;

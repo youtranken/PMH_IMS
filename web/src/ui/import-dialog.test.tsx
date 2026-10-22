@@ -37,4 +37,29 @@ describe('ImportDialog — chọn file là tự đối chiếu', () => {
     expect(uploadFile).toHaveBeenCalledWith('/preview', file, 'x');
     expect(await screen.findByText('Thêm mới: 2')).toBeInTheDocument();
   });
+
+  // PW-A31: ba nút đáy cùng trọng lượng — nút chính theo bước: Đối chiếu trước, Xác nhận ghi sau.
+  it('chưa có file: "Đối chiếu" là nút chính; đối chiếu xong: "Xác nhận ghi" là nút chính', async () => {
+    uploadFile.mockResolvedValue({ rows: [], summary: { create: 2, update: 0, unchanged: 0, skip: 0, error: 0 } });
+    renderWithI18n(
+      <ToastProvider>
+        <ImportDialog
+          title="Nhập"
+          hint="gợi ý"
+          previewUrl="/preview"
+          commitUrl="/commit"
+          csrfToken="x"
+          mapRow={() => ({ group: '', rowNumber: 1, action: 'create', label: '' })}
+          onClose={() => {}}
+          onImported={() => {}}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Đối chiếu' })).toHaveClass('primary');
+    expect(screen.getByRole('button', { name: 'Xác nhận ghi' })).not.toHaveClass('primary');
+    await userEvent.upload(screen.getByLabelText('Chọn file .xlsx'), new File(['PK'], 'tb.xlsx'));
+    await screen.findByText('Thêm mới: 2');
+    expect(screen.getByRole('button', { name: 'Đối chiếu' })).not.toHaveClass('primary');
+    expect(screen.getByRole('button', { name: 'Xác nhận ghi' })).toHaveClass('primary');
+  });
 });

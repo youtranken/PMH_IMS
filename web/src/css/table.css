@@ -4,7 +4,16 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+}
+/* Bảng vừa bề ngang (TableWrap đặt `data-fit`): `clip` không tạo vùng cuộn, nên tiêu đề cột
+   dính được vào trang ngay dưới topbar (TB-02). Bảng rộng hơn khung giữ `auto` để cuộn ngang. */
+.table-wrap[data-fit] {
+  overflow-x: clip;
+}
+.table-wrap[data-fit] > table.table > thead th {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 2;
 }
 table.table {
   width: 100%;
@@ -14,7 +23,7 @@ table.table {
 table.table thead th {
   text-align: left;
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   /* --ink, không --ink-2: tiêu đề cột là chỗ mắt bám để đọc bảng — xám nhạt thì lẫn vào dữ
@@ -62,7 +71,9 @@ table.table thead th .sort-arrow {
   font-size: var(--fs-sm);
 }
 table.table tbody td {
-  padding: var(--space-6) var(--space-7);
+  /* Đặc như công cụ doanh nghiệp (TB-01): dòng một hàng ~44px, có dòng phụ ~56px — trước
+     12/14px cho dòng 63–70px, màn 1440×900 chỉ chứa ~9 dòng. */
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--border);
   color: var(--ink);
   vertical-align: middle;
@@ -80,6 +91,11 @@ table.table > tbody > tr > td {
 table.table > tbody > tr:nth-child(even) > td {
   background: var(--row-alt);
 }
+/* Số và ngày đều bề rộng chữ số ở MỌI ô, không chỉ ô `.mono` (DS-26): cột ngày / số lượng thẳng
+   hàng dọc. */
+table.table td {
+  font-variant-numeric: tabular-nums;
+}
 /* Ô mono trống chỉ còn dấu "—": vẽ bằng font mono thì nó ngắn lại thành "–", đứng cạnh "—"
    của cột thường là hai dấu gạch khác nhau cho cùng một nghĩa "chưa khai". */
 table.table td.mono[data-empty] {
@@ -96,24 +112,17 @@ table.table tbody tr.clickable:hover td {
 table.table tbody tr.overdue td:first-child {
   box-shadow: inset 3px 0 0 var(--danger);
 }
-/* Nổi bật cả hàng: quá hạn (đỏ) / tới hạn hôm nay (cam) — nhìn vào biết ngay. */
-table.table tbody tr.overdue td {
-  background: var(--danger-soft);
-}
+/* Quá hạn: vạch trái + huy hiệu, KHÔNG tô nền cả hàng (TB-11/DS-08) — 6.470 dòng quá hạn tô
+   đỏ hết thì cả trang hồng, mất tác dụng báo động. Tới hạn hôm nay (ít dòng) vẫn tô nền cam. */
 table.table tbody tr.due-today td {
   background: var(--warn-soft);
 }
 table.table tbody tr.due-today td:first-child {
   box-shadow: inset 3px 0 0 var(--warn);
 }
-/*
- * Nền trạng thái của dòng PHẢI thắng sọc dòng chẵn. Viết `.table tr.row-danger td` (0,2,2)
- * thì thua `table.table > tbody > tr:nth-child(even) > td` (0,2,4): dòng quá hạn ở vị trí chẵn mất
- * nền đỏ, người dùng tưởng hai nhóm khác nhau. Cùng độ ưu tiên với luật sọc và đặt SAU nó,
- * như `.overdue`/`.due-today` ngay trên.
- */
-table.table tbody tr.row-danger td {
-  background: var(--danger-soft);
+/* `row-danger` (dòng quá hạn ở bảng hết hạn): cùng vạch trái như `.overdue`, không tô nền. */
+table.table tbody tr.row-danger td:first-child {
+  box-shadow: inset 3px 0 0 var(--danger);
 }
 /*
  * Huy hiệu ĐỎ trên dòng ĐỎ: nền huy hiệu trùng nền dòng nên nó tan vào dòng, nhất là ở chế độ
@@ -311,14 +320,15 @@ table.table tbody tr.row-suspended td:first-child {
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-md);
   line-height: 1;
-  /* Vùng bấm đủ ngón tay chạm trúng (WCAG 2.5.8) — ba chấm vẽ ra chỉ rộng chừng 10px. */
-  min-width: 2rem;
-  min-height: 1.9rem;
+  /* Vùng bấm đủ ngón tay chạm trúng (WCAG 2.5.8) — ba chấm vẽ ra chỉ rộng chừng 10px. Theo
+     --h-ctl-sm nên tự lên 40px ở màn cảm ứng (DS-06). */
+  min-width: var(--h-ctl-sm);
+  min-height: var(--h-ctl-sm);
 }
 /* Ô giữ chỗ bằng nút ⋮ cho dòng không có menu — cột thao tác thẳng hàng. */
 .kebab-slot {
   display: inline-block;
-  min-width: 2rem;
+  min-width: var(--h-ctl-sm);
 }
 .row-actions .kebab[aria-expanded='true'] {
   background: var(--muted-soft);
@@ -338,10 +348,17 @@ table.table tbody tr.row-suspended td:first-child {
      vô hiệu hóa — tràn ra ngoài màn và không bấm được. */
   overflow-y: auto;
   padding: var(--space-1);
-  background: var(--surface);
+  /* Còn mục khuất thì mép trên / dưới có bóng mờ — cùng mẹo nền hai lớp với `.segmented`: lớp
+     `local` che bóng khi đã cuộn tới mép, lớp `scroll` đứng yên ở mép khung. */
+  background:
+    linear-gradient(var(--surface) 40%, transparent) center top / 100% 1.5rem no-repeat local,
+    linear-gradient(transparent, var(--surface) 60%) center bottom / 100% 1.5rem no-repeat local,
+    linear-gradient(var(--scroll-edge), transparent) center top / 100% 0.6rem no-repeat scroll,
+    linear-gradient(transparent, var(--scroll-edge)) center bottom / 100% 0.6rem no-repeat scroll,
+    var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-pop);
 }
 .row-actions-menu button {
   display: flex;
@@ -519,6 +536,20 @@ button.cell-note.cell-sub {
 }
 
 /* --- Status badge / pill -------------------------------------------------- */
+/* Nhãn PHÂN LOẠI (DS-14): loại hồ sơ, VPN, Backup, Nhạy cảm… — viền, trung tính, không chấm.
+   Màu và chấm chỉ dành cho `.badge` trạng thái / hạn, để màu luôn nghĩa là "tình trạng". */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
 .badge {
   display: inline-flex;
   align-items: center;
@@ -610,6 +641,14 @@ table.table td.col-name {
   table.table-stack td.col-name {
     min-width: 0;
   }
+  /* Bảng gập thẻ: dòng là lưới có khe, chỉ tô ô thì sọc chẵn thành từng mảng xám rời (TB-08).
+     Tô cả dòng để khe cùng màu; trạng thái tới hạn cũng lên dòng. */
+  table.table.table-stack > tbody > tr:nth-child(even) {
+    background: var(--row-alt);
+  }
+  table.table.table-stack > tbody > tr.due-today {
+    background: var(--warn-soft);
+  }
 }
 
 /* --- Cột dính khi bảng cuộn ngang (DataTable `stickyActions` / meta.sticky) ----------
@@ -682,8 +721,13 @@ table.table .col-sticky-end::after {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
+}
+/* Danh sách thẻ của từng nhóm (`section.list-cards-section`): không thêm lề hay chấm. */
+.list-cards-sub {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 /* Tiêu đề nhóm (`groupBy` của `DataTable`/`MobileCardList`): "Hôm nay", "Tháng 10/2026". */
 .list-cards-group {
@@ -726,7 +770,7 @@ table.table .col-sticky-end::after {
 }
 .list-card.row-danger,
 .list-card.overdue {
-  background: var(--danger-soft);
+  box-shadow: inset 3px 0 0 var(--danger);
 }
 .list-card.due-today {
   background: var(--warn-soft);
@@ -851,7 +895,8 @@ table.table .col-sticky-end::after {
 /* Mũi tên của cột sắp được nhưng CHƯA sắp: ẩn, hiện mờ khi rê chuột/focus — để cột sắp được
    không trông y hệt cột không sắp được. */
 table.table thead th .sort-arrow.idle {
-  opacity: 0;
+  /* Hiện mờ sẵn (TB-12): ẩn hẳn thì không ai biết cột nào sắp được, màn cảm ứng không có hover. */
+  opacity: 0.35;
   color: var(--ink-3);
   transition: opacity 0.12s var(--ease);
 }
@@ -954,6 +999,10 @@ table.table thead th .th-sort:focus-visible .sort-arrow.idle {
 }
 /* Khung chờ của màn danh sách (`SkeletonTable`): mỗi vạch là một "dòng" cao bằng dòng bảng, có
    kẻ chân như bảng thật, để lúc dữ liệu về mắt không thấy cả khối nhảy. */
+/* Dòng giữ chỗ vẽ ngay, vạch xám chỉ hiện sau 300ms (`data-shown`) — tải nhanh không chớp. */
+.skeleton-table:not([data-shown]) .skeleton {
+  visibility: hidden;
+}
 .skeleton-table {
   border: 1px solid var(--border);
   border-radius: var(--r);

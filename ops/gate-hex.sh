@@ -15,7 +15,8 @@
 #
 # `perl -0777` nuốt trọn file rồi xoá mọi khối `/* … */` (kể cả nhiều dòng), sau đó mới soi.
 #
-# Luật bắt ba dạng màu viết thẳng: `#hex`, hàm màu `rgb()/rgba()/hsl()/hsla()`, và hex mã hoá
+# Luật bắt bốn dạng màu viết thẳng: `#hex`, hàm màu `rgb()/rgba()/hsl()/hsla()`, `color-mix()`
+# (pha ra màu không có trong bảng màu, không có cặp tối riêng), và hex mã hoá
 # URL `%23…` trong `url("data:…svg")` (icon SVG nhúng giữ nguyên màu ở dark mode). Màu nào
 # cũng phải đi qua token có cặp `html[data-theme='dark']`; icon SVG thì dùng `mask-image` +
 # `background-color: var(--token)`. Cổng KHÔNG soi `.tsx`.
@@ -45,7 +46,7 @@ while IFS= read -r f; do
     printf '\033[31m✗ perl hỏng khi đọc %s — không coi đây là XANH.\033[0m\n' "$f"
     exit 1
   }
-  if printf '%s' "$sach" | grep -qiE "#[0-9a-f]{3,8}\b|%23[0-9a-f]{3,8}\b|\b(rgba?|hsla?)\("; then
+  if printf '%s' "$sach" | grep -qiE "#[0-9a-f]{3,8}\b|%23[0-9a-f]{3,8}\b|\b(rgba?|hsla?|color-mix)\("; then
     rogue="${rogue}${f}"$'\n'
   fi
 done < <(find web/src -name "*.css" ! -path "*/css/tokens.css")

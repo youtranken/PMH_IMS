@@ -83,13 +83,13 @@ body:has(.auth) .toast-stack {
 }
 .pager-info { margin-right: auto; }
 .pager-page { font-variant-numeric: tabular-nums; }
-/* Nút ‹ › là chevron dùng chung, ô bấm vuông CAO BẰNG ô "Số dòng" bên cạnh (38px): thấp hơn thì
-   cả hàng lệch đáy và mũi tên trông như chữ phụ. Mũi tên màu chữ phụ đậm, không nhạt như nhãn. */
+/* Cả hàng phân trang cao đúng --h-ctl (DS-15): trước có 4 chiều cao (‹ › 33, ô Số dòng 37, ô Tới
+   trang 24). Mũi tên màu chữ phụ đậm, không nhạt như nhãn. */
 .pager-nav {
   display: inline-grid;
   place-items: center;
-  width: 2.375rem;
-  height: 2.375rem;
+  width: var(--h-ctl);
+  height: var(--h-ctl);
   padding: 0;
   font-size: var(--fs-md);
   color: var(--ink-2);
@@ -101,7 +101,7 @@ body:has(.auth) .toast-stack {
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
-.pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
+.pager-size select { font-size: var(--fs-sm); padding: 0 1.6rem 0 var(--space-3); }
 /* Nhãn "Số dòng" thẳng tâm ô chọn: luật `label` chung (khối, có lề dưới) đẩy nó lên cao ~6px. */
 .pager-size > label { margin: 0; line-height: 1.2; }
 /* Màn cảm ứng: ‹ › và ô "Số dòng" đủ 44px, cách nhau ≥8px — đi hiện trường bấm bằng ngón cái. */
@@ -121,8 +121,8 @@ body:has(.auth) .toast-stack {
   list-style: none;
 }
 .pager-num {
-  min-width: 2.375rem;
-  height: 2.375rem;
+  min-width: var(--h-ctl);
+  height: var(--h-ctl);
   padding: 0 var(--space-3);
   justify-content: center;
   font-variant-numeric: tabular-nums;
@@ -140,7 +140,7 @@ body:has(.auth) .toast-stack {
   gap: var(--space-3);
   color: var(--ink-2);
 }
-.pager-jump .inp { width: 4.5rem; padding: 2px var(--space-3); font-size: var(--fs-sm); }
+.pager-jump .inp { width: 4.5rem; padding: 0 var(--space-3); font-size: var(--fs-sm); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
@@ -1141,12 +1141,6 @@ html[data-motion='off'] .kpi:hover { transform: none; }
     font-size: var(--fs-xl);
   }
 }
-.dash-calm {
-  margin: calc(var(--space-6) * -1) 0 var(--space-6);
-  padding-top: var(--space-2);
-  font-size: var(--fs-xs);
-  color: var(--ink-3);
-}
 
 /*
  * Khối ĐANG CÓ VIỆC — HAI LÀN CỐ ĐỊNH, không phải lưới theo hàng.
@@ -1222,8 +1216,6 @@ html[data-motion='off'] .kpi:hover { transform: none; }
 .dash-card.slim.tone-error { background: var(--warn-soft); border-color: var(--border-warn); }
 .dash-card.slim.tone-error .dash-tone-ic { background: var(--warn); color: var(--on-accent); }
 .dash-card.slim.tone-error p { color: var(--warn); }
-.dash-card.slim.tone-good .dash-tone-ic { background: var(--ok-soft); color: var(--ok); }
-.dash-card.slim.tone-good p { color: var(--ok); }
 .dash-card.slim.tone-info .dash-tone-ic { background: var(--muted-soft); color: var(--ink-2); }
 .dash-card.slim.tone-info p { color: var(--ink-2); }
 
@@ -1408,11 +1400,6 @@ html[data-motion='off'] .kpi:hover { transform: none; }
 .approval-active > h2 {
   font-size: var(--fs-md);
 }
-.approval-export-end {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: var(--space-5);
-}
 /* Khối tóm tắt đầu hộp Duyệt/Từ chối/Thu hồi: người · lúc gửi / đối tượng / lý do / số giờ. */
 .decision-summary {
   display: flex;
@@ -1456,6 +1443,7 @@ html[data-motion='off'] .kpi:hover { transform: none; }
   color: var(--ink-3);
 }
 .approval-detail .approval-reason {
+  display: block;
   margin: 0;
   font-size: var(--fs-md);
 }
@@ -1505,7 +1493,8 @@ html[data-motion='off'] .kpi:hover { transform: none; }
 .sticky-action-bar.compact .sticky-action-note { margin-right: auto; }
 .sticky-action-bar.compact .sticky-action-buttons > .btn {
   flex: 0 0 auto;
-  min-height: 0;
+  /* `min-height: 0` cũ thả nút về cao theo đệm (0 sau khi đệm dọc về 0) → nút 20px. */
+  min-height: var(--h-ctl-sm);
 }
 @media (max-width: 680px) {
   /* Điện thoại: tràn sát hai mép như thanh công cụ, không phải một thẻ lơ lửng. */
@@ -1695,7 +1684,7 @@ table.access-grid thead .access-row-head {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 2.375rem;
+  min-height: var(--h-ctl);
   padding: 0 var(--space-6);
   border: 1px solid var(--border-2);
   border-radius: 999px;
@@ -2235,6 +2224,12 @@ html[data-motion='off'] .spinner {
   border: 1px dashed var(--border-2);
   border-radius: var(--r-lg);
 }
+/* Trong khung bảng thì khung bảng đã là viền: thêm viền đứt + nền riêng là khung kép (ST-02). */
+.table-wrap .empty {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
 /* Icon "khay rỗng" (Lucide inbox) — biến chữ trôi thành khối có chủ đích. */
 .empty::before {
   content: '';
@@ -2362,10 +2357,16 @@ html[data-motion='off'] .spinner {
   flex-direction: column;
   gap: var(--space-4);
 }
-.load-error-text {
+/* Tiêu đề ngắn đỏ đậm, câu giải thích chữ thường (ST-04): cả câu dài đậm đỏ thì khó đọc và
+   át mất nút Thử lại. */
+.load-error-title {
   margin: 0;
   color: var(--danger-strong);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
+}
+.load-error-text {
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
 }
 .load-error-actions button {
   min-height: 40px;

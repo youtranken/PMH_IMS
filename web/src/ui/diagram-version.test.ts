@@ -17,10 +17,10 @@ describe('Nhãn phiên bản bản vẽ — một cách gọi ở mọi nơi', (
   });
 
   it.each([
-    // "v" chỉ dành cho bản chính thức; mọi lần lưu khác là "#" — "v2" cho một nháp bị đọc thành "đã có bản 2 chính thức".
+    // MỘT ký hiệu "#n" cho mọi lần lưu, chữ vị thế đi kèm (UX-E40).
     [2, null, 'long', 'Nháp #2'],
-    [3, 3, 'long', 'Chính thức v3'],
-    [3, 3, 'short', 'v3'],
+    [3, 3, 'long', '#3 · Chính thức'],
+    [3, 3, 'short', '#3'],
     [5, 3, 'short', 'Nháp #5'],
     [2, 3, 'long', 'Phiên bản #2'],
   ] as const)('phiên bản %s, chính thức %s, dạng %s → "%s"', (seq, officialSeq, form, text) => {
@@ -28,8 +28,8 @@ describe('Nhãn phiên bản bản vẽ — một cách gọi ở mọi nơi', (
   });
 
   it.each([
-    ['official', 3, 'Chính thức v3'],
-    ['official_draft', 3, 'Chính thức v3 · có bản nháp'],
+    ['official', 3, '#3 · Chính thức'],
+    ['official_draft', 3, '#3 · Chính thức · có bản nháp'],
     ['draft', null, 'Bản nháp'],
     ['pending', null, 'Chờ duyệt'],
     ['empty', null, 'Chưa vẽ'],

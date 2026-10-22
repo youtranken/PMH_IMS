@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Validate, ValidateIf } from 'class-validator';
 import { RealDateOrEmpty } from '../../common/real-date';
@@ -23,12 +24,12 @@ import { NoStepUp } from '../auth/step-up.decorator';
 import { UsersApiService } from '../users/users.api';
 import { withActorNames } from '../../common/history';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
-import { sendXlsx } from '../../common/excel/xlsx-http';
+import { requireXlsx, sendXlsx, XLSX_UPLOAD_LIMIT } from '../../common/excel/xlsx-http';
+import { ServiceAccountImportService } from './service-account-import.service';
+import { SERVICE_ACCOUNT_SHEET, serviceAccountExportColumns } from './service-account-import';
 import { Feature } from '../auth/feature.decorator';
 
 /** Chữ trong file xuất — cùng chữ với màn danh sách (`serviceAccounts.kind*Short`). */
-const KIND_LABEL: Record<string, string> = { shared: 'Dùng chung', vpn: 'VPN' };
-const STATUS_LABEL: Record<string, string> = { active: 'Đang dùng', disabled: 'Đã ngừng dùng' };
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã tài khoản dịch vụ không hợp lệ.' })
@@ -129,6 +130,7 @@ export class ServiceAccountController {
     private readonly accounts: ServiceAccountService,
     private readonly excel: ExcelExportService,
     private readonly users: UsersApiService,
+    private readonly imports: ServiceAccountImportService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -179,24 +181,45 @@ export class ServiceAccountController {
       filterOf(query),
       parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
     );
-    const buffer = await this.excel.build({
-      sheetName: 'Tài khoản dịch vụ',
-      columns: [
-        { header: 'Mã', width: 18, value: (r) => r.code },
-        { header: 'Tên', width: 28, value: (r) => r.name },
-        { header: 'Loại', width: 12, value: (r) => KIND_LABEL[r.kind] ?? r.kind },
-        { header: 'Tên đăng nhập', width: 28, value: (r) => r.login ?? '' },
-        { header: 'Phòng ban', width: 20, value: (r) => r.department ?? '' },
-        { header: 'Người phụ trách', width: 22, value: (r) => r.ownerName ?? '' },
-        { header: 'Nhóm VPN', width: 18, value: (r) => r.groupName ?? '' },
-        { header: 'Dải IP được phép', width: 28, value: (r) => r.allowedIps ?? '' },
-        { header: 'Trạng thái', width: 16, value: (r) => STATUS_LABEL[r.status] ?? r.status },
-        { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
-        { header: 'Ghi chú', width: 30, value: (r) => r.note ?? '' },
-      ],
-      rows,
-    });
+    // Cùng bộ cột với file mẫu của Nhập (UX-E30): xuất ra, sửa, nhập lại được.
+    const buffer = await this.excel.build({ sheetName: SERVICE_ACCOUNT_SHEET, columns: serviceAccountExportColumns(), rows });
     sendXlsx(res, buffer, 'tai-khoan-dich-vu.xlsx');
+  }
+
+  /**
+   * Nhập từ Excel (UX-E30). ĐẶT TRƯỚC `@Get(':id')` như file Xuất. Cùng vai với Thêm / Sửa tay
+   * (SA, Admin): file là một lối thêm / sửa nữa, không rộng quyền hơn form.
+   */
+  @Roles('sa', 'admin')
+  // File mẫu mang DỮ LIỆU THẬT (xuất ra sửa rồi nhập lại) — ghi vết như file Xuất.
+  @Audited('service_account.exported', 'service_account')
+  @Get('template')
+  async template(@Res() res: Response) {
+    sendXlsx(res, await this.imports.template(), 'mau-tai-khoan-dich-vu.xlsx');
+  }
+
+  /** Bảng đối chiếu — KHÔNG ghi gì. */
+  @Roles('sa', 'admin')
+  @Post('import/preview')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  previewImport(@UploadedFile() file: Express.Multer.File | undefined) {
+    return this.imports.preview(requireXlsx(file));
+  }
+
+  /** Dòng lỗi của lượt đối chiếu ra Excel — chỉ đọc lại file vừa gửi, không ghi gì. */
+  @Roles('sa', 'admin')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-tai-khoan-dich-vu.xlsx');
+  }
+
+  @Roles('sa', 'admin')
+  @Post('import/commit')
+  @Audited('service_account.imported', 'service_account', { writtenByService: true })
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  commitImport(@UploadedFile() file: Express.Multer.File | undefined, @Req() req: AuthedRequest) {
+    return this.imports.commit(actor(req), requireXlsx(file));
   }
 
   @Roles('sa', 'admin', 'member')

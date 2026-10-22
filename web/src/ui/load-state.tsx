@@ -1,10 +1,11 @@
 import { Chevron } from '@/ui/chevron';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { ApiError } from '@/lib/api-client';
 import { describeLoadError } from '@/lib/load-error-text';
-import type { UserRole } from '@/lib/me';
+import { ME_KEY, type Me, type UserRole } from '@/lib/me';
 import { formatDateTime } from '@/lib/format';
 import { openCommandPalette, paletteShortcut } from '@/ui/command-palette';
 import { CopyButton } from '@/ui/copy-button';
@@ -251,6 +252,25 @@ export function LoadError({ onRetry, error }: { onRetry: () => void; error: unkn
   // Mốc giờ của LƯỢT HỎNG NÀY — chụp một lần, không trôi theo mỗi lượt render.
   const [at] = useState(() => new Date().toISOString());
   const status = error instanceof ApiError ? String(error.status) : t('app.techNoResponse');
+  const forbidden = error instanceof ApiError && error.status === 403;
+  /* Vai đọc từ cache phiên (không gọi mạng): SA là người vận hành IMS — bảo SA "gửi cho Super
+     Admin" là bảo họ gửi cho chính mình (ST-04). */
+  const role = useQueryClient().getQueryData<Me | null>(ME_KEY)?.role;
+  const key = described.key === 'app.serverError' && role === 'sa' ? 'app.serverErrorSa' : described.key;
+  /* Mạng về / quay lại tab thì tự thử lại (ST-04): người dùng điện thoại wifi chập chờn không
+     phải tìm nút. 403 thì không — thử lại bao nhiêu cũng 403. */
+  const retryRef = useRef(onRetry);
+  retryRef.current = onRetry;
+  useEffect(() => {
+    if (forbidden) return undefined;
+    const again = () => retryRef.current();
+    window.addEventListener('online', again);
+    window.addEventListener('focus', again);
+    return () => {
+      window.removeEventListener('online', again);
+      window.removeEventListener('focus', again);
+    };
+  }, [forbidden]);
   const tech = [
     t('app.techStatus', { status }),
     t('app.techTime', { time: formatDateTime(at) }),
@@ -269,12 +289,16 @@ export function LoadError({ onRetry, error }: { onRetry: () => void; error: unkn
         </svg>
       </span>
       <div className="load-error-body">
-        <p className="load-error-text">{described.text ?? t(described.key)}</p>
-        <div className="load-error-actions">
-          <button type="button" onClick={onRetry}>
-            {t('app.retry')}
-          </button>
-        </div>
+        <p className="load-error-title">{t('app.loadErrorTitle')}</p>
+        <p className="load-error-text">{described.text ?? t(key)}</p>
+        {/* Thiếu quyền thì bấm lại bao nhiêu lần cũng 403: không bày nút hứa hão. */}
+        {forbidden ? null : (
+          <div className="load-error-actions">
+            <button type="button" className="primary" onClick={onRetry}>
+              {t('app.retry')}
+            </button>
+          </div>
+        )}
         <details className="load-error-tech">
           <summary>{t('app.techDetails')}</summary>
           <p>

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   confirmAction,
   E2E_MEMBER,
@@ -18,6 +18,12 @@ import {
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
+
+/** "Phiên đang mở" nằm trong hộp Chi tiết (bấm dòng), không lặp ở menu ⋮ (UX-E15). */
+async function openSessions(page: Page, fullName: string): Promise<void> {
+  await page.getByRole('row', { name: new RegExp(fullName) }).getByRole('cell').first().click();
+  await page.getByRole('dialog', { name: fullName }).getByRole('button', { name: 'Phiên đang mở' }).click();
+}
 
 /** SA quản trị tài khoản và phiên. */
 /*
@@ -94,8 +100,8 @@ test.describe('Quản trị tài khoản', () => {
     await openNavGroup(page);
     await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
-    await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
-    await expect(page.getByRole('dialog')).toContainText('Phiên đang mở');
+    await openSessions(page, 'E2E Super Admin');
+    await expect(page.getByRole('dialog', { name: 'Phiên đang mở: E2E Super Admin' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Đóng phiên' }).first()).toBeVisible();
   });
 
@@ -175,7 +181,7 @@ test.describe('Quản trị tài khoản', () => {
     // Đang lọc "Đã vô hiệu hóa" nên dòng rời bảng; về bộ lọc mặc định để thấy nó sống lại.
     await expect(row).toHaveCount(0);
     await statusFilter.click();
-    await page.getByRole('option', { name: 'Đang theo dõi (trừ Đã vô hiệu hóa)' }).click();
+    await page.getByRole('option', { name: 'Trừ đã vô hiệu hóa' }).click();
     await expect(
       row.getByText('Đang hoạt động'),
       'kích hoạt lại phải mở THẬT, không chỉ đổi chữ',
@@ -259,11 +265,11 @@ test.describe('Quản trị tài khoản', () => {
       await stepUpViaApi(page, await firstLogin(page, E2E_SA));
       await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
-      await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
+      await openSessions(page, 'E2E Thành viên');
 
-      // Lọc theo nội dung: lát nữa hộp xác nhận mở chồng lên, `getByRole('dialog')` trơ
-      // sẽ khớp hai cái và Playwright báo strict mode.
-      const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
+      // Bám tên hộp: lát nữa hộp xác nhận mở chồng lên, `getByRole('dialog')` trơ sẽ khớp hai
+      // cái và Playwright báo strict mode.
+      const dialog = page.getByRole('dialog', { name: /^Phiên đang mở:/ });
       await dialog.getByRole('button', { name: 'Đóng phiên' }).first().click();
       // Đóng phiên có hỏi lại ("Đóng phiên đăng nhập từ IP …?") — không bấm Đồng ý thì chưa có gì xảy ra.
       await confirmAction(page);
@@ -299,8 +305,8 @@ test.describe('Quản trị tài khoản', () => {
       await openNavGroup(page);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
-      await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
-      const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
+      await openSessions(page, 'E2E Thành viên');
+      const dialog = page.getByRole('dialog', { name: /^Phiên đang mở:/ });
       await dialog.getByRole('button', { name: 'Đóng tất cả phiên' }).click();
       await confirmAction(page);
       await expect(page.getByText(/Đã đóng \d+ phiên\./)).toBeVisible();
@@ -310,7 +316,7 @@ test.describe('Quản trị tài khoản', () => {
       await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
 
       // Đường hỏng cần tránh: SA đóng phiên của chính mình mà không tick thì KHÔNG được tự văng.
-      await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
+      await openSessions(page, 'E2E Super Admin');
       await dialog.getByRole('button', { name: 'Đóng tất cả phiên' }).click();
       await expect(page.getByRole('checkbox', { name: /Đóng cả phiên bạn đang dùng/ })).not.toBeChecked();
       await confirmAction(page);

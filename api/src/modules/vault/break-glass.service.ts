@@ -549,7 +549,7 @@ export class BreakGlassService implements OnModuleInit {
     if (tier === 'denied') {
       throw new ForbiddenException({
         code: 'ACCESS_DENIED',
-        message: 'Bạn không có quyền trên đối tượng này.',
+        message: 'Bạn không có quyền trên hồ sơ này.',
       });
     }
     return tier;
@@ -601,7 +601,7 @@ export class BreakGlassService implements OnModuleInit {
     if (tier === 'denied') {
       throw new ForbiddenException({
         code: 'ACCESS_DENIED',
-        message: 'Bạn không có quyền trên đối tượng này. Liên hệ quản trị nếu cần.',
+        message: 'Bạn không có quyền trên hồ sơ này. Liên hệ Super Admin / Quản trị nếu cần.',
       });
     }
 
@@ -681,13 +681,13 @@ export class BreakGlassService implements OnModuleInit {
     if (tier === 'denied') {
       throw new ForbiddenException({
         code: 'ACCESS_DENIED',
-        message: 'Bạn không có quyền trên đối tượng này nên không gửi yêu cầu được.',
+        message: 'Bạn không có quyền trên hồ sơ này nên không gửi yêu cầu được.',
       });
     }
     if (tier === 'whitelist') {
       throw new BadRequestException({
         code: 'ACCESS_ALREADY_GRANTED',
-        message: 'Bạn đã xem thẳng được đối tượng này, không cần xin.',
+        message: 'Bạn đã xem thẳng được hồ sơ này, không cần xin.',
       });
     }
 
@@ -707,7 +707,7 @@ export class BreakGlassService implements OnModuleInit {
     if (existing) {
       throw new ConflictException({
         code: 'BREAK_GLASS_PENDING',
-        message: 'Bạn đã có một yêu cầu đang chờ duyệt cho đối tượng này.',
+        message: 'Bạn đã có một yêu cầu đang chờ duyệt cho hồ sơ này.',
       });
     }
     if (claimable) {
@@ -723,7 +723,7 @@ export class BreakGlassService implements OnModuleInit {
     if (held) {
       throw new ConflictException({
         code: 'BREAK_GLASS_ACTIVE',
-        message: 'Bạn đang có quyền xem đối tượng này ở phiên đăng nhập này, chưa cần xin thêm.',
+        message: 'Bạn đang có quyền xem hồ sơ này ở phiên đăng nhập này, chưa cần xin thêm.',
       });
     }
 
@@ -766,7 +766,7 @@ export class BreakGlassService implements OnModuleInit {
         error,
         {
           code: 'BREAK_GLASS_PENDING',
-          message: 'Bạn đã có một yêu cầu đang chờ duyệt cho đối tượng này.',
+          message: 'Bạn đã có một yêu cầu đang chờ duyệt cho hồ sơ này.',
         },
         // Khai ĐÍCH DANH: bảng `approval` còn khóa chính, và một 23505 từ chỗ khác mà hiện ra
         // câu "bạn đã có yêu cầu đang chờ" là nói sai hẳn việc vừa xảy ra.

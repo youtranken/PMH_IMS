@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -16,6 +16,9 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
  * Toàn bộ thứ dưới đây là logic THUẦN: đọc/kẹp tham số, quyết cái gì được ghi lên URL. Kiểm
  * được bằng bảng dữ liệu, không cần trình duyệt, không cần server.
  */
+
+// Số dòng một trang nhớ trong localStorage theo màn: bài trước không được rò sang bài sau.
+beforeEach(() => localStorage.clear());
 
 function wrapper(urlPath: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -380,5 +383,31 @@ describe('useListUrlState — giá trị lọc ngoài danh sách cho phép', () 
   it('ô không khai `allowed` thì giữ nguyên giá trị (mã site là UUID tự do)', () => {
     const { result } = mount('/devices?siteId=whatever', options);
     expect(result.current.url.filters.siteId).toBe('whatever');
+  });
+});
+
+/** TB-15: chọn 50 dòng ở Thiết bị, mở lại màn là về 20 — không nhớ. Nhớ theo từng màn. */
+describe('useListUrlState — nhớ số dòng một trang theo màn', () => {
+  it('đổi cỡ trang rồi mở lại màn (URL không có limit) → dùng cỡ đã nhớ', () => {
+    localStorage.clear();
+    const first = mount('/devices');
+    act(() => first.result.current.url.setLimit(50));
+    first.unmount();
+    const again = mount('/devices');
+    expect(again.result.current.url.limit).toBe(50);
+  });
+  it('màn khác không bị ảnh hưởng', () => {
+    localStorage.clear();
+    const first = mount('/devices');
+    act(() => first.result.current.url.setLimit(100));
+    first.unmount();
+    expect(mount('/software').result.current.url.limit).toBe(20);
+  });
+  it('URL có limit thì URL thắng', () => {
+    localStorage.clear();
+    const first = mount('/devices');
+    act(() => first.result.current.url.setLimit(50));
+    first.unmount();
+    expect(mount('/devices?limit=10').result.current.url.limit).toBe(10);
   });
 });

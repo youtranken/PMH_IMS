@@ -26,6 +26,8 @@ import { isStepUpCancelled, useStepUpRetry } from '@/ui/use-step-up-retry';
 import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
+import { CodeInput } from '@/ui/code-input';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 
 /** Phải khớp `SCOPE_TYPES` bên API (`access-tier.ts`) và CHECK ở tầng DB. */
 type ScopeType =
@@ -166,7 +168,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const [onlyEmpty, setOnlyEmpty] = useState(false);
   const [grantingScope, setGrantingScope] = useState<ScopeOption | null>(null);
   const [addingFor, setAddingFor] = useState<AccountRow | null>(null);
-  /** Người NHẬN của "Sao chép quyền từ…" — chọn đồng nghiệp nằm trong hộp. */
+  /** Người NHẬN của "Chép quyền từ…" — chọn đồng nghiệp nằm trong hộp. */
   const [copyingFor, setCopyingFor] = useState<AccountRow | null>(null);
   /** Ô / chip đang mở để đặt/gỡ quyền. `rule` null = đang gán mới. */
   const [cell, setCell] = useState<{
@@ -483,11 +485,15 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('access.title')}
-        subtitle={t('access.subtitle')}
+        titleTip={t('access.defaultDenied')}
         actions={
-          <button type="button" className="btn" onClick={() => setChecking(true)}>
-            {t('access.check')}
-          </button>
+          <>
+            {/* Rà soát quyền định kỳ (UX-E28): chỉ cấu hình quyền, không giá trị két (FR-026). */}
+            <ExportXlsxButton url="/api/v1/vault/access/export.xlsx" fileName="quyen-ket.xlsx" />
+            <button type="button" className="btn" onClick={() => setChecking(true)}>
+              {t('access.check')}
+            </button>
+          </>
         }
       />
 
@@ -533,12 +539,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           </label>
         </FilterBar>
 
-        {/* Mặc định-không-có-quyền và dòng tổng là MỘT khối thông tin: tách hai thì câu chú thích
-            trông như chữ lạc, và cỡ chữ lộn thứ bậc. Dòng tổng chỉ hiện khi CẢ BA truy vấn xong
-            và không lỗi — thiếu một cái là mọi con số ở đây thành số bịa. */}
-        <div className="alert info access-intro">
-          <p>{t('access.defaultDenied')}</p>
-          {!loading && !failed ? (
+        {/* Băng chỉ giữ dòng tổng (PW-C12): luật mặc-định-không-có-quyền đã nằm ở nút (i) cạnh tiêu
+            đề. Dòng tổng chỉ hiện khi CẢ BA truy vấn xong và không lỗi — thiếu một cái là mọi con
+            số ở đây thành số bịa. */}
+        {!loading && !failed ? (
+          <div className="alert info access-intro">
             <p>
               {t('access.summaryMain', {
                 people: members.length,
@@ -564,8 +569,8 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                 t('access.summaryEmpty', { count: emptyScopes })
               )}
             </p>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {content}
 
@@ -1476,7 +1481,7 @@ function MultiGrantDialog({
 }
 
 /**
- * "Sao chép quyền từ…" — người mới vào tổ thường cần đúng bộ quyền của một đồng nghiệp cùng tổ.
+ * "Chép quyền từ…" — người mới vào tổ thường cần đúng bộ quyền của một đồng nghiệp cùng tổ.
  * Gán tay từng nhóm là chỗ dễ sót một nhóm hoặc chọn nhầm tầng.
  *
  * Chỉ dùng API gán sẵn có (`POST /vault/access`, SA/Admin + step-up) — mỗi nhóm một dòng, một
@@ -1792,9 +1797,9 @@ function CheckAccessDialog({
           />
         </Field>
         <Field label={t('access.checkCode')} htmlFor="access-check-code">
-          <input
+          <CodeInput
+            caps
             id="access-check-code"
-            className="inp mono"
             value={code}
             placeholder={t('access.checkCodePlaceholder')}
             onChange={(event) => setCode(event.target.value)}

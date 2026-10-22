@@ -251,6 +251,12 @@ describe('auth.css — bố cục ảnh / form', () => {
     expect(rule(css, '.auth-photo img')).toMatch(/object-fit:\s*cover/);
   });
 
+  // PW-C21: chữ "Phu My Hung" xám của logo nằm trên ảnh mờ còn sáng → tương phản thấp.
+  it('nền cột form (ảnh mờ) đủ tối cho chữ xám của logo: brightness ≤ 0.32', () => {
+    const level = Number(/brightness\(([\d.]+)\)/.exec(rule(css, '.auth-main::before'))?.[1] ?? 1);
+    expect(level).toBeLessThanOrEqual(0.32);
+  });
+
   it('≤720px: bỏ mảng ảnh và khối logo trên card, hiện biểu tượng + tên trong card', () => {
     expect(rule(narrow, '.auth-panel')).toMatch(/display:\s*none/);
     expect(rule(narrow, '.auth-head')).toMatch(/display:\s*none/);

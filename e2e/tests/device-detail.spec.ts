@@ -80,7 +80,7 @@ test.describe('Trang chi tiết thiết bị', () => {
        dòng S/N dưới tiêu đề. */
     const quick = page.getByRole('tabpanel');
     await expect(quick.getByText(`FOC-${code}`, { exact: true })).toBeVisible();
-    await expect(quick.getByRole('button', { name: 'Chép serial' })).toBeVisible();
+    await expect(quick.getByRole('button', { name: 'Sao chép serial' })).toBeVisible();
     await expect(page.getByText(`FOC-${code}`, { exact: true })).toHaveCount(1);
 
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
@@ -97,7 +97,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     ).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
+    await expect(page.getByText('Thêm hồ sơ')).toBeVisible();
     await expect(page.getByText('Thêm cổng Gi1/0/1', { exact: true })).toBeVisible();
     // DEV-085: người làm hiện HỌ TÊN, email lùi vào tooltip.
     await expect(page.getByTitle('e2e-sa@pmh.com.vn').first()).toHaveText('E2E Super Admin');
@@ -108,7 +108,8 @@ test.describe('Trang chi tiết thiết bị', () => {
     const url = new URL(page.url());
     expect(url.searchParams.get('objectType')).toBe('device');
     expect(url.searchParams.get('objectId')).toBe(deviceId);
-    await expect(page.getByRole('searchbox', { name: 'Mã đối tượng' })).toHaveValue(deviceId);
+    // Lọc theo đối tượng hiện là chip (UX-E08), không còn ô gõ mã.
+    await expect(page.getByRole('button', { name: /^Đối tượng: / })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('khu mở rộng chưa có module nào đăng ký → API trả rỗng, trang không hiện khối trống', async ({
@@ -258,14 +259,14 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     await expect(page.getByRole('progressbar')).toHaveCount(0);
 
     // Q-27: ô chưa khai ĐỨNG ĐÚNG CHỖ trong Thông số và ghi "chưa khai", không ẩn; bảo hành chỉ ở
-    // dải 4 ô (không lặp ở Thông số); nút bổ sung đếm đúng số ô trống.
+    // dải 4 ô (không lặp ở Thông số); nút bổ sung đếm đúng số ô trống. Nhà cung cấp (thẻ cột phải)
+    // và Phòng ban (dòng phụ ô Người dùng) cũng không lặp ở Thông số (PW-A04).
     const spec = page.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
-      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Phòng ban sử dụng', 'Ghi chú',
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị', 'Ngày mua', 'Ghi chú',
     ]);
-    await expect(spec.getByRole('definition').filter({ hasText: 'chưa khai' })).toHaveCount(8);
-    await expect(page.getByRole('button', { name: 'Bổ sung 8 ô còn thiếu' })).toBeVisible();
+    await expect(spec.getByRole('definition').filter({ hasText: 'chưa khai' })).toHaveCount(6);
+    await expect(page.getByRole('button', { name: 'Bổ sung 6 ô còn thiếu' })).toBeVisible();
   });
 
   /**

@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { todayIso } from '@/lib/format';
 import { PATHS } from '@/lib/routes';
-import { ChipToggleGroup } from '@/ui/chip-toggle-group';
+import { foldSearch } from '@/lib/search-fold';
+import { FilterBar } from '@/ui/filter-bar';
 import { DataTable } from '@/ui/data-table';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -47,6 +48,7 @@ export function IncidentsScreen({ me }: { me: Me }) {
   const kind = params.get('kind') ?? '';
   const source = (params.get('source') ?? '') as Source | '';
   const signed = params.get('signed') ?? '';
+  const q = params.get('q') ?? '';
   const query = new URLSearchParams({ year: String(year) });
   if (month) query.set('month', month);
   if (kind) query.set('kind', kind);
@@ -111,7 +113,8 @@ export function IncidentsScreen({ me }: { me: Me }) {
           row.original.signedCurrent ? (
             <span className="badge ok">{t('iso.incidents.signedYes')}</span>
           ) : (
-            <span className="badge muted">{row.original.locked ? t('iso.incidents.signedNo') : t('iso.incidents.notLocked')}</span>
+            // Cột Bản ký nói về BẢN KÝ — trạng thái khóa của kỳ không lẫn vào đây (PW-B28).
+            <span className="badge muted">{t('iso.incidents.signedNo')}</span>
           ),
       },
       {
@@ -127,7 +130,14 @@ export function IncidentsScreen({ me }: { me: Me }) {
     [t],
   );
 
-  const items = list.data?.items ?? [];
+  /* Tìm theo số phiếu, mô tả, người lập và ô gắn kèm (tên job / máy) — lọc tại chỗ trên năm đang
+     xem, không dấu không hoa như mọi ô tìm (UX-E31). */
+  const needle = foldSearch(q.trim());
+  const items = (list.data?.items ?? []).filter(
+    (row) =>
+      !needle ||
+      foldSearch([row.code, row.description, row.createdByName, ...row.cells.map((cell) => cell.label)].join(' ')).includes(needle),
+  );
   const unlinked = list.data?.unlinked ?? [];
 
   return (
@@ -142,7 +152,13 @@ export function IncidentsScreen({ me }: { me: Me }) {
         }
       />
       {unlinked.length > 0 ? <UnlinkedList cells={unlinked} onCreate={(cell) => setDialog({ cell })} /> : null}
-      <section className="filter-bar" aria-label={t('iso.incidents.filters')}>
+      <FilterBar
+        search={q}
+        onSearchChange={(value) => setParam('q', value)}
+        searchPlaceholder={t('iso.incidents.search')}
+        activeCount={[month, kind, source, signed, q].filter(Boolean).length}
+        onClear={() => setParams(new URLSearchParams(year === thisYear ? {} : { year: String(year) }), { replace: true })}
+      >
         <SegmentedRadio
           label={t('iso.incidents.year')}
           value={String(year)}
@@ -166,16 +182,17 @@ export function IncidentsScreen({ me }: { me: Me }) {
           options={[{ value: '', label: t('iso.incidents.allKinds') }, ...INCIDENT_KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))]}
           onChange={(v) => setParam('kind', v)}
         />
-        <ChipToggleGroup
+        {/* Chọn MỘT (UX-E31): dáng chip chọn-nhiều mà chỉ giữ chip cuối là đánh đố. */}
+        <SegmentedRadio
           label={t('iso.incidents.source')}
-          allLabel={t('iso.incidents.allSources')}
+          value={source}
           options={[
+            { value: '', label: t('iso.incidents.allSources') },
             { value: 'backup', label: '0203' },
             { value: 'antivirus', label: '0208' },
             { value: 'direct', label: t('iso.incidents.direct') },
           ]}
-          value={source ? [source] : []}
-          onChange={(next) => setParam('source', next.at(-1) ?? '')}
+          onChange={(v) => setParam('source', v)}
         />
         <Select
           value={signed}
@@ -188,7 +205,7 @@ export function IncidentsScreen({ me }: { me: Me }) {
           ]}
           onChange={(v) => setParam('signed', v)}
         />
-      </section>
+      </FilterBar>
       {list.isLoading ? (
         <Loading variant="table" />
       ) : list.isError ? (

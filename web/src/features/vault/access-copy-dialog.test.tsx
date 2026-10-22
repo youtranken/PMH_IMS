@@ -66,26 +66,26 @@ function renderAt(entry: string) {
   return posts;
 }
 
-describe('Quyền két — "Sao chép quyền từ…" (ADM-040)', () => {
+describe('Quyền két — "Chép quyền từ…" (ADM-040)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('chép đúng nhóm + tầng của đồng nghiệp, bỏ qua nhóm người nhận đã có', async () => {
     const posts = renderAt('/admin/vault-access?user=u-an');
-    await userEvent.click(await screen.findByRole('button', { name: 'Sao chép quyền từ…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Sao chép quyền két cho Nguyễn An' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Chép quyền từ…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Chép quyền két — Nguyễn An' });
 
     // Lê Chi chưa có quyền nào → không có mặt trong ô chọn.
     await userEvent.click(within(dialog).getByRole('button', { name: 'Đồng nghiệp' }));
     expect(screen.queryByRole('option', { name: /Lê Chi/ })).toBeNull();
     await userEvent.click(screen.getByRole('option', { name: 'Trần Bình (2 quyền)' }));
 
-    expect(within(dialog).getByText('Sẽ gán 1 nhóm:')).toBeInTheDocument();
+    expect(within(dialog).getByText('Sẽ gán 1 phạm vi:')).toBeInTheDocument();
     expect(within(dialog).getByText('Tên miền & SSL: Chứng chỉ SSL · Xem thẳng')).toBeInTheDocument();
-    expect(within(dialog).getByText('Bỏ qua 1 nhóm người này đã có:')).toBeInTheDocument();
+    expect(within(dialog).getByText('Bỏ qua 1 phạm vi người này đã có:')).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gán quyền' }));
     const confirm = await screen.findByRole('dialog', { name: 'Gán quyền két?' });
-    expect(confirm).toHaveTextContent('Gán cho Nguyễn An 1 nhóm quyền két giống Trần Bình');
+    expect(confirm).toHaveTextContent('Gán cho Nguyễn An 1 phạm vi quyền két giống Trần Bình');
     await userEvent.click(within(confirm).getByRole('button', { name: 'Gán quyền' }));
 
     await waitFor(() => expect(posts).toHaveLength(1));
@@ -94,22 +94,22 @@ describe('Quyền két — "Sao chép quyền từ…" (ADM-040)', () => {
       scopeType: 'software_kind',
       scopeRef: 'ssl',
       tier: 'whitelist',
-      note: 'Sao chép từ binh@pmh.com.vn',
+      note: 'Chép từ binh@pmh.com.vn',
     });
   });
 
   it('đường hỏng: chưa chọn đồng nghiệp thì báo lỗi, không ghi gì', async () => {
     const posts = renderAt('/admin/vault-access?user=u-an');
-    await userEvent.click(await screen.findByRole('button', { name: 'Sao chép quyền từ…' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Chép quyền từ…' }));
     const dialog = await screen.findByRole('dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Gán quyền' }));
-    expect(within(dialog).getByRole('alert')).toHaveTextContent('Chọn một đồng nghiệp để sao chép.');
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Chọn một đồng nghiệp để chép quyền.');
     expect(posts).toHaveLength(0);
   });
 
   it('câu giải thích dài nằm sau nút (i), không thành dòng gợi ý dưới ô', async () => {
     renderAt('/admin/vault-access?user=u-an');
-    await userEvent.click(await screen.findByRole('button', { name: 'Sao chép quyền từ…' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Chép quyền từ…' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('button', { name: 'Giải thích: Đồng nghiệp' })).toBeInTheDocument();
     expect(within(dialog).queryByText(/Người nhận được đúng các nhóm/)).toBeNull();

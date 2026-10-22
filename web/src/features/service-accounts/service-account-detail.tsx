@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api-client";
 import type { Me } from "@/lib/me";
 import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
+import { RenewDialog } from "@/ui/renew-dialog";
 import { HistoryPanel } from "@/ui/history-panel";
 import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
@@ -34,6 +35,7 @@ import {
   type ServiceAccountHistoryRow,
   type ServiceAccountRow,
 } from "./service-account-types";
+import { RecordStamp } from "@/ui/record-stamp";
 
 /**
  * Trang hồ sơ một tài khoản dịch vụ.
@@ -47,6 +49,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
   const [editing, setEditing] = useState(false);
+  const [renewing, setRenewing] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [params] = useSearchParams();
   /* Fallback PHẢI là "vault": khu Hồ sơ không còn là tab (NET-075), để mặc định 'profile'
@@ -76,9 +79,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       apiFetch<ServiceAccountHistoryRow[]>(
         `/api/v1/service-accounts/${id}/history`,
       ),
-    // Tài khoản đã vô hiệu hóa thì băng rôn đầu trang phải nói ai, lúc nào, vì sao — câu đó
-    // chỉ nằm trong sổ lịch sử, nên hỏi sổ ngay cả khi chưa mở tab.
-    enabled: tab === "history" || account.data?.status === "disabled",
+    // Hỏi sổ ngay khi mở trang: dòng "sửa lần cuối … bởi …" dưới dải 4 ô cần lượt mới nhất (UX-E26).
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["service-accounts"] });
@@ -154,6 +155,12 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
               <button type="button" className="btn primary" onClick={() => setEditing(true)}>
                 {t("serviceAccounts.edit")}
               </button>
+              {/* Gia hạn ngay tại hồ sơ (PW-A14) — cùng RenewDialog với màn Sắp hết hạn. */}
+              {item.status === "active" && item.endDate ? (
+                <button type="button" className="btn" onClick={() => setRenewing(true)}>
+                  {t("expiry.renew")}
+                </button>
+              ) : null}
               {/* Đổi trạng thái đi hộp RIÊNG vì nó bắt ghi lý do — cùng hộp với danh sách, để
                   không phải quay ra danh sách, tìm dòng rồi mở ⋯ mới đóng được một tài khoản.
                   Đã ngừng dùng thì "Dùng lại…" nằm ở băng cảnh báo ngay dưới; menu chỉ còn đúng
@@ -255,6 +262,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
               },
         ]}
       />
+      <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />
 
       <DetailLayout>
 
@@ -317,6 +325,18 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       </TabPanel>
       </DetailLayout>
 
+      {renewing && item.endDate ? (
+        <RenewDialog
+          row={{ kind: "service_account", id: item.id, label: item.name, code: item.code, end: item.endDate }}
+          kindLabel={t("nav.serviceAccounts")}
+          csrfToken={me.csrfToken}
+          onClose={() => setRenewing(false)}
+          onDone={() => {
+            setRenewing(false);
+            void refresh();
+          }}
+        />
+      ) : null}
       {editing ? (
         <ServiceAccountForm
           row={item}

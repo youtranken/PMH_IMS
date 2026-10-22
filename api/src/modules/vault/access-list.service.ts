@@ -379,7 +379,7 @@ export class AccessListService {
     if (!options.some((o) => o.scopeType === scopeType && o.scopeRef === scopeRef)) {
       throw new BadRequestException({
         code: 'SCOPE_REF_NOT_FOUND',
-        message: 'Nhóm đối tượng này không còn (site hoặc loại đã bị xóa hay ngừng dùng).',
+        message: 'Phạm vi này không còn (site hoặc loại đã bị xóa hay ngừng dùng).',
       });
     }
   }

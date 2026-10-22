@@ -16,6 +16,9 @@ import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/sched
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
+import { MobileCardList } from '@/ui/data-table';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 /** Khoảng hợp lệ của "Trong vòng (ngày)" — cùng mốc xa nhất của bộ lọc màn Sắp hết hạn. */
 const WITHIN_MIN = 1;
@@ -109,6 +112,130 @@ export function DigestRulesPanel({
 
   const rows = rules.data ?? [];
 
+  /** Menu dòng của một luật — dùng chung cho dòng bảng và thẻ điện thoại. */
+  const ruleActions = (rule: DigestRule) => (
+    <RowActions
+      primary={{
+        label: t('common.edit'),
+        ariaLabel: t('common.editOf', { subject: rule.name }),
+        onClick: () => setEditing({ rule }),
+      }}
+      label={t('common.actionsOf', { subject: rule.name })}
+      items={[
+        {
+          key: 'toggle',
+          label: t(rule.active ? 'digest.pause' : 'digest.resume'),
+          warn: rule.active,
+          ok: !rule.active,
+          disabled: toggle.isPending,
+          onSelect: () =>
+            toggle.mutate(
+              { id: rule.id, active: !rule.active },
+              {
+                onSuccess: () => {
+                  toast({
+                    message: t(rule.active ? 'digest.pausedDone' : 'digest.resumed'),
+                  });
+                  void refresh();
+                },
+                onError: (error) =>
+                  toast({ message: errorMessage(error), tone: 'error' }),
+              },
+            ),
+        },
+        {
+          key: 'preview',
+          label: t('digest.preview'),
+          onSelect: () => setPreviewing(rule),
+        },
+        /* Gửi cho CHÍNH người bấm: xem thư thật trong hộp thư mình mà không
+           làm phiền danh sách của luật — nên không cần hỏi lại. */
+        {
+          key: 'test-me',
+          label: t('digest.testMe'),
+          disabled: sendTest.isPending,
+          onSelect: () =>
+            sendTest.mutate(
+              { id: rule.id, onlyMe: true },
+              {
+                onSuccess: testSentToast,
+                onError: (error) =>
+                  toast({ message: errorMessage(error), tone: 'error' }),
+              },
+            ),
+        },
+        {
+          key: 'test',
+          label: t('digest.test'),
+          disabled: sendTest.isPending,
+          /*
+           * "Gửi thử" KHÔNG gửi vào một hộp thư nháp nào cả — nó bắn email
+           * THẬT tới đúng danh sách người nhận của luật, mà danh sách ấy
+           * thường là sếp và cả phòng. Chữ "thử" làm người ta tưởng ngược
+           * lại, nên đây là chỗ hiếm hoi phải hỏi lại dù thao tác không
+           * ghi gì xuống DB: cái không hoàn tác được là email đã rời đi.
+           *
+           * Câu hỏi NÊU ĐÍCH DANH người nhận — đó mới là thông tin giúp
+           * người dùng dừng lại đúng lúc, chứ không phải chữ "chắc chưa?".
+           */
+          onSelect: () => {
+            void (async () => {
+              const ok = await askConfirm({
+                title: t('common.titleOf', {
+                  action: t('digest.test'),
+                  subject: rule.name,
+                }),
+                message: t('digest.confirmTest', {
+                  to: rule.recipients.join(', '),
+                }),
+                confirmLabel: t('digest.test'),
+              });
+              if (!ok) return;
+              sendTest.mutate(
+                { id: rule.id },
+                {
+                  onSuccess: testSentToast,
+                  onError: (error) =>
+                    toast({ message: errorMessage(error), tone: 'error' }),
+                },
+              );
+            })();
+          },
+        },
+        {
+          key: 'delete',
+          label: t('digest.delete'),
+          danger: true,
+          onSelect: () => {
+            void (async () => {
+              const ok = await askConfirm({
+                title: t('common.titleOf', {
+                  action: t('digest.delete'),
+                  subject: rule.name,
+                }),
+                message: t('digest.confirmDelete', { name: rule.name }),
+                danger: true,
+                confirmLabel: t('digest.delete'),
+              });
+              if (!ok) return;
+              remove.mutate(
+                { id: rule.id },
+                {
+                  onSuccess: () => {
+                    toast({ message: t('digest.deleted') });
+                    void refresh();
+                  },
+                  onError: (error) =>
+                    toast({ message: errorMessage(error), tone: 'error' }),
+                },
+              );
+            })();
+          },
+        },
+      ]}
+    />
+  );
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
   return (
     <div className="attachment-panel">
       {canEdit ? null : <p className="muted">{t('digest.readOnly')}</p>}
@@ -128,6 +255,21 @@ export function DigestRulesPanel({
               </button>
             ) : undefined
           }
+        />
+      ) : narrow ? (
+        /* ≤600px: thẻ "tên + lịch gửi + người nhận" thay bảng gập 7 dòng nhãn (TB-05). */
+        <MobileCardList
+          rows={rows}
+          rowKey={(rule) => rule.id}
+          rowClassName={(rule) => (rule.active ? '' : 'row-muted')}
+          card={{
+            title: (rule) => rule.name,
+            badge: (rule) => (rule.active ? null : <span className="badge muted">{t('digest.paused')}</span>),
+            actions: canEdit ? (rule) => ruleActions(rule) : undefined,
+            subtitle: (rule) =>
+              `${describeSchedule({ frequency: rule.frequency, hour: rule.hour, weekday: rule.weekday ?? undefined, dayOfMonth: rule.dayOfMonth ?? undefined })} · ${rule.nextSendAt ? formatDateTime(rule.nextSendAt) : t('digest.paused')}`,
+            meta: (rule) => rule.recipients.join(', '),
+          }}
         />
       ) : (
         <div className="table-wrap">
@@ -177,130 +319,7 @@ export function DigestRulesPanel({
                   <td data-label={t('digest.lastSent')}>
                     {rule.lastSentAt ? formatDateTime(rule.lastSentAt) : t('digest.never')}
                   </td>
-                  {canEdit ? (
-                    <td data-label={t('common.actions')}>
-                      <RowActions
-                        primary={{
-                          label: t('common.edit'),
-                          ariaLabel: t('common.editOf', { subject: rule.name }),
-                          onClick: () => setEditing({ rule }),
-                        }}
-                        label={t('common.actionsOf', { subject: rule.name })}
-                        items={[
-                          {
-                            key: 'toggle',
-                            label: t(rule.active ? 'digest.pause' : 'digest.resume'),
-                            warn: rule.active,
-                            ok: !rule.active,
-                            disabled: toggle.isPending,
-                            onSelect: () =>
-                              toggle.mutate(
-                                { id: rule.id, active: !rule.active },
-                                {
-                                  onSuccess: () => {
-                                    toast({
-                                      message: t(rule.active ? 'digest.pausedDone' : 'digest.resumed'),
-                                    });
-                                    void refresh();
-                                  },
-                                  onError: (error) =>
-                                    toast({ message: errorMessage(error), tone: 'error' }),
-                                },
-                              ),
-                          },
-                          {
-                            key: 'preview',
-                            label: t('digest.preview'),
-                            onSelect: () => setPreviewing(rule),
-                          },
-                          /* Gửi cho CHÍNH người bấm: xem thư thật trong hộp thư mình mà không
-                             làm phiền danh sách của luật — nên không cần hỏi lại. */
-                          {
-                            key: 'test-me',
-                            label: t('digest.testMe'),
-                            disabled: sendTest.isPending,
-                            onSelect: () =>
-                              sendTest.mutate(
-                                { id: rule.id, onlyMe: true },
-                                {
-                                  onSuccess: testSentToast,
-                                  onError: (error) =>
-                                    toast({ message: errorMessage(error), tone: 'error' }),
-                                },
-                              ),
-                          },
-                          {
-                            key: 'test',
-                            label: t('digest.test'),
-                            disabled: sendTest.isPending,
-                            /*
-                             * "Gửi thử" KHÔNG gửi vào một hộp thư nháp nào cả — nó bắn email
-                             * THẬT tới đúng danh sách người nhận của luật, mà danh sách ấy
-                             * thường là sếp và cả phòng. Chữ "thử" làm người ta tưởng ngược
-                             * lại, nên đây là chỗ hiếm hoi phải hỏi lại dù thao tác không
-                             * ghi gì xuống DB: cái không hoàn tác được là email đã rời đi.
-                             *
-                             * Câu hỏi NÊU ĐÍCH DANH người nhận — đó mới là thông tin giúp
-                             * người dùng dừng lại đúng lúc, chứ không phải chữ "chắc chưa?".
-                             */
-                            onSelect: () => {
-                              void (async () => {
-                                const ok = await askConfirm({
-                                  title: t('common.titleOf', {
-                                    action: t('digest.test'),
-                                    subject: rule.name,
-                                  }),
-                                  message: t('digest.confirmTest', {
-                                    to: rule.recipients.join(', '),
-                                  }),
-                                  confirmLabel: t('digest.test'),
-                                });
-                                if (!ok) return;
-                                sendTest.mutate(
-                                  { id: rule.id },
-                                  {
-                                    onSuccess: testSentToast,
-                                    onError: (error) =>
-                                      toast({ message: errorMessage(error), tone: 'error' }),
-                                  },
-                                );
-                              })();
-                            },
-                          },
-                          {
-                            key: 'delete',
-                            label: t('digest.delete'),
-                            danger: true,
-                            onSelect: () => {
-                              void (async () => {
-                                const ok = await askConfirm({
-                                  title: t('common.titleOf', {
-                                    action: t('digest.delete'),
-                                    subject: rule.name,
-                                  }),
-                                  message: t('digest.confirmDelete', { name: rule.name }),
-                                  danger: true,
-                                  confirmLabel: t('digest.delete'),
-                                });
-                                if (!ok) return;
-                                remove.mutate(
-                                  { id: rule.id },
-                                  {
-                                    onSuccess: () => {
-                                      toast({ message: t('digest.deleted') });
-                                      void refresh();
-                                    },
-                                    onError: (error) =>
-                                      toast({ message: errorMessage(error), tone: 'error' }),
-                                  },
-                                );
-                              })();
-                            },
-                          },
-                        ]}
-                      />
-                    </td>
-                  ) : null}
+                  {canEdit ? <td data-label={t('common.actions')}>{ruleActions(rule)}</td> : null}
                 </tr>
               ))}
             </tbody>
@@ -446,7 +465,7 @@ function RuleForm({
           );
         }}
       >
-        {check.summary ? <div className="span-2">{check.summary}</div> : null}
+        {check.summary}
         <Field label={t('digest.name')} required htmlFor="rule-name" error={check.error('name')}>
           <input
             id="rule-name"
@@ -542,7 +561,7 @@ function RuleForm({
           <SchedulePicker value={schedule} onChange={setSchedule} />
         </Field>
 
-        <Field label={t('digest.active')}>
+        <Field label={t('digest.stateLabel')}>
           {/* Công tắc chứ không phải ô tick: đây là trạng thái Chạy / Tạm ngưng của cả luật,
               và chữ bên cạnh đổi theo để không phải đoán "tick là đang chạy hay đang dừng". */}
           <label className="row" style={{ gap: 'var(--space-3)' }}>

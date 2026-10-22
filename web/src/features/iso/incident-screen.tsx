@@ -49,11 +49,9 @@ function IncidentView({ me, incident }: { me: Me; incident: Incident }) {
       <div className="no-print">
         <PageHeader
           title={t('iso.incident.viewTitle', { code: incident.code })}
-          subtitle={
-            readOnly
-              ? t(incident.inReview ? 'iso.incident.reviewSubtitle' : 'iso.incident.lockedSubtitle', { period })
-              : t('iso.incident.openSubtitle', { period })
-          }
+          /* Phụ đề một ý (PW-B11): sửa được hay không là việc của băng ngay dưới — nói ở cả hai
+             chỗ thì lặp, và câu "sửa được" sai với người không phụ trách. */
+          subtitle={t('iso.incident.belongsTo', { period })}
           actions={
             <>
               <Link to={PATHS.isoIncidents}>{t('iso.incident.backToList')}</Link>
@@ -71,8 +69,10 @@ function IncidentView({ me, incident }: { me: Me; incident: Incident }) {
         <p className="alert info">
           <span className={`badge ${INCIDENT_STATUS_TONE[incident.status]}`}>{STATUS_LABEL[incident.status]}</span>{' '}
           {readOnly
-            ? t(incident.inReview ? 'iso.incident.reviewHint' : 'iso.incident.lockedHint')
-            : t(incident.status === 'in_progress' ? 'iso.incident.inProgressNote' : 'iso.incident.editableNote')}{' '}
+            ? t(incident.inReview ? 'iso.incident.reviewShort' : 'iso.incident.lockedShort')
+            : incident.canWrite === false
+              ? t('iso.incident.noWriteHint')
+              : t(incident.status === 'in_progress' ? 'iso.incident.inProgressNote' : 'iso.incident.editableNote')}{' '}
           <Link to={PATHS.isoPeriod(incident.governing[0], monthKey(incident.year, incident.month))}>{t('iso.openPeriods')}</Link>
         </p>
       </div>

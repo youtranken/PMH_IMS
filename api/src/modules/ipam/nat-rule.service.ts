@@ -410,6 +410,20 @@ export class NatRuleService {
   }
 
   /**
+   * Gỡ NHIỀU luật, MỘT lý do (UX-E25) — dừng một máy chủ có chục luật không còn là chục lượt bấm.
+   * MỘT transaction, mỗi luật đi qua đúng `voidWithin` của gỡ tay (lịch sử + nhật ký từng luật);
+   * một luật đã gỡ / không còn thì cả lô không ghi gì. Khoá theo thứ tự id cố định để hai lô chồng
+   * nhau không khoá chéo.
+   */
+  async bulkVoid(actor: string, ids: string[], reason: string): Promise<{ voided: number }> {
+    const unique = [...new Set(ids)].sort();
+    await this.db.transaction(async (tx) => {
+      for (const id of unique) await this.voidWithin(tx, actor, id, reason);
+    });
+    return { voided: unique.length };
+  }
+
+  /**
    * Thân của `voidRule`, chạy trong transaction CÓ SẴN — để lượt thanh lý máy gỡ được cả chùm
    * rule trong cùng một transaction với lượt đổi trạng thái thiết bị. Một bản logic, hai lối vào.
    */

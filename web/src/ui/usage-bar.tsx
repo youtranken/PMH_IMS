@@ -19,6 +19,7 @@ export function UsageBar({
   warnAt,
   dangerAt,
   marker,
+  title,
 }: {
   percent: number;
   /** Chữ hiện cạnh thanh, vd "127/254 · còn 127". Bỏ trống thì chỉ hiện %. */
@@ -36,6 +37,8 @@ export function UsageBar({
    * điều khiển: thanh đỏ 93% mà không thấy ngưỡng là 80 hay 90 thì không biết nó vượt bao xa.
    */
   marker?: { percent: number; label: string };
+  /** Đủ số khi rê chuột lên thanh, vd "155/254 đang dùng" khi chữ cạnh thanh chỉ nói "còn 99". */
+  title?: string;
 }) {
   // Kẹp lại phòng dữ liệu lệch: thanh tràn ra ngoài khung làm hỏng cả bảng.
   const value = Math.max(0, Math.min(100, Math.round(percent)));
@@ -50,6 +53,7 @@ export function UsageBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={ariaLabel}
+        title={title}
       >
         {/* Đã dùng mà chưa tới 1% vẫn phải thấy một vạch: dải có 1 IP khác hẳn dải trống trơn. */}
         <div

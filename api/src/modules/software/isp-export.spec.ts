@@ -1,4 +1,4 @@
-import { ISP_EXPORT_COLUMNS } from './isp-line.controller';
+import { ISP_EXPORT_COLUMNS } from './isp-import';
 
 /**
  * Q-04 (làm rõ): cột tốc độ là tốc độ của GÓI CƯỚC đường truyền, không phải thuộc tính của nhà

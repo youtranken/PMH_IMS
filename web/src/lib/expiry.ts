@@ -5,6 +5,7 @@
  *
  * Ngưỡng mặc định khớp luật digest (system_config): 30 ngày là "sắp", 7 ngày là "gấp".
  */
+import { formatCount } from '@/lib/format';
 import i18n from '@/lib/i18n';
 
 export type ExpiryLevel = 'expired' | 'critical' | 'warning' | 'ok' | 'none';
@@ -80,9 +81,9 @@ export function expiryLabel(
 ): string {
   if (!end) return i18n.t('expiry.labelNone');
   const days = daysUntil(end, now);
-  if (days < 0) return i18n.t('expiry.labelOverdue', { count: Math.abs(days) });
+  if (days < 0) return i18n.t('expiry.labelOverdue', { count: Math.abs(days), n: formatCount(Math.abs(days)) });
   if (days === 0) return i18n.t('expiry.labelToday');
-  return i18n.t('expiry.labelLeft', { count: days });
+  return i18n.t('expiry.labelLeft', { count: days, n: formatCount(days) });
 }
 
 function parseDateOnly(value: string): Date {

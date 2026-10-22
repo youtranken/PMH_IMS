@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { PATHS } from '@/lib/routes';
 import { canSee } from '@/lib/features';
 import { DatePicker } from '@/ui/date-picker';
+import { InfoTip } from '@/ui/info-tip';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
@@ -21,6 +21,10 @@ import { useFormErrors, useSubmitError } from '@/ui/use-form-errors';
 import { ISO_KEY, useDivisions, useIsoWrite, useJobs, useOwners } from './iso-api';
 import { canWriteForm, lineStorage, pointsError } from './iso-rules';
 import type { Division, FormOwners, IsoPerson, Job, JobLine } from './iso-types';
+import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { MobileCardList } from '@/ui/data-table';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 type Tab = 'jobs' | 'divisions' | 'owners';
 const TABS: Tab[] = ['jobs', 'divisions', 'owners'];
@@ -45,12 +49,7 @@ export function CatalogScreen({ me }: { me: Me }) {
       <PageHeader
         title={t('nav.isoCatalog')}
         subtitle={t('iso.catalog.subtitle')}
-        actions={
-          <>
-            {sees0203 ? <Link to={PATHS.isoBackup}>{t('nav.isoBackup')}</Link> : null}
-            {sees0208 ? <Link to={PATHS.isoAntivirus}>{t('nav.isoAntivirus')}</Link> : null}
-          </>
-        }
+        titleTip={t('iso.catalog.subtitleTip')}
       />
       <Tabs
         ariaLabel={t('iso.catalog.tabs')}
@@ -89,6 +88,28 @@ function JobsTab({ me }: { me: Me }) {
   const fail = (err: unknown) => toast({ message: errorMessage(err), tone: 'error' });
   const list = jobs.data ?? [];
 
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
+  const jobStatus = (job: Job) =>
+    job.stoppedOn ? (
+      <span className="badge muted">{t('iso.catalog.stoppedOn', { day: formatDate(job.stoppedOn) })}</span>
+    ) : (
+      <span className="badge ok">{t('iso.catalog.live')}</span>
+    );
+  const jobActions = (job: Job) => (
+    <RowActions
+      label={t('common.actionsOf', { subject: job.name })}
+      primary={{ label: t('common.edit'), ariaLabel: t('common.editOf', { subject: job.name }), onClick: () => setEditing(job) }}
+      items={
+        job.stoppedOn
+          ? [{ key: 'resume', label: t('iso.catalog.resume'), ok: true, onSelect: () => write.mutate({ id: job.id, path: 'resume' }, { onError: fail }) }]
+          : [
+              { key: 'up', label: t('iso.catalog.moveUp'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'up' } }, { onError: fail }) },
+              { key: 'down', label: t('iso.catalog.moveDown'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'down' } }, { onError: fail }) },
+              { key: 'stop', label: t('iso.catalog.stop'), warn: true, onSelect: () => setStopping(job) },
+            ]
+      }
+    />
+  );
   return (
     <section>
       <div className="sheet-toolbar">
@@ -117,6 +138,21 @@ function JobsTab({ me }: { me: Me }) {
         <LoadError error={jobs.error} onRetry={() => void jobs.refetch()} />
       ) : list.length === 0 ? (
         <EmptyState title={t('iso.catalog.noJobs')} hint={t('iso.catalog.noJobsHint')} />
+      ) : narrow ? (
+        /* ≤600px: thẻ "1 · PMH-Twin" + trạng thái + một dòng đối tượng con, thay thẻ 8 dòng
+           nhãn ~390px mỗi job (PW-B31). */
+        <MobileCardList
+          rows={list}
+          rowKey={(job) => job.id}
+          card={{
+            title: (job) => `${job.no} · ${job.name}`,
+            badge: (job) => jobStatus(job),
+            actions: canWrite ? (job) => jobActions(job) : undefined,
+            subtitle: (job) => job.lines.map((line) => line.label).filter(Boolean).join(' · ') || null,
+            meta: (job) => `${t('iso.catalog.trackedFrom')} ${formatDate(job.trackedFrom)}`,
+          }}
+          rowClassName={(job) => (job.stoppedOn ? 'row-muted' : '')}
+        />
       ) : (
         <div className="table-wrap">
           <table className="table table-stack">
@@ -149,30 +185,8 @@ function JobsTab({ me }: { me: Me }) {
                     <LineStack lines={job.lines} text={(l) => pointsText(l.pointsCloud, l.storageCloud)} />
                   </td>
                   <td data-label={t('iso.catalog.trackedFrom')}>{formatDate(job.trackedFrom)}</td>
-                  <td data-label={t('iso.catalog.status')}>
-                    {job.stoppedOn ? (
-                      <span className="badge muted">{t('iso.catalog.stoppedOn', { day: formatDate(job.stoppedOn) })}</span>
-                    ) : (
-                      <span className="badge ok">{t('iso.catalog.live')}</span>
-                    )}
-                  </td>
-                  {canWrite ? (
-                    <td data-label={t('common.actions')}>
-                      <RowActions
-                      label={t('common.actionsOf', { subject: job.name })}
-                      primary={{ label: t('common.edit'), ariaLabel: t('common.editOf', { subject: job.name }), onClick: () => setEditing(job) }}
-                      items={
-                        job.stoppedOn
-                          ? [{ key: 'resume', label: t('iso.catalog.resume'), ok: true, onSelect: () => write.mutate({ id: job.id, path: 'resume' }, { onError: fail }) }]
-                          : [
-                              { key: 'up', label: t('iso.catalog.moveUp'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'up' } }, { onError: fail }) },
-                              { key: 'down', label: t('iso.catalog.moveDown'), onSelect: () => write.mutate({ id: job.id, path: 'move', body: { direction: 'down' } }, { onError: fail }) },
-                              { key: 'stop', label: t('iso.catalog.stop'), warn: true, onSelect: () => setStopping(job) },
-                            ]
-                      }
-                      />
-                    </td>
-                  ) : null}
+                  <td data-label={t('iso.catalog.status')}>{jobStatus(job)}</td>
+                  {canWrite ? <td data-label={t('common.actions')} className="col-center">{jobActions(job)}</td> : null}
                 </tr>
               ))}
             </tbody>
@@ -235,6 +249,7 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
     })) ?? [blankLine()],
   );
   const [error, setError] = useSubmitError([no, name, trackedFrom, lines]);
+  const server = useServerFieldErrors([no, name, trackedFrom, lines]);
   const save = useIsoWrite<void, Job>(me.csrfToken, () => ({
     url: job ? `/api/v1/iso/catalog/jobs/${job.id}` : '/api/v1/iso/catalog/jobs',
     method: job ? 'PATCH' : 'POST',
@@ -290,7 +305,9 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
               toast({ message: t('iso.catalog.jobSaved') });
               onClose();
             },
-            onError: (err) => setError(errorMessage(err)),
+            onError: (err) => {
+              if (!server.claim(err, { ISO_JOB_NO_TAKEN: 'iso-job-no', ISO_JOB_NAME_TAKEN: 'iso-job-name' })) setError(errorMessage(err));
+            },
           });
         }}
       >
@@ -300,10 +317,10 @@ function JobDialog({ me, job, nextNo: suggestedNo, onClose }: { me: Me; job: Job
           </p>
         ) : null}
         <FormSection columns={3}>
-          <Field label={t('iso.field.jobName')} required htmlFor="iso-job-name" error={check.error('name')}>
+          <Field label={t('iso.field.jobName')} required htmlFor="iso-job-name" error={check.error('name') ?? server.error('iso-job-name')}>
             <input id="iso-job-name" className="inp mono" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label={t('iso.catalog.no')} required htmlFor="iso-job-no" error={check.error('no')}>
+          <Field label={t('iso.catalog.no')} required size="xs" htmlFor="iso-job-no" error={check.error('no') ?? server.error('iso-job-no')}>
             <input id="iso-job-no" className="inp" inputMode="numeric" value={no} onChange={(e) => setNo(e.target.value)} />
           </Field>
           <Field label={t('iso.catalog.trackedFrom')} required hint={t('iso.catalog.trackedFromHint')} htmlFor="iso-job-from">
@@ -474,10 +491,15 @@ function DivisionsTab({ me }: { me: Me }) {
                     <span className={`badge ${d.active ? 'ok' : 'muted'}`}>{d.active ? t('iso.catalog.inUse') : t('iso.catalog.notInUse')}</span>
                   </td>
                   {canWrite ? (
-                    <td data-label={t('common.actions')}>
-                      <button type="button" className="btn sm ghost" aria-label={t('common.editOf', { subject: d.name })} onClick={() => setEditing(d)}>
-                        {t('common.edit')}
-                      </button>
+                    <td data-label={t('common.actions')} className="col-center">
+                      {/* Cùng khuôn nút dòng với tab Job (PW-B30): nút viền "Sửa" + ô giữ chỗ ba chấm
+                          để cột thẳng hàng. */}
+                      <div className="action-cell">
+                        <button type="button" className="btn sm" aria-label={t('common.editOf', { subject: d.name })} onClick={() => setEditing(d)}>
+                          {t('common.edit')}
+                        </button>
+                        <span className="kebab-slot" aria-hidden="true" />
+                      </div>
                     </td>
                   ) : null}
                 </tr>
@@ -572,7 +594,15 @@ function OwnersTab({ me }: { me: Me }) {
   });
   return (
     <section>
-      <p className="alert info">{t('iso.catalog.ownersHint')}</p>
+      {/* Luật mail nhắc và ghi chú 0206 vào (i) (UX-E06): một câu lặp trên mọi dòng / một dòng
+          bảng chỉ để giải thích thì không phải dữ liệu. */}
+      <p className="alert info">
+        {t('iso.catalog.ownersHint')}{' '}
+        <InfoTip subject={t('iso.catalog.mailTo')}>
+          <p>{t('iso.catalog.mailRule')}</p>
+          <p>{t('iso.catalog.incidentOwnerNote')}</p>
+        </InfoTip>
+      </p>
       {owners.isLoading ? (
         <Loading />
       ) : owners.isError ? (
@@ -585,22 +615,12 @@ function OwnersTab({ me }: { me: Me }) {
                 <th>{t('iso.catalog.form')}</th>
                 <th>{t('iso.catalog.primary')}</th>
                 <th>{t('iso.catalog.backup')}</th>
-                <th>{t('iso.catalog.mailTo')}</th>
-                {manager ? <th className="col-center">{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
               {(owners.data ?? []).map((row) => (
                 <OwnerRow key={row.formType} me={me} row={row} people={people.data ?? []} manager={manager} />
               ))}
-              <tr>
-                <td data-label={t('iso.catalog.form')}>
-                  <strong>0206 · {t('nav.isoIncidents')}</strong>
-                </td>
-                <td colSpan={manager ? 4 : 3} data-label={t('iso.catalog.primary')} className="muted">
-                  {t('iso.catalog.incidentOwnerNote')}
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -614,14 +634,29 @@ function OwnerRow({ me, row, people, manager }: { me: Me; row: FormOwners; peopl
   const toast = useToast();
   const [primary, setPrimary] = useState(row.primary?.id ?? '');
   const [backup, setBackup] = useState(row.backup?.id ?? '');
-  const save = useIsoWrite<void>(me.csrfToken, () => ({
+  const save = useIsoWrite<{ primary: string; backup: string }>(me.csrfToken, (next) => ({
     url: `/api/v1/iso/catalog/owners/${row.formType}`,
     method: 'PUT',
-    body: { primaryUserId: primary || null, backupUserId: backup || null },
+    body: { primaryUserId: next.primary || null, backupUserId: next.backup || null },
   }));
+  /* Đổi người là lưu luôn (PW-B32) — nút Lưu xám trên mỗi dòng thì người ta chọn xong rồi bỏ đi,
+     tưởng đã lưu. Lỗi thì trả ô về giá trị cũ. */
+  const commit = (next: { primary: string; backup: string }) => {
+    const before = { primary, backup };
+    setPrimary(next.primary);
+    setBackup(next.backup);
+    save.mutate(next, {
+      onSuccess: () => toast({ message: t('iso.catalog.ownersSaved', { form: row.formType }) }),
+      onError: (err) => {
+        setPrimary(before.primary);
+        setBackup(before.backup);
+        toast({ message: errorMessage(err), tone: 'error' });
+      },
+    });
+  };
   const options = [{ value: '', label: t('iso.catalog.nobody') }, ...people.map((p) => ({ value: p.id, label: p.fullName, searchText: p.email }))];
-  const changed = primary !== (row.primary?.id ?? '') || backup !== (row.backup?.id ?? '');
-  const label = row.formType === '0203' ? `0203 · ${t('nav.isoBackup')}` : `0208 · ${t('nav.isoAntivirus')}`;
+  // "0203 · Backup", không "0203 · Theo dõi backup · 0203" (mã lặp đôi, PW-B13).
+  const label = row.formType === '0203' ? t('iso.field.tab0203') : t('iso.field.tab0208');
   return (
     <tr>
       <td data-label={t('iso.catalog.form')}>
@@ -629,38 +664,18 @@ function OwnerRow({ me, row, people, manager }: { me: Me; row: FormOwners; peopl
       </td>
       <td data-label={t('iso.catalog.primary')}>
         {manager ? (
-          <Select value={primary} ariaLabel={t('iso.catalog.primaryOf', { form: row.formType })} options={options} searchable onChange={setPrimary} />
+          <Select value={primary} ariaLabel={t('iso.catalog.primaryOf', { form: row.formType })} options={options} searchable disabled={save.isPending} onChange={(value) => commit({ primary: value, backup })} />
         ) : (
           (row.primary?.fullName ?? t('iso.catalog.nobody'))
         )}
       </td>
       <td data-label={t('iso.catalog.backup')}>
         {manager ? (
-          <Select value={backup} ariaLabel={t('iso.catalog.backupOf', { form: row.formType })} options={options} searchable onChange={setBackup} />
+          <Select value={backup} ariaLabel={t('iso.catalog.backupOf', { form: row.formType })} options={options} searchable disabled={save.isPending} onChange={(value) => commit({ primary, backup: value })} />
         ) : (
           (row.backup?.fullName ?? t('iso.catalog.nobody'))
         )}
       </td>
-      <td data-label={t('iso.catalog.mailTo')} className="small">
-        {t('iso.catalog.mailRule')}
-      </td>
-      {manager ? (
-        <td data-label={t('common.actions')}>
-          <button
-            type="button"
-            className="btn sm primary"
-            disabled={!changed || save.isPending}
-            onClick={() =>
-              save.mutate(undefined, {
-                onSuccess: () => toast({ message: t('iso.catalog.ownersSaved', { form: row.formType }) }),
-                onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-              })
-            }
-          >
-            {t('common.save')}
-          </button>
-        </td>
-      ) : null}
     </tr>
   );
 }

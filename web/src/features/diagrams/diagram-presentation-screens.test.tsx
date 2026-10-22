@@ -91,7 +91,7 @@ describe('Bản đồ — bản trình bày đứng riêng (Q-23)', () => {
     expect(within(chips).getByRole('button', { name: 'Tầng 1 E2E — trình bày' })).toHaveAttribute('aria-current', 'true');
     expect(map.querySelectorAll('.dmap-banner')).toHaveLength(1);
     const panel = screen.getByRole('complementary', { name: 'Bản vẽ đang chọn' });
-    expect(panel).toHaveTextContent('Từ "Tầng 1 E2E" · chính thức v1');
+    expect(panel).toHaveTextContent('Từ "Tầng 1 E2E" · chính thức #1');
     expect(panel).toHaveTextContent('Bản gốc đã có phiên bản mới (4)');
     // Bản trình bày không qua duyệt: không Phát hành / Gửi duyệt.
     expect(within(panel).queryByRole('button', { name: /^(Phát hành|Gửi duyệt)/ })).toBeNull();
@@ -246,7 +246,7 @@ describe('Sửa bản trình bày — thiết bị dự kiến và ảnh tự do
     const user = userEvent.setup();
     await pickMenuItem(user, /^Thao tác với/, 'Thiết bị dự kiến');
     await user.click(screen.getByRole('button', { name: 'Chèn vào bản vẽ' }));
-    expect(await screen.findByText('Nhập tên thiết bị.')).toBeInTheDocument();
+    expect(await screen.findByText('Chưa nhập.')).toBeInTheDocument();
     await user.type(screen.getByLabelText(/Tên thiết bị/), 'AP tầng 3');
     await user.type(screen.getByLabelText('Giá dự kiến'), '3500000');
     await user.type(screen.getByLabelText('Nhà cung cấp'), 'NCC E2E');

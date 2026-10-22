@@ -54,11 +54,15 @@ describe('DeviceTypeFilter', () => {
     const group = screen.getByRole('group', { name: 'Lọc theo loại thiết bị' });
     expect(group).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Firewall' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Core' })).toHaveAttribute('aria-pressed', 'false');
+    // PW-B09: mặc định chỉ bày chip loại cờ Router; loại khác sau nút "Mọi loại…".
+    expect(screen.queryByRole('button', { name: 'Core' })).toBeNull();
     // Loại đã ngừng dùng không bày thành chip mới — nhưng vẫn nằm trong bộ lọc mặc định.
     expect(screen.queryByRole('button', { name: 'Modem cũ' })).toBeNull();
     expect(seen).toHaveBeenLastCalledWith(['fw', 'rt', 'old']);
 
+    await userEvent.click(screen.getByRole('button', { name: 'Mọi loại…' }));
+    expect(screen.queryByRole('button', { name: 'Mọi loại…' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Core' })).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(screen.getByRole('button', { name: 'Core' }));
     expect(seen.mock.calls.at(-1)?.[0]).toEqual(expect.arrayContaining(['fw', 'core', 'rt']));
 

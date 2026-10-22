@@ -2,13 +2,14 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { formatDate, orDash, todayIso } from '@/lib/format';
+import { formatCount, formatDate, orDash, todayIso } from '@/lib/format';
 import { matchPeriod, periodRange, PERIODS, type Period } from '@/lib/period-range';
 import { OWNER_PATH } from '@/lib/routes';
 import {
   DISPOSAL_KIND_KEY as KIND_KEY,
   DISPOSAL_KINDS,
   disposalDetail,
+  disposalItemKindLabel,
   disposalStatusKey,
   disposalStatusTone,
   type DisposalKind,
@@ -146,29 +147,24 @@ export function DisposalScreen() {
      lặp nhãn Mã/Loại/Chi tiết/Ngày trên từng thẻ nên cao gấp đôi mà không nói thêm gì. */
   const narrow = useMediaQuery(MOBILE_CARD_QUERY);
 
-  const actionsOf = (item: DisposalItem): RowAction[] => [
-    {
-      key: 'open',
-      label: t('disposal.open'),
-      onSelect: () => navigate(LINK[item.kind](item.id)),
-    },
-    /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13).
-       Loại khác dùng lại ở trang hồ sơ của nó (Q-19): kho không ghi gì, nên mục này chỉ dẫn
-       đường, và mang tên nói rõ việc người ta tìm tới. */
+  /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13). Loại
+     khác dùng lại ở trang hồ sơ của nó (Q-19): MỘT mục mang tên nói rõ việc người ta tìm tới —
+     để thêm "Mở hồ sơ" cạnh nó là hai mục cùng một đích (UX-E14). */
+  const actionsOf = (item: DisposalItem): RowAction[] =>
     item.kind === 'software'
-      ? {
-          key: 'restore',
-          label: t('software.restore'),
-          ok: true,
-          onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
-        }
-      : {
-          key: 'reuse',
-          label: t('disposal.reuse'),
-          ok: true,
-          onSelect: () => navigate(LINK[item.kind](item.id)),
-        },
-  ];
+      ? [
+          { key: 'open', label: t('disposal.open'), onSelect: () => navigate(LINK.software(item.id)) },
+          {
+            key: 'restore',
+            label: t('software.restore'),
+            ok: true,
+            onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
+          },
+        ]
+      : [{ key: 'reuse', label: t('disposal.reuse'), ok: true, onSelect: () => navigate(LINK[item.kind](item.id)) }];
+  /** Loại chạm trần 500 dòng của API thì số trên chip là TRẦN, không phải số thật (PW-A09). */
+  const chipCount = (key: DisposalKind) =>
+    `${formatCount(counts?.[key] ?? 0)}${truncated.includes(key) ? '+' : ''}`;
 
   const setPeriod = (next: Period | '') => {
     const range = next ? periodRange(next, today) : { from: '', to: '' };
@@ -180,7 +176,6 @@ export function DisposalScreen() {
     <>
       <PageHeader
         title={t('disposal.title')}
-        subtitle={t('disposal.subtitle')}
         actions={
           <ExportXlsxButton url={`/api/v1/disposal/export.xlsx?${query}`} fileName="kho-thanh-ly.xlsx" />
         }
@@ -205,7 +200,11 @@ export function DisposalScreen() {
               value: '',
               label: (
                 <>
-                  {t('disposal.allKinds')} <span className="seg-count">{countAll}</span>
+                  {t('disposal.allKinds')}{' '}
+                  <span className="seg-count">
+                    {formatCount(countAll)}
+                    {truncated.length > 0 ? '+' : ''}
+                  </span>
                 </>
               ),
             },
@@ -213,7 +212,7 @@ export function DisposalScreen() {
               value: key,
               label: (
                 <>
-                  {t(KIND_KEY[key])} <span className="seg-count">{counts?.[key] ?? 0}</span>
+                  {t(KIND_KEY[key])} <span className="seg-count">{chipCount(key)}</span>
                 </>
               ),
             })),
@@ -261,14 +260,14 @@ export function DisposalScreen() {
         />
       </FilterBar>
 
-      <p className="alert info">{t('disposal.note')}</p>
-      {truncated.length > 0 ? (
-        <p className="alert">
-          {t('disposal.truncated', {
-            kinds: truncated.map((key) => t(KIND_KEY[key])).join(', '),
-          })}
-        </p>
-      ) : null}
+      {/* MỘT băng (PW-A09): hai băng khác kiểu chồng nhau thì mắt bỏ qua cả hai. */}
+      <p className="alert info">
+        {t('disposal.note')}
+        {/* "Chưa hiện hết" chỉ có nghĩa khi có dòng để xem (TB-24). */}
+        {truncated.length > 0 && rows.length > 0
+          ? ` ${t('disposal.truncated', { kinds: truncated.map((key) => t(KIND_KEY[key])).join(', ') })}`
+          : null}
+      </p>
 
       {inventory.isLoading ? (
         <Loading variant="table" />
@@ -303,7 +302,7 @@ export function DisposalScreen() {
                 title: (item) => item.code,
                 titleIsCode: true,
                 href: (item) => LINK[item.kind](item.id),
-                badge: (item) => <span className="badge muted">{t(KIND_KEY[item.kind])}</span>,
+                badge: (item) => <span className="badge muted">{disposalItemKindLabel(item.kind, item.detail, t)}</span>,
                 actions: (item) => (
                   <RowActions
                     label={t('common.actionsOf', { subject: item.code })}
@@ -345,13 +344,16 @@ export function DisposalScreen() {
                         <span className="cell-sub">{item.name}</span>
                       </td>
                       <td data-label={t('disposal.kind')}>
-                        <span>{t(KIND_KEY[item.kind])}</span>
-                        {/* Tên gốc của trạng thái theo module chủ — thứ cả màn này sinh ra để nói. */}
-                        <span className="cell-sub">
-                          <span className={`badge ${disposalStatusTone(item.kind, item.status)}`}>
-                            {statusLabel(item.status, t)}
+                        <span>{disposalItemKindLabel(item.kind, item.detail, t)}</span>
+                        {/* Tên gốc của trạng thái theo module chủ — chỉ khi KHÁC "Đã thanh lý", trạng
+                            thái mặc định của chính kho này (PW-A25); lặp trên mọi dòng thì thành nhiễu. */}
+                        {isPlainDisposed(item.status) ? null : (
+                          <span className="cell-sub">
+                            <span className={`badge ${disposalStatusTone(item.kind, item.status)}`}>
+                              {statusLabel(item.status, t)}
+                            </span>
                           </span>
-                        </span>
+                        )}
                       </td>
                       <td data-label={t('disposal.detail')}>
                         {disposalDetail(item.kind, item.detail, t)}
@@ -388,6 +390,11 @@ export function DisposalScreen() {
       )}
     </>
   );
+}
+
+/** "Đã thanh lý" (thiết bị, phần mềm `retired`; đường truyền `terminated`) — mặc định của kho. */
+function isPlainDisposed(status: string): boolean {
+  return status === 'retired' || status === 'terminated';
 }
 
 /** Trạng thái lạ in nguyên văn — luật đặt tên nằm ở `disposalStatusKey`. */

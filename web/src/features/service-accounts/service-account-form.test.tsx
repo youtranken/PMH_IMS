@@ -71,7 +71,7 @@ describe('Form tài khoản dịch vụ — hạn dùng (tùy chọn)', () => {
     const user = userEvent.setup();
     const dialog = renderForm();
     await user.type(within(dialog).getByRole('textbox', { name: /Tên đăng nhập/ }), 'vpn-e2e');
-    within(dialog).getByRole('button', { name: 'Hết hạn (tùy chọn)' }).focus();
+    within(dialog).getByRole('button', { name: 'Hết hạn' }).focus();
     await user.keyboard('3');
     await user.keyboard('1/12/2026{Enter}');
     await user.click(within(dialog).getByRole('button', { name: 'Lưu' }));

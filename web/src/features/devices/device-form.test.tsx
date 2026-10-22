@@ -68,9 +68,9 @@ describe('Form thiết bị — kiểm tiếng Việt và danh mục vô hiệu'
     expect(await screen.findByText('Còn 3 ô cần sửa trước khi lưu.')).toBeInTheDocument();
     const code = screen.getByRole('textbox', { name: 'Mã thiết bị' });
     expect(code).toHaveAttribute('aria-invalid', 'true');
-    expect(code).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    expect(code).toHaveAccessibleDescription('Chưa nhập.');
     expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveAccessibleDescription(
-      'Bắt buộc — chưa chọn ô này.',
+      'Chưa chọn.',
     );
     await waitFor(() => expect(code).toHaveFocus());
     expect(calls.some((c) => c.method === 'POST')).toBe(false);

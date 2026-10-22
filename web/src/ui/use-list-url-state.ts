@@ -1,7 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { PAGE_SIZES } from '@/ui/pagination';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '@/ui/pagination';
 import { clampPage } from '@/lib/paging';
+
+/*
+ * Số dòng một trang NHỚ THEO MÀN (TB-15): chọn 50 dòng ở Thiết bị, lần sau mở lại vẫn 50. Chỉ là
+ * tiện ích của từng máy (localStorage), nên mọi lần đọc / ghi bọc try: trình duyệt chặn bộ nhớ
+ * (chế độ riêng tư) thì màn vẫn chạy với cỡ mặc định.
+ */
+const PAGE_SIZE_KEY = 'ims.pageSize:';
+function rememberedLimit(path: string): number | null {
+  try {
+    const value = Number.parseInt(localStorage.getItem(PAGE_SIZE_KEY + path) ?? '', 10);
+    return (PAGE_SIZES as readonly number[]).includes(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+function rememberLimit(path: string, value: number): void {
+  try {
+    localStorage.setItem(PAGE_SIZE_KEY + path, String(value));
+  } catch {
+    /* Bộ nhớ bị chặn: lần sau về cỡ mặc định, không sao. */
+  }
+}
 
 /**
  * Trạng thái của MỘT màn danh sách — bộ lọc, trang, số dòng, cột sắp — sống trên THANH ĐỊA CHỈ
@@ -103,12 +125,13 @@ export function useListUrlState<F extends Record<string, string>>(options: {
 }): ListUrlState<F> {
   const {
     emptyFilters,
-    defaultLimit = 20,
+    defaultLimit = DEFAULT_PAGE_SIZE,
     defaultSort = { key: '', desc: false },
     searchKey,
     allowed,
   } = options;
   const [params, setParams] = useSearchParams();
+  const { pathname } = useLocation();
 
   const read = useCallback(
     (key: string, fallback = '') => params.get(key) ?? fallback,
@@ -149,8 +172,9 @@ export function useListUrlState<F extends Record<string, string>>(options: {
    * Kẹp về đúng `PAGE_SIZES` — tập mà `ui/pagination.tsx` cho chọn — nên trạng thái trên URL
    * luôn là trạng thái mà giao diện dựng lại được. Giá trị lạ rơi về mặc định của màn.
    */
-  const limitTho = Number.parseInt(read('limit', String(defaultLimit)), 10);
-  const limit = (PAGE_SIZES as readonly number[]).includes(limitTho) ? limitTho : defaultLimit;
+  const startLimit = rememberedLimit(pathname) ?? defaultLimit;
+  const limitTho = Number.parseInt(read('limit', String(startLimit)), 10);
+  const limit = (PAGE_SIZES as readonly number[]).includes(limitTho) ? limitTho : startLimit;
   const sortKey = read('sort', defaultSort.key);
   const dirParam = params.get('dir');
   const sorting: SortState = {
@@ -259,7 +283,11 @@ export function useListUrlState<F extends Record<string, string>>(options: {
     page,
     setPage: (value) => write({ page: value === 1 ? '' : value }, false),
     limit,
-    setLimit: (value) => write({ limit: value === defaultLimit ? '' : value }),
+    setLimit: (value) => {
+      // Ghi nhớ TRƯỚC khi đổi URL: URL bỏ `limit` (cỡ mặc định) thì lượt đọc kế lấy cỡ đã nhớ.
+      rememberLimit(pathname, value);
+      write({ limit: value === defaultLimit ? '' : value });
+    },
     sorting,
     setSorting: (value) => {
       const isDefault = value.key === defaultSort.key && value.desc === defaultSort.desc;

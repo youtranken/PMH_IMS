@@ -45,6 +45,15 @@ export class DevicesApiService {
   }
 
   /**
+   * Mã thiết bị → id cho file nhập của module khác (UX-E30: cột "Thiết bị" của Đường truyền ghi
+   * MÃ). Khóa là mã viết thường đã bỏ khoảng trắng thừa; mã không có thì vắng mặt. Còn dùng được
+   * hay không vẫn hỏi `assertUsable` như form.
+   */
+  idsByCodes(codes: string[]): Promise<Map<string, string>> {
+    return this.devices.idsByCodes(codes);
+  }
+
+  /**
    * "Thiết bị này còn nhận thêm được không?" — cửa DUY NHẤT cho module khác hỏi trước khi ghi
    * bất cứ thứ gì trỏ tới một `deviceId` người dùng chọn.
    *

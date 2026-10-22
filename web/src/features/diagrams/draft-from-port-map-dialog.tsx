@@ -5,7 +5,7 @@ import { errorMessage } from '@/lib/api';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
-import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, siteFormLabel, useCatalogLists } from '@/ui/use-catalog-lists';
 import { isStepUpCancelled } from '@/ui/use-step-up-retry';
 import type { VersionItem } from './diagram-api';
 
@@ -104,7 +104,7 @@ export function DraftFromPortMapDialog({
               value={siteId}
               onChange={setSiteId}
               ariaLabel={t('diagrams.cable.draftSite')}
-              options={activeOptions(lists.data?.sites, null, (row) => `${row.code} — ${row.name}`)}
+              options={activeOptions(lists.data?.sites, null, (site) => siteFormLabel(site))}
             />
           </Field>
         ) : (

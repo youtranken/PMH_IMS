@@ -2,6 +2,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode,
 import { Chevron } from '@/ui/chevron';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { motionReduced } from '@/lib/motion';
+import { formatCount } from '@/lib/format';
 
 /** Nội dung tab mờ dần vào — bằng `--dur` của tokens.css (Web Animations không đọc biến CSS). */
 const TAB_FADE_MS = 200;
@@ -64,11 +65,17 @@ export function Tabs({
   onChange,
   ariaLabel,
   wrap = false,
+  panel = true,
 }: {
   items: TabItem[];
   value: string;
   onChange: (key: string) => void;
   ariaLabel: string;
+  /**
+   * `false` khi thanh tab chỉ là công tắc chế độ / điều hướng, không có `TabPanel` đi kèm (màn
+   * sơ đồ Xem | Sửa): `aria-controls` trỏ vào id không tồn tại thì axe báo lỗi (AX-02).
+   */
+  panel?: boolean;
   /**
    * Tab xuống dòng thay vì cuộn ngang: khung hẹp (panel bên phải của /diagrams) mà tên dài thì
    * cuộn ngang giấu mất tab đầu sau một mép mờ, và chuột không có cách nào cuộn ngang.
@@ -143,6 +150,8 @@ export function Tabs({
       /* Chừa chỗ mũi tên ở CẢ HAI mép khi thanh tràn — không chỉ lúc mũi tên đang hiện: đệm bật
          tắt theo mép thì thanh co giãn ngay dưới con trỏ khi vừa cuộn khỏi mép. */
       data-overflow={overflow ? 'true' : undefined}
+      // Một tab thì thanh tab trông như hỏng (PW-C13): CSS ẩn đi, tab vẫn ở DOM để panel giữ tên.
+      data-single={items.length === 1 ? 'true' : undefined}
     >
     {!wrap && edges.start ? (
       <button type="button" className="tabs-arrow" data-side="start" tabIndex={-1} aria-hidden="true" onClick={() => scrollBy(-1)}>
@@ -160,6 +169,8 @@ export function Tabs({
       // Có vạch trượt thì CSS bỏ gạch chân riêng của tab đang chọn (không vẽ hai vạch).
       data-ink={ink ? 'true' : undefined}
       data-wrap={wrap ? 'true' : undefined}
+      // Ít tab: màn hẹp chia đều bề ngang thay vì cuộn và cắt chữ tab cuối (PW-C05).
+      data-few={items.length <= 3 ? 'true' : undefined}
     >
       {items.map((item, index) => (
         <Fragment key={item.key}>
@@ -190,7 +201,7 @@ export function Tabs({
            * đủ panel nghĩa là mọi tab đều chạy truy vấn của nó ngay khi mở trang — đắt hơn hẳn,
            * và `TabPanel` hiện được dùng ở 8 chỗ gọi trên 7 màn (`expiry-screen` gọi hai lần).
            */
-          aria-controls={item.key === value ? `tabpanel-${item.key}` : undefined}
+          aria-controls={panel && item.key === value ? `tabpanel-${item.key}` : undefined}
           // Chỉ tab đang chọn nằm trong luồng Tab; các tab khác đi bằng phím mũi tên.
           tabIndex={item.key === value ? 0 : -1}
           className={`tab${item.key === value ? ' active' : ''}`}
@@ -230,7 +241,7 @@ export function Tabs({
           {item.count ? (
             <>
               {' '}
-              <span className="tab-count">{item.count}</span>
+              <span className="tab-count">{formatCount(item.count)}</span>
             </>
           ) : null}
         </button>

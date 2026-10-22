@@ -2012,7 +2012,7 @@ function iso(value: Date | string | null): string | null {
 function manageForbidden(): ForbiddenException {
   return new ForbiddenException({
     code: 'DIAGRAM_MANAGE_FORBIDDEN',
-    message: 'Thành viên chỉ đổi tên hoặc lưu trữ bản trình bày do mình tạo hoặc phụ trách — việc khác cần Admin/SA.',
+    message: 'Thành viên chỉ đổi tên hoặc lưu trữ bản trình bày do mình tạo hoặc phụ trách — việc khác cần Super Admin / Quản trị.',
   });
 }
 

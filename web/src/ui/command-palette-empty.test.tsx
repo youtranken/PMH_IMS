@@ -56,8 +56,37 @@ describe('Tìm nhanh — trạng thái trống và không khớp', () => {
     const user = await openPalette();
     const goto = screen.getByRole('group', { name: 'Đi tới' });
     expect(within(goto).getByRole('option', { name: /Thiết bị/ })).toBeInTheDocument();
-    await user.keyboard('{Enter}');
+    await user.click(within(goto).getByRole('option', { name: /Bảng điều khiển/ }));
     expect(screen.getByTestId('where')).toHaveTextContent('/');
+  });
+
+  // UX-E32: việc hay làm nhất (thêm hồ sơ, lập phiếu sự cố) gọi được ngay từ Ctrl+K.
+  it('chưa gõ gì: nhóm "Lệnh" đứng trước "Đi tới"; Enter ở lệnh đầu mở form Thêm thiết bị', async () => {
+    stubFetch([]);
+    const user = await openPalette();
+    const commands = screen.getByRole('group', { name: 'Lệnh' });
+    expect(within(commands).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      expect.stringContaining('Thêm thiết bị'),
+      expect.stringContaining('Thêm phần mềm'),
+      expect.stringContaining('Thêm đường truyền'),
+      expect.stringContaining('Lập phiếu sự cố'),
+    ]);
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('where')).toHaveTextContent('/devices?new=1');
+  });
+
+  it('nhóm quyền chỉ có Mạng: lệnh Thêm của mảng Tài sản không hiện (Q-31)', async () => {
+    stubFetch([]);
+    await openPalette({ ...me, role: 'member', features: ['network'] } as unknown as Me);
+    expect(screen.queryByRole('group', { name: 'Lệnh' })).toBeNull();
+  });
+
+  it('gõ "them" ra lệnh Thêm khớp (không dấu)', async () => {
+    stubFetch([]);
+    const user = await openPalette();
+    await user.type(screen.getByRole('combobox'), 'them thiet');
+    const commands = await screen.findByRole('group', { name: 'Lệnh' });
+    expect(within(commands).getByRole('option', { name: /Thêm thiết bị/ })).toBeInTheDocument();
   });
 
   it('mở một hồ sơ → lần sau nó nằm ở "Mở gần đây"', async () => {
@@ -85,6 +114,8 @@ describe('Tìm nhanh — trạng thái trống và không khớp', () => {
     const user = await openPalette();
     await user.type(screen.getByRole('combobox'), 'zzqq');
     expect(await screen.findByText('Không có hồ sơ nào khớp "zzqq".')).toBeInTheDocument();
+    // ST-06: chỉ ba gợi ý — tám dòng "Tìm … trong …" kín cả màn điện thoại.
+    expect(screen.getAllByRole('option')).toHaveLength(3);
     await user.click(screen.getByRole('option', { name: 'Tìm "zzqq" trong Thiết bị' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/devices?q=zzqq');
   });

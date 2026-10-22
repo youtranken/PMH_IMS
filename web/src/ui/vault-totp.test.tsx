@@ -91,8 +91,8 @@ function renderPanel() {
 const writes = (calls: Call[]) => calls.filter((call) => call.method !== 'GET');
 
 async function openCreate(kind: string) {
-  await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
-  const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+  await userEvent.click(await screen.findByRole('button', { name: 'Cất vào két' }));
+  const dialog = screen.getByRole('dialog', { name: 'Cất vào két' });
   await userEvent.type(within(dialog).getByLabelText(/Tên gọi/), `E2E ${kind}`);
   if (kind !== 'Mật khẩu') {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Loại' }));
@@ -160,7 +160,7 @@ describe('VaultPanel — cất ngăn Mã 2 lớp', () => {
  * đoán grace (không biết `stepped_up_at`), nên khi server nói còn grace thì KHÔNG được hỏi mã.
  */
 describe('VaultPanel — không hỏi mã trước khi server đòi', () => {
-  it('cất mật khẩu rồi cất mã 2 lớp: không hộp "Xác nhận danh tính" nào, đúng hai lượt ghi', async () => {
+  it('cất mật khẩu rồi cất mã 2 lớp: không hộp "Nhập mã 6 số" nào, đúng hai lượt ghi', async () => {
     const calls = mockApi([]);
     renderPanel();
 
@@ -168,13 +168,13 @@ describe('VaultPanel — không hỏi mã trước khi server đòi', () => {
     await userEvent.type(within(dialog).getByLabelText(/^Giá trị/), 'Sup3r#Secret');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
     await screen.findByText('Đã lưu vào két.');
-    expect(screen.queryByRole('heading', { name: 'Xác nhận danh tính' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Nhập mã 6 số' })).toBeNull();
 
     dialog = await openCreate('Mã 2 lớp');
     await userEvent.type(within(dialog).getByLabelText(/^Giá trị/), 'JBSWY3DPEHPK3PXP');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu' }));
     await screen.findAllByText('Đã lưu vào két.');
-    expect(screen.queryByRole('heading', { name: 'Xác nhận danh tính' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Nhập mã 6 số' })).toBeNull();
 
     expect(writes(calls).map((call) => (call.body as { kind: string }).kind)).toEqual([
       'password',

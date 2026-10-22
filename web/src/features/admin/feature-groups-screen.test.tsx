@@ -84,7 +84,7 @@ describe('Màn Nhóm quyền (Q-31)', () => {
 
   it('chưa có nhóm nào → trạng thái trống có nút Thêm nhóm', async () => {
     renderScreen(() => jsonResponse(200, []));
-    expect(await screen.findByText('Chưa có nhóm quyền nào')).toBeInTheDocument();
+    expect(await screen.findByText('Chưa có nhóm quyền nào.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Thêm nhóm' })).toBeInTheDocument();
   });
 });

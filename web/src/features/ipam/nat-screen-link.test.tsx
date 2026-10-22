@@ -85,3 +85,42 @@ describe('Sổ NAT — link tới một luật (X-05)', () => {
     expect(screen.getByRole('button', { name: 'Bỏ lọc để thấy luật này' })).toBeInTheDocument();
   });
 });
+
+// UX-E29: file xuất theo đúng bộ lọc đang bày — giao thức, cổng nhạy cảm, chip trạng thái, thứ tự.
+describe('Sổ NAT — Xuất Excel theo bộ lọc', () => {
+  it('URL xuất mang protocol, sensitive, states (chip đang bật) và sort', async () => {
+    render('/nat?protocol=udp&sensitive=1&sort=newest');
+    const fetchMock = fetch as unknown as { mock: { calls: [RequestInfo | URL][] } };
+    // Bộ lọc này không ra dòng nào (hai rule đều TCP) — chờ sổ về rồi mới bấm Xuất.
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/v1/ipam/nat?'))).toBe(true));
+    await userEvent.click(await screen.findByRole('button', { name: /Xuất Excel/ }));
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/v1/ipam/nat/export.xlsx'))).toBe(true));
+    const call = fetchMock.mock.calls.find(([u]) => String(u).startsWith('/api/v1/ipam/nat/export.xlsx'))!;
+    const params = new URL(String(call[0]), 'http://x').searchParams;
+    expect(params.get('protocol')).toBe('udp');
+    expect(params.get('sensitive')).toBe('1');
+    expect(params.get('states')).toBe('open');
+    expect(params.get('sort')).toBe('newest');
+  });
+});
+
+// UX-E25: dừng một máy chủ có chục luật NAT — tick nhiều luật, gỡ một lượt, một lý do.
+describe('Sổ NAT — gỡ nhiều luật', () => {
+  it('SA tick hai luật → "Gỡ 2 luật" → một lý do → một lượt POST /ipam/nat/bulk-void', async () => {
+    render('/nat');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('checkbox', { name: /^Chọn TCP 8080/ }));
+    await user.click(screen.getByRole('checkbox', { name: /^Chọn TCP 8443/ }));
+    const bar = screen.getByRole('group', { name: 'Thao tác với các luật đã chọn' });
+    expect(bar).toHaveTextContent('Đã chọn 2');
+    await user.click(within(bar).getByRole('button', { name: 'Gỡ 2 luật' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Gỡ 2 luật NAT' });
+    const fetchMock = fetch as unknown as { mock: { calls: [RequestInfo | URL, RequestInit | undefined][] } };
+    fetchMock.mock.calls.length = 0;
+    await user.type(within(dialog).getByRole('textbox', { name: /Lý do/ }), 'Máy chủ camera ngừng');
+    await user.click(within(dialog).getByRole('button', { name: 'Gỡ' }));
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u, init]) => String(u) === '/api/v1/ipam/nat/bulk-void' && init?.method === 'POST')).toBe(true));
+    const post = fetchMock.mock.calls.find(([u]) => String(u) === '/api/v1/ipam/nat/bulk-void')!;
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ ids: ['r1', 'r2'], reason: 'Máy chủ camera ngừng' });
+  });
+});

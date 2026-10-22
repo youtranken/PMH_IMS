@@ -114,8 +114,8 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
   ]).then(([event]) => event);
   expect(download.suggestedFilename()).toBe('kho-thanh-ly.xlsx');
   await page.goto('/disposal?from=2000-01-01&to=2000-01-31');
-  await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc')).toBeVisible();
-  await page.getByRole('button', { name: 'Xóa bộ lọc' }).first().click();
+  await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc.')).toBeVisible();
+  await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).first().click();
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
 
   // Lọc theo loại: bấm "Thiết bị" thì ba loại kia biến đi.
@@ -174,7 +174,8 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
   const row = page.getByRole('row', { name: new RegExp(cut) });
   await expect(row).toBeVisible();
   await expect(row.getByText('Đường truyền', { exact: true })).toBeVisible();
-  await expect(row.getByText('Đã thanh lý', { exact: true })).toBeVisible();
+  // PW-A25: "Đã thanh lý" là trạng thái mặc định của kho — không lặp thành huy hiệu trên dòng.
+  await expect(row.getByText('Đã thanh lý', { exact: true })).toHaveCount(0);
   await expect(row.getByText('300 Mbps')).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(running) })).toHaveCount(0);
 

@@ -18,6 +18,9 @@ import { PeriodStateBadge, PeriodSteps } from './iso-parts';
 import { monthKey, monthLabel, pad2 } from './iso-rules';
 import { ReasonDialog } from '@/ui/reason-dialog';
 import { ISO_FORM_TYPES, type IsoFormType, type MonthOverview, type PeriodDetail } from './iso-types';
+import { MobileCardList } from '@/ui/data-table';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 const FORM_NAME: Record<IsoFormType, string> = { '0203': '0203 · Backup', '0208': '0208 · Antivirus' };
 
@@ -64,23 +67,19 @@ export function PeriodsScreen({ me }: { me: Me }) {
         }
       />
       {overview.data ? (
-        <KpiStrip>
-          {manager ? (
-            <>
-              <KpiTile value={kpis.pending ?? 0} tone="warn" label={t('iso.periods.kpiPending')} />
-              <KpiTile value={kpis.reopenPending ?? 0} tone="warn" label={t('iso.periods.kpiReopen')} />
-              <KpiTile value={kpis.awaitingSigned ?? 0} label={t('iso.periods.kpiSigned')} />
-              <KpiTile value={kpis.done ?? 0} label={t('iso.periods.kpiDone')} />
-            </>
-          ) : (
-            <>
-              <KpiTile value={kpis.unlinkedFails ?? 0} tone="danger" label={t('iso.periods.kpiUnlinked')} to={PATHS.isoIncidents} />
-              <KpiTile value={kpis.awaitingSigned ?? 0} tone="warn" label={t('iso.periods.kpiSigned')} />
-              <KpiTile value={kpis.pending ?? 0} label={t('iso.periods.kpiPending')} />
-              <KpiTile value={kpis.done ?? 0} label={t('iso.periods.kpiDone')} />
-            </>
-          )}
-        </KpiStrip>
+        <>
+          {/* Cùng 4 ô, cùng thứ tự cho mọi vai (PW-B27) — vai nào phải làm ô nào thì ô đó mang tông
+              cảnh báo. Yêu cầu mở lại kỳ là việc riêng của người duyệt: một dòng nhỏ khi có. */}
+          <KpiStrip>
+            <KpiTile value={kpis.unlinkedFails ?? 0} tone="danger" label={t('iso.periods.kpiUnlinked')} to={PATHS.isoIncidents} />
+            <KpiTile value={kpis.pending ?? 0} tone={manager ? 'warn' : undefined} label={t('iso.periods.kpiPending')} />
+            <KpiTile value={kpis.awaitingSigned ?? 0} tone={manager ? undefined : 'warn'} label={t('iso.periods.kpiSigned')} />
+            <KpiTile value={kpis.done ?? 0} label={t('iso.periods.kpiDone')} />
+          </KpiStrip>
+          {manager && (kpis.reopenPending ?? 0) > 0 ? (
+            <p className="muted small">{t('iso.periods.reopenPendingCount', { count: kpis.reopenPending })}</p>
+          ) : null}
+        </>
       ) : null}
       {overview.isLoading ? (
         <Loading variant="table" />
@@ -110,10 +109,34 @@ function YearTable({
   const { t } = useTranslation();
   // Tháng chưa tới không có gì để xem hay làm — ẩn, không vẽ thành hàng "—" mờ.
   const usable = months.filter((m) => m.access !== 'before_start' && m.access !== 'future');
+  const narrow = useMediaQuery(BREAKPOINTS.cards);
   if (usable.length === 0) return <p className="alert info">{t('iso.periods.paperYear', { year })}</p>;
   return (
     <section aria-labelledby="iso-year">
       <h2 id="iso-year">{t('iso.periods.yearTitle', { year })}</h2>
+      {narrow ? (
+        /* ≤600px: một thẻ một tháng, chạm để xem chi tiết kỳ (TB-05) — bảng gập thẻ nhãn–giá trị
+           thì 12 tháng là trang dài, và nút "Tháng n" lọt thỏm giữa thẻ. */
+        <MobileCardList
+          rows={usable}
+          rowKey={(m) => String(m.month)}
+          onRowClick={(m) => onSelect(monthKey(year, m.month))}
+          rowCurrent={(m) => selected === monthKey(year, m.month)}
+          card={{
+            title: (m) => t('iso.periods.monthN', { month: pad2(m.month) }),
+            subtitle: (m) => (
+              <span className="row" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {m.forms.map((f) => (
+                  <span key={f.formType}>
+                    {f.formType} <PeriodStateBadge state={f.display} />
+                  </span>
+                ))}
+              </span>
+            ),
+            meta: (m) => `0206 · ${t('iso.periods.incidentCount', { count: m.incidents, signed: m.incidentsSigned })}`,
+          }}
+        />
+      ) : (
       <div className="table-wrap">
         <table className="table table-stack">
           <thead>
@@ -147,6 +170,7 @@ function YearTable({
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }
@@ -183,7 +207,7 @@ function MonthDetail({ me, month }: { me: Me; month: string }) {
                   <Link className="mono" to={PATHS.isoIncident(inc.id)}>
                     {inc.code}
                   </Link>{' '}
-                  {inc.signedCurrent ? t('iso.incidents.signedYes') : inc.locked ? t('iso.incidents.signedNo') : t('iso.incidents.notLocked')}
+                  {inc.signedCurrent ? t('iso.incidents.signedYes') : t('iso.incidents.signedNo')}
                 </span>
               </li>
             ))}
@@ -199,7 +223,7 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const [dialog, setDialog] = useState<'return' | 'reopen' | 'deny' | null>(null);
+  const [dialog, setDialog] = useState<'reopen' | 'deny' | null>(null);
   const base = `/api/v1/iso/periods/${detail.formType}/${month}`;
   const write = useIsoWrite<{ path: string; body?: unknown }, PeriodDetail>(me.csrfToken, ({ path, body }) => ({
     url: `${base}${path}`,
@@ -222,9 +246,8 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
 
   return (
     <article className="card" aria-label={FORM_NAME[detail.formType]}>
-      <h3>
-        {FORM_NAME[detail.formType]} <PeriodStateBadge state={detail.display} />
-      </h3>
+      {/* Không huy hiệu trạng thái (UX-E23): thanh bước ngay dưới đã nói kỳ đang ở bước nào. */}
+      <h3>{FORM_NAME[detail.formType]}</h3>
       <PeriodSteps state={detail.display} />
       {detail.state === 'open' ? (
         <p className="muted small">
@@ -243,12 +266,10 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
         ) : null}
         {detail.state === 'pending' && detail.canDecide ? (
           <>
+            {/* "Trả lại" chỉ ở màn Xem & duyệt (UX-E23): trả lại mà chưa xem phiếu là quyết mù. */}
             <Link className="linkbtn primary sm" to={review}>
               {t('iso.periods.reviewApprove')}
             </Link>
-            <button type="button" className="btn sm danger-ghost" onClick={() => setDialog('return')}>
-              {t('iso.review.return')}
-            </button>
           </>
         ) : null}
         {detail.state === 'pending' && !detail.canDecide ? <span className="muted small">{t('iso.review.waiting')}</span> : null}
@@ -305,16 +326,6 @@ function FormCard({ me, month, detail }: { me: Me; month: string; detail: Period
             onChanged={() => void queryClient.invalidateQueries({ queryKey: ISO_KEY })}
           />
         </details>
-      ) : null}
-      {dialog === 'return' ? (
-        <ReasonDialog
-          title={t('iso.review.returnTitle')}
-          label={t('iso.review.returnReason')}
-          confirmLabel={t('iso.review.return')}
-          busy={write.isPending}
-          onClose={() => setDialog(null)}
-          onConfirm={(reason) => run('/return', { reason }, 'iso.review.returnedToast')}
-        />
       ) : null}
       {dialog === 'reopen' ? (
         <ReasonDialog

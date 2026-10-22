@@ -2,13 +2,12 @@ import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { Chevron } from '@/ui/chevron';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, formatDateTime, formatMoney, orDash, todayIso } from '@/lib/format';
-import { daysBetweenIso, periodRange } from '@/lib/period-range';
+import { daysBetweenIso } from '@/lib/period-range';
 import type { Me } from '@/lib/me';
 import { renewPreset } from '@/lib/renew-dates';
 import { softwareItemPath } from '@/lib/software-screens';
@@ -33,6 +32,8 @@ import { RenewDialog } from '@/ui/renew-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { DigestRulesPanel } from './digest-rules-panel';
+import { Actor, actorLabel } from '@/ui/actor';
+import { useRowSelection } from '@/ui/use-row-selection';
 
 interface ExpiryRow {
   id: string;
@@ -105,16 +106,16 @@ interface ExpiryResponse {
   failedKinds?: string[];
 }
 
-/** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
-const WINDOWS = [7, 30, 60, 90, 180, 365];
+/** Cửa sổ nhìn tới — bốn mốc + "Tới ngày…" (UX-E24): 12 lựa chọn thì phải đọc hết mới chọn được. */
+const WINDOWS = [30, 90, 180, 365];
 /** Cửa sổ mặc định khi URL không nói (hoặc nói sai) — một chỗ cho cả lượt hỏi lẫn tô ô lọc. */
 const DEFAULT_WINDOW = 30;
 
 /**
- * Cửa sổ theo LỊCH ("tới hết tháng này / quý này / tới ngày…") cho câu hỏi ngân sách: "tháng
- * này có gì hết hạn". Quy về `withinDays` của API (1–365), vẫn luôn kèm mục đã quá hạn.
+ * Cửa sổ "tới ngày…" cho câu hỏi ngân sách ("tới cuối quý có gì hết hạn"). Quy về `withinDays`
+ * của API (1–365), vẫn luôn kèm mục đã quá hạn. Link cũ `?period=month|quarter` rơi về mặc định.
  */
-const PERIOD_WINDOWS = ['month', 'quarter', 'custom'] as const;
+const PERIOD_WINDOWS = ['custom'] as const;
 type PeriodWindow = (typeof PERIOD_WINDOWS)[number];
 
 /** Cột bấm sắp được — tên khớp `EXPIRY_SORTS` bên API. */
@@ -136,11 +137,23 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const askConfirm = useConfirm();
+  const navigate = useNavigate();
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
+  const [renewalsRange, setRenewalsRange] = useState({ from: '', to: '' });
+  const renewalsRangeQuery = renewalsQuery(renewalsRange);
   const [addingRule, setAddingRule] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const picked = useRowSelection();
+  const selected = picked.selected;
   const canEditRules = me.role === 'sa' || me.role === 'admin';
+  /* Cùng khóa + cùng hàm với `DigestRulesPanel` nên chỉ đọc cache, không gọi lần hai. Chưa có
+     luật nào thì nút "Thêm luật" chỉ ở khung trống, không lặp ở đầu trang (PW-A30). */
+  const rules = useQuery({
+    queryKey: ['expiry', 'rules'],
+    queryFn: () => apiFetch<unknown[]>('/api/v1/expiry/rules'),
+    enabled: tab === 'rules',
+  });
+  const hasRules = (rules.data?.length ?? 0) > 0;
 
   /*
    * BA BỘ LỌC SỐNG TRÊN THANH ĐỊA CHỈ, KHÔNG TRONG `useState`.
@@ -168,12 +181,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const period = (PERIOD_WINDOWS as readonly string[]).includes(url.filters.period)
     ? (url.filters.period as PeriodWindow)
     : '';
-  const until =
-    period === 'custom'
-      ? url.filters.until || ''
-      : period
-        ? periodRange(period, today).to
-        : '';
+  const until = period === 'custom' ? url.filters.until || '' : '';
   const withinDays = until
     ? windowUntil(until, today)
     : WINDOWS.includes(Number(url.filters.withinDays))
@@ -353,14 +361,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
             <button type="button" className="btn sm" onClick={() => setRenewing(row.original)}>
               {t('expiry.renew')}
             </button>
-          ) : (
-            /* Bảo hành không gia hạn ở đây: cho lối sang hồ sơ (sửa ngày ở đó) thay vì một câu
-               xám lặp lại trên mọi dòng, đọc như chữ của một nút bị vô hiệu. */
-            <Link className="with-icon" to={row.original.link}>
-              {t('expiry.openRecordShort')}
-              <Chevron direction="right" />
-            </Link>
-          ),
+          ) : /* Không gia hạn được ở đây (bảo hành): ô trống. Lối sang hồ sơ là link mã ở cột
+                 Mục và bấm cả dòng (PW-A20) — thêm "Mở hồ sơ ›" là lặp lại trên mọi dòng. */
+          null,
       },
     ],
     /*
@@ -382,10 +385,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
     <>
       <PageHeader
         title={t('expiry.title')}
-        subtitle={t('expiry.subtitle')}
         actions={
           tab === 'rules' ? (
-            canEditRules ? (
+            canEditRules && hasRules ? (
               <button type="button" className="btn primary" onClick={() => setAddingRule(true)}>
                 {t('digest.add')}
               </button>
@@ -398,6 +400,12 @@ export function ExpiryScreen({ me }: { me: Me }) {
                 `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}${sortParams}`
               }
               fileName={state ? `sap-het-han-${EXPORT_SUFFIX[state]}.xlsx` : 'sap-het-han.xlsx'}
+            />
+          ) : tab === 'renewals' ? (
+            /* Xuất đúng khoảng ngày đang xem của tab Đã gia hạn (PW-A29). */
+            <ExportXlsxButton
+              url={`/api/v1/expiry/renewals/export.xlsx${renewalsRangeQuery ? `?${renewalsRangeQuery}` : ''}`}
+              fileName="da-gia-han.xlsx"
             />
           ) : null
         }
@@ -495,7 +503,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
         </TabPanel>
       ) : tab === 'renewals' ? (
         <TabPanel tabKey="renewals">
-          <RenewalsPanel kindLabel={kindLabel} />
+          <RenewalsPanel kindLabel={kindLabel} range={renewalsRange} onRangeChange={setRenewalsRange} />
         </TabPanel>
       ) : (
         <TabPanel tabKey="list">
@@ -506,15 +514,13 @@ export function ExpiryScreen({ me }: { me: Me }) {
           /* Tô như bộ lọc đang bật chỉ khi KHÁC mặc định (30 ngày tới): phạm vi mặc định tô xanh
              thì người dùng đi tìm một bộ lọc để tắt mà không có. */
           indicateFilled={Boolean(period) || withinDays !== DEFAULT_WINDOW}
-          /* Chín mốc cố định, đọc lướt là thấy — ô gõ lọc chỉ thêm một bước. */
+          /* Năm mốc cố định, đọc lướt là thấy — ô gõ lọc chỉ thêm một bước. */
           searchable={false}
           options={[
             ...WINDOWS.map((days) => ({
               value: String(days),
               label: t('expiry.windowDays', { days }),
             })),
-            { value: 'month', label: t('expiry.windowMonth') },
-            { value: 'quarter', label: t('expiry.windowQuarter') },
             { value: 'custom', label: t('expiry.windowCustom') },
           ]}
           onChange={setWindow}
@@ -592,27 +598,11 @@ export function ExpiryScreen({ me }: { me: Me }) {
              sách là theo tháng. Sắp theo cột khác thì nhóm tháng vô nghĩa nên bỏ. */
           groupBy={sortKey === 'end' ? byMonth : undefined}
           rowClassName={(row) => (row.daysLeft < 0 ? 'row-danger' : '')}
+          onRowClick={(row) => navigate(row.link)}
+          rowHref={(row) => row.link}
           /* Chọn nhiều dòng để gia hạn một lượt (cuối năm cả chục license/SSL cùng một hợp
              đồng). Dòng không gia hạn được ở đây thì bỏ qua lúc chạy, và nói ra con số đó. */
-          selection={{
-            selected,
-            onToggle: (id) =>
-              setSelected((current) => {
-                const next = new Set(current);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              }),
-            onToggleAll: (ids, checked) =>
-              setSelected((current) => {
-                const next = new Set(current);
-                for (const id of ids) {
-                  if (checked) next.add(id);
-                  else next.delete(id);
-                }
-                return next;
-              }),
-          }}
+          selection={picked}
         />
       )}
 
@@ -621,9 +611,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
           rows={rows.filter((row) => selected.has(row.id))}
           csrfToken={me.csrfToken}
           askConfirm={askConfirm}
-          onClear={() => setSelected(new Set())}
+          onClear={picked.clear}
           onDone={() => {
-            setSelected(new Set());
+            picked.clear();
             void queryClient.invalidateQueries({ queryKey: ['expiry'] });
           }}
         />
@@ -774,9 +764,17 @@ function BulkRenewBar({
 }
 
 /** Tab "Đã gia hạn": các lượt gia hạn gần nhất (`GET /expiry/renewals`) — ai, lúc nào, cũ → mới. */
-function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
+function RenewalsPanel({
+  kindLabel,
+  range,
+  onRangeChange: setRange,
+}: {
+  kindLabel: (kind: string) => string;
+  /** Khoảng ngày nằm ở màn cha: nút Xuất ở đầu trang xuất đúng khoảng đang xem. */
+  range: { from: string; to: string };
+  onRangeChange: React.Dispatch<React.SetStateAction<{ from: string; to: string }>>;
+}) {
   const { t } = useTranslation();
-  const [range, setRange] = useState({ from: '', to: '' });
   const query = renewalsQuery(range);
   const renewals = useQuery({
     queryKey: ['expiry', 'renewals', query],
@@ -838,12 +836,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         accessorKey: 'actor',
         enableSorting: false,
         header: t('expiry.renewedBy'),
-        cell: ({ row }) =>
-          row.original.actorName ? (
-            <span title={row.original.actor}>{row.original.actorName}</span>
-          ) : (
-            row.original.actor
-          ),
+        cell: ({ row }) => <Actor actor={row.original.actor} actorName={row.original.actorName} />,
       },
     ],
     [t, kindLabel],
@@ -903,7 +896,7 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
           title: (row) => row.label,
           href: (row) => softwareItemPath(row.objectKind, row.objectId),
           meta: (row) =>
-            `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actorName ?? row.actor}`,
+            `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${actorLabel(row.actor, row.actorName, t).text}`,
           aside: (row) => formatDate(row.createdAt),
         }}
       />

@@ -13,6 +13,7 @@ import {
   searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
+  switchTheme,
 } from './helpers';
 
 /**
@@ -32,11 +33,7 @@ test.beforeEach(() => {
 });
 
 async function useTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  const button = page.getByRole('button', {
-    name: theme === 'dark' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng',
-  });
-  if ((await button.count()) > 0) await button.click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await switchTheme(page, theme);
 }
 
 async function pcTypeId(page: Page): Promise<string> {
@@ -86,18 +83,19 @@ async function seatUsed(page: Page, softwareId: string): Promise<number> {
   return ((await res.json()) as { seatUsed: number }).seatUsed;
 }
 
-test('1280px: 6 cột vừa khung, Ghế chỉ in phân số + "Hết ghế", Tình trạng đếm tới lúc tự thanh lý', async ({
+test('1280px: 6 cột vừa khung, Ghế chỉ in phân số + "Hết ghế", Hết hạn in ngày rồi đếm tới lúc tự thanh lý', async ({
   page,
 }) => {
   await firstLogin(page, E2E_SA);
   const stamp = uniqueStamp();
   const prefix = `LIC-E2E-TT-${stamp}`;
+  const expiredEnd = isoInDays(-10);
   const expired = await createSoftware(page, {
     code: `${prefix}-HET`,
     name: 'License hết hạn 10 ngày',
     kind: 'license',
     seatTotal: 2,
-    endDate: isoInDays(-10),
+    endDate: expiredEnd,
   });
   await assign(page, expired, await createDevice(page, `PC-E2E-TT-A-${stamp}`));
   await assign(page, expired, await createDevice(page, `PC-E2E-TT-B-${stamp}`));
@@ -117,10 +115,12 @@ test('1280px: 6 cột vừa khung, Ghế chỉ in phân số + "Hết ghế", T�
   await searchAndWaitForFilter(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
 
-  // Cột sắp được thì tên ô tiêu đề là tên nút sắp xếp bên trong nó.
+  /* Cột sắp được thì tên ô tiêu đề là tên nút sắp xếp bên trong nó. Cột sắp theo ngày nên tên
+     là "Hết hạn" và ngày là dòng chính (PW-A07 / TB-13); trạng thái xuống dòng phụ. */
   await expect(
-    page.getByRole('columnheader', { name: /^(Sắp xếp theo )?Tình trạng$/ }),
+    page.getByRole('columnheader', { name: /^(Sắp xếp theo )?Hết hạn$/ }),
   ).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: /^(Sắp xếp theo )?Tình trạng$/ })).toHaveCount(0);
   await expect(page.getByRole('columnheader', { name: 'Tình trạng hạn' })).toHaveCount(0);
   await expect(page.getByRole('columnheader', { name: 'Trạng thái', exact: true })).toHaveCount(0);
 
@@ -128,9 +128,10 @@ test('1280px: 6 cột vừa khung, Ghế chỉ in phân số + "Hết ghế", T�
   await expect(expiredRow).toContainText('2/2');
   await expect(expiredRow).toContainText('Hết ghế');
   await expect(expiredRow).not.toContainText('%');
+  await expect(expiredRow).toContainText(expiredEnd.split('-').reverse().join('/'));
   await expect(expiredRow.getByText('Hết hạn', { exact: true })).toBeVisible();
   // Số ngày ân hạn đọc từ cấu hình qua API — bài này đọc cùng khoá đó, không gõ 30.
-  await expect(expiredRow).toContainText(`quá 10 ngày · tự thanh lý sau ${grace - 9} ngày`);
+  await expect(expiredRow).toContainText(`tự thanh lý sau ${grace - 9} ngày`);
 
   const overRow = page.getByRole('row', { name: new RegExp(`${prefix}-VUOT`) });
   await expect(overRow).toContainText('2/1');
@@ -257,8 +258,8 @@ test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Khôi ph
   await retire(page, id);
 
   await page.goto(`/software/${id}`);
-  await expect(page.getByRole('status').filter({ hasText: 'Đã thanh lý ngày' })).toContainText(
-    `bởi ${E2E_SA.email}`,
+  await expect(page.getByRole('status').filter({ hasText: 'Đã thanh lý' })).toContainText(
+    `· ${E2E_SA.email}`,
   );
   await expect(page.getByRole('button', { name: 'Gia hạn', exact: true })).toHaveCount(0);
 

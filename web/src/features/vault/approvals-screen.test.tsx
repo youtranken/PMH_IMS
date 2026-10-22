@@ -74,25 +74,24 @@ describe('Màn Duyệt yêu cầu mở từ thư', () => {
   });
 });
 
-/** D-07: bản vẽ chờ duyệt có chỗ trên màn Duyệt — tên, người gửi, bấm là mở bản vẽ. */
-describe('Khối "Bản vẽ chờ duyệt"', () => {
+/** UX-E07: duyệt bản vẽ là việc của màn Sơ đồ mạng (nav đã có badge) — màn Duyệt chỉ giữ két. */
+describe('Màn Duyệt không còn khối "Bản vẽ chờ duyệt"', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('Admin/SA thấy bản vẽ đang chờ mình duyệt, link mở thẳng bản vẽ', async () => {
-    renderAt('/approvals', [], [
+  it('có bản vẽ chờ cũng không bày khối, không hỏi hàng chờ bản vẽ', async () => {
+    renderAt('/approvals', undefined, [
       { approvalId: 'p1', diagramId: 'd1', name: 'Tầng 3 E2E', requester: 'tv@pmh.com.vn', requesterName: 'Thành viên E2E', seq: 4, submittedAt: '2026-10-05T01:00:00Z' },
     ]);
-    const block = await screen.findByRole('heading', { name: 'Bản vẽ chờ duyệt · 1' });
-    const card = block.closest('section') as HTMLElement;
-    expect(within(card).getByRole('link', { name: 'Mở Tầng 3 E2E' })).toHaveAttribute('href', '/diagrams/d1');
-    expect(card).toHaveTextContent('Phiên bản #4');
-    expect(card).toHaveTextContent('Thành viên E2E gửi lúc');
-  });
-
-  it('không có bản vẽ nào chờ thì không bày khối', async () => {
-    renderAt('/approvals');
     await screen.findByText('an@pmh.com.vn');
     expect(screen.queryByRole('heading', { name: /Bản vẽ chờ duyệt/ })).toBeNull();
+    const calls = (fetch as unknown as { mock: { calls: [RequestInfo | URL][] } }).mock.calls;
+    expect(calls.some(([url]) => String(url).includes('/api/v1/diagrams/reviews/pending'))).toBe(false);
+  });
+
+  it('tab Chờ duyệt: thẻ không đeo badge "Chờ duyệt" — cả tab đều đang chờ', async () => {
+    renderAt('/approvals');
+    const card = await screen.findByRole('region', { name: /an@pmh\.com\.vn/ });
+    expect(within(card).queryByText('Chờ duyệt')).toBeNull();
   });
 });
 

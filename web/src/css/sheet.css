@@ -309,23 +309,39 @@ button.sheet-mark:focus-visible {
   font-weight: var(--fw-semibold);
 }
 
+/* Chuỗi "Đang ghi › Chờ duyệt › Đã chốt › Hoàn tất" (PW-B24): mỗi bước rộng theo chữ, nối bằng ›,
+   khung hẹp thì chảy sang dòng sau như một câu. Bước co giãn đều (`flex: 1 1 6rem`) thì xếp thành
+   lưới 2×2 và mắt đọc theo cột, mất thứ tự. */
 .sheet-steps {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
   list-style: none;
   padding: 0;
   margin: var(--space-3) 0;
 }
 
 .sheet-steps li {
-  flex: 1 1 6rem;
+  position: relative;
+  flex: 0 0 auto;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-sm);
   background: var(--surface-2);
-  color: var(--ink-3);
-  font-size: var(--fs-2xs);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+/* Dấu › nằm GIỮA hai bước (trong khe), không lọt vào nền của bước. */
+.sheet-steps li + li::before {
+  content: '›';
+  position: absolute;
+  right: 100%;
+  width: var(--space-6);
   text-align: center;
+  color: var(--ink-3);
+  font-weight: 400;
 }
 
 .sheet-steps li[data-done] {
@@ -490,6 +506,22 @@ button.sheet-mark:focus-visible {
   /* Màu ô của mẫu (tiêu đề, Note, bộ phận) phải ra giấy — trình duyệt mặc định bỏ nền khi in. */
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+
+/* Bản giấy vẽ ĐÚNG khổ rồi `PaperFit` thu cả khối vừa khung (iso-paper.tsx). Để trình duyệt tự
+   co thì bảng 0206 trên điện thoại bị bóp đến chồng chữ và lưới 0203 khuất ngày 30–31. */
+.paper-fit {
+  min-width: 0;
+  overflow-x: auto;
+}
+.paper[data-page='a4'] {
+  width: 210mm;
+}
+.paper[data-page='a4l'] {
+  width: 297mm;
+}
+.paper[data-page='a3l'] {
+  width: 420mm;
 }
 
 /* Đầu phiếu như mẫu SP-IT02: logo góc trái, mã phiếu ngay dưới logo, tên phiếu giữa trang (cột
@@ -784,5 +816,8 @@ button.sheet-mark:focus-visible {
     border: 0;
     border-radius: 0;
     overflow: visible;
+    /* Giấy là khổ thật: bỏ bề rộng màn hình và hệ số thu của PaperFit. */
+    width: auto;
+    zoom: normal !important;
   }
 }

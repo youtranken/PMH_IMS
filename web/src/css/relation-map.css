@@ -18,7 +18,6 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: var(--space-9) var(--space-10) var(--space-10);
-  box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-11);
 }
 .rmap-head {
@@ -86,9 +85,11 @@
   justify-content: center;
   padding: var(--space-7) var(--space-9);
   border-radius: var(--r-lg);
-  background: var(--grad);
-  color: var(--on-brand);
-  box-shadow: var(--shadow);
+  /* Nền mặt + viền thương hiệu (PW-A33): ô nổi nhất trang không cần gradient trang trí — viền đủ
+     nói "đây là máy đang xem". */
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  color: var(--ink);
   text-align: center;
   font-family: var(--mono);
   font-size: var(--fs-xl);
@@ -98,8 +99,7 @@
      chữ (lớp `sm`/`xs` do `hubSize()` gắn), không bao giờ ngắt. */
   white-space: nowrap;
 }
-/* Hạch có ảnh của máy (cùng ảnh trên sơ đồ): ảnh trên, mã dưới. Nền trắng-trên-nền-thương-hiệu
-   để ảnh chụp máy không lẫn vào dải màu. Ảnh rộng hết bề ngang thẻ, cao theo ảnh: ảnh máy 1U
+/* Hạch có ảnh của máy (cùng ảnh trên sơ đồ): ảnh trên, mã dưới. Ảnh rộng hết bề ngang thẻ, cao theo ảnh: ảnh máy 1U
    (~11 : 1) là một dải đọc được, không phải hình nhỏ giữa một ô vuông. Thẻ có ảnh rộng hơn thẻ chỉ
    có mã để dải đó đủ dài; ảnh dọc bị chặn trần chiều cao. */
 .rmap-hub.with-image {

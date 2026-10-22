@@ -113,11 +113,11 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
     const form = page.getByRole('dialog');
     await openFold(form, 'Người dùng và phòng ban');
-    await form.getByLabel('Người sử dụng').fill('anh Nam');
+    await form.getByLabel('Người dùng').fill('anh Nam');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
+    await expect(page.getByText('Thêm hồ sơ')).toBeVisible();
     await expect(page.getByText(/người sử dụng: \(trống\) → anh Nam/)).toBeVisible();
   });
 
@@ -172,7 +172,7 @@ test.describe('Kho thiết bị', () => {
     await confirmAction(page);
     await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.')).toBeVisible();
     // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
-    await expect(page.getByText(/Thanh lý lúc .* bởi /)).toBeVisible();
+    await expect(page.getByText(/Đã thanh lý .* · /)).toBeVisible();
     // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đổi trạng thái" (Q-20).
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toHaveCount(0);
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.
@@ -320,12 +320,12 @@ test.describe('Kho thiết bị', () => {
 
     // Khối đã có giá trị mở sẵn khi sửa (Q-27) — người dùng hiện có phải thấy ngay.
     await expect(form.getByRole('button', { name: /^Người dùng và phòng ban/ })).toHaveAttribute('aria-expanded', 'true');
-    await expect(form.getByLabel('Người sử dụng')).toHaveValue('chị Lan');
-    await form.getByLabel('Người sử dụng').fill('anh Tuấn');
+    await expect(form.getByLabel('Người dùng')).toHaveValue('chị Lan');
+    await form.getByLabel('Người dùng').fill('anh Tuấn');
     await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    // Bảng không còn cột Người sử dụng (Q-27): đọc lại hồ sơ để chắc đã lưu.
+    // Bảng không còn cột Người dùng (Q-27): đọc lại hồ sơ để chắc đã lưu.
     const saved = await page.request.get(`/api/v1/devices?search=${encodeURIComponent(code)}`);
     expect((await saved.json()).items[0]).toMatchObject({ code, assignedTo: 'anh Tuấn' });
   });
@@ -356,7 +356,7 @@ test.describe('Kho thiết bị', () => {
     await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row.getByRole('button', { name: `Sửa máy ${code}` })).toBeVisible();
-    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái', 'Nhân bản', 'Thanh lý']);
+    expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái…', 'Nhân bản', 'Thanh lý…']);
 
     await rowAction(page, code, 'Đổi trạng thái');
     await page.getByRole('button', { name: 'Trạng thái mới' }).click();

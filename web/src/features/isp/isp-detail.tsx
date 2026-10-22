@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { bandwidthLabel } from "@/lib/bandwidth";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -38,6 +39,7 @@ import { ispMenuItems, parseIspAction } from "./isp-status-menu";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
 import { PATHS } from "@/lib/routes";
+import { RecordStamp } from "@/ui/record-stamp";
 
 /**
  * Trang chi tiết đường truyền.
@@ -69,9 +71,7 @@ export function IspDetail({ me }: { me: Me }) {
   const history = useQuery({
     queryKey: ["isp", id, "history"],
     queryFn: () => apiFetch<IspHistoryRow[]>(`/api/v1/isp-lines/${id}/history`),
-    // Line đã thanh lý thì thẻ định danh phải nói ai thanh lý, lúc nào (Q-04) — thông tin đó
-    // chỉ nằm trong sổ lịch sử, nên hỏi sổ ngay cả khi chưa mở tab.
-    enabled: tab === "history" || line.data?.status === "terminated",
+    // Hỏi sổ ngay khi mở trang: dòng "sửa lần cuối … bởi …" dưới dải 4 ô cần lượt mới nhất (UX-E26).
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["isp"] });
@@ -149,7 +149,7 @@ export function IspDetail({ me }: { me: Me }) {
 
   /* Mọi trường chưa nói ở dải 4 ô, đủ cả, theo thứ tự cố định — ô trống ghi "chưa khai". */
   const specItems = [
-    { label: t("isp.bandwidth"), value: item.bandwidth },
+    { label: t("isp.bandwidth"), value: bandwidthLabel(item.bandwidth) },
     { label: t("isp.site"), value: item.siteCode },
     { label: t("isp.startDate"), value: item.startDate ? formatDate(item.startDate) : null },
     { label: t("isp.note"), value: item.note },
@@ -270,6 +270,7 @@ export function IspDetail({ me }: { me: Me }) {
           },
         ]}
       />
+      <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />
 
       {/* Một cột: trạng thái ở đầu trang, việc cần lúc mất mạng (hotline, IP WAN, thiết bị,
           số hợp đồng) ở dải 4 ô — không còn gì cho cột phải. */}

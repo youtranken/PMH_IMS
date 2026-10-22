@@ -363,7 +363,7 @@ describe('bố cục khối dùng chung', () => {
   it.each(['tr:last-child', 'tr:nth-child(even)'])('luật dòng bảng `%s` không rò vào bảng con trong khu bung', (part) => {
     const rules = cssRules('table.css').filter((r) => r.selector.startsWith('table.table') && r.selector.includes(part));
     expect(rules.length).toBeGreaterThan(0);
-    for (const r of rules) expect(r.selector).toMatch(/^table\.table > tbody > tr[^ ]* > td$/);
+    for (const r of rules) expect(r.selector).toMatch(/^table\.table(\.table-stack)? > tbody > tr[^ ]*( > td)?$/);
   });
 
   it('thanh lọc ≤600px: ô chọn / ô ngày chia đều hai cột thay cho bề ngang tối thiểu lởm chởm', () => {
@@ -462,7 +462,7 @@ describe('bảng thiết bị vừa khung ở 1280–1440px', () => {
     expect(declValue(rule('table.css', '.cell-sub.only-mid', MID)!.body, 'display')).toBe('block');
   });
 
-  // Bảng IP nằm trong khung phải ~770px ở 1366: tiêu đề "Người / phòng ban dùng" không ngắt
+  // Bảng IP nằm trong khung phải ~770px ở 1366: tiêu đề "Người dùng / phòng ban" không ngắt
   // dòng thì một mình nó đòi 190px, và ô đệm 14px × 14 mép ăn thêm gần 200px.
   it('bảng IP: tiêu đề ngắt dòng được, ô đệm hẹp lại ở khổ giữa', () => {
     const head = rule('primitives.css', 'table.table.ip-table thead th', '(min-width: 961px)');
@@ -566,5 +566,15 @@ describe('trình xem sơ đồ vẽ trên giấy sáng như trình vẽ (ui/diag
     expect(luminance(hex('light', '--diagram-paper'))).toBeGreaterThan(0.9);
     // Watermark nằm trên giấy đó: theme tối mà dùng mực sáng thì chìm mất.
     expect(tokenBlock('dark').get('--diagram-watermark')).toBe(tokenBlock('light').get('--diagram-watermark'));
+  });
+});
+
+// PW-A33: hạch bản đồ quan hệ — nền mặt + viền thương hiệu, không gradient trang trí.
+describe('relation-map.css — hạch', () => {
+  it('.rmap-hub nền var(--surface), viền var(--primary), không var(--grad)', () => {
+    const body = rule('relation-map.css', '.rmap-hub')!.body;
+    expect(declValue(body, 'background')).toBe('var(--surface)');
+    expect(declValue(body, 'border')).toBe('2px solid var(--primary)');
+    expect(body).not.toContain('var(--grad)');
   });
 });

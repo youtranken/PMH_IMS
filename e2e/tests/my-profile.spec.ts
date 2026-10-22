@@ -71,8 +71,10 @@ test('đổi mật khẩu thành công từ Hồ sơ; sai mật khẩu hiện t�
   browser,
 }) => {
   const { person, own } = await newPerson(page, browser);
+  // Menu tài khoản chỉ còn "Hồ sơ của tôi" (UX-E18): đổi mật khẩu đi từ thẻ Mật khẩu của Hồ sơ.
   await own.getByRole('button', { name: /^Menu tài khoản của / }).click();
-  await own.getByRole('menuitem', { name: 'Đổi mật khẩu' }).click();
+  await own.getByRole('menuitem', { name: 'Hồ sơ của tôi' }).click();
+  await own.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click();
   const dialog = own.getByRole('dialog', { name: 'Đổi mật khẩu' });
   await expect(dialog).toBeVisible();
 
@@ -115,7 +117,7 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   await dialog.getByRole('button', { name: 'Tiếp tục' }).click();
 
   // Bước hỏi mã của điện thoại HIỆN TẠI nằm NGAY TRONG hộp này, câu nói đúng việc cài lại.
-  const stepUp = dialog.getByRole('region', { name: 'Xác nhận danh tính' });
+  const stepUp = dialog.getByRole('region', { name: 'Nhập mã 6 số', exact: true });
   await expect(stepUp).toBeVisible();
   await expect(own.getByRole('dialog')).toHaveCount(1);
   await expect(
@@ -250,6 +252,6 @@ test('Giao diện trong menu tài khoản: một hàng ba nút biểu tượng, 
   await row.getByRole('menuitemradio', { name: 'Tối' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(row.getByRole('menuitemradio', { name: 'Tối' })).toHaveAttribute('aria-checked', 'true');
-  // Nút tài khoản giống nhau ở mọi giao diện: không có mũi tên chỉ hiện khi tối.
-  await expect(page.getByRole('button', { name: /^Menu tài khoản của / }).locator('svg')).toHaveCount(0);
+  // Nút tài khoản giống nhau ở mọi giao diện: đúng MỘT mũi tên lên (PW-C26), không thêm biểu tượng nào khi tối.
+  await expect(page.getByRole('button', { name: /^Menu tài khoản của / }).locator('svg')).toHaveCount(1);
 });
