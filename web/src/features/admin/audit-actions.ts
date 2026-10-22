@@ -70,6 +70,7 @@ export const ACTION_KEY: Record<string, string> = {
   'vault.secret.revealed': 'audit.actions.vaultSecretRevealed',
   'vault.secret.reveal_denied': 'audit.actions.vaultSecretRevealDenied',
   'vault.access.granted': 'audit.actions.vaultAccessGranted',
+  'vault.access.exported': 'audit.actions.vaultAccessExported',
   'vault.access.revoked': 'audit.actions.vaultAccessRevoked',
   'break_glass.requested': 'audit.actions.breakGlassRequested',
   'break_glass.approved': 'audit.actions.breakGlassApproved',

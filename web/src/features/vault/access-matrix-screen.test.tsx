@@ -53,6 +53,14 @@ function renderAt(entry: string, me: Me = ME) {
   return { ...view, fetchMock };
 }
 
+// UX-E28: rà soát quyền két định kỳ cần một file — nút ở đầu trang, cùng chỗ mọi màn.
+describe('Quyền két — Xuất Excel', () => {
+  it('đầu trang có "Xuất Excel" trỏ tới /vault/access/export.xlsx', () => {
+    renderAt('/admin/vault-access');
+    expect(screen.getByRole('button', { name: /Xuất Excel/ })).toBeInTheDocument();
+  });
+});
+
 describe('Quyền xem két sắt — theo người', () => {
   afterEach(() => vi.unstubAllGlobals());
 

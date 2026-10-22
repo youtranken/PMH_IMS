@@ -3651,6 +3651,7 @@ export default {
       vaultSecretRevealed: 'Xem mật khẩu trong két',
       vaultSecretRevealDenied: 'Bị chặn xem két',
       vaultAccessGranted: 'Gán quyền két',
+      vaultAccessExported: 'Xuất ma trận quyền két',
       vaultAccessRevoked: 'Gỡ quyền két',
       breakGlassRequested: 'Xin mở két',
       breakGlassApproved: 'Duyệt mở két',

@@ -27,6 +27,7 @@ import { secretTextRule, useFormErrors, useSubmitError } from '@/ui/use-form-err
 import { foldSearch } from '@/lib/search-fold';
 import { planCopy } from './access-copy';
 import { CodeInput } from '@/ui/code-input';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 
 /** Phải khớp `SCOPE_TYPES` bên API (`access-tier.ts`) và CHECK ở tầng DB. */
 type ScopeType =
@@ -486,9 +487,13 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         title={t('access.title')}
         titleTip={t('access.defaultDenied')}
         actions={
-          <button type="button" className="btn" onClick={() => setChecking(true)}>
-            {t('access.check')}
-          </button>
+          <>
+            {/* Rà soát quyền định kỳ (UX-E28): chỉ cấu hình quyền, không giá trị két (FR-026). */}
+            <ExportXlsxButton url="/api/v1/vault/access/export.xlsx" fileName="quyen-ket.xlsx" />
+            <button type="button" className="btn" onClick={() => setChecking(true)}>
+              {t('access.check')}
+            </button>
+          </>
         }
       />
 
