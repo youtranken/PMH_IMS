@@ -30,6 +30,7 @@ import { useMediaQuery } from '@/ui/use-media-query';
 import { disposalDetailText, disposalItemKindLabel, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
 import { cutExpiryBoard } from './expiry-board-cut';
+import { RowActions } from '@/ui/row-actions';
 
 interface Block<T> {
   available: boolean;
@@ -944,7 +945,14 @@ function ExpiringBlock({
         href: (item) => item.link ?? undefined,
         badge: (item) => <ExpiryBadge end={item.endDate} />,
         meta: (item) => `${expiryKindLabel(kinds, item.kind)} · ${formatDate(item.endDate)}`,
-        aside: (item) => (item.canRenew ? <RenewButton item={item} onRenew={setRenewing} /> : null),
+        // Thẻ chỉ có nút ⋯ (TB-09): Gia hạn vào menu thay vì đứng cạnh badge.
+        actions: (item) =>
+          item.canRenew ? (
+            <RowActions
+              label={t('common.actionsOf', { subject: item.label })}
+              items={[{ key: 'renew', label: t('expiry.renew'), onSelect: () => setRenewing(item) }]}
+            />
+          ) : null,
       }}
     />
   );

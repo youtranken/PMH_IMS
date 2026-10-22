@@ -17,6 +17,7 @@ import { SkeletonCards, SkeletonRows } from '@/ui/skeleton-rows';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { BREAKPOINTS } from '@/ui/breakpoints';
 import { useMediaQuery } from '@/ui/use-media-query';
+import { RowActionsCompact } from '@/ui/row-actions';
 
 // Cho phép cột khai báo className (vd 'num' căn phải cột số) qua columnDef.meta.
 declare module '@tanstack/react-table' {
@@ -51,7 +52,12 @@ export interface MobileCard<T> {
   titleIsCode?: boolean;
   /** Góc phải trên — badge trạng thái. */
   badge?: (row: T) => ReactNode;
-  /** Góc phải trên, sau badge — menu ⋯ (`RowActions`). Bấm vào đây không mở dòng. */
+  /**
+   * Góc phải trên, sau badge — menu ⋯ (`RowActions`). Bấm vào đây không mở dòng. Trên thẻ, nút
+   * `primary` ("Sửa") của `RowActions` gộp vào đầu menu: thẻ chỉ có một nút ⋯ (TB-09).
+   * Bỏ trống thì `DataTable` lấy ô của cột `id: 'actions'` — điện thoại không mất thao tác mà
+   * desktop có. Thẻ cố ý không có thao tác thì trả `null`.
+   */
   actions?: (row: T) => ReactNode;
   /** Dòng 2 — tên hồ sơ. */
   subtitle?: (row: T) => ReactNode;
@@ -271,6 +277,15 @@ export function DataTable<T>({
   const lastColumnId = table.getAllLeafColumns().at(-1)?.id;
 
   if (mobileCard && narrow) {
+    const hasActionsColumn = table.getAllLeafColumns().some((column) => column.id === 'actions');
+    const byOriginal = new Map(rows.map((row) => [row.original, row]));
+    const columnActions = (original: T) => {
+      const cell = byOriginal.get(original)?.getAllCells().find((c) => c.column.id === 'actions');
+      return cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null;
+    };
+    const withActions: MobileCard<T> =
+      mobileCard.actions || !hasActionsColumn ? mobileCard : { ...mobileCard, actions: columnActions };
+    const card = rowHref && !withActions.href ? { ...withActions, href: rowHref } : withActions;
     return (
       <>
         {searchPlaceholder !== undefined && (
@@ -284,7 +299,7 @@ export function DataTable<T>({
           <MobileCardList
             rows={rows.map((row) => row.original)}
             rowKey={(_, index) => rows[index].id}
-            card={rowHref && !mobileCard.href ? { ...mobileCard, href: rowHref } : mobileCard}
+            card={card}
             rowClassName={rowClassName}
             onRowClick={onRowClick}
             rowCurrent={rowCurrent}
@@ -675,7 +690,7 @@ function MobileCardItem<T>({
         {badge || actions ? (
           <span className="list-card-end">
             {badge}
-            {actions}
+            <RowActionsCompact.Provider value>{actions}</RowActionsCompact.Provider>
           </span>
         ) : null}
       </div>

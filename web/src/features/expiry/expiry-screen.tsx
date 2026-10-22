@@ -34,6 +34,7 @@ import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { DigestRulesPanel } from './digest-rules-panel';
 import { Actor, actorLabel } from '@/ui/actor';
 import { useRowSelection } from '@/ui/use-row-selection';
+import { RowActions } from '@/ui/row-actions';
 
 interface ExpiryRow {
   id: string;
@@ -566,19 +567,20 @@ export function ExpiryScreen({ me }: { me: Me }) {
           columns={columns}
           emptyText={t('expiry.empty')}
           stackOnMobile
-          /* ≤600px: thẻ 2 dòng — mục + badge ngày, rồi "loại · ngày hết hạn" và nút Gia hạn
-             nhỏ nếu gia hạn được tại đây. */
+          /* ≤600px: thẻ 2 dòng — mục + badge ngày, rồi "loại · ngày hết hạn". Gia hạn nằm trong
+             nút ⋯ như mọi thẻ (TB-09). */
           mobileCard={{
             title: (row) => row.code ?? row.label,
             subtitle: (row) => (row.code ? row.name : undefined),
             href: (row) => row.link,
             badge: (row) => <ExpiryBadge end={row.end} thresholds={nguong} />,
             meta: (row) => `${kindLabel(row.kind)} · ${formatDate(row.end)}`,
-            aside: (row) =>
+            actions: (row) =>
               row.canRenew ? (
-                <button type="button" className="btn sm" onClick={() => setRenewing(row)}>
-                  {t('expiry.renew')}
-                </button>
+                <RowActions
+                  label={t('common.actionsOf', { subject: row.code ?? row.label })}
+                  items={[{ key: 'renew', label: t('expiry.renew'), onSelect: () => setRenewing(row) }]}
+                />
               ) : null,
           }}
           /*
