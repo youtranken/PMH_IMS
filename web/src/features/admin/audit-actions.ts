@@ -217,6 +217,8 @@ export const VERB_KEY: Record<string, string> = {
   'imported-update': 'audit.verb.importedUpdate',
   diagram_icon_set: 'audit.verb.diagramIconSet',
   diagram_icon_removed: 'audit.verb.diagramIconRemoved',
+  photo_set: 'audit.verb.photoSet',
+  photo_removed: 'audit.verb.photoRemoved',
   activated: 'audit.verb.activated',
   deactivated: 'audit.verb.deactivated',
   enabled: 'audit.verb.enabled',

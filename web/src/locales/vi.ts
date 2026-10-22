@@ -3873,6 +3873,8 @@ export default {
       importedUpdate: 'Cập nhật khi nhập từ Excel',
       diagramIconSet: 'Tải biểu tượng sơ đồ',
       diagramIconRemoved: 'Gỡ biểu tượng sơ đồ',
+      photoSet: 'Đặt ảnh của loại',
+      photoRemoved: 'Gỡ ảnh của loại',
       activated: 'Dùng lại',
       deactivated: 'Ngừng dùng',
       enabled: 'Bật',
