@@ -3112,6 +3112,8 @@ export default {
     usedBy: 'Người dùng / phòng ban',
     usedByPlaceholder: 'Phòng ban hoặc tên người',
     usedByHint: 'vd "Chị Lan — Kế toán" hoặc "Phòng IT".',
+    usedByFromDevice: 'Theo hồ sơ máy — đổi người dùng ở trang thiết bị.',
+    usedByDeviceNone: 'Máy chưa khai người dùng',
     assignedAt: 'Ngày cấp',
     /* Nút trên dòng, tiêu đề hộp và nút gửi cùng một chữ: ô trống và hồ sơ đã thu hồi mở CÙNG
        một hộp, nên hai chữ khác nhau là nói với người dùng rằng đó là hai việc khác nhau. */

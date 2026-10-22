@@ -69,6 +69,11 @@ export interface IpAddressRecord {
    * IP chỉ đọc được từ máy; IP không gắn máy thì `null`.
    */
   deviceSiteCode: string | null;
+  /**
+   * Người / bộ phận dùng IP. IP gắn máy thì ĐỌC TỪ MÁY (người dùng, không có thì phòng ban —
+   * LF-03, Q-33): bản sao trong hàng IP là thứ làm sổ nói tên người cũ sau khi máy đổi tay.
+   * IP không gắn máy thì là ô tự ghi.
+   */
   usedBy: string | null;
   assignedBy: string;
   assignedAt: string | null;
@@ -518,7 +523,7 @@ export class IpAddressService {
         subnetId: input.subnetId,
         address,
         deviceId: input.deviceId || null,
-        usedBy: input.usedBy?.trim() || null,
+        usedBy: ownUsedBy(input.deviceId, input.usedBy),
         assignedBy: actor,
         assignedAt: input.assignedAt || null,
         status,
@@ -540,7 +545,7 @@ export class IpAddressService {
       changes: {
         address,
         deviceId: input.deviceId || null,
-        usedBy: input.usedBy?.trim() || null,
+        usedBy: ownUsedBy(input.deviceId, input.usedBy),
         reason: input.reason?.trim() || null,
       },
     });
@@ -713,6 +718,10 @@ export class IpAddressService {
     // Hồ sơ Đang dùng mà bị gỡ hết chủ là quay lại đúng dòng mồ côi Q-14 cấm. Hồ sơ Trống thì
     // không có chủ là chuyện bình thường — sửa ghi chú của nó không được chặn.
     if (isOccupying(before.status as IpStatus)) requireOwner(nextOwner.deviceId, nextOwner.usedBy);
+    // Lượt sửa chạm chủ mà hồ sơ (sau sửa) gắn máy: bỏ bản sao người dùng (LF-03).
+    if (nextOwner.deviceId && (values.deviceId !== undefined || values.usedBy !== undefined)) {
+      values.usedBy = null;
+    }
 
     /*
      * ĐỔI CHỦ hoặc DỜI ĐỊA CHỈ qua đường sửa hồ sơ cũng phải hỏi sổ NAT.
@@ -876,6 +885,7 @@ export class IpAddressService {
       const nextDeviceId = values.deviceId !== undefined ? values.deviceId : before.deviceId;
       requireOwner(nextDeviceId, values.usedBy !== undefined ? values.usedBy : before.usedBy);
       await this.assertDeviceHasNoIpWithin(tx, nextDeviceId, id);
+      if (nextDeviceId) values.usedBy = null;
       // Ngày cấp người dùng chọn thắng "hôm nay": cấp bù một IP đã cắm từ tuần trước là
       // chuyện thường, và sổ phải ghi ngày thật.
       values.assignedAt = options.assignedAt || isoDateInTz(await this.timezone());
@@ -1277,7 +1287,7 @@ export class IpAddressService {
         deviceCode: device?.code ?? null,
         deviceName: device?.name ?? null,
         deviceSiteCode: device?.siteCode ?? null,
-        usedBy: row.usedBy,
+        usedBy: device ? deviceOwnerOf(device) : row.usedBy,
         assignedBy: row.assignedBy,
         assignedAt: row.assignedAt,
         status: row.status as IpStatus,
@@ -1318,6 +1328,16 @@ export class IpAddressService {
  * Q-14: hồ sơ IP phải gắn thiết bị hoặc người/bộ phận — có hồ sơ là Đang dùng (Q-02), và một
  * hồ sơ không chủ chỉ là dòng "Trống" mồ côi đứng cạnh ô trống thật.
  */
+/** "Người — Phòng ban" của máy, cùng cách ghép với ô chọn máy bên web (`deviceOwnerText`). */
+function deviceOwnerOf(device: { assignedTo: string | null; department: string | null }): string | null {
+  return [device.assignedTo, device.department].filter((part) => part?.trim()).join(' — ') || null;
+}
+
+/** Ô người dùng chỉ lưu cho IP KHÔNG gắn máy — IP gắn máy đọc người dùng từ máy (LF-03). */
+function ownUsedBy(deviceId: string | null | undefined, usedBy: string | null | undefined): string | null {
+  return deviceId ? null : usedBy?.trim() || null;
+}
+
 function requireOwner(
   deviceId: string | null | undefined,
   usedBy: string | null | undefined,
