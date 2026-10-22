@@ -416,11 +416,11 @@ describe('Thanh trình xem nói đang xem bản nào', () => {
     });
     renderScreen('/diagrams/d1');
     await screen.findByRole('region', { name: 'Bản vẽ, chỉ xem' });
-    expect(await screen.findByText('Chính thức v1')).toBeInTheDocument();
+    expect(await screen.findByText('#1 · Chính thức')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('versionId=v1'))).toBe(true);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Xem Nháp #2' }));
     expect(await screen.findByText('Nháp #2 · chưa phát hành')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Xem bản chính thức v1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xem bản chính thức #1' })).toBeInTheDocument();
   });
 
   it('chưa phát hành lần nào: chỉ "Nháp #n · chưa phát hành", không có nút xem bản chính thức', async () => {

@@ -133,20 +133,20 @@ beforeEach(() => narrow(false));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Bản đồ — gốc là băng, con là khu, cháu là ô', () => {
-  it('băng gốc: loại, tên, "v8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong", trạng thái CHỮ; khu và ô đúng chỗ', async () => {
+  it('băng gốc: loại, tên, "#8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong", trạng thái CHỮ; khu và ô đúng chỗ', async () => {
     routeFetch({});
     renderScreen('/diagrams');
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     const banner = within(map).getByRole('button', { name: /^Tổng công ty Toàn công ty E2E/ });
     expect(banner).toHaveTextContent('Tổng công ty');
-    expect(banner).toHaveTextContent('v8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong');
-    expect(banner).toHaveTextContent('Chính thức v8');
+    expect(banner).toHaveTextContent('#8 · Thuận · 2 giờ trước · 6 Bản vẽ bên trong');
+    expect(banner).toHaveTextContent('#8 · Chính thức');
     const t2Tiles = within(map).getByRole('list', { name: 'Bản vẽ trong "Tầng 2 E2E"' });
     const tiles = within(t2Tiles).getAllByRole('listitem');
     expect(tiles.map((li) => li.querySelector('.dmap-tile-name')?.textContent ?? li.textContent)).toEqual(['Phòng server E2E', 'Kế toán E2E', '+ Bản vẽ con vào Tầng 2 E2E']);
-    // Trạng thái có chữ, không chỉ màu; meta ngắn "v12 · 3 Bản nháp".
+    // Trạng thái có chữ, không chỉ màu; meta ngắn "#12 · 3 Bản nháp".
     expect(tiles[0]).toHaveTextContent('Chính thức · có bản nháp');
-    expect(tiles[0]).toHaveTextContent('v12 · 3 Bản nháp');
+    expect(tiles[0]).toHaveTextContent('#12 · 3 Bản nháp');
     expect(tiles[0]).toHaveAttribute('data-tone', 'warn');
     expect(tiles[1]).toHaveTextContent('Chờ duyệt');
     expect(tiles[1]).toHaveAttribute('data-tone', 'info');
@@ -383,7 +383,7 @@ describe('Panel bản vẽ đang chọn', () => {
     await user.click(within(drafts).getByRole('checkbox', { name: 'Chọn nháp #14' }));
     await user.click(within(drafts).getByRole('button', { name: 'Xóa 2 bản nháp' }));
     const confirm = await screen.findByRole('dialog', { name: 'Bỏ 2 bản nháp của "Phòng server E2E"?' });
-    expect(confirm).toHaveTextContent('Xóa vĩnh viễn 2 lần lưu #14–#15, giữ bản chính thức v12, cùng các lần lưu trước #14.');
+    expect(confirm).toHaveTextContent('Xóa vĩnh viễn 2 lần lưu #14–#15, giữ bản chính thức #12, cùng các lần lưu trước #14.');
     await user.click(within(confirm).getByRole('button', { name: 'Bỏ bản nháp' }));
     expect(await screen.findByText('Đã bỏ 2 bản nháp (#14–#15) của "Phòng server E2E".')).toBeInTheDocument();
     const calls = fetchMock.mock.calls as unknown as Calls;
@@ -463,17 +463,17 @@ describe('Panel bản vẽ đang chọn', () => {
     expect(published).toHaveTextContent('Giữ mãi, không xóa');
     const rows = within(published).getAllByRole('listitem');
     expect(rows).toHaveLength(4);
-    expect(rows[0]).toHaveTextContent('v12');
+    expect(rows[0]).toHaveTextContent('#12');
     expect(rows[0]).toHaveTextContent('Đang dùng');
-    expect(rows[2]).toHaveTextContent('v10 · "Trước khi đổi ISP"');
+    expect(rows[2]).toHaveTextContent('#10 · "Trước khi đổi ISP"');
     const user = userEvent.setup();
     await user.click(within(published).getByRole('button', { name: 'Xem thêm 2 phiên bản cũ' }));
     expect(within(published).getAllByRole('listitem')).toHaveLength(6);
-    await user.click(within(rows[1]).getByRole('button', { name: 'Thêm thao tác với v11' }));
+    await user.click(within(rows[1]).getByRole('button', { name: 'Thêm thao tác với #11' }));
     const names = (await screen.findAllByRole('menuitem')).map((el) => el.textContent);
     expect(names).toEqual(['Đặt tên', 'Khôi phục', 'Khôi phục làm chính thức']);
     await user.keyboard('{Escape}');
-    await user.click(within(rows[1]).getByRole('button', { name: 'So sánh v11 với bản mới nhất' }));
+    await user.click(within(rows[1]).getByRole('button', { name: 'So sánh #11 với bản mới nhất' }));
     expect(location).toBe('/diagrams/sv?version=v15&compare=v11');
   });
 

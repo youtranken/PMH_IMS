@@ -191,7 +191,7 @@ describe('Yêu cầu đang chờ', () => {
     expect(screen.queryByRole('button', { name: 'Gửi duyệt' })).toBeNull();
     await user.click(await screen.findByRole('button', { name: 'Duyệt…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Duyệt phiên bản #2' });
-    expect(dialog).toHaveTextContent('Thay đổi so với bản chính thức v1');
+    expect(dialog).toHaveTextContent('Thay đổi so với bản chính thức #1');
     expect(dialog).toHaveTextContent('Thêm 1 thiết bị');
     expect(dialog).toHaveTextContent('nằm trong khung tủ khác');
     expect(within(dialog).getByRole('button', { name: 'Xem so sánh với bản chính thức' })).toBeEnabled();
@@ -287,7 +287,7 @@ describe('Ghim bình luận', () => {
 });
 
 describe('Bản đồ — trạng thái duyệt', () => {
-  it('"Chờ duyệt" và "Chính thức v3" (chữ, không chỉ màu)', async () => {
+  it('"Chờ duyệt" và "#3 · Chính thức" (chữ, không chỉ màu)', async () => {
     routeFetch([
       ['/versions', () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })],
       ['/publications', () => jsonResponse(401, { code: 'STEPUP_REQUIRED', scope: 'diagram', graceMinutes: 10 })],
@@ -305,8 +305,8 @@ describe('Bản đồ — trạng thái duyệt', () => {
     renderScreen('/diagrams?node=g0', SA);
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     expect(within(map).getByRole('button', { name: /^A E2E/ })).toHaveTextContent('Chờ duyệt');
-    expect(within(map).getByRole('button', { name: /^B E2E/ })).toHaveTextContent('Chính thức v3');
-    expect(within(map).getByRole('button', { name: /^C E2E/ })).toHaveTextContent('Chính thức v3 · có bản nháp');
+    expect(within(map).getByRole('button', { name: /^B E2E/ })).toHaveTextContent('#3 · Chính thức');
+    expect(within(map).getByRole('button', { name: /^C E2E/ })).toHaveTextContent('#3 · Chính thức · có bản nháp');
   });
 });
 

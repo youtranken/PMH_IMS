@@ -205,13 +205,13 @@ test.describe('Sơ đồ mạng — gửi duyệt, trả về kèm ghim, duyệt
     });
     expect(resubmit.status(), await resubmit.text()).toBe(201);
 
-    // SA duyệt → bản chính thức v2; cây ghi "Chính thức v2"; thư báo người gửi.
+    // SA duyệt → bản chính thức #2; cây ghi "#2 · Chính thức"; thư báo người gửi.
     await page.reload();
     await expect(viewer(page)).toBeVisible();
     await page.getByRole('button', { name: 'Duyệt…', exact: true }).click();
     await page.getByRole('dialog', { name: `Duyệt phiên bản #${v2.seq}` }).getByRole('button', { name: 'Duyệt', exact: true }).click();
     await expect(page.getByText(`Đã duyệt — phiên bản #${v2.seq} là bản chính thức.`)).toBeVisible();
-    await expect((await treeRow(page, name)).getByText(`Chính thức v${v2.seq}`)).toBeVisible();
+    await expect((await treeRow(page, name)).getByText(`#${v2.seq} · Chính thức`)).toBeVisible();
     expect(await waitForMail(`Đã duyệt: bản vẽ "${name}"`)).not.toHaveLength(0);
     await member.context().close();
   });
@@ -281,7 +281,7 @@ test.describe('Sơ đồ mạng — Admin/SA tự phát hành, lùi bản chính
     const v2 = await save(page, id, page_('<mxCell id="s2" value="Phòng mới E2E" vertex="1" parent="1"><mxGeometry x="300" y="100" width="80" height="40" as="geometry"/></mxCell>'), v1.id);
     const published = await page.request.post(`/api/v1/diagrams/${id}/publish`, { headers: await writeHeaders(page), data: { versionId: v2.id } });
     expect(published.status(), await published.text()).toBe(201);
-    await expect((await treeRow(page, name)).getByText(`Chính thức v${v2.seq}`)).toBeVisible();
+    await expect((await treeRow(page, name)).getByText(`#${v2.seq} · Chính thức`)).toBeVisible();
 
     // Lùi về bản chính thức cũ: tạo phiên bản MỚI (v3) chép v1 rồi phát hành, không xoá gì.
     await page.goto(`/diagrams/${id}`);

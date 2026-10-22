@@ -128,7 +128,7 @@ test.describe('Sơ đồ mạng — bản đồ không gian (Q-23)', () => {
     const tiles = map.getByRole('list', { name: `Bản vẽ trong "E2E Tầng 2 ${stamp}"` });
     const serverTile = mapItem(page, `E2E Phòng server ${stamp}`);
     await expect(serverTile).toContainText('Chính thức · có bản nháp');
-    await expect(serverTile).toContainText('v1 · 1 Bản nháp');
+    await expect(serverTile).toContainText('#1 · 1 Bản nháp');
     await expect(mapItem(page, `E2E Kế toán ${stamp}`)).toContainText('Chưa vẽ');
     await expect(tiles.getByRole('button', { name: `Thêm bản vẽ con vào "E2E Tầng 2 ${stamp}"` })).toBeVisible();
 
@@ -263,7 +263,7 @@ test.describe('Sơ đồ mạng — Bỏ nháp từ một bản chọn, Xóa h�
     await expect(drafts.getByText('Đã chọn #3–#4')).toBeVisible();
     await drafts.getByRole('button', { name: 'Xóa 2 bản nháp' }).click();
     const confirm = page.getByRole('dialog', { name: `Bỏ 2 bản nháp của "${name}"?` });
-    await expect(confirm).toContainText('Xóa vĩnh viễn 2 lần lưu #3–#4, giữ bản chính thức v1, cùng các lần lưu trước #3.');
+    await expect(confirm).toContainText('Xóa vĩnh viễn 2 lần lưu #3–#4, giữ bản chính thức #1, cùng các lần lưu trước #3.');
     await confirm.getByRole('button', { name: 'Bỏ bản nháp' }).click();
     await expect(page.getByText(`Đã bỏ 2 bản nháp (#3–#4) của "${name}".`)).toBeVisible();
     await expect(panel(page).getByRole('region', { name: 'Nháp chưa phát hành · 1' })).toBeVisible();

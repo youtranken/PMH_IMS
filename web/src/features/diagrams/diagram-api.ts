@@ -28,7 +28,7 @@ export interface DiagramNode {
   status: DiagramStatus;
   /** `savedByName` = tên người lưu cho thẻ "v12 · Thuận"; thiếu/`null` thì hiện email. */
   latestVersion: { id: string; seq: number; savedAt: string; savedBy: string; savedByName?: string | null } | null;
-  /** Số phiên bản chính thức ("chính thức v3"); `null` = chưa phát hành. Thiếu → coi như `null`. */
+  /** Số phiên bản chính thức ("#3 · Chính thức"); `null` = chưa phát hành. Thiếu → coi như `null`. */
   officialSeq?: number | null;
   /** Phiên bản chính thức hiện hành — trình chiếu mở đúng bản này. Thiếu → coi như `null`. */
   officialVersionId?: string | null;
@@ -286,7 +286,7 @@ export const STATUS_KEY: Record<DiagramStatus, string> = {
   pending: 'diagrams.status.pending',
 };
 
-/** "Chính thức v3" khi biết số phiên bản chính thức (Q-23); không thì nhãn trạng thái thường. */
+/** "#3 · Chính thức" khi biết số phiên bản chính thức (Q-23); không thì nhãn trạng thái thường. */
 export function statusLabel(node: DiagramNode, t: (key: string, options?: Record<string, unknown>) => string): string {
   return diagramStatusLabel(t, node.status, node.officialSeq);
 }

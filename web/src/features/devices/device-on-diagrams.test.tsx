@@ -41,7 +41,7 @@ describe('Khu "Có trên sơ đồ" của hồ sơ thiết bị', () => {
     const section = await screen.findByRole('region', { name: 'Có trên sơ đồ (2)' });
     const items = await within(section).findAllByRole('listitem');
     expect(within(items[0]).getByRole('link', { name: 'PMH Tower E2E' })).toHaveAttribute('href', '/diagrams/d1?focus=dev-1');
-    expect(items[0]).toHaveTextContent('Chính thức v3 · có bản nháp');
+    expect(items[0]).toHaveTextContent('#3 · Chính thức · có bản nháp');
     expect(within(items[1]).getByRole('link', { name: 'Phòng server E2E' })).toHaveAttribute('href', '/diagrams/d2?focus=dev-1');
     expect(items[1]).toHaveTextContent('Bản nháp');
     expect(fetchMock.mock.calls.some(([url]) => /\/content|\/versions/.test(String(url)))).toBe(false);
