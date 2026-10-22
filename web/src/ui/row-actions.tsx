@@ -36,6 +36,11 @@ export interface RowAction {
    */
   hint?: string;
   /**
+   * Câu giải thích "việc này để làm gì" chỉ hiện khi rê chuột (thuộc tính `title`): màn đã nhiều
+   * chữ thì không thêm dòng mô tả dưới mỗi mục (thanh sơ đồ, Q-33).
+   */
+  title?: string;
+  /**
    * Tên nhóm có tiêu đề trong menu dài (thanh của màn sơ đồ: "Dây & kết nối", "Phiên bản & duyệt").
    * Có nhóm thì menu xếp theo nhóm — nhóm đứng theo lần đầu xuất hiện, trong nhóm vẫn đẩy việc
    * nguy hiểm xuống cuối. Tiêu đề chỉ để đọc, phím mũi tên đi qua mục chứ không dừng ở tiêu đề.
@@ -334,6 +339,7 @@ function RowActionsMenu({
                 type="button"
                 role="menuitem"
                 disabled={item.disabled}
+                title={item.title}
                 className={
                   item.muted
                     ? 'ghost is-muted'

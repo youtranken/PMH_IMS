@@ -109,7 +109,13 @@ export function DiagramSearch({ content, diagramId, onFly }: { content: DiagramC
   }
 
   return (
-    <Popover label={t('diagrams.nav.search')} title={t('diagrams.nav.searchTitle')} open={open} onOpenChange={setOpen}>
+    <Popover
+      label={t('diagrams.nav.search')}
+      title={t('diagrams.nav.searchTitle')}
+      hint={t('diagrams.help.search')}
+      open={open}
+      onOpenChange={setOpen}
+    >
       <div className="stock-picker">
       <form onSubmit={(event) => void submit(event)} className="stock-picker">
         <Field label={t('diagrams.nav.searchLabel')} htmlFor="diagram-nav-search">
