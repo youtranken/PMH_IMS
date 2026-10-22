@@ -16,6 +16,20 @@ export const FEATURE_TICKS = [
 ] as const;
 
 export type FeatureTick = (typeof FEATURE_TICKS)[number];
+
+/**
+ * Các mục tick của nhóm quyền (Q-31), đúng thứ tự mockup đã duyệt — hàng của bảng Nhóm quyền và
+ * danh sách "Quyền của tôi" ở Hồ sơ. Nhãn dùng lại khóa `nav.*`: tên phải là tên thấy trên menu.
+ */
+export const FEATURE_ROWS: { tick: FeatureTick; labelKey: string; underIso: boolean }[] = [
+  { tick: 'overview', labelKey: 'nav.groupOverview', underIso: false },
+  { tick: 'assets', labelKey: 'nav.groupAssets', underIso: false },
+  { tick: 'network', labelKey: 'nav.groupNetwork', underIso: false },
+  { tick: 'iso_0203', labelKey: 'nav.isoBackup', underIso: true },
+  { tick: 'iso_0206', labelKey: 'nav.isoIncidents', underIso: true },
+  { tick: 'iso_0208', labelKey: 'nav.isoAntivirus', underIso: true },
+  { tick: 'break_glass', labelKey: 'nav.approvalsMine', underIso: false },
+];
 export type Feature = FeatureTick | 'expiry' | 'iso';
 
 /** Có ít nhất MỘT trong `required`. `features: null` = không bị giới hạn; chưa có `me` = không. */

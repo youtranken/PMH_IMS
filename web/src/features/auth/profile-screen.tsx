@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
+import { FEATURE_ROWS } from '@/lib/features';
 import { formatDate, formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { useConfirm } from '@/ui/confirm-provider';
@@ -75,6 +76,24 @@ export function ProfileScreen({ me }: { me: Me }) {
             thuẫn (PW-C22). */}
         {me.role === 'sa' ? null : <p className="muted">{t('profile.infoHint')}</p>}
       </section>
+
+      {/* Thành viên bị nhóm quyền giới hạn (Q-31) chỉ thấy mục menu biến mất — khu này nói rõ được
+          dùng mảng nào (UX-E33). Admin/SA không bị nhóm quyền giới hạn nên không có khu này. */}
+      {me.role === 'member' ? (
+        <section className="card profile-card" aria-labelledby="profile-permissions">
+          <h2 id="profile-permissions">{t('profile.permissionsTitle')}</h2>
+          {me.features === null ? (
+            <p>{t('profile.permissionsAll')}</p>
+          ) : (
+            <ul className="profile-permissions">
+              {FEATURE_ROWS.filter((row) => me.features?.includes(row.tick)).map((row) => (
+                <li key={row.tick}>{t(row.labelKey)}</li>
+              ))}
+            </ul>
+          )}
+          <p className="muted">{t('profile.permissionsHint')}</p>
+        </section>
+      ) : null}
 
       <section className="card profile-card" aria-labelledby="profile-password">
         <h2 id="profile-password">{t('profile.passwordTitle')}</h2>

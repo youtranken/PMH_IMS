@@ -500,6 +500,9 @@ export default {
   },
   profile: {
     title: 'Hồ sơ của tôi',
+    permissionsTitle: 'Quyền của tôi',
+    permissionsAll: 'Mọi mảng của Thành viên.',
+    permissionsHint: 'Cần thêm mảng nào thì nhờ Super Admin đổi nhóm quyền.',
     infoTitle: 'Thông tin',
     infoHint: 'Muốn đổi tên hay vai trò, liên hệ Super Admin.',
     fullName: 'Họ tên',
