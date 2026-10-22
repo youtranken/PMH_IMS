@@ -110,8 +110,13 @@ test.describe('Ghế riêng và đợt mua (Q-27)', () => {
       data: { code: `LIC-E2E-DOT-${stamp}-1`, name, kind: 'license', licenseModel: 'perpetual', seatTotal: 2 },
     });
     expect(first.status()).toBe(201);
+    // Giữ danh sách đợt lại tới khi hộp Gán ĐÃ mở — cột phải chắc chắn mọc SAU, không chờ đồng hồ.
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await page.route(/\/api\/v1\/software\?kind=license&limit=50&search=/, async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await gate;
       await route.continue();
     });
 
@@ -126,6 +131,7 @@ test.describe('Ghế riêng và đợt mua (Q-27)', () => {
 
     const assign = page.getByRole('dialog', { name: `Gán license vào máy — LIC-E2E-DOT-${stamp}-2` });
     await expect(assign).toBeVisible();
+    release();
     await expect(page.getByText('Mua theo đợt')).toBeVisible();
     await expect(assign, 'cột phải mọc muộn không được đóng hộp Gán').toBeVisible();
   });
