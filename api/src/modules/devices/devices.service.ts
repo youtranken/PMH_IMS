@@ -5,8 +5,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, getTableColumns, inArray, ne, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, getTableColumns, inArray, ne, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { nextCode } from '../../common/next-code';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -25,6 +26,7 @@ import {
   pgConstraint,
   pgErrorCode,
   searchNormLike,
+  escapeLike,
 } from '../../common/sql';
 import { rackUnitLabel } from '../../common/rack-units';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -182,6 +184,18 @@ export class DevicesService {
     const rows = await this.db.select().from(deviceTable).where(inArray(deviceTable.id, unique));
     const decorated = await this.decorate(rows);
     return new Map(decorated.map((item) => [item.id, item]));
+  }
+
+  /**
+   * Mã gợi ý cho form Thêm (FM-21): kế tiếp mã của máy thêm GẦN NHẤT, nhảy qua mã đã có cùng tiền
+   * tố. `null` = không đoán được (mã cuối không kết thúc bằng số, hoặc kho trống).
+   */
+  async suggestCode(): Promise<string | null> {
+    const [last] = await this.db.select({ code: deviceTable.code }).from(deviceTable).orderBy(desc(deviceTable.createdAt), desc(deviceTable.code)).limit(1);
+    const prefix = last ? /^(.*?)\d+$/.exec(last.code)?.[1] : undefined;
+    if (prefix === undefined) return null;
+    const taken = await this.db.select({ code: deviceTable.code }).from(deviceTable).where(ilike(deviceTable.code, `${escapeLike(prefix)}%`));
+    return nextCode(last.code, taken.map((row) => row.code));
   }
 
   /** Mã (không phân biệt hoa thường, bỏ khoảng trắng thừa) → id, kể cả máy đã thanh lý. */

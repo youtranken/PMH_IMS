@@ -315,6 +315,13 @@ export class DevicesController {
     return this.imports.commit(actor(req), requireXlsx(file));
   }
 
+  /** Mã gợi ý cho form Thêm (FM-21). ĐẶT TRƯỚC `@Get(':id')`. */
+  @Roles('sa', 'admin', 'member')
+  @Get('next-code')
+  async nextCode() {
+    return { code: await this.devices.suggestCode() };
+  }
+
   @Roles('sa', 'admin', 'member')
   @Feature('assets', 'network')
   @Get(':id')

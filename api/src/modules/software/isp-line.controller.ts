@@ -159,6 +159,13 @@ export class IspLineController {
     sendXlsx(res, buffer, 'duong-truyen.xlsx');
   }
 
+  /** Mã gợi ý cho form Thêm (FM-21). ĐẶT TRƯỚC `@Get(':id')`. */
+  @Roles('sa', 'admin', 'member')
+  @Get('next-code')
+  async nextCode() {
+    return { code: await this.isp.suggestCode() };
+  }
+
   /**
    * Nhập từ Excel (UX-E30). ĐẶT TRƯỚC `@Get(':id')` như file Xuất. Cùng vai với Thêm / Sửa tay:
    * file là một lối thêm / sửa nữa, không rộng quyền hơn form.

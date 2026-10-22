@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { useMe } from '@/lib/api';
@@ -28,6 +28,7 @@ import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
 import { CodeInput, IpInput } from '@/ui/code-input';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { useSuggestedCode } from '@/ui/use-suggested-code';
 
 const WAN_ISSUE_KEY: Record<Exclude<WanIpIssue, null>, string> = {
   range: 'isp.wanIpRange',
@@ -126,6 +127,9 @@ export function IspForm({
   // mở lại và bấm thêm phát nữa là khai trùng một đường truyền.
   const busy = save.isPending || uploading;
 
+  // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
+  const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
+  useSuggestedCode(row ? null : '/api/v1/isp-lines/next-code', form.code, applyCode, 'isp-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 

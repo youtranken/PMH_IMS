@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
@@ -37,6 +37,7 @@ import { DeviceModelField } from './device-model-field';
 import { ACCESS_KINDS, type AccessPoint } from './device-access';
 import { CodeInput, IpInput } from '@/ui/code-input';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { useSuggestedCode } from '@/ui/use-suggested-code';
 
 interface FormState {
   code: string;
@@ -219,6 +220,9 @@ export function DeviceForm({
   // Nút nào gửi lượt ghi gần nhất: dấu tích "đã lưu" chỉ hiện trên nút Lưu khi chính nó được bấm.
   const [sentByNext, setSentByNext] = useState(false);
 
+  // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
+  const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
+  useSuggestedCode(device ? null : '/api/v1/devices/next-code', form.code, applyCode, 'device-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Bảo hành gần như luôn bắt đầu từ ngày mua: ô "Bảo hành từ" còn trống thì lấy theo.

@@ -5,11 +5,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { isRealDateOnly } from '../../common/real-date';
+import { nextCode } from '../../common/next-code';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
@@ -331,6 +332,19 @@ export class SoftwareService {
         retired: retired.length,
       };
     });
+  }
+
+  /**
+   * Mã gợi ý cho form Thêm của một màn (FM-21): kế tiếp mã của hồ sơ thêm GẦN NHẤT trong các loại
+   * của màn đó (License không gợi ý theo SSL), nhảy qua mã đã có cùng tiền tố. `null` = không đoán.
+   */
+  async suggestCode(kinds: readonly SoftwareKind[] | undefined): Promise<string | null> {
+    const scope = kinds && kinds.length > 0 ? inArray(softwareTable.kind, [...kinds]) : undefined;
+    const [last] = await this.db.select({ code: softwareTable.code }).from(softwareTable).where(scope).orderBy(desc(softwareTable.createdAt), desc(softwareTable.code)).limit(1);
+    const prefix = last ? /^(.*?)\d+$/.exec(last.code)?.[1] : undefined;
+    if (prefix === undefined) return null;
+    const taken = await this.db.select({ code: softwareTable.code }).from(softwareTable).where(ilike(softwareTable.code, `${escapeLike(prefix)}%`));
+    return nextCode(last.code, taken.map((row) => row.code));
   }
 
   async create(actor: string, input: SoftwareInputShape): Promise<SoftwareRecord> {

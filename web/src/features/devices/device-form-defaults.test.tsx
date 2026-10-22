@@ -31,3 +31,25 @@ describe('Form thiết bị — Thêm mới lấy site đang lọc', () => {
     await waitFor(() => expect(site).toHaveTextContent('HCM — Văn phòng HCM'));
   });
 });
+
+/* FM-21: nhập hàng loạt phải nhớ số cuối — form Thêm điền sẵn mã kế tiếp; form Sửa không hỏi. */
+describe('Form thiết bị — mã kế tiếp', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('Thêm mới: ô Mã điền sẵn mã gợi ý của /devices/next-code', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(jsonResponse(200, String(input) === '/api/v1/devices/next-code' ? { code: 'PC-E2E-012' } : LISTS)),
+      ),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <DeviceForm device={null} csrfToken="t" onClose={() => {}} onSaved={() => {}} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    expect(await screen.findByDisplayValue('PC-E2E-012')).toBeInTheDocument();
+  });
+});

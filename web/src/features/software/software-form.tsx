@@ -1,5 +1,5 @@
 import { todayIso } from '@/lib/format';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
@@ -43,6 +43,7 @@ import {
 } from '@/lib/software-screens';
 import { CodeInput } from '@/ui/code-input';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
+import { useSuggestedCode } from '@/ui/use-suggested-code';
 
 interface FormState {
   code: string;
@@ -174,6 +175,9 @@ export function SoftwareForm({
   // nút Lưu mở lại và bấm phát nữa là tạo hồ sơ thứ hai.
   const busy = save.isPending || uploading;
 
+  // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
+  const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
+  useSuggestedCode(row || batchFrom ? null : `/api/v1/software/next-code?kind=${spec.kinds.join(',')}`, form.code, applyCode, 'sw-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Đổi sang loại không có seat thì xóa luôn ô seat — gửi lên sẽ bị API từ chối,

@@ -5,11 +5,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { isRealDateOnly } from '../../common/real-date';
+import { nextCode } from '../../common/next-code';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -258,6 +259,15 @@ export class IspLineService {
       .orderBy(desc(ispLineHistoryTable.createdAt))
       .limit(HISTORY_PAGE_LIMIT);
     return rows as IspLineHistoryRecord[];
+  }
+
+  /** Mã gợi ý cho form Thêm (FM-21) — kế tiếp mã của đường thêm GẦN NHẤT; `null` = không đoán. */
+  async suggestCode(): Promise<string | null> {
+    const [last] = await this.db.select({ code: ispLineTable.code }).from(ispLineTable).orderBy(desc(ispLineTable.createdAt), desc(ispLineTable.code)).limit(1);
+    const prefix = last ? /^(.*?)\d+$/.exec(last.code)?.[1] : undefined;
+    if (prefix === undefined) return null;
+    const taken = await this.db.select({ code: ispLineTable.code }).from(ispLineTable).where(ilike(ispLineTable.code, `${escapeLike(prefix)}%`));
+    return nextCode(last.code, taken.map((row) => row.code));
   }
 
   // ─────────────────────────── Ghi ───────────────────────────

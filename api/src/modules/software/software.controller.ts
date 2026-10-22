@@ -305,6 +305,13 @@ export class SoftwareController {
     sendXlsx(res, buffer, shape.fileName);
   }
 
+  /** Mã gợi ý cho form Thêm của một màn (FM-21) — theo `?kind=` của màn. ĐẶT TRƯỚC `@Get(':id')`. */
+  @Roles('sa', 'admin', 'member')
+  @Get('next-code')
+  async nextCode(@Query() query: SoftwareExportQueryDto) {
+    return { code: await this.software.suggestCode(softwareKindsQuery(query.kind)) };
+  }
+
   /**
    * Nhập từ Excel (UX-E30). ĐẶT TRƯỚC `@Get(':id')` như file Xuất. Cùng vai với Thêm / Sửa tay.
    * File mẫu theo `?kind=` của màn (Q-22): đúng sheet + cột file Xuất của màn đó.
