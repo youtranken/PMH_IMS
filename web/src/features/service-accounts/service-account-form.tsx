@@ -30,6 +30,7 @@ import {
   type ServiceAccountStatus,
 } from './service-account-types';
 import { CodeInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 
 interface FormState {
@@ -129,6 +130,7 @@ export function ServiceAccountForm({
     !row && noteContainsSecret(form.note, secretValue) && t('vault.noteContainsSecret');
   const check = useFormErrors({
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
+    code: recordCodeProblem(form.code, row?.code) && t('formErrors.codeFormat'),
     allowedIps:
       badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
     // Chứa đúng mật khẩu đang cất (B1) hay trông như mật khẩu (Q-19) — cùng một ô, một lỗi.
@@ -258,7 +260,7 @@ export function ServiceAccountForm({
                 })();
               },
               onError: (err) => {
-                if (!server.claim(err, { SERVICE_ACCOUNT_CODE_TAKEN: 'sa-code' })) setError(errorMessage(err));
+                if (!server.claim(err, { SERVICE_ACCOUNT_CODE_TAKEN: 'sa-code', CODE_FORMAT_INVALID: 'sa-code' })) setError(errorMessage(err));
               },
             },
           );
@@ -323,7 +325,7 @@ export function ServiceAccountForm({
               nói trước hậu quả ngay khi nó bị đổi. */}
           <Field
             label={t('serviceAccounts.code')}
-            error={server.error('sa-code')}
+            error={check.error('code') ?? server.error('sa-code')}
             hint={
               row
                 ? form.code.trim() !== row.code
@@ -337,7 +339,7 @@ export function ServiceAccountForm({
             htmlFor="sa-code"
           >
             <CodeInput
-              caps
+              upper
               id="sa-code"
               placeholder={t('serviceAccounts.codeAutoPlaceholder')}
               value={form.code}

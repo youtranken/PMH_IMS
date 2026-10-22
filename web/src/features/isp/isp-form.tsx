@@ -27,6 +27,7 @@ import { PhoneInput } from '@/ui/phone-input';
 import { CloseIcon, PlusIcon } from '@/ui/glyph-icons';
 import { MAX_WAN_IPS, wanIpIssues, wanIpsPayload, type WanIpIssue } from './wan-ips';
 import { CodeInput, IpInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 import { useSuggestedCode } from '@/ui/use-suggested-code';
 
@@ -157,7 +158,9 @@ export function IspForm({
     });
 
   const check = useFormErrors({
-    code: !form.code.trim() && t('formErrors.required'),
+    code:
+      (!form.code.trim() && t('formErrors.required')) ||
+      (recordCodeProblem(form.code, row?.code) && t('formErrors.codeFormat')),
     providerId: !form.providerId && t('formErrors.requiredPick'),
     wanIps: firstWanIssue && t(WAN_ISSUE_KEY[firstWanIssue]),
     note: secretTextRule(t, form.note),
@@ -236,7 +239,7 @@ export function IspForm({
                 })();
               },
               onError: (err) => {
-                if (!server.claim(err, { ISP_CODE_TAKEN: 'isp-code' })) setError(errorMessage(err));
+                if (!server.claim(err, { ISP_CODE_TAKEN: 'isp-code', CODE_FORMAT_INVALID: 'isp-code' })) setError(errorMessage(err));
               },
             },
           );
@@ -258,7 +261,7 @@ export function IspForm({
         <FormSection title={t('isp.tabProfile')} columns={4}>
           <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code') ?? server.error('isp-code')}>
             <CodeInput
-              caps
+              upper
               id="isp-code"
               data-guard-value={codeGuard}
               required

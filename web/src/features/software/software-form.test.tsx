@@ -202,3 +202,31 @@ describe('Form theo màn (Q-22)', () => {
     expect(writes[0]).toMatchObject({ kind });
   });
 });
+
+/* PW-A12 (Q-33): mã hồ sơ chỉ A–Z 0–9 - _ . /, tự in hoa; mã khai trước luật vẫn sửa được. */
+describe('Form phần mềm — luật mã hồ sơ', () => {
+  it('gõ chữ thường thành chữ hoa; có dấu / khoảng trắng thì báo tại ô, không gửi', async () => {
+    const writes = mockFetch();
+    renderWithI18n(
+      <ToastProvider>
+        <SoftwareForm row={null} screen="maintenance" csrfToken="csrf" onClose={() => {}} onSaved={() => {}} />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    const code = screen.getByRole('textbox', { name: /Mã hồ sơ/ });
+    await user.type(code, 'hồ sơ -1');
+    expect(code).toHaveValue('HỒ SƠ -1');
+    await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Bảo trì');
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    expect(await screen.findAllByText(/Chỉ dùng chữ A–Z/)).not.toHaveLength(0);
+    expect(writes).toHaveLength(0);
+  });
+
+  it('Sửa hồ sơ có mã cũ sai luật: không đụng ô Mã thì lưu được', async () => {
+    const writes = mockFetch();
+    render({ ...ROW, code: 'hồ sơ -1' });
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ code: 'hồ sơ -1' });
+  });
+});

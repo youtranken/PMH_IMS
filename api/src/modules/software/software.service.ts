@@ -12,6 +12,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { isRealDateOnly } from '../../common/real-date';
 import { nextCode } from '../../common/next-code';
+import { recordCode } from '../../common/record-code';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
@@ -374,7 +375,7 @@ export class SoftwareService {
     input: SoftwareInputShape,
   ): Promise<SoftwareRecord> {
     const before = await this.requireRow(id);
-    const values = await this.prepare(input, id);
+    const values = await this.prepare(input, id, before.code);
     // Khôi phục hồ sơ đã Thanh lý (Q-13) phải kèm hạn còn hiệu lực: để hạn cũ thì nó về Hết
     // hạn rồi lượt quét kế tiếp lại tự thanh lý, và các ghế người dùng vừa gán lại bị gỡ.
     if (before.status === 'retired' && values.status === 'expired_ok') {
@@ -485,7 +486,7 @@ export class SoftwareService {
         websites: cells.websites,
       };
       try {
-        const values = await this.prepare(input, before?.id ?? null);
+        const values = await this.prepare(input, before?.id ?? null, before?.code);
         if (!before) {
           rows.push({ rowNumber: item.rowNumber, sheet: item.sheet, label: code, action: 'create', values });
           continue;
@@ -857,13 +858,14 @@ export class SoftwareService {
   private async prepare(
     input: SoftwareInputShape,
     id: string | null,
+    currentCode?: string,
   ): Promise<Record<string, unknown>> {
     const values: Record<string, unknown> = {};
     const put = (key: string, value: unknown) => {
       if (value !== undefined) values[key] = value;
     };
 
-    put('code', input.code === undefined ? undefined : requireText(input.code, 'mã hồ sơ'));
+    put('code', input.code === undefined ? undefined : recordCode(input.code, 'Mã hồ sơ', currentCode));
     put('name', input.name === undefined ? undefined : requireText(input.name, 'tên hồ sơ'));
     put('kind', input.kind);
     put('licenseModel', input.licenseModel);

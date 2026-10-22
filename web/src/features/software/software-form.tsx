@@ -42,6 +42,7 @@ import {
   type SoftwareScreenKey,
 } from '@/lib/software-screens';
 import { CodeInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 import { useSuggestedCode } from '@/ui/use-suggested-code';
 
@@ -241,7 +242,9 @@ export function SoftwareForm({
 
   // Khoá động `seat-note-n` (ghi chú từng ghế) — kiểu khoá là chuỗi.
   const check = useFormErrors<string>({
-    code: !form.code.trim() && t('formErrors.required'),
+    code:
+      (!form.code.trim() && t('formErrors.required')) ||
+      (recordCodeProblem(form.code, row?.code) && t('formErrors.codeFormat')),
     name: !form.name.trim() && t('formErrors.required'),
     // Thuê bao/SSL/tên miền mà không có hạn thì rơi khỏi mọi lời nhắc — API cũng từ chối.
     endDate: endRequired && !form.endDate && t('software.endRequired'),
@@ -395,7 +398,7 @@ export function SoftwareForm({
                 })();
               },
               onError: (err) => {
-                if (!server.claim(err, { SOFTWARE_CODE_TAKEN: 'sw-code' })) setError(errorMessage(err));
+                if (!server.claim(err, { SOFTWARE_CODE_TAKEN: 'sw-code', CODE_FORMAT_INVALID: 'sw-code' })) setError(errorMessage(err));
               },
             },
           );
@@ -483,7 +486,7 @@ export function SoftwareForm({
           </Field>
           <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code') ?? server.error('sw-code')}>
             <CodeInput
-              caps
+              upper
               id="sw-code"
               data-guard-value={codeGuard}
               required

@@ -204,6 +204,12 @@ test.describe('Q-22 · Hợp đồng bảo trì', () => {
     await expect(dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true })).toHaveAccessibleDescription(
       'Chưa nhập.',
     );
+    // PW-A12: mã có dấu / khoảng trắng bị chặn tại ô (chữ thường tự thành chữ hoa).
+    const codeBox = dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true });
+    await codeBox.fill('hồ sơ -1');
+    await expect(codeBox).toHaveValue('HỒ SƠ -1');
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(codeBox).toHaveAccessibleDescription(/Chỉ dùng chữ A–Z/);
     await expect(dialog).toBeVisible();
   });
 });

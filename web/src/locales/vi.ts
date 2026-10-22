@@ -77,6 +77,8 @@ export default {
   formErrors: {
     required: 'Chưa nhập.',
     requiredPick: 'Chưa chọn.',
+    // Mã hồ sơ (PW-A12) — cùng luật với `api/src/common/record-code.ts`.
+    codeFormat: 'Chỉ dùng chữ A–Z, số 0–9 và - _ . / (không dấu, không khoảng trắng).',
     summary: 'Còn {{count}} ô cần sửa trước khi lưu.',
     minLength: 'Cần ít nhất {{min}} ký tự.',
     email: 'Email chưa đúng dạng (vd ten@pmh.com.vn).',
