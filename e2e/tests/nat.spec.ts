@@ -628,6 +628,10 @@ test.describe('Sổ NAT', () => {
     expect(res.status()).toBe(200);
     expect(res.headers()['content-type']).toContain('spreadsheetml');
     expect((await res.body()).length).toBeGreaterThan(1000);
+    // UX-E29: xuất theo bộ lọc của màn; chip trạng thái lạ bị chặn 400, không ra file rỗng.
+    const filtered = await page.request.get('/api/v1/ipam/nat/export.xlsx?states=open,off&protocol=tcp&sort=newest');
+    expect(filtered.status()).toBe(200);
+    expect((await page.request.get('/api/v1/ipam/nat/export.xlsx?states=open,lung-tung')).status()).toBe(400);
   });
 });
 

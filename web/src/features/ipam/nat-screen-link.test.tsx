@@ -85,3 +85,21 @@ describe('Sổ NAT — link tới một luật (X-05)', () => {
     expect(screen.getByRole('button', { name: 'Bỏ lọc để thấy luật này' })).toBeInTheDocument();
   });
 });
+
+// UX-E29: file xuất theo đúng bộ lọc đang bày — giao thức, cổng nhạy cảm, chip trạng thái, thứ tự.
+describe('Sổ NAT — Xuất Excel theo bộ lọc', () => {
+  it('URL xuất mang protocol, sensitive, states (chip đang bật) và sort', async () => {
+    render('/nat?protocol=udp&sensitive=1&sort=newest');
+    const fetchMock = fetch as unknown as { mock: { calls: [RequestInfo | URL][] } };
+    // Bộ lọc này không ra dòng nào (hai rule đều TCP) — chờ sổ về rồi mới bấm Xuất.
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/v1/ipam/nat?'))).toBe(true));
+    await userEvent.click(await screen.findByRole('button', { name: /Xuất Excel/ }));
+    await vi.waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/v1/ipam/nat/export.xlsx'))).toBe(true));
+    const call = fetchMock.mock.calls.find(([u]) => String(u).startsWith('/api/v1/ipam/nat/export.xlsx'))!;
+    const params = new URL(String(call[0]), 'http://x').searchParams;
+    expect(params.get('protocol')).toBe('udp');
+    expect(params.get('sensitive')).toBe('1');
+    expect(params.get('states')).toBe('open');
+    expect(params.get('sort')).toBe('newest');
+  });
+});

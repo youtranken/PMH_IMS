@@ -21,6 +21,7 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
   Max,
   Min,
   Validate,
@@ -28,6 +29,7 @@ import {
 } from 'class-validator';
 import { NoSecretText } from '../../common/no-secret-text';
 import { RealDateOrEmpty } from '../../common/real-date';
+import { dateTimeInTz } from '../../common/today';
 import { BadRequestException } from '@nestjs/common';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
@@ -50,6 +52,7 @@ import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { withActorNames } from '../../common/history';
 import { sensitivePortsOf } from './nat-sensitive';
+import { NAT_EXPORT_SORTS, natExportRows, type NatExportSort, type NatState } from './nat-export';
 import { Feature } from '../auth/feature.decorator';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -207,7 +210,22 @@ class NatQueryDto {
   @IsOptional() @IsIn(['true', 'false']) includeVoided?: string;
 }
 
-/** Bộ lọc của sổ NAT gửi xuống service — cờ chuỗi của query đổi thành boolean ở đúng một chỗ. */
+/**
+ * Bộ lọc thêm của file xuất (UX-E29): màn Sổ NAT lọc giao thức, "chỉ cổng nhạy cảm", ba chip
+ * trạng thái và thứ tự TẠI CHỖ — file phải theo đúng chừng ấy, không chỉ ô tìm + site.
+ */
+class NatExportQueryDto extends NatQueryDto {
+  @IsOptional() @IsIn([...NAT_PROTOCOLS]) protocol?: NatProtocol;
+
+  @IsOptional() @IsIn(['1', '']) sensitive?: string;
+
+  /** Các chip đang bật, phẩy ngăn: `open,off,voided`. Vắng = mọi rule còn trong sổ (như cũ). */
+  @IsOptional() @IsString() @Matches(/^((open|off|voided)(,(open|off|voided))*)?$/) states?: string;
+
+  @IsOptional() @IsIn([...NAT_EXPORT_SORTS]) sort?: NatExportSort;
+}
+
+
 function natFilters(query: NatQueryDto) {
   return {
     deviceId: query.deviceId,
@@ -643,8 +661,22 @@ export class IpamController {
   @Roles('sa', 'admin', 'member')
   @Audited('nat.exported', 'nat_rule')
   @Get('nat/export.xlsx')
-  async exportNat(@Query() query: NatQueryDto, @Res() res: Response) {
-    const rows = await this.nat.list(natFilters(query));
+  async exportNat(@Query() query: NatExportQueryDto, @Res() res: Response) {
+    const states = (query.states ? query.states.split(',') : ['open', 'off']) as NatState[];
+    const [all, sensitiveText, timeZone] = await Promise.all([
+      this.nat.list({ ...natFilters(query), includeVoided: states.includes('voided') }),
+      this.config.getString('natSensitivePorts'),
+      this.config.getString('appTimezone'),
+    ]);
+    const rows = await withActorNames(
+      natExportRows(all, {
+        states,
+        protocol: query.protocol,
+        sensitivePorts: query.sensitive === '1' ? sensitivePortsOf(sensitiveText) : undefined,
+        sort: query.sort,
+      }).map((rule) => ({ ...rule, actor: rule.createdBy })),
+      (emails) => this.users.namesByEmails(emails),
+    );
     const buffer = await this.excel.build({
       sheetName: 'Sổ NAT',
       columns: [
@@ -658,6 +690,10 @@ export class IpamController {
         { header: 'Mở cho ai', width: 24, value: (r) => r.usedBy },
         { header: 'Lý do', width: 40, value: (r) => r.reason },
         { header: 'Đang dùng', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
+        { header: 'Ghi chú', width: 30, value: (r) => r.note ?? '' },
+        // Ai mở, lúc nào — câu kiểm toán thứ hai sau "vì sao" (UX-E29).
+        { header: 'Mở lúc', width: 18, value: (r) => dateTimeInTz(r.createdAt, timeZone) },
+        { header: 'Người mở', width: 24, value: (r) => r.actorName ?? r.createdBy },
         // Ba cột chỉ có giá trị khi xuất kèm rule đã gỡ; để trống là rule còn trong sổ.
         { header: 'Gỡ lúc', width: 18, value: (r) => r.voidedAt },
         { header: 'Người gỡ', width: 24, value: (r) => r.voidedBy ?? '' },

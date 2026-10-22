@@ -163,10 +163,14 @@ export function NatScreen({ me }: { me: Me }) {
   // Xin luôn cả rule đã gỡ: chip "Đã gỡ" phải mang con số thật ngay cả khi đang tắt.
   const listQuery = new URLSearchParams(query);
   listQuery.set('includeVoided', 'true');
-  // Bản xuất đi theo đúng thứ đang bày trên màn: chỉ kèm rule đã gỡ khi chip đó đang bật.
+  // Bản xuất đi theo đúng thứ đang bày trên màn (UX-E29): router, giao thức, cổng nhạy cảm, các
+  // chip trạng thái đang bật và thứ tự — server lọc / sắp theo cùng luật (`api/.../nat-export.ts`).
   const exportQuery = new URLSearchParams(query);
   if (filters.deviceId) exportQuery.set('deviceId', filters.deviceId);
-  if (shown.voided) exportQuery.set('includeVoided', 'true');
+  if (filters.protocol) exportQuery.set('protocol', filters.protocol);
+  if (filters.sensitive) exportQuery.set('sensitive', '1');
+  exportQuery.set('states', NAT_BUCKETS.filter((bucket) => shown[bucket]).join(','));
+  exportQuery.set('sort', sortKey);
 
   const rules = useQuery({
     queryKey: ['ipam', 'nat', filters.search, filters.siteId, 'withVoided'],
