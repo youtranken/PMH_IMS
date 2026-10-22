@@ -3154,6 +3154,8 @@ export default {
     seeInFree: 'Xem trong Trống',
     choiceFreedRecord: 'đã thu hồi',
     filesButton: 'Giấy tờ ({{count}})',
+    /* Nút ⋯ của khung dải trên điện thoại: Giấy tờ + Xuất Excel (PW-B05). */
+    moreOf: 'Xuất & giấy tờ của {{cidr}}',
     mask: 'Mask',
     netConfig: 'Cấu hình cho máy',
     copyOf: 'Sao chép {{label}}',

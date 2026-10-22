@@ -18,7 +18,9 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { HideDialog, SubnetForm } from './subnet-form';
-import { SubnetPane } from './subnet-detail';
+import { ALL_IP_EXPORT, SubnetPane, subnetExport } from './subnet-detail';
+import { BREAKPOINTS } from '@/ui/breakpoints';
+import { useMediaQuery } from '@/ui/use-media-query';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
 import { useIpamSettings } from './ipam-settings';
@@ -147,6 +149,7 @@ export function IpamScreen({ me }: { me: Me }) {
   const selected = rows.find((row) => row.id === id) ?? rows[0] ?? null;
   const navigate = useNavigate();
   const narrow = useIsNarrow();
+  const phone = useMediaQuery(BREAKPOINTS.cards);
   const [railFilter, setRailFilter] = useState('');
   const [siteFilter, setSiteFilter] = useState('');
   const siteOptions = useMemo(() => siteOptionsOf(rows), [rows]);
@@ -198,13 +201,14 @@ export function IpamScreen({ me }: { me: Me }) {
         title={t('ipam.title')}
         actions={
           <>
-            {selected ? (
+            {/* Điện thoại: Xuất nằm trong ⋯ của khung dải (PW-B05, `SubnetPane`). */}
+            {selected && !phone ? (
               <ExportXlsxButton
-                url={`/api/v1/ipam/subnets/${selected.id}/export.xlsx`}
-                fileName={`ip-${selected.cidr.replace('/', '-')}.xlsx`}
+                url={subnetExport(selected).url}
+                fileName={subnetExport(selected).fileName}
                 currentLabel={t('ipam.exportCurrent')}
-                allUrl="/api/v1/ipam/addresses/export.xlsx"
-                allFileName="ip-tat-ca.xlsx"
+                allUrl={ALL_IP_EXPORT.url}
+                allFileName={ALL_IP_EXPORT.fileName}
               />
             ) : null}
             {/* Nút viền (PW-B06): đã có dải thì việc chính của màn là "Cấp IP trống kế tiếp" —

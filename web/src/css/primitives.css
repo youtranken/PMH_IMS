@@ -369,6 +369,16 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   margin: var(--space-2) 0 0;
   font-size: var(--fs-sm);
 }
+/* Điện thoại: thông tin dải MỘT dòng, vuốt ngang khi dài (PW-B05) — xuống ba dòng thì IP đầu
+   tiên bị đẩy dưới mép màn hình. */
+@media (max-width: 600px) {
+  .pane-sub {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
 .pane-actions {
   display: flex;
   flex-wrap: wrap;
