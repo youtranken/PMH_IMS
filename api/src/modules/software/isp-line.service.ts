@@ -31,7 +31,6 @@ import { ispLineHistoryTable, ispLineTable, ispLineWanIpTable } from './software
 import { MAX_WAN_IPS, wanIpsOf } from './wan-ip';
 import { requireUnchangedSince } from '../../common/cas';
 import { summarize, type ImportAction, type ImportSummary } from '../../common/import-plan';
-import type { IspParsedRow } from './isp-import';
 
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
@@ -70,6 +69,27 @@ const TRACKED = [
   'note',
   'status',
 ] as const;
+
+/** Ô của một dòng: tham chiếu còn ở dạng TÊN / MÃ — service dịch ra id rồi đi qua `prepare()`. */
+export interface IspImportCells {
+  code?: string;
+  provider?: string;
+  bandwidth?: string;
+  wanIps?: string[];
+  site?: string;
+  device?: string;
+  hotline?: string;
+  contractNo?: string;
+  startDate?: string;
+  status?: IspStatus;
+  note?: string;
+}
+
+export interface IspParsedRow {
+  rowNumber: number;
+  cells?: IspImportCells;
+  error?: string;
+}
 
 export interface IspImportRow {
   rowNumber: number;

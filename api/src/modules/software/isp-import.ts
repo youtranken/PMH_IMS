@@ -2,7 +2,7 @@ import type { ExportColumn } from '../../common/excel/excel-export.service';
 import { findSheet, importableRows, readImportFields, type ImportField } from '../../common/import-fields';
 import { stripDiacritics, type ParsedSheets } from '../../common/import-plan';
 import { normalizePhone, PHONE_MESSAGE } from '../../common/phone';
-import type { IspLineListItem, IspStatus } from './isp-line.service';
+import type { IspImportCells, IspLineListItem, IspParsedRow, IspStatus } from './isp-line.service';
 
 /** Tên sheet — đúng tên sheet của file Xuất, để xuất ra sửa rồi nhập lại được (UX-E30). */
 export const ISP_SHEET = 'Đường truyền';
@@ -60,27 +60,6 @@ const FIELDS: ImportField<Key>[] = [
   { key: 'statusText', label: 'Trạng thái', max: 40 },
   { key: 'note', label: 'Ghi chú', max: 2000, noSecret: true },
 ];
-
-/** Ô của một dòng: tham chiếu còn ở dạng TÊN / MÃ — service dịch ra id rồi đi qua `prepare()`. */
-export interface IspImportCells {
-  code?: string;
-  provider?: string;
-  bandwidth?: string;
-  wanIps?: string[];
-  site?: string;
-  device?: string;
-  hotline?: string;
-  contractNo?: string;
-  startDate?: string;
-  status?: IspStatus;
-  note?: string;
-}
-
-export interface IspParsedRow {
-  rowNumber: number;
-  cells?: IspImportCells;
-  error?: string;
-}
 
 function statusOf(text: string): IspStatus | null {
   const key = stripDiacritics(text.trim().toLowerCase());
