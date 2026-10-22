@@ -106,8 +106,8 @@ describe('DeviceIpAssign', () => {
     expect(post?.body).toMatchObject({ subnetId: 'sub-1', address: '10.77.1.2', deviceId: 'dev-1' });
   });
 
-  // LF-04: cấp IP mới từ trang máy — hộp thứ hai điền sẵn người dùng / phòng ban của máy.
-  it('cấp mới: ô Người dùng / phòng ban điền sẵn theo máy', async () => {
+  // LF-03 / LF-04: cấp IP mới từ trang máy — người dùng / phòng ban đọc theo máy.
+  it('cấp mới: Người dùng / phòng ban theo máy, không có ô gõ riêng', async () => {
     mockFetch();
     renderWithI18n(
       <ToastProvider>
@@ -126,7 +126,8 @@ describe('DeviceIpAssign', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await screen.findByRole('dialog', { name: 'Cấp IP — 10.77.1.2' });
-    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Chị Lan — Kế toán');
+    expect(screen.queryByRole('combobox', { name: 'Người dùng / phòng ban' })).toBeNull();
+    expect(screen.getByText('Chị Lan — Kế toán')).toBeInTheDocument();
   });
 
   it('chỉ có một dải thì chọn sẵn — IP gợi ý hiện ngay, không bắt chọn lại', async () => {
@@ -178,8 +179,9 @@ describe('DeviceIpAssign', () => {
     expect(await screen.findByRole('dialog', { name: 'Đổi IP — 10.77.1.2' })).toBeInTheDocument();
     // Máy không đổi được trong hộp Đổi IP — chỉ địa chỉ đổi.
     expect(screen.queryByRole('combobox', { name: 'Thiết bị' })).toBeNull();
-    // Người/bộ phận và ghi chú của IP cũ đi theo máy — điền sẵn, sửa được.
-    expect(screen.getByRole('combobox', { name: 'Người dùng / phòng ban' })).toHaveValue('Phòng Kế toán');
+    // Người dùng theo máy (LF-03), không sửa trong hộp; ghi chú của IP cũ đi theo máy.
+    expect(screen.queryByRole('combobox', { name: 'Người dùng / phòng ban' })).toBeNull();
+    expect(screen.getByText('Phòng Kế toán')).toBeInTheDocument();
     expect(screen.getByLabelText('Ghi chú')).toHaveValue('Cổng 3 switch tầng 2');
     await userEvent.click(screen.getByRole('button', { name: 'Đổi IP' }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
@@ -188,10 +190,10 @@ describe('DeviceIpAssign', () => {
     expect(post?.body).toMatchObject({
       subnetId: 'sub-1',
       address: '10.77.1.2',
-      usedBy: 'Phòng Kế toán',
       note: 'Cổng 3 switch tầng 2',
     });
     expect(post?.body).not.toHaveProperty('deviceId');
+    expect(post?.body).not.toHaveProperty('usedBy');
   });
 
   it('đường hỏng: chưa có dải nào thì không bày ô chọn rỗng — chỉ lối sang khai dải', async () => {

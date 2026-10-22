@@ -17,7 +17,7 @@ import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { AttachmentTabNote } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { IspRow } from './isp-types';
@@ -461,24 +461,10 @@ export function IspForm({
           <NoteField id="isp-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
-        {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id.
-            Sửa: panel giấy tờ đầy đủ — đổi hợp đồng là việc thường xuyên của đường truyền. */}
+        {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id. Sửa: chỉ một dòng chỉ
+            sang tab Giấy tờ (UX-E20) — panel ghi thẳng, không thuộc lượt Lưu của form. */}
         {row ? (
-          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
-             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
-          <FormSection
-            title={t('attachments.title')}
-            titleTip={t('attachments.liveTip')}
-            columns={1}
-          >
-            <AttachmentPanel
-              ownerType="isp"
-              ownerId={row.id}
-              csrfToken={csrfToken}
-              canEdit={!busy}
-            />
-          </FormSection>
+          <AttachmentTabNote ownerType="isp" ownerId={row.id} />
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}

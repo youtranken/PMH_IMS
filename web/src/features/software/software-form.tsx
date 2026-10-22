@@ -10,7 +10,7 @@ import { Dialog, DialogCancel } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft, type AttachmentDraft } from '@/ui/attachment-draft';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { AttachmentTabNote } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SubmitButton } from '@/ui/submit-button';
 import { useToast } from '@/ui/toast';
@@ -658,26 +658,12 @@ export function SoftwareForm({
           </FormSection>
         )}
 
-        {/* Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — chúng nằm sẵn trên tay lúc
-            gõ hồ sơ mới, và cũng là thứ hay phải thay bản mới lúc sửa. Thêm mới thì chỉ chọn
-            file (đẩy lên sau khi có id); sửa thì dùng thẳng panel giấy tờ, có đủ danh sách
-            đang có + tải về + xóa. Bật ghế riêng thì giấy tờ ở từng ghế. */}
+        {/* Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền nằm sẵn trên tay lúc gõ hồ sơ
+            mới: Thêm mới chọn file ngay (đẩy lên sau khi có id). Sửa chỉ còn một dòng chỉ sang
+            tab Giấy tờ (UX-E20) — panel ghi thẳng, không thuộc lượt Lưu. Bật ghế riêng thì giấy
+            tờ ở từng ghế. */}
         {perSeat ? null : row ? (
-          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nút (i)
-             cạnh tiêu đề phải nói ra. */
-          <FormSection
-            title={t('attachments.title')}
-            titleTip={t('attachments.liveTip')}
-            columns={1}
-          >
-            <AttachmentPanel
-              ownerType="software"
-              ownerId={row.id}
-              csrfToken={csrfToken}
-              canEdit={!busy}
-            />
-          </FormSection>
+          <AttachmentTabNote ownerType="software" ownerId={row.id} />
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}

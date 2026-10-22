@@ -286,8 +286,9 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     // Hộp nói TRƯỚC khi bấm: IP này sẽ bị gỡ — đọc từ dữ liệu thật của máy.
     await expect(dialog.getByText(ipText).first()).toBeVisible();
     await expect(dialog.getByRole('heading', { name: 'Giữ nguyên' })).toBeVisible();
-    // Mặc định là "Chỉ thanh lý": gỡ hàng loạt không được là mặc định êm ái.
-    await expect(dialog.getByRole('radio', { name: /Chỉ thanh lý/ })).toBeChecked();
+    // Mặc định là "Gỡ hết rồi thanh lý" (Q-33) — chọn "Chỉ thanh lý" thì API chặn kèm danh sách.
+    await expect(dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' })).toBeChecked();
+    await dialog.getByRole('radio', { name: /Chỉ thanh lý/ }).check();
 
     await dialog.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
@@ -309,7 +310,7 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     await rowAction(page, `PC-E2E-RC-${stamp}`, 'Thanh lý');
 
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' }).check();
+    await expect(dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' })).toBeChecked();
     const submit = dialog.getByRole('button', { name: 'Thanh lý', exact: true });
     // Chưa gõ mã thì chưa bấm được — một cú bấm theo quán tính không xoá được IP của máy.
     await expect(submit).toBeDisabled();
@@ -318,7 +319,7 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     await dialog.getByLabel(new RegExp(`Gõ lại mã máy ${code}`)).fill(code);
     await submit.click();
 
-    await expect(page.getByRole('button', { name: 'Đổi trạng thái' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Dùng lại…' })).toBeVisible();
     expect(sql(`SELECT status FROM device WHERE id = '${kit.deviceId}'`)).toBe('retired');
     expect(
       sql(`SELECT status FROM ip_address WHERE id = '${kit.ipId}'`),

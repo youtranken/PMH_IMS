@@ -9,7 +9,7 @@ import { RowActions, type RowAction } from '@/ui/row-actions';
  *
  * `onEdit` chỉ truyền khi nút Sửa KHÔNG đứng ngoài (trang chi tiết trên điện thoại); nút Sửa đã
  * ở ngoài mà còn trong menu là hai lối cho một việc. `onReopen` vắng thì máy đã thanh lý không
- * có "Đổi trạng thái" (mở lại) trong menu — nơi gọi đã để nó thành nút chính bên ngoài.
+ * có "Dùng lại…" trong menu — nơi gọi đã để nó thành nút chính bên ngoài.
  */
 export function deviceMenuItems(
   t: TFunction,
@@ -25,7 +25,7 @@ export function deviceMenuItems(
   if (retired) {
     return [
       ...(handlers.onReopen
-        ? [{ key: 'reopen', label: t('devices.changeStatusMenu'), onSelect: handlers.onReopen, ok: true }]
+        ? [{ key: 'reopen', label: t('devices.reopenMenu'), onSelect: handlers.onReopen, ok: true }]
         : []),
       { key: 'clone', label: t('devices.clone'), onSelect: handlers.onClone },
     ];
@@ -44,7 +44,7 @@ export function deviceMenuItems(
  * Ô Thao tác của một dòng thiết bị: "Sửa" đứng ngoài (việc hằng ngày), phần còn lại vào ⋮.
  *
  * Máy đã thanh lý thì API từ chối mọi lượt sửa (DEVICE_RETIRED): nút Sửa vẫn ĐỨNG ĐÓ (tắt) kèm
- * lý do đọc được, để hàng không lệch cột và người ta biết vì sao. Lối quay lại là "Đổi trạng thái"
+ * lý do đọc được, để hàng không lệch cột và người ta biết vì sao. Lối quay lại là "Dùng lại…"
  * trong menu.
  */
 export function DeviceRowActions({

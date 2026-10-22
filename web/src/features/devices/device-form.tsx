@@ -16,7 +16,7 @@ import { Field, FormSection } from '@/ui/page-header';
 import { FoldSection } from '@/ui/fold-section';
 import { NumberStepper } from '@/ui/number-stepper';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { AttachmentTabNote } from '@/ui/attachment-panel';
 import { DevicePhotoSlots, useDeviceTypeIconSrc } from '@/ui/device-photo-slots';
 import { ME_KEY, type Me } from '@/lib/me';
 import { Select } from '@/ui/select';
@@ -32,7 +32,7 @@ import {
   type DeviceStatus,
   type DeviceWriteResult,
 } from '@/lib/device-types';
-import { DevicePhotoEditor, useDevicePhotoDraft } from './device-diagram-look';
+import { useDevicePhotoDraft } from './device-diagram-look';
 import { DeviceModelField } from './device-model-field';
 import { ACCESS_KINDS, type AccessPoint } from './device-access';
 import { CodeInput, IpInput } from '@/ui/code-input';
@@ -448,7 +448,7 @@ export function DeviceForm({
           </p>
         ) : null}
         {check.summary}
-        {/* Hai khối luôn mở là đủ để lưu một máy (Q-27): máy gì, đặt ở đâu. Model đứng đầu vì nó
+        {/* Hai khối luôn mở là đủ để lưu một máy (Q-27): Nhận dạng, Vị trí. Model đứng đầu vì nó
             điền sẵn Loại, Số U và ảnh. Phần còn lại gập, khai sau cũng được — khối nào đã có giá
             trị (sửa, nhân bản) hoặc có lỗi thì tự mở. */}
         <FormSection title={t('devices.formSectionWhat')} columns={3}>
@@ -754,32 +754,20 @@ export function DeviceForm({
           </FormSection>
         </FoldSection>
 
-        {/* Ảnh (không bắt buộc): SỬA ghi thẳng như trang thiết bị; THÊM MỚI giữ ảnh ở trình duyệt
-            tới lúc máy có id. Giấy tờ: THÊM MỚI chỉ chọn file, đẩy lên sau khi có id; SỬA dùng
-            thẳng `AttachmentPanel` (ghi ngay lúc bấm — nút (i) nói ra điều đó). */}
-        <FoldSection
-          title={t('devices.foldMedia')}
-          count={device ? undefined : foldCount(draft.files.length + (photoDraft.files.front ? 1 : 0) + (photoDraft.files.back ? 1 : 0), 'devices.foldFiles')}
-          defaultOpen={Boolean(device)}
-        >
-          <FormSection
-            title={t('devices.photoSectionTitle')}
-            titleTip={device ? t('devices.photoLiveTip') : undefined}
-            columns={1}
+        {/* Ảnh và giấy tờ (không bắt buộc) chỉ chọn ở THÊM MỚI: giữ ở trình duyệt tới lúc máy có
+            id rồi mới đẩy lên. SỬA chỉ còn một dòng chỉ sang tab Giấy tờ (UX-E20): ảnh và giấy tờ
+            của máy đã có ghi thẳng lúc bấm, không thuộc lượt Lưu của hộp này — ảnh sửa ở khu
+            "Hình dùng trên sơ đồ" của trang chi tiết. */}
+        {device ? (
+          <AttachmentTabNote ownerType="device" ownerId={device.id} />
+        ) : (
+          <FoldSection
+            title={t('devices.foldMedia')}
+            count={foldCount(draft.files.length + (photoDraft.files.front ? 1 : 0) + (photoDraft.files.back ? 1 : 0), 'devices.foldFiles')}
+            defaultOpen={false}
           >
-            <p className="muted small">{t('devices.photoSectionHint')}</p>
-            {device ? (
-              <DevicePhotoEditor
-                pendingModel={(model?.id ?? null) !== (device.deviceModelId ?? null) ? model : undefined}
-                deviceId={device.id}
-                deviceTypeId={device.deviceTypeId}
-                deviceTypeName={device.deviceTypeName}
-                csrfToken={csrfToken}
-                canEdit={device.status !== 'retired'}
-                canEditModel={canEditModel}
-                rackUnits={formUnits}
-              />
-            ) : (
+            <FormSection title={t('devices.photoSectionTitle')} columns={1}>
+              <p className="muted small">{t('devices.photoSectionHint')}</p>
               <DevicePhotoSlots
                 slots={{
                   front: modelFront
@@ -799,29 +787,10 @@ export function DeviceForm({
                   return held ? Promise.resolve(held) : Promise.reject(new Error('none'));
                 }}
               />
-            )}
-          </FormSection>
-          {device ? (
-            /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-               của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
-               ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
-            <FormSection
-              title={t('attachments.title')}
-              titleTip={t('attachments.liveTip')}
-              columns={1}
-            >
-              <AttachmentPanel
-                ownerType="device"
-                ownerId={device.id}
-                csrfToken={csrfToken}
-                canEdit={!busy}
-              />
             </FormSection>
-          ) : (
             <AttachmentDraftSection draft={draft} disabled={busy} />
-          )}
-
-        </FoldSection>
+          </FoldSection>
+        )}
 
         <FoldSection
           title={t('devices.note')}

@@ -14,6 +14,7 @@ import {
   stepUpViaApi,
   DEVICE_FOLDS,
   openDeviceFolds,
+  openFold,
   isoToday,
 } from './helpers';
 
@@ -609,7 +610,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     for (const fold of DEVICE_FOLDS) {
       await expect(
         dialog.getByRole('button', { name: new RegExp(`^${fold}`) }),
-        `Hộp thêm mới mở ra với khối "${fold}" GẬP — chỉ hai khối Máy gì / Đặt ở đâu luôn mở`,
+        `Hộp thêm mới mở ra với khối "${fold}" GẬP — chỉ hai khối Nhận dạng / Vị trí luôn mở`,
       ).toHaveAttribute('aria-expanded', 'false');
     }
     await openDeviceFolds(dialog);
@@ -622,12 +623,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(dialog.getByRole('heading', { level: 2 })), {
         message:
-          'Form thiết bị: hai khối luôn mở kể một mạch chuyện (máy gì → đặt ở đâu); trong khối gập "Ảnh và giấy tờ" có hai khu con có tiêu đề',
+          'Form thiết bị: hai khối luôn mở kể một mạch chuyện (nhận dạng → vị trí); trong khối gập "Ảnh và giấy tờ" có hai khu con có tiêu đề',
       })
       .toEqual([
         'Thêm thiết bị',
-        'Máy gì',
-        'Đặt ở đâu',
+        'Nhận dạng',
+        'Vị trí',
         'Ảnh thiết bị',
         'Giấy tờ đính kèm',
       ]);
@@ -858,13 +859,17 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Tiêu đề hộp sửa phải mang MÃ MÁY — mở hai tab rồi lẫn lộn hai cái máy là hỏng thật, không phải hỏng đẹp',
     ).toBeVisible();
     // Q-27: khối gập nào ĐÃ có giá trị thì tự mở khi sửa — máy này có người dùng, serial, ghi chú.
-    for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Ảnh và giấy tờ', 'Ghi chú']) {
+    for (const fold of ['Người dùng và phòng ban', 'Mua sắm và bảo hành', 'Ghi chú']) {
       await expect(
         editDialog.getByRole('button', { name: new RegExp(`^${fold}`) }),
         `Khối "${fold}" đã có giá trị phải mở sẵn ở form sửa — giấu giá trị đang có là mời người ta khai lại`,
       ).toHaveAttribute('aria-expanded', 'true');
     }
-    await openDeviceFolds(editDialog);
+    // UX-E20: form SỬA không có khối "Ảnh và giấy tờ" — chỉ một dòng chỉ sang tab Giấy tờ.
+    await expect(editDialog.getByText(/Giấy tờ · quản lý ở tab Giấy tờ$/)).toBeVisible();
+    for (const fold of DEVICE_FOLDS.filter((title) => title !== 'Ảnh và giấy tờ')) {
+      await openFold(editDialog, fold);
+    }
 
     /*
      * ĐIỀN SẴN — đọc lại từng ô.
@@ -905,13 +910,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * BỘ NÚT CỦA CHẾ ĐỘ SỬA — đúng bằng bộ của chế độ thêm mới CỘNG hai thứ, BỚT một, không hơn:
      *   + "Trạng thái": máy đã tồn tại thì trạng thái mới là một quyết định thật.
      *   - "Lưu và nhân bản": đang sửa một máy thì không có "máy tiếp theo".
-     *   + (i) cạnh "Giấy tờ đính kèm": khu này GHI THẲNG, nút Hủy của hộp không gỡ được file đã tải —
-     *     nói ra ở nút giải thích thay cho băng cảnh báo (Q-18).
+     *   - Khối "Ảnh và giấy tờ" (UX-E20): ảnh và giấy tờ ghi thẳng, sửa ở trang chi tiết.
      */
     await expect
       .poll(() => controlName(editDialog.getByRole('button')), {
         message:
-          'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Lưu và nhân bản"; khu giấy tờ ghi thẳng (chọn là tải, không có nút "Tải lên")',
+          'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Lưu và nhân bản" và khối "Ảnh và giấy tờ"',
       })
       .toEqual([
         'Đóng hộp thoại',
@@ -931,17 +935,6 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
         'Truy cập quản trị chưa khai',
         '+ Đường truy cập',
-        // Khu "Ảnh thiết bị" (Q-23): ô ảnh hai mặt + ảnh chung của model (SA/Admin).
-        'Ảnh và giấy tờ',
-        'Giải thích: Ảnh thiết bị',
-        'Tải ảnh lên — Mặt trước',
-        'Tải ảnh chung cho mọi máy cùng model — Mặt trước',
-        'Tải ảnh lên — Mặt sau',
-        'Tải ảnh chung cho mọi máy cùng model — Mặt sau',
-        'Giải thích: Giấy tờ đính kèm',
-        'Chọn file để đính kèm',
-        // Câu "chỉ tải về, không mở trong trình duyệt" nằm trong nút (i) (Q-20).
-        'Giải thích: Cách mở file đính kèm',
         'Ghi chú',
         'Hủy',
         'Lưu',

@@ -174,7 +174,8 @@ describe('Hồ sơ IP phải có chủ (Q-14)', () => {
         expect(await rowOf(id)).toMatchObject({
           status: 'assigned',
           device_id: deviceId,
-          used_by: 'Chị Lan',
+          // Gắn máy thì người dùng đọc từ máy, không lưu bản sao (LF-03).
+          used_by: null,
           assigned_at: '2026-03-04',
           note: 'camera cổng',
         });

@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { noteContainsSecret } from '@/lib/note-secret';
 import { NoteField } from '@/ui/note-field';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { AttachmentTabNote } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogCancel } from '@/ui/dialog';
 import { SubmitButton } from '@/ui/submit-button';
@@ -477,22 +477,10 @@ export function ServiceAccountForm({
           <NoteField id="sa-note" value={form.note} onChange={(v) => set('note', v)} error={check.error('note')} />
         </FormSection>
 
+        {/* Sửa: chỉ một dòng chỉ sang tab Giấy tờ (UX-E20) — panel ghi thẳng, không thuộc lượt
+            Lưu của form. */}
         {row ? (
-          /* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt lưu
-             của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên, nên nói ra —
-             ở nút (i) cạnh tiêu đề, không phải một băng cảnh báo làm hộp cao thêm. */
-          <FormSection
-            title={t('attachments.title')}
-            titleTip={t('attachments.liveTip')}
-            columns={1}
-          >
-            <AttachmentPanel
-              ownerType="service_account"
-              ownerId={row.id}
-              csrfToken={csrfToken}
-              canEdit={!busy}
-            />
-          </FormSection>
+          <AttachmentTabNote ownerType="service_account" ownerId={row.id} />
         ) : (
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}

@@ -60,7 +60,8 @@ import {
   type SlotLine,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
-import { AssignIpDialog, IpDeviceCombobox, ownerRule } from "./ip-assign-dialog";
+import { AssignIpDialog, IpDeviceCombobox, IpUsedByFromDevice, ownerRule } from "./ip-assign-dialog";
+import { deviceOwnerText } from "@/ui/device-combobox";
 import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
 import { paletteShortcut } from "@/ui/command-palette";
@@ -1060,6 +1061,8 @@ export function IpForm({
     term: record.deviceCode ?? "",
   });
   const [usedBy, setUsedBy] = useState(record.usedBy ?? "");
+  /** IP gắn máy đọc người dùng theo máy (LF-03) — không còn ô tự ghi khi đã chọn máy. */
+  const [deviceOwner, setDeviceOwner] = useState(record.deviceId ? (record.usedBy ?? "") : "");
   const departments = useDepartments();
   const [assignedAt, setAssignedAt] = useState(record.assignedAt ?? "");
   const [note, setNote] = useState(record.note ?? "");
@@ -1108,7 +1111,7 @@ export function IpForm({
           save.mutate(
             {
               deviceId: device.deviceId,
-              usedBy: usedBy.trim(),
+              usedBy: device.deviceId ? "" : usedBy.trim(),
               assignedAt,
               note: note.trim(),
             },
@@ -1130,23 +1133,30 @@ export function IpForm({
           <IpDeviceCombobox
             deviceId={device.deviceId}
             term={device.term}
-            onChange={setDevice}
+            onChange={(next) => {
+              setDevice({ deviceId: next.deviceId, term: next.term });
+              if (next.device) setDeviceOwner(deviceOwnerText(next.device));
+            }}
           />
         </Field>
 
-        <Field label={t("ipam.usedBy")} hint={t("ipam.usedByHint")}>
-          {/* Gợi ý từ danh mục Bộ phận, VẪN gõ tự do được: ô này đôi khi là một phòng, đôi
-              khi là "Chị Lan — Kế toán", đôi khi là hai phòng dùng chung một máy in. Ép thành
-              khóa ngoại là ép người dùng khai sai cho vừa cái ô. */}
-          <SuggestInput
-            value={usedBy}
-            onChange={setUsedBy}
-            options={departments.names}
-            failed={departments.failed}
-            placeholder={t("ipam.usedByPlaceholder")}
-            ariaLabel={t("ipam.usedBy")}
-          />
-        </Field>
+        {device.deviceId ? (
+          <IpUsedByFromDevice owner={deviceOwner} />
+        ) : (
+          <Field label={t("ipam.usedBy")} hint={t("ipam.usedByHint")}>
+            {/* Gợi ý từ danh mục Bộ phận, VẪN gõ tự do được: ô này đôi khi là một phòng, đôi
+                khi là "Chị Lan — Kế toán", đôi khi là hai phòng dùng chung một máy in. Ép thành
+                khóa ngoại là ép người dùng khai sai cho vừa cái ô. */}
+            <SuggestInput
+              value={usedBy}
+              onChange={setUsedBy}
+              options={departments.names}
+              failed={departments.failed}
+              placeholder={t("ipam.usedByPlaceholder")}
+              ariaLabel={t("ipam.usedBy")}
+            />
+          </Field>
+        )}
 
         <Field label={t("ipam.assignedAt")}>
           <DatePicker

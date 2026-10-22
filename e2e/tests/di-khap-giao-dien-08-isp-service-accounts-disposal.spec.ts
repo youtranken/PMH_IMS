@@ -1425,13 +1425,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // Nói thẳng ra ba thứ tuyệt đối không được có, để log lúc đỏ đọc là hiểu ngay.
     /*
      * Menu ⋯ của kho CHỈ dẫn đường (DP-006): phần mềm "Mở hồ sơ" + "Khôi phục…", loại khác MỘT
-     * mục "Mở hồ sơ để dùng lại" (Q-19, UX-E14) — không mục nào ghi dữ liệu ngay tại đây, dùng
+     * mục "Dùng lại…" (Q-19, UX-E14, Q-33) — không mục nào ghi dữ liệu ngay tại đây, dùng
      * lại vẫn làm ở đúng module chủ.
      */
     expect(
       await rowActionNames(page, deviceCode),
       'Thiết bị trong kho: chỉ có lối mở hồ sơ gốc',
-    ).toEqual(['Mở hồ sơ để dùng lại']);
+    ).toEqual(['Dùng lại…']);
     // "Xuất Excel" ĐƯỢC có (DP-004): nó chỉ đọc, và lượt xuất vẫn ghi sổ `disposal.exported`.
     for (const forbiddenLabel of [/Thêm/, /^Sửa/, /^Xóa/, /Khôi phục/]) {
       await expect(

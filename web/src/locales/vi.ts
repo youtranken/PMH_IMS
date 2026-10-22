@@ -1804,7 +1804,6 @@ export default {
     lookModelSaved: 'Đã đặt ảnh cho mọi máy model {{model}}.',
     photoSectionTitle: 'Ảnh thiết bị',
     photoSectionHint: 'Không bắt buộc. Ảnh hiện trên sơ đồ thay cho biểu tượng loại.',
-    photoLiveTip: 'Ô ảnh ghi THẲNG: tải lên hay bỏ ảnh là có hiệu lực ngay, không chờ nút Lưu của hộp này.',
     photoDraftSaved: 'Đã đặt ảnh cho máy {{code}}.',
     photoDraftFailed: 'Đã thêm máy {{code}} nhưng chưa đặt được ảnh ({{reason}}). Mở hồ sơ máy → "Hình dùng trên sơ đồ" để tải lại.',
     photoRetry: 'Mở hồ sơ đặt lại ảnh',
@@ -1820,8 +1819,8 @@ export default {
        chung `tabProfile` thì đổi tên tab kéo theo cả tiêu đề khối trong hộp "Thêm thiết bị"
        ("là máy gì → đứng ở đâu → mua của ai"), nơi chữ "Tổng quan" vô nghĩa vì chưa có gì để
        tổng quan. */
-    formSectionWhat: 'Máy gì',
-    formSectionWhere: 'Đặt ở đâu',
+    formSectionWhat: 'Nhận dạng',
+    formSectionWhere: 'Vị trí',
     foldPeople: 'Người dùng và phòng ban',
     foldPurchaseSummary: 'nhà cung cấp, ngày mua, hạn bảo hành, serial',
     foldAccessSummary: 'Web / SSH / RDP…',
@@ -1843,7 +1842,7 @@ export default {
     specTitle: 'Thông số',
     factsLabel: 'Tóm tắt thiết bị',
     cabinetCard: 'Trong tủ {{cabinet}}',
-    cabinetNoU: 'Chưa khai U của máy trong tủ — khai ở Sửa hồ sơ › Đặt ở đâu.',
+    cabinetNoU: 'Chưa khai U của máy trong tủ — khai ở Sửa hồ sơ › Vị trí.',
     cabinetThis: 'máy này',
     cabinetEmpty: 'trống',
     noUserYet: 'chưa khai',
@@ -1878,13 +1877,14 @@ export default {
     retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
     retireBlocked:
       'Máy còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc gỡ từng thứ trước.',
-    // Mở lại máy đã thanh lý chỉ là đổi trạng thái về Đang dùng/Dự phòng/Hỏng (Q-20). Kho thanh
-    // lý vẫn ghi "Dùng lại" (`disposal.restore`): ở đó việc là kéo hồ sơ ra khỏi kho.
-    reopen: 'Đổi trạng thái',
+    // Q-33: một cặp "Thanh lý… / Dùng lại…" cho mọi hồ sơ. Bên trong vẫn là đổi trạng thái về
+    // Đang dùng/Dự phòng/Hỏng (Q-15).
+    reopen: 'Dùng lại',
+    reopenMenu: 'Dùng lại…',
     confirmReopen:
       'Hồ sơ "{{name}}" mở lại để sửa được, và hạn bảo hành của máy lại có trong ' +
       'email nhắc hạn.',
-    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đổi trạng thái" nếu cần sửa hồ sơ.',
+    retiredLocked: 'Thiết bị đã thanh lý — bấm "Dùng lại…" nếu cần sửa hồ sơ.',
     /*
      * HAI câu cho HAI cảnh, đừng gộp lại. Một câu chung có chữ "khớp bộ lọc" khiến hệ thống
      * vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa có thiết bị nào khớp bộ lọc" — và người dùng
@@ -1903,7 +1903,7 @@ export default {
       'sẵn trong Danh mục.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
-    retiredLockedShort: 'Đã thanh lý — đổi trạng thái rồi mới sửa được.',
+    retiredLockedShort: 'Đã thanh lý — dùng lại rồi mới sửa được.',
     emptySearch: 'Không có thiết bị nào khớp "{{q}}".',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
@@ -1965,6 +1965,8 @@ export default {
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
+    inTab: '{{count}} Giấy tờ · quản lý ở tab Giấy tờ',
+    inTabUnknown: 'Giấy tờ · quản lý ở tab Giấy tờ',
     hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành…',
     forbidden: 'Bạn chưa có quyền xem giấy tờ của hồ sơ này.',
     hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh…',
@@ -3110,6 +3112,8 @@ export default {
     usedBy: 'Người dùng / phòng ban',
     usedByPlaceholder: 'Phòng ban hoặc tên người',
     usedByHint: 'vd "Chị Lan — Kế toán" hoặc "Phòng IT".',
+    usedByFromDevice: 'Theo hồ sơ máy — đổi người dùng ở trang thiết bị.',
+    usedByDeviceNone: 'Máy chưa khai người dùng',
     assignedAt: 'Ngày cấp',
     /* Nút trên dòng, tiêu đề hộp và nút gửi cùng một chữ: ô trống và hồ sơ đã thu hồi mở CÙNG
        một hộp, nên hai chữ khác nhau là nói với người dùng rằng đó là hai việc khác nhau. */
@@ -3480,7 +3484,7 @@ export default {
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',
     /* Q-19: dùng lại thiết bị / tài khoản dịch vụ / đường truyền làm ở trang hồ sơ, không tại kho. */
-    reuse: 'Mở hồ sơ để dùng lại',
+    reuse: 'Dùng lại…',
     clearFilters: 'Xóa bộ lọc',
     filterKind: 'Lọc theo loại hồ sơ',
     allKinds: 'Tất cả',
