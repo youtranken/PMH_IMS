@@ -222,7 +222,9 @@ export function DeviceForm({
 
   // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
   const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
-  useSuggestedCode(device ? null : '/api/v1/devices/next-code', form.code, applyCode, 'device-code');
+  // Mỗi lượt "Lưu & thêm tiếp" là một vòng mới: hỏi lại mã kế tiếp của mã vừa lưu.
+  const [codeRound, setCodeRound] = useState(0);
+  const codeGuard = useSuggestedCode(device ? null : '/api/v1/devices/next-code', form.code, applyCode, 'device-code', codeRound);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Bảo hành gần như luôn bắt đầu từ ngày mua: ô "Bảo hành từ" còn trống thì lấy theo.
@@ -361,6 +363,7 @@ export function DeviceForm({
           }
           if (keepOpen) {
             setForm(nextState(sent));
+            setCodeRound((n) => n + 1);
             codeRef.current?.focus();
           }
           onSaved(result, { keepOpen });
@@ -476,6 +479,7 @@ export function DeviceForm({
               caps
               ref={codeRef}
               id="device-code"
+              data-guard-value={codeGuard}
               required
               value={form.code}
               onChange={(e) => set('code', e.target.value)}

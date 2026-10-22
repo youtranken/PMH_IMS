@@ -129,7 +129,7 @@ export function IspForm({
 
   // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
   const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
-  useSuggestedCode(row ? null : '/api/v1/isp-lines/next-code', form.code, applyCode, 'isp-code');
+  const codeGuard = useSuggestedCode(row ? null : '/api/v1/isp-lines/next-code', form.code, applyCode, 'isp-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -260,6 +260,7 @@ export function IspForm({
             <CodeInput
               caps
               id="isp-code"
+              data-guard-value={codeGuard}
               required
               value={form.code}
               onChange={(e) => set('code', e.target.value)}

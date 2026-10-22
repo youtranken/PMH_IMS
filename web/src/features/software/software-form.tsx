@@ -177,7 +177,7 @@ export function SoftwareForm({
 
   // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
   const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
-  useSuggestedCode(row || batchFrom ? null : `/api/v1/software/next-code?kind=${spec.kinds.join(',')}`, form.code, applyCode, 'sw-code');
+  const codeGuard = useSuggestedCode(row || batchFrom ? null : `/api/v1/software/next-code?kind=${spec.kinds.join(',')}`, form.code, applyCode, 'sw-code');
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Đổi sang loại không có seat thì xóa luôn ô seat — gửi lên sẽ bị API từ chối,
@@ -485,6 +485,7 @@ export function SoftwareForm({
             <CodeInput
               caps
               id="sw-code"
+              data-guard-value={codeGuard}
               required
               placeholder={batchFrom ? suggestedCode : codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
               value={form.code}
