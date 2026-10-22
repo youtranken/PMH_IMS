@@ -181,15 +181,13 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 }
 
 /* Ô TÊN DÒNG của bảng khu mở rộng (trang chi tiết thiết bị): là <th scope="row">, nên phải
-   tự bỏ dáng tiêu đề cột — căn trái, không viết hoa, và hẹp lại để cột giá trị được rộng. */
+   tự bỏ dáng tiêu đề cột — căn trái và hẹp lại để cột giá trị được rộng. */
 .table.kv-table td {
   overflow-wrap: anywhere;
 }
 .table th.panel-key {
   width: 38%;
   text-align: left;
-  text-transform: none;
-  letter-spacing: 0;
   font-weight: 600;
   color: var(--ink-2);
   white-space: normal;
@@ -754,10 +752,8 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   grid-template-columns: var(--seat-cols);
   gap: var(--space-7);
   padding: 0 var(--space-7) var(--space-2);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   color: var(--ink-3);
 }
 .seat-card {

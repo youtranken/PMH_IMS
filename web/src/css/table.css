@@ -22,10 +22,10 @@ table.table {
 }
 table.table thead th {
   text-align: left;
-  font-size: var(--fs-2xs);
+  /* Chữ thường, không giãn chữ (DS-09, Q-33): chữ in hoa giãn làm tiêu đề dài gấp rưỡi, đẩy bảng
+     tràn ngang ở laptop; đậm vừa đủ tách khỏi dữ liệu. */
+  font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   /* --ink, không --ink-2: tiêu đề cột là chỗ mắt bám để đọc bảng — xám nhạt thì lẫn vào dữ
      liệu (Q-27, chủ dự án). */
   color: var(--ink);
