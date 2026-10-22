@@ -109,15 +109,15 @@ describe('Kho thanh lý', () => {
     expect(screen.getByRole('menuitem', { name: 'Mở hồ sơ để dùng lại' })).toHaveClass('ok');
   });
 
-  it('phần mềm: "Khôi phục…" tô ok, không có lối dùng lại riêng', async () => {
+  it('phần mềm: "Dùng lại…" tô ok, không có lối dùng lại riêng', async () => {
     const user = userEvent.setup();
     renderWith([], [SOFTWARE]);
     await user.click(await screen.findByRole('button', { name: 'Thao tác với SW-E2E-01' }));
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Mở hồ sơ',
-      'Khôi phục…',
+      'Dùng lại…',
     ]);
-    expect(screen.getByRole('menuitem', { name: 'Khôi phục…' })).toHaveClass('ok');
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toHaveClass('ok');
   });
 
   /* Q-20: hai ô ngày là MỘT cụm "từ – đến" trên cùng hàng; chữ trong ô ngắn, tên đầy đủ ở nhãn. */

@@ -294,8 +294,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     expect(
       await rowActionNames(page, licenseCode),
-      'Hồ sơ đã bỏ: không Gán, không Gia hạn, không bỏ lần hai — menu chỉ còn Khôi phục…',
-    ).toEqual(['Khôi phục…']);
+      'Hồ sơ đã bỏ: không Gán, không Gia hạn, không bỏ lần hai — menu chỉ còn Dùng lại…',
+    ).toEqual(['Dùng lại…']);
     await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
   });
 

@@ -12,7 +12,7 @@ import type { SoftwareDetailRow } from './software-types';
 
 /**
  * SW-033 / SW-034 — hồ sơ Thanh lý: không có Gia hạn, có băng nói rõ đã thanh lý ra sao và
- * một hộp Khôi phục gọi đúng PATCH của Sửa hồ sơ rồi gán lại ghế qua API gán sẵn có.
+ * một hộp Dùng lại gọi đúng PATCH của Sửa hồ sơ rồi gán lại ghế qua API gán sẵn có.
  */
 
 const BASE: SoftwareDetailRow = {
@@ -78,33 +78,33 @@ function renderDetail(detail: SoftwareDetailRow) {
   );
 }
 
-describe('Trang chi tiết phần mềm — Gia hạn / Khôi phục', () => {
+describe('Trang chi tiết phần mềm — Gia hạn / Dùng lại', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('hồ sơ Thanh lý: không có Gia hạn; băng nói ngày + tự động sau N ngày; có Khôi phục…', async () => {
+  it('hồ sơ Thanh lý: không có Gia hạn; băng nói ngày + tự động sau N ngày; có Dùng lại…', async () => {
     mockFetch(BASE);
     renderDetail(BASE);
     expect(await screen.findByText(/Đã thanh lý 01\/09\/2026 · tự động sau 31 ngày hết hạn/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Gia hạn' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Khôi phục…' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Dùng lại…' }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Thanh lý…' })).not.toBeInTheDocument();
   });
 
-  /* Q-19: header chỉ giữ việc chính; "Khôi phục…" vào ⋮ (màu ok), băng Thanh lý vẫn giữ nút của nó. */
-  // UX-E22: một lối cho một việc — "Khôi phục…" chỉ ở băng Thanh lý, menu ⋮ không lặp lại
+  /* Q-19: header chỉ giữ việc chính; "Dùng lại…" vào ⋮ (màu ok), băng Thanh lý vẫn giữ nút của nó. */
+  // UX-E22: một lối cho một việc — "Dùng lại…" chỉ ở băng Thanh lý, menu ⋮ không lặp lại
   // (và không còn việc nào khác nên không có nút ⋮).
-  it('hồ sơ Thanh lý: "Khôi phục…" chỉ ở băng, không có menu ⋮', async () => {
+  it('hồ sơ Thanh lý: "Dùng lại…" chỉ ở băng, không có menu ⋮', async () => {
     const user = userEvent.setup();
     mockFetch(BASE);
     renderDetail(BASE);
     await screen.findByText(/Đã thanh lý 01\/09\/2026/);
-    expect(screen.getAllByRole('button', { name: 'Khôi phục…' })).toHaveLength(1);
-    const restore = screen.getByRole('button', { name: 'Khôi phục…' });
+    expect(screen.getAllByRole('button', { name: 'Dùng lại…' })).toHaveLength(1);
+    const restore = screen.getByRole('button', { name: 'Dùng lại…' });
     expect(restore.closest('.alert')).not.toBeNull();
     expect(screen.queryByRole('button', { name: `Thao tác với ${BASE.code}` })).toBeNull();
     await user.click(restore);
     expect(
-      await screen.findByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${BASE.code}`) }),
+      await screen.findByRole('dialog', { name: new RegExp(`Dùng lại hồ sơ — ${BASE.code}`) }),
     ).toBeInTheDocument();
   });
 
@@ -127,7 +127,7 @@ describe('Trang chi tiết phần mềm — Gia hạn / Khôi phục', () => {
     renderDetail(detail);
     expect(await screen.findByRole('button', { name: 'Sửa hồ sơ' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Gia hạn' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Khôi phục…' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dùng lại…' })).not.toBeInTheDocument();
   });
 
   it('thuê bao đang dùng: vẫn có Gia hạn', async () => {
@@ -157,7 +157,7 @@ describe('Hộp Khôi phục', () => {
     const onDone = renderDialog(BASE);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('checkbox', { name: /PC-02/ }));
-    await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
+    await user.click(screen.getByRole('button', { name: 'Dùng lại' }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith({ assigned: 1, failures: [] }));
     const writes = calls.filter((call) => call.method !== 'GET');
@@ -178,7 +178,7 @@ describe('Hộp Khôi phục', () => {
     const group = screen.getByRole('group', { name: 'Đặt nhanh ngày hết hạn' });
     await user.click(within(group).getByRole('button', { name: '+2 năm' }));
     await user.click(await screen.findByRole('checkbox', { name: /PC-02/ }));
-    await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
+    await user.click(screen.getByRole('button', { name: 'Dùng lại' }));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
       status: 'active',
@@ -192,7 +192,7 @@ describe('Hộp Khôi phục', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('checkbox', { name: /PC-01/ }));
     await user.click(screen.getByRole('checkbox', { name: /PC-02/ }));
-    await user.click(screen.getByRole('button', { name: 'Khôi phục' }));
+    await user.click(screen.getByRole('button', { name: 'Dùng lại' }));
 
     expect(await screen.findByText(/Hồ sơ chỉ có 1 ghế/)).toBeInTheDocument();
     expect(calls.filter((call) => call.method !== 'GET')).toEqual([]);

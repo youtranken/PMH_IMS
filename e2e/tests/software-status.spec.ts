@@ -20,7 +20,7 @@ import {
  * Danh sách + hồ sơ phần mềm theo vòng đời Q-03/Q-13:
  *   SW-001 bảng vừa 1280px, cột Thao tác trong khung · SW-002 cột Ghế chỉ phân số + cờ đỏ ·
  *   SW-004 một cột "Tình trạng" có số ngày tới lúc tự thanh lý (đọc từ cấu hình) ·
- *   SW-005 Hết hạn đỏ, Thanh lý xám, cả sáng lẫn tối · SW-033/034 Gia hạn/Khôi phục ·
+ *   SW-005 Hết hạn đỏ, Thanh lý xám, cả sáng lẫn tối · SW-033/034 Gia hạn/Dùng lại ·
  *   SW-035 câu hỏi lại nói đúng là ghế sẽ bị gỡ.
  */
 
@@ -238,7 +238,7 @@ test('thanh lý từ danh sách: câu hỏi lại nói ghế sẽ BỊ GỠ và 
   expect(await seatUsed(page, id)).toBe(0);
 });
 
-test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Khôi phục… gán lại máy đã tick', async ({
+test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Dùng lại… gán lại máy đã tick', async ({
   page,
 }) => {
   await firstLogin(page, E2E_SA);
@@ -263,15 +263,15 @@ test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Khôi ph
   );
   await expect(page.getByRole('button', { name: 'Gia hạn', exact: true })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Khôi phục…' }).first().click();
-  const dialog = page.getByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${code}`) });
+  await page.getByRole('button', { name: 'Dùng lại…' }).first().click();
+  const dialog = page.getByRole('dialog', { name: new RegExp(`Dùng lại hồ sơ — ${code}`) });
   await expect(dialog).toBeVisible();
   // Hạn mới có sẵn +1 năm — người dùng không phải tự nhớ phải nhập hạn.
   await expect(dialog.getByRole('button', { name: 'Hạn mới' })).toContainText(
     String(Number(isoToday().slice(0, 4)) + 1),
   );
   await dialog.getByRole('checkbox', { name: new RegExp(deviceA) }).check();
-  await dialog.getByRole('button', { name: 'Khôi phục', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Dùng lại', exact: true }).click();
 
   await expect(page.getByText('Đã khôi phục hồ sơ.')).toBeVisible();
   await expect(page.getByText('Đã gán lại 1 máy.')).toBeVisible();
@@ -279,7 +279,7 @@ test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Khôi ph
   expect(await seatUsed(page, id)).toBe(1);
 });
 
-test('Khôi phục: tick nhiều máy hơn số ghế thì bị chặn trong hộp, hồ sơ vẫn Thanh lý', async ({
+test('Dùng lại: tick nhiều máy hơn số ghế thì bị chặn trong hộp, hồ sơ vẫn Thanh lý', async ({
   page,
 }) => {
   await firstLogin(page, E2E_SA);
@@ -299,11 +299,11 @@ test('Khôi phục: tick nhiều máy hơn số ghế thì bị chặn trong h�
   await retire(page, id);
 
   await page.goto(`/software/${id}`);
-  await page.getByRole('button', { name: 'Khôi phục…' }).first().click();
-  const dialog = page.getByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${code}`) });
+  await page.getByRole('button', { name: 'Dùng lại…' }).first().click();
+  const dialog = page.getByRole('dialog', { name: new RegExp(`Dùng lại hồ sơ — ${code}`) });
   await dialog.getByRole('checkbox', { name: new RegExp(deviceA) }).check();
   await dialog.getByRole('checkbox', { name: new RegExp(deviceB) }).check();
-  await dialog.getByRole('button', { name: 'Khôi phục', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Dùng lại', exact: true }).click();
 
   await expect(dialog.getByText(/Hồ sơ chỉ có 1 ghế/)).toBeVisible();
   const after = await page.request.get(`/api/v1/software/${id}`);
