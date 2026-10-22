@@ -7,6 +7,9 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { FilesApiService } from '../files/files.api';
 import { deviceTypeTable } from './catalog.schema';
 import { CatalogService } from './catalog.service';
+import type { CatalogEntity } from './catalog.types';
+
+const DEVICE_TYPE: CatalogEntity = 'device_type';
 
 /**
  * Ảnh riêng của loại thiết bị (PW-A18): khung ảnh trống của máy chưa có ảnh thật (máy, model)
@@ -43,7 +46,7 @@ export class DeviceTypePhotoService {
     if (before === fileId) return;
     await this.db.transaction(async (tx) => {
       await tx.update(deviceTypeTable).set({ photoFileId: fileId, updatedAt: new Date() }).where(eq(deviceTypeTable.id, typeId));
-      await this.catalog.recordWithin(tx, actor, 'device_type', typeId, fileId ? 'photo_set' : 'photo_removed', {
+      await this.catalog.recordWithin(tx, actor, DEVICE_TYPE, typeId, fileId ? 'photo_set' : 'photo_removed', {
         photoFileId: { before, after: fileId },
       });
       if (before) await this.files.trashWithin(tx, actor, [before]);

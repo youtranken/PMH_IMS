@@ -44,6 +44,8 @@ export const ACTION_LABEL: Record<string, string> = {
   'imported-update': 'history.catalog.actImportedUpdate',
   diagram_icon_set: 'history.catalog.actDiagramIconSet',
   diagram_icon_removed: 'history.catalog.actDiagramIconRemoved',
+  photo_set: 'history.catalog.actPhotoSet',
+  photo_removed: 'history.catalog.actPhotoRemoved',
 };
 
 /** Đủ để đọc tên một site — `SiteRow` của danh mục thoả, bài kiểm không cần dựng cả dòng. */

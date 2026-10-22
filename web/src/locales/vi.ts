@@ -4387,6 +4387,8 @@ export default {
       actImportedUpdate: 'Cập nhật khi nhập từ Excel',
       actDiagramIconSet: 'Tải biểu tượng sơ đồ',
       actDiagramIconRemoved: 'Gỡ biểu tượng sơ đồ',
+      actPhotoSet: 'Đặt ảnh của loại',
+      actPhotoRemoved: 'Gỡ ảnh của loại',
     },
   },
   /* Phiếu ISO đợt 1 — 0203 · 0206 · 0208 (Q-28). Chữ trên bản in là chữ của mẫu giấy (tiếng Anh), không ở đây. */
