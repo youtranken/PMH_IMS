@@ -33,7 +33,7 @@ async function fillSoftware(
     await form.getByRole('button', { name: 'Hết hạn' }).click();
     await page.getByRole('button', { name: 'Chọn ngày' }).first().click();
   }
-  await form.getByRole('button', { name: 'Lưu' }).click();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 }
 
 /** Đặt hạn qua API cho gọn — DatePicker là widget lịch, không phải thứ story này đi kiểm. */
@@ -340,7 +340,7 @@ test.describe('Hồ sơ phần mềm', () => {
     // Hộp phải mở ra với dữ liệu ĐANG CÓ — hộp trắng là mất hết những ô người ta không sửa.
     await expect(form.getByRole('textbox', { name: 'Mã hồ sơ' })).toHaveValue(code);
     await form.getByRole('textbox', { name: 'Tên hồ sơ' }).fill('Tên mới sau khi sửa');
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByText('Đã lưu hồ sơ.')).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toContainText(
@@ -381,7 +381,7 @@ test.describe('Hồ sơ phần mềm', () => {
     const form = page.getByRole('dialog');
     await form.getByRole('button', { name: 'Trạng thái', exact: true }).click();
     await page.getByRole('option', { name: 'Đang dùng', exact: true }).click();
-    await form.getByRole('button', { name: 'Lưu' }).click();
+    await form.getByRole('button', { name: 'Lưu', exact: true }).click();
     return form;
   }
 

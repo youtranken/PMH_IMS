@@ -346,7 +346,7 @@ test('license vượt ghế 2/1: sửa ghi chú giữ nguyên tổng thì lưu �
   const form = page.getByRole('dialog');
   await expect(form.getByRole('textbox', { name: 'Số ghế' })).toHaveValue('1');
   await form.getByRole('textbox', { name: 'Ghi chú' }).fill('Ghi chú E2E sau khi sửa');
-  await form.getByRole('button', { name: 'Lưu' }).click();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
   await expect(page.getByText('Đã lưu hồ sơ.')).toBeVisible();
   const after = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as {
@@ -373,7 +373,7 @@ test('license 2/3: HẠ tổng xuống dưới số đang dùng thì vẫn bị 
   await page.getByRole('button', { name: 'Sửa hồ sơ' }).first().click();
   const form = page.getByRole('dialog');
   await form.getByRole('textbox', { name: 'Số ghế' }).fill('1');
-  await form.getByRole('button', { name: 'Lưu' }).click();
+  await form.getByRole('button', { name: 'Lưu', exact: true }).click();
 
   await expect(form.getByText(/Đang có 2 máy dùng — gỡ bớt máy trước khi giảm xuống 1 ghế/)).toBeVisible();
   const after = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as {

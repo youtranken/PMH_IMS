@@ -283,3 +283,40 @@ describe('Form đường truyền — IP WAN nhiều dòng', () => {
     expect(body.wanIps).toEqual([]);
   });
 });
+
+/* FM-21: khai nhiều đường cùng nhà mạng / site — lưu xong form ở lại, bỏ mã, IP WAN, ghi chú. */
+describe('Form đường truyền — Lưu và nhân bản', () => {
+  it('lưu một đường, form ở lại: mã + IP WAN + ghi chú trống, nhà mạng / tốc độ giữ nguyên', async () => {
+    const calls = mockFetch();
+    const saved = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <IspForm row={null} csrfToken="t" onClose={() => undefined} onSaved={saved} />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/v1/catalog'))).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Nhà mạng' }));
+    await user.click(await screen.findByRole('option', { name: 'VNPT' }));
+    await user.type(screen.getByLabelText(/Mã đường/), 'ISP-E2E-01');
+    await user.type(screen.getByRole('textbox', { name: /Tốc độ gói cước/ }), '100M');
+    await user.type(screen.getByRole('textbox', { name: 'Ghi chú' }), 'Tầng 2');
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
+    await waitFor(() => expect(saved).toHaveBeenCalledWith({ keepOpen: true }));
+    const body = calls.find((c) => c.url === '/api/v1/isp-lines')!.body as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'ISP-E2E-01', providerId: 'p-vnpt', note: 'Tầng 2' });
+    expect(screen.getByRole('dialog', { name: 'Thêm đường truyền' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Mã đường/)).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: /Tốc độ gói cước/ })).toHaveValue('100M');
+    expect(screen.getByRole('button', { name: 'Nhà mạng' })).toHaveTextContent('VNPT');
+  });
+
+  it('form Sửa không có nút Lưu và nhân bản', () => {
+    mockFetch();
+    renderForm(ROW_ON_INACTIVE as IspRow);
+    expect(screen.queryByRole('button', { name: 'Lưu và nhân bản' })).toBeNull();
+  });
+});

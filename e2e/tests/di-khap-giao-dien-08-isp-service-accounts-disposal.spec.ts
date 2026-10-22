@@ -452,7 +452,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await thirdDialog.getByRole('textbox', { name: 'Mã đường' }).fill(itemCode);
     await thirdDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
-    await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByText('Đã lưu hồ sơ đường truyền.')).toBeVisible();
     await expect(

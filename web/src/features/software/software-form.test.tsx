@@ -230,3 +230,34 @@ describe('Form phần mềm — luật mã hồ sơ', () => {
     expect(writes[0]).toMatchObject({ code: 'hồ sơ -1' });
   });
 });
+
+/* FM-21: khai cả lô hợp đồng / dịch vụ — lưu xong giữ form mở, bỏ mã + ghi chú, giữ phần chung. */
+describe('Form phần mềm — Lưu và nhân bản', () => {
+  it('lưu một hồ sơ, form ở lại: mã + ghi chú trống, tên / NCC / hạn giữ nguyên', async () => {
+    const writes = mockFetch();
+    const saved = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <SoftwareForm row={null} screen="maintenance" csrfToken="csrf" onClose={() => {}} onSaved={saved} />
+      </ToastProvider>,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /Mã hồ sơ/ }), 'BT-E2E-01');
+    await user.type(screen.getByRole('textbox', { name: /Tên hồ sơ/ }), 'Bảo trì UPS');
+    await user.type(screen.getByRole('textbox', { name: 'Ghi chú' }), 'Tầng 3');
+    await user.click(screen.getByRole('button', { name: 'Lưu và nhân bản' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ code: 'BT-E2E-01', name: 'Bảo trì UPS', note: 'Tầng 3' });
+    await waitFor(() => expect(saved).toHaveBeenCalledWith(expect.objectContaining({ id: 'sw1' }), { keepOpen: true }));
+    expect(screen.getByRole('dialog', { name: 'Thêm hợp đồng bảo trì' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Mã hồ sơ/ })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: 'Ghi chú' })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: /Tên hồ sơ/ })).toHaveValue('Bảo trì UPS');
+  });
+
+  it('form Sửa không có nút Lưu và nhân bản', () => {
+    mockFetch();
+    render(ROW);
+    expect(screen.queryByRole('button', { name: 'Lưu và nhân bản' })).toBeNull();
+  });
+});

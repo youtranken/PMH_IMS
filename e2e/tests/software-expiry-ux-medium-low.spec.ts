@@ -324,7 +324,7 @@ test.describe('Sắp hết hạn', () => {
     await within.fill('45 ngày');
     const recipients = form.getByRole('textbox', { name: 'Người nhận', exact: true });
     await recipients.fill('sep@pmh.com.vn, khong-phai-email');
-    await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(within).toHaveAccessibleDescription(/Nhập số ngày từ 1 tới 365/);
     await expect(recipients).toHaveAccessibleDescription(/Email chưa đúng dạng: khong-phai-email/);

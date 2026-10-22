@@ -403,6 +403,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hủy',
       // Q-27: việc ngay sau khi khai license là đưa nó vào máy.
       'Lưu rồi gán vào máy',
+      // FM-21: khai cả lô — lưu xong form ở lại.
+      'Lưu và nhân bản',
       'Lưu',
     ]) {
       await expect(
