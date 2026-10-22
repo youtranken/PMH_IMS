@@ -425,8 +425,9 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await expect(dialog).toHaveCount(0);
   });
 
-  // FM-21: khai nhiều đường cùng nhà mạng — lưu xong form ở lại, mã + IP WAN trống, nhà mạng giữ.
-  test('form: Lưu và nhân bản giữ nhà mạng, bỏ mã + IP WAN; hai đường đều vào sổ', async ({ page }) => {
+  // FM-21: khai nhiều đường cùng nhà mạng — lưu xong form ở lại, mã nhảy sang mã kế tiếp, IP WAN
+  // trống, nhà mạng giữ.
+  test('form: Lưu và nhân bản giữ nhà mạng, gợi mã kế tiếp, bỏ IP WAN; hai đường đều vào sổ', async ({ page }) => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const stamp = uniqueStamp();
     const provider = `Nha mang nhan ban E2E ${stamp}`;
@@ -440,7 +441,8 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true }).fill('113.161.10.31');
     await dialog.getByRole('button', { name: 'Lưu và nhân bản' }).click();
     await expect(page.getByText('Đã lưu hồ sơ đường truyền.')).toBeVisible();
-    await expect(dialog.getByLabel('Mã đường')).toHaveValue('');
+    const nextStamp = String(Number(stamp) + 1).padStart(stamp.length, '0');
+    await expect(dialog.getByLabel('Mã đường')).toHaveValue(`ISP-E2E-NB1-${nextStamp}`);
     await expect(dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true })).toHaveValue('');
     await expect(dialog.getByRole('button', { name: 'Nhà mạng', exact: true })).toContainText(provider);
     await dialog.getByLabel('Mã đường').fill(`ISP-E2E-NB2-${stamp}`);

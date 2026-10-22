@@ -428,7 +428,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * chính nút đó; form đặt `noValidate` nên không còn bong bóng tiếng Anh của trình duyệt.
      */
     await dialog.getByRole('textbox', { name: 'Mã đường' }).fill(itemCode);
-    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(
       dialog.getByRole('button', { name: 'Nhà mạng', exact: true }),
@@ -1195,7 +1195,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * Ô Tên đăng nhập bắt buộc khi ô Mã còn trống. Form đặt `noValidate` nên không còn bong bóng
      * tiếng Anh: câu tiếng Việt nằm dưới và nối vào chính ô đó, hộp KHÔNG đóng.
      */
-    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(dialog, 'Form trống mà bấm Lưu thì hộp phải ở lại').toBeVisible();
     expect(
       await dialog

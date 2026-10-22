@@ -273,7 +273,7 @@ test('hồ sơ Thanh lý: băng nói ai/khi nào, không có Gia hạn; Dùng l�
   await dialog.getByRole('checkbox', { name: new RegExp(deviceA) }).check();
   await dialog.getByRole('button', { name: 'Dùng lại', exact: true }).click();
 
-  await expect(page.getByText('Đã khôi phục hồ sơ.')).toBeVisible();
+  await expect(page.getByText('Hồ sơ đã về Đang dùng.')).toBeVisible();
   await expect(page.getByText('Đã gán lại 1 máy.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Gia hạn', exact: true })).toBeVisible();
   expect(await seatUsed(page, id)).toBe(1);

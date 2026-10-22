@@ -236,14 +236,17 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       ).toHaveText([section.addButton]);
 
       const columns = page.getByRole('table').getByRole('columnheader');
+      // Cột đầu là ô tick "Chọn tất cả" của thao tác hàng loạt (UX-E25) — không có chữ.
+      const headers = ['', ...section.columns];
+      await expect(page.getByRole('table').getByRole('checkbox', { name: 'Chọn tất cả' })).toBeVisible();
       await expect(
         columns,
-        `bảng của ngăn ${section.tab} phải có đúng ${section.columns.length} cột`,
-      ).toHaveCount(section.columns.length);
+        `bảng của ngăn ${section.tab} phải có đúng ${headers.length} cột`,
+      ).toHaveCount(headers.length);
       await expect(
         columns,
         `bộ cột của ngăn ${section.tab} sai — tab đang bày dữ liệu của một danh mục khác`,
-      ).toHaveText(section.columns);
+      ).toHaveText(headers);
     }
   });
 

@@ -446,7 +446,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
       });
     }
 
-    // Một máy vừa thanh lý → khối kho thanh lý có việc.
+    // Một máy thanh lý: bài "gia hạn ngay trên dòng" dùng lại loại PC của nó.
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
       return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
@@ -487,9 +487,10 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
     expect(side.x, 'làn phụ phải ở bên phải làn chính').toBeGreaterThanOrEqual(main.x + main.width);
     const cards = page.getByTestId('dash-lane-side').locator('section');
     const count = await cards.count();
-    expect(count, 'cần ≥2 khối ở làn phụ (tổng ≥4 khối) để kiểm khoảng trống').toBeGreaterThanOrEqual(
-      2,
-    );
+    /* Kho thanh lý không còn là khối của bảng (PW-A26): khối làn phụ thứ hai (sự cố 0206,
+       break-glass, két lâu chưa đổi) không gieo được bằng dữ liệu E2E tự dọn, nên khe giữa các
+       khối chỉ được kiểm khi DB có sẵn khối thứ hai. */
+    expect(count, 'làn phụ phải có khối "Dải mạng sắp đầy" vừa gieo').toBeGreaterThanOrEqual(1);
     expect((await cards.first().boundingBox())!.y - side.y).toBeLessThanOrEqual(2);
     for (let i = 1; i < count; i += 1) {
       const prev = (await cards.nth(i - 1).boundingBox())!;

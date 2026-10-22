@@ -519,8 +519,9 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
   });
 });
 
-test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
-  test('sửa thiết bị: thấy panel giấy tờ, tải lên rồi xóa ngay trong hộp', async ({ page }) => {
+test.describe('Popup Sửa chỉ báo số giấy tờ', () => {
+  // UX-E20: giấy tờ quản lý ở tab Giấy tờ của trang chi tiết; hộp Sửa chỉ còn một dòng đếm.
+  test('sửa thiết bị: một dòng đếm giấy tờ, không có panel tải lên trong hộp', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const code = `PC-E2E-SUA-${stamp}`;
@@ -541,8 +542,8 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
     await page.getByRole('button', { name: `Sửa máy ${code}` }).click();
 
     const form = page.getByRole('dialog');
-    await expect(form.getByRole('heading', { name: 'Giấy tờ đính kèm' })).toBeVisible();
-    await expect(form.getByText('Chưa có giấy tờ nào.')).toBeVisible();
+    await expect(form.getByText('0 Giấy tờ · quản lý ở tab Giấy tờ')).toBeVisible();
+    await expect(form.getByRole('heading', { name: 'Giấy tờ đính kèm' })).toHaveCount(0);
   });
 });
 

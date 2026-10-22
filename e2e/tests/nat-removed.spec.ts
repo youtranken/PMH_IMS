@@ -191,7 +191,8 @@ test.describe('390px', () => {
       .getByRole('group', { name: 'Lọc theo trạng thái luật' })
       .getByRole('button', { name: /^Đã gỡ/ })
       .click();
-    await expect(page.getByText(/dịch vụ đã ngừng E2E/).first()).toBeVisible();
+    // Huy hiệu "Đã gỡ" ngắn (UX-E40); ngày · người · lý do nằm ở title.
+    await expect(page.getByTitle(/dịch vụ đã ngừng E2E/).first()).toBeVisible();
     expect(await horizontalOverflow(page)).toBe(0);
   });
 });

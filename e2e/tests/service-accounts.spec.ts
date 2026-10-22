@@ -212,7 +212,8 @@ test.describe('Tài khoản dịch vụ', () => {
     // Không phân biệt hoa/thường: "TK-x" và "tk-x" là cùng một thứ.
     const clash = await createViaApi(page, { code: code.toLowerCase(), kind: 'shared', name: 'B' });
     expect(clash.status).toBe(409);
-    expect(String(clash.body.message)).toContain(code.toLowerCase());
+    // Mã hồ sơ luôn lưu in hoa (PW-A12) — câu báo nói đúng mã đã lưu.
+    expect(String(clash.body.message)).toContain(code.toUpperCase());
   });
 
   test('Member đọc được nhưng KHÔNG ghi được', async ({ page }) => {
