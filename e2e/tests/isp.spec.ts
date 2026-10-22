@@ -276,7 +276,7 @@ test.describe('Đường truyền ISP', () => {
     const saved = page.waitForResponse(
       (r) => r.url().endsWith('/api/v1/isp-lines') && r.request().method() === 'POST',
     );
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     const response = await saved;
     expect(response.status()).toBe(201);
     const body = (await response.json()) as { id: string; providerId: string; provider: string };
@@ -416,13 +416,39 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await page.getByRole('option', { name: provider }).click();
     const first = dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true });
     await first.fill('113.161.10');
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(first).toHaveAccessibleDescription(/Không phải một IPv4/);
     await expect(dialog).toBeVisible();
 
     await first.fill('113.161.10.20');
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(dialog).toHaveCount(0);
+  });
+
+  // FM-21: khai nhiều đường cùng nhà mạng — lưu xong form ở lại, mã + IP WAN trống, nhà mạng giữ.
+  test('form: Lưu và nhân bản giữ nhà mạng, bỏ mã + IP WAN; hai đường đều vào sổ', async ({ page }) => {
+    await stepUpViaApi(page, await firstLogin(page, E2E_SA));
+    const stamp = uniqueStamp();
+    const provider = `Nha mang nhan ban E2E ${stamp}`;
+    await ispProviderId(page, provider);
+    await page.goto('/isp-lines');
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Thêm đường truyền' });
+    await dialog.getByLabel('Mã đường').fill(`ISP-E2E-NB1-${stamp}`);
+    await dialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
+    await page.getByRole('option', { name: provider }).click();
+    await dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true }).fill('113.161.10.31');
+    await dialog.getByRole('button', { name: 'Lưu và nhân bản' }).click();
+    await expect(page.getByText('Đã lưu hồ sơ đường truyền.')).toBeVisible();
+    await expect(dialog.getByLabel('Mã đường')).toHaveValue('');
+    await expect(dialog.getByRole('textbox', { name: 'IP WAN 1', exact: true })).toHaveValue('');
+    await expect(dialog.getByRole('button', { name: 'Nhà mạng', exact: true })).toContainText(provider);
+    await dialog.getByLabel('Mã đường').fill(`ISP-E2E-NB2-${stamp}`);
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    const saved = await page.request.get(`/api/v1/isp-lines?search=${encodeURIComponent(`ISP-E2E-NB`)}&limit=50`);
+    const codes = ((await saved.json()) as { items: { code: string }[] }).items.map((row) => row.code);
+    expect(codes).toEqual(expect.arrayContaining([`ISP-E2E-NB1-${stamp}`, `ISP-E2E-NB2-${stamp}`]));
   });
 });
 
@@ -456,7 +482,7 @@ test.describe('Đường truyền — nhiều IP WAN', () => {
     const second = dialog.getByRole('textbox', { name: 'IP WAN 2', exact: true });
     await expect(second).toBeFocused();
     await second.fill(`${ipB.replace(/\d+$/, '8')}/29`);
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(second).toHaveAccessibleDescription(/Nhập từng IP, không nhập dải/);
     await expect(dialog).toBeVisible();
 
@@ -464,7 +490,7 @@ test.describe('Đường truyền — nhiều IP WAN', () => {
     const saved = page.waitForResponse(
       (response) => response.url().endsWith('/api/v1/isp-lines') && response.request().method() === 'POST',
     );
-    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
     expect((await saved).status()).toBe(201);
     await expect(dialog).toHaveCount(0);
 

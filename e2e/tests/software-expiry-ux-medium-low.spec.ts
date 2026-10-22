@@ -322,7 +322,7 @@ test.describe('Sắp hết hạn', () => {
     await form.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`Luật E2E ${uniqueStamp()}`);
     const recipients = form.getByRole('textbox', { name: 'Người nhận', exact: true });
     await recipients.fill('sep@pmh.com.vn, khong-phai-email');
-    await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(recipients).toHaveAccessibleDescription(/Email chưa đúng dạng: khong-phai-email/);
     await expect(form, 'Lưu hỏng thì hộp ở lại').toBeVisible();
@@ -330,7 +330,7 @@ test.describe('Sắp hết hạn', () => {
 });
 
 test.describe('Kho thanh lý', () => {
-  test('DP-001/DP-005/DP-006: chi tiết dịch tiếng Việt, lọc nằm trên URL, "Khôi phục…" mở thẳng hộp khôi phục', async ({
+  test('DP-001/DP-005/DP-006: chi tiết dịch tiếng Việt, lọc nằm trên URL, "Dùng lại…" mở thẳng hộp dùng lại', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -345,9 +345,9 @@ test.describe('Kho thanh lý', () => {
     await expect(row.getByText('license', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('radio', { name: /^Phần mềm \d+$/ })).toBeChecked();
 
-    expect(await rowActionNames(page, code)).toEqual(['Mở hồ sơ', 'Khôi phục…']);
-    await rowAction(page, code, 'Khôi phục…');
-    await expect(page.getByRole('dialog', { name: new RegExp(`Khôi phục hồ sơ — ${code}`) })).toBeVisible();
+    expect(await rowActionNames(page, code)).toEqual(['Mở hồ sơ', 'Dùng lại…']);
+    await rowAction(page, code, 'Dùng lại…');
+    await expect(page.getByRole('dialog', { name: new RegExp(`Dùng lại hồ sơ — ${code}`) })).toBeVisible();
 
     // Đường hỏng: tìm không ra thì có nút xoá bộ lọc, bấm là thấy lại.
     await page.goto('/disposal?kind=software');

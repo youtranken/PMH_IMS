@@ -42,6 +42,7 @@ import {
   type SoftwareScreenKey,
 } from '@/lib/software-screens';
 import { CodeInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 import { useSuggestedCode } from '@/ui/use-suggested-code';
 
@@ -93,6 +94,11 @@ function initialState(row: SoftwareRow | null, firstKind: SoftwareKind, batchFro
   };
 }
 
+/** Sau "Lưu và nhân bản": giữ phần một lô dùng chung (tên, loại, NCC, kỳ hạn, số ghế), bỏ ô riêng. */
+function nextState(saved: FormState): FormState {
+  return { ...saved, code: '', note: '', websites: '', contract: '', perSeat: false };
+}
+
 /**
  * Form hồ sơ phần mềm (FR-008). Màn nhập — desktop-first.
  *
@@ -119,7 +125,8 @@ export function SoftwareForm({
   csrfToken: string;
   onClose: () => void;
   /** `assign`: người dùng bấm "Lưu rồi gán vào máy" — nơi gọi mở hộp Gán của hồ sơ `id`. */
-  onSaved: (result?: { id: string; assign: boolean }) => void;
+  /** `keepOpen`: "Lưu và nhân bản" — form ở lại để khai hồ sơ kế tiếp, nơi gọi chỉ làm mới danh sách. */
+  onSaved: (result?: { id: string; assign: boolean }, options?: { keepOpen: boolean }) => void;
 }) {
   const { t } = useTranslation();
   const spec = screen ? SOFTWARE_SCREENS[screen] : row ? screenOfKind(row.kind) : batchFrom ? screenOfKind(batchFrom.kind) : SOFTWARE_SCREENS.software;
@@ -144,6 +151,7 @@ export function SoftwareForm({
   /* Nút nào gửi form: đọc trong `onSubmit` của CÙNG lượt bấm, nên phải là ref — state chỉ đổi ở
      lượt vẽ sau, `onSubmit` sẽ đọc giá trị cũ. `sentToAssign` (state) chỉ để vẽ dấu tích. */
   const assignAfter = useRef(false);
+  const cloneAfter = useRef(false);
   const [sentToAssign, setSentToAssign] = useState(false);
 
   /* Ghế riêng: hồ sơ đang sửa thì đọc ghế đã lưu một lần (id ghế để mở giấy tờ thật). */
@@ -177,7 +185,15 @@ export function SoftwareForm({
 
   // Thêm mới: điền sẵn mã kế tiếp, bôi chọn để gõ đè (FM-21).
   const applyCode = useCallback((code: string) => setForm((current) => ({ ...current, code })), []);
-  const codeGuard = useSuggestedCode(row || batchFrom ? null : `/api/v1/software/next-code?kind=${spec.kinds.join(',')}`, form.code, applyCode, 'sw-code');
+  // Mỗi lượt "Lưu và nhân bản" là một vòng mới: hỏi lại mã kế tiếp của mã vừa lưu.
+  const [codeRound, setCodeRound] = useState(0);
+  const codeGuard = useSuggestedCode(
+    row || batchFrom ? null : `/api/v1/software/next-code?kind=${spec.kinds.join(',')}`,
+    form.code,
+    applyCode,
+    'sw-code',
+    codeRound,
+  );
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
       // Đổi sang loại không có seat thì xóa luôn ô seat — gửi lên sẽ bị API từ chối,
@@ -241,7 +257,9 @@ export function SoftwareForm({
 
   // Khoá động `seat-note-n` (ghi chú từng ghế) — kiểu khoá là chuỗi.
   const check = useFormErrors<string>({
-    code: !form.code.trim() && t('formErrors.required'),
+    code:
+      (!form.code.trim() && t('formErrors.required')) ||
+      (recordCodeProblem(form.code, row?.code) && t('formErrors.codeFormat')),
     name: !form.name.trim() && t('formErrors.required'),
     // Thuê bao/SSL/tên miền mà không có hạn thì rơi khỏi mọi lời nhắc — API cũng từ chối.
     endDate: endRequired && !form.endDate && t('software.endRequired'),
@@ -311,12 +329,27 @@ export function SoftwareForm({
               {t('software.saveAndAssign')}
             </button>
           ) : null}
+          {/* FM-21: khai cả lô (cùng NCC, cùng kỳ hạn) — lưu xong form ở lại, chỉ bỏ ô riêng từng hồ sơ. */}
+          {!row && !batchFrom ? (
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                cloneAfter.current = true;
+                check.formRef.current?.requestSubmit();
+              }}
+            >
+              {t('software.saveAndNext')}
+            </button>
+          ) : null}
           <SubmitButton
             form="software-form"
             busy={busy}
             succeeded={save.isSuccess && !sentToAssign}
             onClick={() => {
               assignAfter.current = false;
+              cloneAfter.current = false;
             }}
           />
         </>
@@ -331,8 +364,11 @@ export function SoftwareForm({
           setError(null);
           if (!check.check()) return;
           const assign = assignAfter.current;
+          const again = cloneAfter.current;
           assignAfter.current = false;
-          setSentToAssign(assign);
+          cloneAfter.current = false;
+          setSentToAssign(assign || again);
+          const sent = form;
           save.mutate(
             {
               code: form.code.trim(),
@@ -391,11 +427,19 @@ export function SoftwareForm({
                     await uploadSeatDrafts(id).catch((err) => toast({ message: errorMessage(err), tone: 'warn' }));
                     setUploading(false);
                   }
+                  if (again) {
+                    setForm(nextState(sent));
+                    setSeatEdits({});
+                    setCodeRound((n) => n + 1);
+                    document.getElementById('sw-code')?.focus();
+                    onSaved({ id, assign: false }, { keepOpen: true });
+                    return;
+                  }
                   onSaved({ id, assign });
                 })();
               },
               onError: (err) => {
-                if (!server.claim(err, { SOFTWARE_CODE_TAKEN: 'sw-code' })) setError(errorMessage(err));
+                if (!server.claim(err, { SOFTWARE_CODE_TAKEN: 'sw-code', CODE_FORMAT_INVALID: 'sw-code' })) setError(errorMessage(err));
               },
             },
           );
@@ -471,7 +515,18 @@ export function SoftwareForm({
               />
             </Field>
           ) : null}
-          {/* Một hàng ba ô (Q-27): tên · mã · nhà cung cấp — "cái gì, gọi là gì, mua của ai". */}
+          {/* Một hàng ba ô: mã · tên · nhà cung cấp. Mã luôn trước Tên như mọi form (FM-25, Q-33). */}
+          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code') ?? server.error('sw-code')}>
+            <CodeInput
+              upper
+              id="sw-code"
+              data-guard-value={codeGuard}
+              required
+              placeholder={batchFrom ? suggestedCode : codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
+              value={form.code}
+              onChange={(e) => set('code', e.target.value)}
+            />
+          </Field>
           <Field label={t('software.name')} required htmlFor="sw-name" error={check.error('name')}>
             <input
               id="sw-name"
@@ -479,17 +534,6 @@ export function SoftwareForm({
               required
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
-            />
-          </Field>
-          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code') ?? server.error('sw-code')}>
-            <CodeInput
-              caps
-              id="sw-code"
-              data-guard-value={codeGuard}
-              required
-              placeholder={batchFrom ? suggestedCode : codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
-              value={form.code}
-              onChange={(e) => set('code', e.target.value)}
             />
           </Field>
           <Field label={t('software.vendor')}>

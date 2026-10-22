@@ -14,6 +14,7 @@ import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
+import { recordCode } from '../../common/record-code';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import {
@@ -507,7 +508,7 @@ export class ServiceAccountService {
 
     return {
       values: {
-        code: merged.code.trim(),
+        code: recordCode(merged.code, 'Mã tài khoản', before?.code),
         kind,
         name: merged.name.trim(),
         login: merged.login,

@@ -422,8 +422,8 @@ export function IspScreen({ me }: { me: Me }) {
           row={null}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
-          onSaved={() => {
-            setCreating(false);
+          onSaved={(options) => {
+            if (!options?.keepOpen) setCreating(false);
             void queryClient.invalidateQueries({ queryKey: ['isp'] });
           }}
         />

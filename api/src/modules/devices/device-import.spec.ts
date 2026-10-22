@@ -69,6 +69,29 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
     expect(plan.rows[0].values).not.toHaveProperty('status');
   });
 
+  // PW-A12: mã MỚI theo luật A–Z 0–9 - _ . /, tự in hoa; mã đã có trong kho thì không kiểm lại.
+  it('mã mới viết thường → in hoa; mã có dấu / khoảng trắng → lỗi dòng', () => {
+    const plan = planDeviceImport(
+      sheet([
+        { ...MINIMAL, 'Mã thiết bị *': 'pc-e2e-01' },
+        { ...MINIMAL, 'Mã thiết bị *': 'máy 02' },
+      ]),
+      context(),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'create' });
+    expect(plan.rows[0].values).toMatchObject({ code: 'PC-E2E-01' });
+    expect(plan.rows[1]).toMatchObject({ action: 'error' });
+    expect(plan.rows[1].message).toContain('A–Z');
+  });
+
+  it('mã cũ sai luật đã có trong kho: dòng không đổi gì vẫn qua', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Mã thiết bị *': 'máy cũ 1' }]),
+      context({ devices: new Map([['máy cũ 1', existing({ code: 'máy cũ 1' })]]) }),
+    );
+    expect(plan.rows[0].action).not.toBe('error');
+  });
+
   it.each([
     ['Mã thiết bị *', 'Mã thiết bị'],
     ['Tên thiết bị *', 'Tên thiết bị'],

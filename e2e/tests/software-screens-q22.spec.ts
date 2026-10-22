@@ -168,6 +168,10 @@ test.describe('Q-22 · Hợp đồng bảo trì', () => {
       'href',
       '/maintenance',
     );
+    // PW-A10: hợp đồng không còn tab Tổng quan — Ghi chú, Số hợp đồng ở dải tóm tắt.
+    await expect(page.getByRole('tab', { name: /^Giấy tờ/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Tổng quan' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Tóm tắt hồ sơ' }).getByText('Số hợp đồng', { exact: true })).toBeVisible();
     const saved = await page.request.get(`/api/v1/software?search=${encodeURIComponent(code)}&kind=maintenance`);
     expect(((await saved.json()) as { total: number }).total).toBe(1);
   });
@@ -200,6 +204,12 @@ test.describe('Q-22 · Hợp đồng bảo trì', () => {
     await expect(dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true })).toHaveAccessibleDescription(
       'Chưa nhập.',
     );
+    // PW-A12: mã có dấu / khoảng trắng bị chặn tại ô (chữ thường tự thành chữ hoa).
+    const codeBox = dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true });
+    await codeBox.fill('hồ sơ -1');
+    await expect(codeBox).toHaveValue('HỒ SƠ -1');
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(codeBox).toHaveAccessibleDescription(/Chỉ dùng chữ A–Z/);
     await expect(dialog).toBeVisible();
   });
 });

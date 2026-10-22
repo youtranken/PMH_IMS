@@ -331,10 +331,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await dialogBlockNames(dialog),
-      'Hộp thêm đường truyền có đúng ba khối: Hồ sơ · Hợp đồng và liên hệ sự cố · Giấy tờ đính kèm',
+      'Hộp thêm đường truyền có đúng ba khối: Nhận dạng · Hợp đồng và liên hệ sự cố · Giấy tờ đính kèm',
     ).toEqual(sortVi([
       'Thêm đường truyền',
-      'Hồ sơ',
+      // PW-A35: tiêu đề khối là danh từ.
+      'Nhận dạng',
       'Hợp đồng và liên hệ sự cố',
       'Giấy tờ đính kèm',
     ]));
@@ -395,6 +396,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Bắt đầu',
         'Chọn file để đính kèm',
         'Hủy',
+        // FM-21: khai nhiều đường cùng nhà mạng — lưu xong form ở lại.
+        'Lưu và nhân bản',
         'Lưu',
       ]),
     );
@@ -452,7 +455,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await thirdDialog.getByRole('textbox', { name: 'Mã đường' }).fill(itemCode);
     await thirdDialog.getByRole('button', { name: 'Nhà mạng', exact: true }).click();
     await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
-    await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
+    await thirdDialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(page.getByText('Đã lưu hồ sơ đường truyền.')).toBeVisible();
     await expect(
@@ -1089,8 +1092,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(
       sortVi([
         'Thêm tài khoản',
-        'Hồ sơ',
-        'Thuộc về ai',
+        'Nhận dạng',
+        'Phụ trách',
         'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
            "Ghi chú" — hai dòng y hệt chồng nhau. */
@@ -1164,8 +1167,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(
       sortVi([
         'Thêm tài khoản',
-        'Hồ sơ',
-        'Thuộc về ai',
+        'Nhận dạng',
+        'Phụ trách',
         'Cấu hình VPN',
         'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
@@ -1424,7 +1427,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     // Nói thẳng ra ba thứ tuyệt đối không được có, để log lúc đỏ đọc là hiểu ngay.
     /*
-     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): phần mềm "Mở hồ sơ" + "Khôi phục…", loại khác MỘT
+     * Menu ⋯ của kho CHỈ dẫn đường (DP-006): phần mềm "Mở hồ sơ" + "Dùng lại…", loại khác MỘT
      * mục "Dùng lại…" (Q-19, UX-E14, Q-33) — không mục nào ghi dữ liệu ngay tại đây, dùng
      * lại vẫn làm ở đúng module chủ.
      */

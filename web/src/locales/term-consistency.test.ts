@@ -346,6 +346,24 @@ describe('Q-15: thuật ngữ đã chốt', () => {
     expect(catalogKeys.filter(([, v]) => /vô hiệu|bật lại/i.test(v))).toEqual([]);
   });
 
+  /**
+   * Lấy lại một tài sản đã thanh lý mang MỘT tên ở mọi màn (UX-E13): phần mềm từng là
+   * "Khôi phục…" trong khi đường truyền là "Dùng lại…" — cùng một việc, hai nhãn ngay cạnh nhau
+   * ở Kho thanh lý.
+   */
+  it('tài sản: một cặp "Thanh lý… / Dùng lại…"', () => {
+    expect(lookup('software.disposeMenu')).toBe(lookup('isp.terminateMenu'));
+    expect(lookup('software.restore')).toBe(lookup('isp.reactivateMenu'));
+    expect(lookup('software.restoreSubmit')).toBe(lookup('isp.actionActive'));
+    expect(lookup('serviceAccounts.enableMenu')).toBe(lookup('isp.reactivateMenu'));
+    expect(lookup('iso.catalog.resume')).toBe(lookup('catalog.activate'));
+    // FM-21: cùng một nút ở ba form Thêm.
+    expect(lookup('software.saveAndNext')).toBe(lookup('devices.saveAndNext'));
+    expect(lookup('isp.saveAndNext')).toBe(lookup('devices.saveAndNext'));
+    const assetKeys = VALUES.filter(([k]) => /^(software|isp|serviceAccounts|iso)\./.test(k));
+    expect(assetKeys.filter(([, v]) => /khôi phục…|bật lại/i.test(v))).toEqual([]);
+  });
+
   /** NAT viết thuần Việt như các màn khác: "luật NAT", "cổng ngoài", "cổng trong". */
   it('không còn "rule" ở đâu, không còn "port" trong sổ NAT', () => {
     expect(VALUES.filter(([, v]) => /\brules?\b/i.test(v))).toEqual([]);

@@ -36,6 +36,7 @@ import { useDevicePhotoDraft } from './device-diagram-look';
 import { DeviceModelField } from './device-model-field';
 import { ACCESS_KINDS, type AccessPoint } from './device-access';
 import { CodeInput, IpInput } from '@/ui/code-input';
+import { recordCodeProblem } from '@/lib/record-code';
 import { useServerFieldErrors } from '@/ui/use-server-field-errors';
 import { useSuggestedCode } from '@/ui/use-suggested-code';
 
@@ -300,7 +301,9 @@ export function DeviceForm({
   const typeIconSrc = useDeviceTypeIconSrc(device ? null : form.deviceTypeId);
 
   const check = useFormErrors({
-    code: !form.code.trim() && t('formErrors.required'),
+    code:
+      (!form.code.trim() && t('formErrors.required')) ||
+      (recordCodeProblem(form.code, device?.code) && t('formErrors.codeFormat')),
     name: !form.name.trim() && t('formErrors.required'),
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
     note: secretTextRule(t, form.note),
@@ -371,7 +374,7 @@ export function DeviceForm({
       },
       onError: (err) => {
         if (errorCode(err) === 'DEVICE_RACK_U_TAKEN') setRackServerError(errorMessage(err));
-        else if (!server.claim(err, { DEVICE_CODE_TAKEN: 'device-code' })) setError(errorMessage(err));
+        else if (!server.claim(err, { DEVICE_CODE_TAKEN: 'device-code', CODE_FORMAT_INVALID: 'device-code' })) setError(errorMessage(err));
       },
     });
   };
@@ -476,7 +479,7 @@ export function DeviceForm({
           ) : null}
           <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code') ?? server.error('device-code')}>
             <CodeInput
-              caps
+              upper
               ref={codeRef}
               id="device-code"
               data-guard-value={codeGuard}

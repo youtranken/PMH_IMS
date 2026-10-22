@@ -128,6 +128,21 @@ describe('Hộp Sửa luật NAT', () => {
     expect(within(dialog).queryByText(/số phiếu yêu cầu/)).toBeNull();
   });
 
+  // PW-A35 (Q-33): tiêu đề khối là danh từ, theo đường đi của gói tin: ngoài → trong → mục đích.
+  it('ba khối "Phía ngoài", "Phía trong", "Mục đích"', async () => {
+    mockFetch([]);
+    const user = userEvent.setup();
+    renderScreen();
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm luật NAT' }))[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent?.trim())).toEqual([
+      'Thêm luật NAT',
+      'Phía ngoài',
+      'Phía trong',
+      'Mục đích',
+    ]);
+  });
+
   it('không nhúng Lịch sử — menu ⋮ của dòng đã có mục đó', async () => {
     const urls = mockFetch([RULE]);
     const user = userEvent.setup();

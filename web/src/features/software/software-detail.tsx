@@ -25,7 +25,7 @@ import { RowActions } from "@/ui/row-actions";
 import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
-import { fileCountFact, useTabCounts } from "@/ui/tab-counts";
+import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
@@ -158,7 +158,11 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
    */
   const counts = useTabCounts("software", id, me);
   const tabItems = [
-    { key: "profile", label: t("software.tabProfile") },
+    /* Hợp đồng / dịch vụ (PW-A10): tab Tổng quan chỉ còn Ghi chú, nay nằm ở dải tóm tắt — bỏ tab.
+       Hồ sơ chưa về thì vẫn để, cùng lý do với tab "Máy đang dùng" bên dưới. */
+    ...(software.data && isContractKind(software.data.kind)
+      ? []
+      : [{ key: "profile", label: t("software.tabProfile") }]),
     /*
      * Tab "Máy đang dùng" chỉ có nghĩa với license (FR-011) — NHƯNG khi hồ sơ chưa về thì
      * chưa biết nó là loại gì, và "chưa biết" không được xử như "không phải license".
@@ -239,7 +243,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         { label: t("software.note"), value: item.perSeat ? t("software.notePerSeat") : item.note },
       ]
     : [
-        // Không "Loại hồ sơ" (PW-A10): tên màn và mắt xích loại ở đầu trang đã nói.
+        // Tên miền / SSL. Không "Loại hồ sơ" (PW-A10): mắt xích loại ở đầu trang đã nói.
         ...startItem,
         { label: t("software.note"), value: item.note },
       ];
@@ -266,7 +270,8 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
         subline={
           <>
             <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
-            <span>{t(KIND_KEY[item.kind])}</span>
+            {/* Màn một loại: tên màn ở crumb đã nói loại (PW-A10). */}
+            {spec.kinds.length > 1 ? <span>{t(KIND_KEY[item.kind])}</span> : null}
           </>
         }
         actions={
@@ -364,6 +369,9 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   notCounted={retired}
                 />
               </>
+            ) : item.startDate ? (
+              /* Không có hạn: ngày bắt đầu ở đây, vì hợp đồng / dịch vụ không còn tab Tổng quan. */
+              t("software.termFrom", { from: formatDate(item.startDate) })
             ) : null,
           },
           supportsSeats(item.kind)
@@ -376,7 +384,7 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
                   note: item.websites?.[0],
                 }
               : /* Hợp đồng / dịch vụ: ô Bắt đầu chỉ lặp ngày đầu của khoảng hạn (PW-A10). */
-                { key: "contract", label: t("software.contract"), value: item.contract },
+                { key: "contract", label: t("software.contractNumber"), value: item.contract },
           supportsSeats(item.kind)
             ? {
                 key: "contract",
@@ -388,11 +396,8 @@ export function SoftwareDetail({ me, screen = "software" }: { me: Me; screen?: S
             : supportsWebsites(item.kind)
               ? /* Ô Giấy tờ trùng tab Giấy tờ (PW-A11) — tên miền / SSL dùng ô này cho số hợp đồng. */
                 { key: "contract", label: t("software.contract"), value: item.contract }
-              : {
-                  key: "files",
-                  label: t("software.tabAttachments"),
-                  value: fileCountFact(counts, (count) => t("software.fileCount", { count })),
-                },
+              : /* Ghi chú thay ô Giấy tờ (trùng số trên tab Giấy tờ, PW-A11): tab Tổng quan đã bỏ. */
+                { key: "note", label: t("software.note"), value: item.note },
         ]}
       />
       <RecordStamp createdAt={item.createdAt} last={history.data?.[0]} onOpenHistory={() => setTab("history")} />
@@ -624,8 +629,13 @@ const HISTORY_GROUP_KEY = {
  */
 function defaultTab(kind: SoftwareKind | undefined): string {
   if (kind && supportsSeats(kind)) return "devices";
-  if (kind === "ssl" || kind === "domain") return "attachments";
+  if (kind && (supportsWebsites(kind) || isContractKind(kind))) return "attachments";
   return "profile";
+}
+
+/** Hợp đồng bảo trì, dịch vụ có hạn: không ghế, không tên miền — mọi thông tin nằm ở dải tóm tắt. */
+function isContractKind(kind: SoftwareKind): boolean {
+  return !supportsSeats(kind) && !supportsWebsites(kind);
 }
 
 /**

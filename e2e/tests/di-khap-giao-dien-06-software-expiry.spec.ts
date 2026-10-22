@@ -294,8 +294,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     expect(
       await rowActionNames(page, licenseCode),
-      'Hồ sơ đã bỏ: không Gán, không Gia hạn, không bỏ lần hai — menu chỉ còn Khôi phục…',
-    ).toEqual(['Khôi phục…']);
+      'Hồ sơ đã bỏ: không Gán, không Gia hạn, không bỏ lần hai — menu chỉ còn Dùng lại…',
+    ).toEqual(['Dùng lại…']);
     await expect(page.getByRole('button', { name: `Sửa ${licenseCode}` })).toBeVisible();
   });
 
@@ -360,13 +360,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     expect(
       (await add.getByRole('heading', { level: 2 }).allTextContents()).map((text) => text.trim()),
-      'Hộp thêm hồ sơ (license, Q-27): tiêu đề hộp, rồi các khối — phần mềm gì, thời hạn, ghế + hợp đồng, ghi chú, giấy tờ',
-    ).toEqual(['Thêm phần mềm', 'Phần mềm gì', 'Thời hạn', 'Ghế và hợp đồng', 'Ghi chú', 'Giấy tờ đính kèm']);
+      'Hộp thêm hồ sơ (license, Q-27): tiêu đề hộp, rồi các khối — nhận dạng, thời hạn, ghế + hợp đồng, ghi chú, giấy tờ (PW-A35)',
+    ).toEqual(['Thêm phần mềm', 'Nhận dạng', 'Thời hạn', 'Ghế và hợp đồng', 'Ghi chú', 'Giấy tờ đính kèm']);
 
     // ===== Ô GÕ CHỮ =====
     await expect(
       add.getByRole('textbox'),
-      'Form thêm hồ sơ có đúng 5 ô gõ chữ: Tên hồ sơ · Mã hồ sơ · Số ghế · Số hợp đồng / PO · Ghi chú',
+      'Form thêm hồ sơ có đúng 5 ô gõ chữ: Mã hồ sơ · Tên hồ sơ · Số ghế · Số hợp đồng / PO · Ghi chú',
     ).toHaveCount(5);
     for (const name of ['Mã hồ sơ', 'Tên hồ sơ', 'Số ghế', 'Số hợp đồng / PO', 'Ghi chú']) {
       await expect(
@@ -385,8 +385,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 15 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(15);
+      'Hộp thêm hồ sơ có đúng 16 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(16);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
@@ -403,6 +403,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hủy',
       // Q-27: việc ngay sau khi khai license là đưa nó vào máy.
       'Lưu rồi gán vào máy',
+      // FM-21: khai cả lô — lưu xong form ở lại.
+      'Lưu và nhân bản',
       'Lưu',
     ]) {
       await expect(

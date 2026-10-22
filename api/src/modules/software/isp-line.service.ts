@@ -12,6 +12,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { isRealDateOnly } from '../../common/real-date';
 import { nextCode } from '../../common/next-code';
+import { recordCode } from '../../common/record-code';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -300,7 +301,8 @@ export class IspLineService {
   }
 
   async update(actor: string, id: string, input: IspLineInput): Promise<IspLineRecord> {
-    const values = await this.prepare(input, id);
+    const current = input.code === undefined ? undefined : (await this.requireRow(id)).code;
+    const values = await this.prepare(input, id, current);
     const nextWanIps = requireWanIps(input.wanIps);
     return this.db.transaction((tx) => this.updateLineWithin(tx, actor, id, values, nextWanIps));
   }
@@ -427,7 +429,7 @@ export class IspLineService {
         status: cells.status,
       };
       try {
-        const values = await this.prepare(input, before?.id ?? null);
+        const values = await this.prepare(input, before?.id ?? null, before?.code);
         const wanIps = requireWanIps(input.wanIps);
         // Máy đã thanh lý / không còn: báo NGAY ở dòng này như form, không để lượt ghi từ chối cả file.
         if (device.id && device.id !== before?.deviceId) await this.devices.assertUsable(device.id);
@@ -602,13 +604,14 @@ export class IspLineService {
   private async prepare(
     input: IspLineInput,
     id: string | null,
+    currentCode?: string,
   ): Promise<Record<string, unknown>> {
     const values: Record<string, unknown> = {};
     const put = (key: string, value: unknown) => {
       if (value !== undefined) values[key] = value;
     };
 
-    put('code', input.code === undefined ? undefined : requireText(input.code, 'mã đường truyền'));
+    put('code', input.code === undefined ? undefined : recordCode(input.code, 'Mã đường truyền', currentCode));
     put('bandwidth', text(input.bandwidth));
     put('siteId', input.siteId === undefined ? undefined : (input.siteId || null));
     put('deviceId', input.deviceId === undefined ? undefined : (input.deviceId || null));
@@ -851,14 +854,6 @@ function dateOnly(
       code: 'DATE_INVALID',
       message: `${label} phải là ngày hợp lệ.`,
     });
-  }
-  return trimmed;
-}
-
-function requireText(value: string, label: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    throw new BadRequestException({ code: 'FIELD_REQUIRED', message: `Thiếu ${label}.` });
   }
   return trimmed;
 }

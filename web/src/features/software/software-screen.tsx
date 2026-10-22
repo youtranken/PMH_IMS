@@ -495,7 +495,11 @@ function SoftwareList({ me, spec }: { me: Me; spec: SoftwareScreenSpec }) {
             setCreating(false);
             setBatching(null);
           }}
-          onSaved={(result) => {
+          onSaved={(result, options) => {
+            if (options?.keepOpen) {
+              void refresh();
+              return;
+            }
             setCreating(false);
             setBatching(null);
             // "Lưu rồi gán vào máy": sang hồ sơ vừa tạo, mở sẵn hộp Gán ở tab Máy đang dùng.
