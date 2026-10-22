@@ -29,6 +29,7 @@ import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand
 import { ExpandPanel } from '@/ui/expand-panel';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
+import { DeviceBulkBar } from './device-bulk-bar';
 import { DeviceRowActions } from './device-actions';
 import { devicePhotoSrc } from './device-diagram-look';
 import { deviceModelPhotoSrc } from '@/lib/device-models';
@@ -44,6 +45,7 @@ import {
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { useOpenFromUrl } from '@/ui/use-open-from-url';
+import { useRowSelection } from '@/ui/use-row-selection';
 
 
 /* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
@@ -102,6 +104,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const setPage = url.setPage;
   const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
+  const picked = useRowSelection();
   // Lệnh "Thêm …" của Tìm nhanh mở thẳng form (UX-E32).
   useOpenFromUrl(useCallback(() => setCreating(true), []));
   const [importing, setImporting] = useState(false);
@@ -497,6 +500,8 @@ export function DevicesScreen({ me }: { me: Me }) {
             stackOnMobile
             stickyActions
             mobileCard={mobileCard}
+            /* Tick nhiều máy rồi làm một lượt (UX-E25): đổi trạng thái, đổi người dùng / phòng ban. */
+            selection={{ ...picked, rowLabel: (item) => t('devices.selectOne', { code: item.code }) }}
             rowClassName={(item) => (item.id === flashId ? 'row-flash' : '')}
             /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
                phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */
@@ -551,6 +556,17 @@ export function DevicesScreen({ me }: { me: Me }) {
             total={devices.data?.total ?? 0}
             onPageChange={setPage}
           />
+          {picked.selected.size > 0 ? (
+            <DeviceBulkBar
+              ids={[...picked.selected]}
+              csrfToken={me.csrfToken}
+              onClear={picked.clear}
+              onDone={() => {
+                picked.clear();
+                void queryClient.invalidateQueries({ queryKey: ['devices'] });
+              }}
+            />
+          ) : null}
         </div>
       )}
 

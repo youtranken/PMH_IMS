@@ -124,6 +124,8 @@ interface DataTableProps<T> {
     selected: Set<string>;
     onToggle: (id: string) => void;
     onToggleAll: (ids: string[], checked: boolean) => void;
+    /** Tên ô tick của từng dòng ("Chọn PC-01") — vắng thì "Chọn dòng" như nhau cho mọi dòng. */
+    rowLabel?: (row: T) => string;
   };
   /**
    * Cột CUỐI (thao tác) dính mép phải khi bảng cuộn ngang, kèm bóng mép khi còn cột khuất.
@@ -473,7 +475,7 @@ export function DataTable<T>({
                         >
                           <input
                             type="checkbox"
-                            aria-label={t('dataTable.selectRow')}
+                            aria-label={selection.rowLabel?.(row.original) ?? t('dataTable.selectRow')}
                             checked={selection.selected.has(row.id)}
                             onChange={() => selection.onToggle(row.id)}
                           />

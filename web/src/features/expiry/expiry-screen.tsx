@@ -33,6 +33,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { DigestRulesPanel } from './digest-rules-panel';
 import { Actor, actorLabel } from '@/ui/actor';
+import { useRowSelection } from '@/ui/use-row-selection';
 
 interface ExpiryRow {
   id: string;
@@ -142,7 +143,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const [renewalsRange, setRenewalsRange] = useState({ from: '', to: '' });
   const renewalsRangeQuery = renewalsQuery(renewalsRange);
   const [addingRule, setAddingRule] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const picked = useRowSelection();
+  const selected = picked.selected;
   const canEditRules = me.role === 'sa' || me.role === 'admin';
   /* Cùng khóa + cùng hàm với `DigestRulesPanel` nên chỉ đọc cache, không gọi lần hai. Chưa có
      luật nào thì nút "Thêm luật" chỉ ở khung trống, không lặp ở đầu trang (PW-A30). */
@@ -600,25 +602,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
           rowHref={(row) => row.link}
           /* Chọn nhiều dòng để gia hạn một lượt (cuối năm cả chục license/SSL cùng một hợp
              đồng). Dòng không gia hạn được ở đây thì bỏ qua lúc chạy, và nói ra con số đó. */
-          selection={{
-            selected,
-            onToggle: (id) =>
-              setSelected((current) => {
-                const next = new Set(current);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              }),
-            onToggleAll: (ids, checked) =>
-              setSelected((current) => {
-                const next = new Set(current);
-                for (const id of ids) {
-                  if (checked) next.add(id);
-                  else next.delete(id);
-                }
-                return next;
-              }),
-          }}
+          selection={picked}
         />
       )}
 
@@ -627,9 +611,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
           rows={rows.filter((row) => selected.has(row.id))}
           csrfToken={me.csrfToken}
           askConfirm={askConfirm}
-          onClear={() => setSelected(new Set())}
+          onClear={picked.clear}
           onDone={() => {
-            setSelected(new Set());
+            picked.clear();
             void queryClient.invalidateQueries({ queryKey: ['expiry'] });
           }}
         />
