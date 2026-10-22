@@ -158,8 +158,8 @@ body:has(.auth) .toast-stack {
    nền/viền gốc lấy từ `.inp` (và `.auth-form .inp` trên kính). */
 .otp-boxes {
   /* Nhịp phải khớp OTP_RING_IN_MS / OTP_ORBIT_MS (ui/otp-input.tsx): JS tính mốc trọn vòng. */
-  --otp-ring-in: 350ms;
-  --otp-orbit: 1100ms;
+  --otp-ring-in: 250ms;
+  --otp-orbit: 800ms;
   --otp-gap: var(--space-3);
   /* Vòng quanh tâm hàng ô: ô thu nhỏ khi lên vòng để 6 ô (cách nhau 60°) không chạm nhau. */
   --otp-ring-r: 42px;
@@ -232,7 +232,7 @@ body:has(.auth) .toast-stack {
 .otp-boxes.is-success .otp-box {
   opacity: 0;
   border-color: var(--warm);
-  animation: otp-converge 500ms var(--ease) both;
+  animation: otp-converge 350ms var(--ease) both;
 }
 .otp-check {
   position: absolute;
@@ -246,7 +246,7 @@ body:has(.auth) .toast-stack {
   place-items: center;
   border: 2px solid var(--warm);
   border-radius: var(--r);
-  animation: otp-seal-in 200ms var(--ease) 400ms both;
+  animation: otp-seal-in 150ms var(--ease) 280ms both;
 }
 /* Lớp xanh phủ lên ô ấm: đổi màu bằng độ mờ của một lớp, không chuyển màu viền. */
 .otp-check::before {
@@ -256,7 +256,7 @@ body:has(.auth) .toast-stack {
   border: 2px solid var(--ok);
   border-radius: inherit;
   background: var(--ok-soft);
-  animation: otp-fade-in 250ms var(--ease) 650ms both;
+  animation: otp-fade-in 200ms var(--ease) 430ms both;
 }
 /* Vòng xanh loang ra quanh ô rồi đứng lại mờ mờ. */
 .otp-check::after {
@@ -267,7 +267,7 @@ body:has(.auth) .toast-stack {
   border-radius: 50%;
   box-shadow: var(--otp-ok-glow);
   opacity: 0.7;
-  animation: otp-ripple 650ms var(--ease) 650ms both;
+  animation: otp-ripple 450ms var(--ease) 430ms both;
 }
 /* Dấu tích nảy ra rồi GIỮ: nhịp giữ nằm trong chính keyframe, nên `animationend` của nó là mốc
    duy nhất ô báo "xong" cho nơi gọi đi tiếp (ui/otp-input.tsx). */
@@ -280,7 +280,7 @@ body:has(.auth) .toast-stack {
   stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-  animation: otp-check-pop 650ms var(--ease) 750ms both;
+  animation: otp-check-pop 520ms var(--ease) 430ms both;
 }
 /* Card đăng nhập luôn tối: đổi sang bộ --auth-otp-* (xem tokens.css; phần vòng ở auth.css). */
 .auth-form .otp-box:not(.is-filled):focus { caret-color: var(--auth-otp-focus); }

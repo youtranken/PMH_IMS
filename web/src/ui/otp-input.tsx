@@ -21,10 +21,14 @@ const OTP_LENGTH = 6;
  */
 export type OtpStatus = 'idle' | 'verifying' | 'success' | 'error';
 
+/*
+ * Cả chuỗi mã đúng — vòng tối thiểu + hội tụ + dấu tích — gói trong 2 giây ở MỌI nơi (Q-33): mở
+ * két gấp trên điện thoại thì hiệu ứng không được đứng chắn trước mật khẩu.
+ */
 /** Ô rời hàng lên vòng (khớp `--otp-ring-in` trong shared-kit.css). */
-export const OTP_RING_IN_MS = 350;
+export const OTP_RING_IN_MS = 250;
 /** Một vòng quay (khớp `--otp-orbit`). */
-export const OTP_ORBIT_MS = 1100;
+export const OTP_ORBIT_MS = 800;
 /**
  * Mốc dừng sớm nhất của vòng: lên vòng + trọn một vòng. Server trả lời nhanh cỡ nào người dùng
  * vẫn thấy trọn một vòng (Q-21).
@@ -35,12 +39,16 @@ export const OTP_MIN_SPIN_MS = OTP_RING_IN_MS + OTP_ORBIT_MS;
  * shared-kit.css): mốc nơi gọi đổi tiêu đề + nút sang "Đã xác thực" — đổi sớm hơn thì chữ báo
  * xong trước khi ô kịp hội tụ.
  */
-export const OTP_CONFIRM_AT_MS = 650;
+export const OTP_CONFIRM_AT_MS = 430;
+/**
+ * Từ lúc dừng vòng tới khi dấu tích hiện xong và giữ (khớp `.otp-check-mark`: trễ + thời lượng).
+ */
+export const OTP_SUCCESS_MS = 950;
 /**
  * Chuỗi thành công không được giữ người dùng lâu hơn mức này dù `animationend` không tới (tab bị
- * ẩn, trình duyệt bỏ animation): hội tụ + vòng xanh + dấu tích + nhịp giữ (~1,4 giây), dư một nhịp.
+ * ẩn, trình duyệt bỏ animation): cả chuỗi `OTP_SUCCESS_MS`, dư một nhịp.
  */
-export const OTP_SUCCESS_FALLBACK_MS = 2000;
+export const OTP_SUCCESS_FALLBACK_MS = OTP_SUCCESS_MS + 350;
 
 /**
  * Dấu tích đứng yên được giữ bấy lâu khi bỏ chuyển động: không có `animationend` nào để chờ,
