@@ -139,24 +139,36 @@ export function AccountStatusDialog({
   );
 }
 
+/** Kết quả hộp "Vai trò & nhóm quyền": nhóm `null` = "Đủ quyền"; chỉ có nghĩa khi vai là Thành viên. */
+export interface RoleAndGroup {
+  role: Me['role'];
+  featureGroupId: string | null;
+}
+
 /**
- * Đổi vai trò sau khi tạo — thăng/hạ mà không phải tạo tài khoản thứ hai (lịch sử cắt đôi).
- * Hạ một Thành viên đang có quyền két xuống/lên: nhắc rằng quyền két theo vai sẽ đổi.
+ * Vai trò + nhóm quyền trong MỘT hộp (Q-33): hai thứ cùng trả lời "người này làm được gì", để hai
+ * mục menu thì menu dòng dài thêm và người ta đổi vai xong quên nhóm. Nhóm quyền chỉ có nghĩa với
+ * Thành viên (Q-31) nên ô chọn nhóm chỉ hiện khi vai đang chọn là Thành viên.
+ *
+ * Đổi vai sau khi tạo — thăng/hạ mà không phải tạo tài khoản thứ hai (lịch sử cắt đôi). Lên/xuống
+ * Thành viên: nhắc rằng quyền két theo vai sẽ đổi.
  */
-export function RoleDialog({
+export function RoleAndGroupDialog({
   account,
   onClose,
   onSubmit,
 }: {
-  account: AccountRef;
+  account: AccountRef & { featureGroupId?: string | null };
   onClose: () => void;
-  onSubmit: (role: Me['role']) => Promise<void>;
+  onSubmit: (next: RoleAndGroup) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [role, setRole] = useState<Me['role']>(account.role);
+  const [groupId, setGroupId] = useState(account.featureGroupId ?? '');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useSubmitError([role]);
-  const unchanged = role === account.role;
+  const [error, setError] = useSubmitError([role, groupId]);
+  const roleUnchanged = role === account.role;
+  const unchanged = roleUnchanged && (role !== 'member' || groupId === (account.featureGroupId ?? ''));
 
   return (
     <Dialog
@@ -164,7 +176,7 @@ export function RoleDialog({
       onOpenChange={onClose}
       dismissible={!busy}
       maxWidth={520}
-      title={t('accounts.changeRoleOf', { name: account.fullName })}
+      title={t('accounts.roleAndGroupOf', { name: account.fullName })}
       footer={
         <>
           <button type="button" className="btn" disabled={busy} onClick={onClose}>
@@ -177,7 +189,7 @@ export function RoleDialog({
             onClick={() => {
               setError(null);
               setBusy(true);
-              onSubmit(role).then(
+              onSubmit({ role, featureGroupId: groupId || null }).then(
                 () => setBusy(false),
                 (err: unknown) => {
                   setBusy(false);
@@ -187,21 +199,22 @@ export function RoleDialog({
               );
             }}
           >
-            {busy ? t('common.working') : t('accounts.changeRoleSubmit')}
+            {busy ? t('common.working') : t('common.save')}
           </button>
         </>
       }
     >
       <p className="muted">{account.email}</p>
       <RoleChoice value={role} onChange={setRole} name="change-role" />
-      {!unchanged && account.role === 'member' ? (
+      {!roleUnchanged && account.role === 'member' ? (
         <p className="muted">{t('accounts.changeRoleFromMember')}</p>
       ) : null}
-      {!unchanged && role === 'member' ? (
+      {!roleUnchanged && role === 'member' ? (
         <p className="alert warn" role="note">
           {t('accounts.changeRoleToMember')}
         </p>
       ) : null}
+      {role === 'member' ? <FeatureGroupSelect id="feature-group-of" value={groupId} onChange={setGroupId} /> : null}
       {error ? (
         <p className="alert error" role="alert">
           {error}
@@ -213,7 +226,7 @@ export function RoleDialog({
 
 /**
  * Ô chọn nhóm quyền của một Thành viên (Q-31). Giá trị `''` = "Đủ quyền" (chưa gán nhóm). Dùng ở
- * hộp Thêm người dùng và hộp Đổi nhóm quyền.
+ * hộp Thêm người dùng và hộp Vai trò & nhóm quyền.
  */
 export function FeatureGroupSelect({
   id,
@@ -239,63 +252,5 @@ export function FeatureGroupSelect({
         ]}
       />
     </Field>
-  );
-}
-
-/** Đổi nhóm quyền của một Thành viên — không đòi mã 6 số (Q-31). */
-export function FeatureGroupDialog({
-  account,
-  onClose,
-  onSubmit,
-}: {
-  account: AccountRef & { featureGroupId?: string | null };
-  onClose: () => void;
-  onSubmit: (groupId: string | null) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [groupId, setGroupId] = useState(account.featureGroupId ?? '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useSubmitError([groupId]);
-  const unchanged = groupId === (account.featureGroupId ?? '');
-  return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      dismissible={!busy}
-      maxWidth={440}
-      title={t('featureGroups.changeTitle', { name: account.fullName })}
-      footer={
-        <>
-          <button type="button" className="btn" disabled={busy} onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={busy || unchanged}
-            onClick={() => {
-              setError(null);
-              setBusy(true);
-              onSubmit(groupId || null).then(
-                () => setBusy(false),
-                (err: unknown) => {
-                  setBusy(false);
-                  setError(errorMessage(err));
-                },
-              );
-            }}
-          >
-            {busy ? t('common.working') : t('featureGroups.save')}
-          </button>
-        </>
-      }
-    >
-      <FeatureGroupSelect id="feature-group-of" value={groupId} onChange={setGroupId} />
-      {error ? (
-        <p className="alert error" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </Dialog>
   );
 }

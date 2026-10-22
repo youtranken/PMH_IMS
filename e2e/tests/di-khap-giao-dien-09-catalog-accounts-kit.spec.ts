@@ -852,7 +852,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const roleField = createDialog.getByRole('group', { name: 'Vai trò' });
     await expect(
       roleField,
-      'nhóm Vai trò chỉ có ở chế độ TẠO — vai trò của người đang có thì đổi bằng "Đổi vai trò…"',
+      'nhóm Vai trò chỉ có ở chế độ TẠO — vai trò của người đang có thì đổi bằng "Vai trò & nhóm quyền…"',
     ).toBeVisible();
     await expect(
       roleField.getByRole('radio'),

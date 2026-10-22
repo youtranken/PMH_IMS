@@ -2661,8 +2661,6 @@ export default {
     /* Ô chọn nhóm ở form tài khoản. "Đủ quyền" = chưa gán nhóm. */
     field: 'Nhóm quyền',
     fullAccess: 'Đủ quyền',
-    change: 'Đổi nhóm quyền…',
-    changeTitle: 'Nhóm quyền của {{name}}',
     changed: 'Đã đổi nhóm quyền của {{name}}.',
   },
   accounts: {
@@ -2803,8 +2801,8 @@ export default {
     footprintRequestsFailed: 'Yêu cầu mở két (không đếm được)',
     footprintDevices: '{{count}} Thiết bị đang ghi người này sử dụng',
     footprintDevicesFailed: 'Thiết bị đang ghi người này sử dụng (không đếm được)',
-    changeRole: 'Đổi vai trò…',
-    changeRoleSubmit: 'Đổi vai trò',
+    roleAndGroup: 'Vai trò & nhóm quyền…',
+    roleAndGroupOf: 'Vai trò & nhóm quyền: {{name}}',
     changeRoleOf: 'Đổi vai trò: {{name}}',
     changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được mọi két theo vai — quyền két gán riêng không còn tác dụng.',
     changeRoleToMember: 'Hạ xuống Thành viên là mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',
