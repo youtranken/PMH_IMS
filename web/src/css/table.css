@@ -358,7 +358,7 @@ table.table tbody tr.row-suspended td:first-child {
     var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--elev-1);
 }
 .row-actions-menu button {
   display: flex;

@@ -274,19 +274,12 @@ describe('chuyển động nhẹ khi rê chuột', () => {
     expect(t, selector).toMatch(/var\(--dur(-fast)?\)/);
   });
 
-  it('ô số trên Bảng điều khiển nhấc 1px + bóng khi rê chuột', () => {
-    const body = rule('shared-kit.css', '.kpi:hover')!.body;
-    expect(declValue(body, 'transform')).toBe('translateY(-1px)');
-    expect(declValue(body, 'box-shadow')).toBeDefined();
-  });
-
   it('"giảm chuyển động": tắt mọi transition/animation và bỏ cả các cú nhấc/trượt khi hover', () => {
     const all = rule('detail-tabs.css', `${MOTION_SYSTEM} *`, REDUCE)!;
     expect(declValue(all.body, 'transition')).toBe('none !important');
     expect(declValue(all.body, 'animation')).toBe('none !important');
     for (const [file, selector] of [
       ['base.css', '.nav-item:hover'],
-      ['shared-kit.css', '.kpi:hover'],
     ]) {
       expect(declValue(rule(file, `${MOTION_SYSTEM} ${selector}`, REDUCE)!.body, 'transform'), selector).toBe('none');
     }

@@ -127,7 +127,7 @@
   /* Viền nhấn trên cùng: tách card khỏi nền tối, cùng màu với thanh "Bước 1/2". */
   border-top: 3px solid var(--warm);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-3);
   animation: pageIn 0.3s var(--ease) both;
 }
 .auth-card > .ghost.sm {
@@ -207,7 +207,7 @@
 }
 /* Mã đúng: card có quầng xanh phía sau, tiêu đề mới hiện dần. */
 .auth-card.is-verified {
-  box-shadow: var(--shadow-lg), var(--auth-card-ok-glow);
+  box-shadow: var(--elev-3), var(--auth-card-ok-glow);
   transition: box-shadow 400ms var(--ease);
 }
 .auth-card.is-verified .auth-title,

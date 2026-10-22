@@ -431,7 +431,7 @@ input[list]::-webkit-calendar-picker-indicator {
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--elev-1);
   animation: rowIn 0.13s var(--ease) both;
 }
 .fsel-option {
@@ -691,7 +691,7 @@ input.switch:focus-visible {
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--elev-1);
   /* Fade-only (KHÔNG transform) để không đụng transform định vị của Floating UI. */
   animation: rowIn 0.13s var(--ease) both;
 }
@@ -824,7 +824,7 @@ input.switch:focus-visible {
   max-height: min(94vh, 1000px);
   background: var(--surface);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-3);
   /* PHẢI là `auto`, KHÔNG được `hidden`. `.sheet` chỉ cắt gọn góc bo khi nội dung được bọc
      trong `.sheet-body` (chỉ confirm-dialog làm vậy) — 21 dialog còn lại đổ form thẳng vào
      đây, nên `hidden` nghĩa là form cao quá 94vh bị CẮT MẤT phần dưới, kể cả nút Lưu, mà
@@ -978,7 +978,7 @@ input.switch:focus-visible {
   color: var(--ink-2);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--elev-1);
   font-size: var(--fs-sm);
   font-weight: 400;
   line-height: 1.45;

@@ -186,10 +186,15 @@
   --warn-tint: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
   --danger-tint: color-mix(in srgb, var(--danger) 22%, transparent);
   --primary-tint: color-mix(in srgb, var(--primary) 16%, transparent);
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-lg: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
+  /*
+   * Bóng chỉ cho lớp NỔI trên trang, đúng 3 nấc (DS-23): thẻ nằm trên trang phẳng, chỉ có viền —
+   * bóng rải khắp thẻ thì mắt không còn tách được cái đang nổi khỏi cái nằm trên trang.
+   * 1 = menu, popover, gợi ý, ngày; 2 = toast, ngăn kéo, thanh thao tác dính; 3 = hộp thoại.
+   */
+  --elev-1: 0 12px 28px -10px rgba(16, 24, 40, 0.25);
+  --elev-2: 0 16px 36px -14px rgba(16, 24, 40, 0.3), 0 4px 10px -6px rgba(16, 24, 40, 0.12);
+  --elev-3: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
     0 8px 20px -12px rgba(16, 24, 40, 0.2);
-  --shadow-pop: 0 12px 28px -10px rgba(16, 24, 40, 0.25);
   /*
    * Lớp phủ sau hộp thoại. Là token (không viết thẳng trong `overlays.css`) để có cặp cho chế
    * độ tối: trang vốn đã tối mà bị phủ thêm 44% đen thì bảng phía sau gần như đen tuyền.
@@ -355,10 +360,10 @@ html[data-theme='dark'] {
   --warn-tint: color-mix(in srgb, var(--warn-soft) 55%, var(--surface));
   --danger-tint: color-mix(in srgb, var(--danger) 22%, transparent);
   --primary-tint: color-mix(in srgb, var(--primary) 16%, transparent);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
+  --elev-1: 0 12px 28px -10px rgba(0, 0, 0, 0.6);
+  --elev-2: 0 16px 36px -14px rgba(0, 0, 0, 0.65), 0 4px 10px -6px rgba(0, 0, 0, 0.4);
+  --elev-3: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
     0 8px 20px -12px rgba(0, 0, 0, 0.5);
-  --shadow-pop: 0 12px 28px -10px rgba(0, 0, 0, 0.6);
   /* Chế độ tối: nền đã tối sẵn nên lớp phủ phải THUẦN ĐEN và đậm hơn một chút mới tách được
      hộp ra khỏi trang; dùng lại sắc xanh của bản sáng thì hai lớp hòa vào nhau. */
   --scrim: rgba(0, 0, 0, 0.62);

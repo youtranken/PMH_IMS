@@ -132,9 +132,9 @@ describe('Token dùng đúng KIỂU của nó, không chỉ đúng tên', () => 
 
     it.each([
       ['outline: 2px solid var(--ring);', 'đúng dòng đã chết ở shared-kit.css'],
-      ['border: 1px solid var(--shadow);', 'shorthand border'],
+      ['border: 1px solid var(--elev-1);', 'shorthand border'],
       ['color: var(--ring);', 'thuộc tính màu thuần'],
-      ['BORDER-COLOR: var(--shadow-lg);', 'chữ hoa'],
+      ['BORDER-COLOR: var(--elev-3);', 'chữ hoa'],
     ])('bắt được %p (%s)', (css) => {
       expect(colorSlotMisuse(css, values)).toHaveLength(1);
     });

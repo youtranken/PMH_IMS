@@ -124,7 +124,7 @@
   border: 1px solid var(--sidebar-border);
   /* Nền sidebar (tối) — KHÔNG dùng --surface sáng, nếu không chữ .sb-act (ink sáng) mất. */
   background: var(--sidebar-bg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-1);
   z-index: 20;
 }
 .sb-act {
