@@ -38,9 +38,10 @@ test.beforeEach(() => {
  *
  * `LoadError` chọn câu THEO NGUYÊN NHÂN: 403 nói thiếu quyền, 404 nói không tìm thấy, mất
  * mạng nói mất kết nối, và 500 ra câu này — bài này giả lập 500, nên đây là câu đúng của nó.
+ * Người xem là SA nên ra bản câu dành cho SA (không bảo SA "gửi cho Super Admin" — ST-04).
  */
 const LOAD_ERROR =
-  'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
+  'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, xem log của dịch vụ api trên máy chủ theo mốc giờ ở "Chi tiết kỹ thuật".';
 
 /** Bắt một đường API trả 500 — giống `breakRoute` của bài desktop, cùng hình dạng lỗi. */
 async function breakRoute(page: Page, pattern: RegExp): Promise<void> {

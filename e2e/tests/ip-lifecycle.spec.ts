@@ -58,6 +58,8 @@ test.describe('Vòng đời IP', () => {
 
     await page.goto(`/ip-addresses/${subnetId}`);
     const row = page.getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) });
+    // Thẻ dải nói mức dùng một lần: "còn n" cạnh thanh đo (PW-B07).
+    const card = page.getByRole('link', { name: new RegExp(`LAN vòng đời E2E ${stamp}`) });
     await expect(row.getByText('Đang dùng')).toBeVisible();
 
     // Chỉ còn hai trạng thái (Q-02): đang cấp thì đường đi tiếp duy nhất là Thu hồi.
@@ -73,7 +75,7 @@ test.describe('Vòng đời IP', () => {
     await reclaim.getByRole('button', { name: 'Thu hồi IP' }).click();
 
     // Thu hồi TRẢ CHỖ về pool: mức sử dụng phải giảm, và hàng về đúng trạng thái Trống.
-    await expect(page.getByText('Còn 6 IP trống')).toBeVisible();
+    await expect(card.getByText('còn 6', { exact: true })).toBeVisible();
     await expect(row.getByText('Trống', { exact: true })).toBeVisible();
     await expect(row.getByText('Đã thu hồi')).toHaveCount(0);
     // Chủ cũ đã biến khỏi hồ sơ (không còn là người dùng của IP) — chỉ còn dòng gợi nhớ
@@ -90,7 +92,7 @@ test.describe('Vòng đời IP', () => {
     await assign.getByRole('combobox', { name: 'Người dùng / phòng ban' }).fill('Anh Hùng — Kho');
     await assign.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(row.getByText('Anh Hùng — Kho')).toBeVisible();
-    await expect(page.getByText('Còn 5 IP trống')).toBeVisible();
+    await expect(card.getByText('còn 5', { exact: true })).toBeVisible();
 
     // AC: lịch sử giữ VĨNH VIỄN — mở ra vẫn đọc được IP này từng là máy in kế toán.
     await rowAction(page, address, 'Lịch sử');

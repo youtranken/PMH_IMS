@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import ExcelJS from 'exceljs';
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, uniqueStamp } from './helpers';
+import { E2E_SA, firstLogin, resetSoftware, resetUsers, uniqueStamp } from './helpers';
 
 /** UX-E30: Phần mềm (bốn màn) nhập được từ Excel — cùng sheet + cột với file Xuất của màn. */
 async function xlsx(sheetName: string, rows: Record<string, string>[]): Promise<string> {
@@ -16,6 +16,11 @@ async function xlsx(sheetName: string, rows: Record<string, string>[]): Promise<
   await wb.xlsx.writeFile(path);
   return path;
 }
+
+test.beforeEach(() => {
+  resetUsers();
+  resetSoftware();
+});
 
 test.describe('Phần mềm — Nhập từ Excel', () => {
   test('file mẫu Hợp đồng bảo trì nhập lại không đổi gì; thêm một hợp đồng qua file', async ({ page }) => {

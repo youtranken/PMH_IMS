@@ -291,15 +291,17 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await page.getByRole('searchbox', { name: /người thao tác/ }).fill(E2E_SA.email);
     expect((await filtered).status()).toBe(200);
 
-    // `firstLogin` vừa ghi dòng đăng nhập của chính tài khoản này.
-    const loginRow = page.getByText(/^auth\.(login|password)\.ok$/).first();
+    // `firstLogin` vừa ghi dòng đăng nhập của chính tài khoản này. Mã hành động nằm ở `title`
+    // của nhãn (UX-E08), không in thành chữ trên dòng.
+    const loginRow = page.getByTitle(/^auth\.(login|password)\.ok$/).first();
     await expect(loginRow).toBeVisible();
     expect(new URL(page.url()).searchParams.get('q')).toBe(E2E_SA.email);
 
     await page.reload();
     await expect(page.getByRole('searchbox', { name: /người thao tác/ })).toHaveValue(E2E_SA.email);
-    await expect(page.getByText(/^auth\.(login|password)\.ok$/).first()).toBeVisible();
-    await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
+    await expect(page.getByTitle(/^auth\.(login|password)\.ok$/).first()).toBeVisible();
+    // Email người thao tác ở `title` của tên (UX-E08).
+    await expect(page.getByTitle(E2E_SA.email, { exact: true }).first()).toBeVisible();
   });
 
   test('ADM-071: chip "Chỉ sự kiện an ninh" chỉ còn dòng thất bại / bị chặn, và lọc chạy ở API', async ({

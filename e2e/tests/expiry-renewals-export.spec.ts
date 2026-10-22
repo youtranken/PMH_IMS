@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin } from './helpers';
+import { E2E_SA, firstLogin, resetSoftware, resetUsers } from './helpers';
 
 /** PW-A29: tab "Đã gia hạn" xuất được Excel, đúng khoảng ngày đang xem. */
+test.beforeEach(() => {
+  resetUsers();
+  resetSoftware();
+});
+
 test.describe('Sắp hết hạn — xuất tab Đã gia hạn', () => {
   test('nút Xuất ở đầu trang tải về da-gia-han.xlsx; khoảng ngày ngược → 400, không trả file', async ({ page }) => {
     await firstLogin(page, E2E_SA);

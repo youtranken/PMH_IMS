@@ -173,7 +173,8 @@ test.describe('Sơ đồ mạng — bản vẽ con, khung VLAN, khung tủ', () 
     const box = page.getByRole('dialog', { name: 'Chèn khung tủ có sẵn máy' });
     await box.getByRole('button', { name: 'Tủ mạng', exact: true }).click();
     await page.getByRole('option', { name: `${siteCode} · E2E-R${stamp}` }).click();
-    await box.getByRole('button', { name: 'Chèn tủ mạng' }).click();
+    // exact: hộp còn nút (i) "Giải thích: Chèn tủ mạng" mang lời dặn dài (TX-37).
+    await box.getByRole('button', { name: 'Chèn tủ mạng', exact: true }).click();
     await expect(page.getByText(`Đã chèn khung tủ E2E-R${stamp} (1 thiết bị).`)).toBeVisible();
 
     const [saved] = await Promise.all([

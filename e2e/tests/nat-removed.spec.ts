@@ -146,7 +146,12 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await rowAction(page, f.ports, 'Ngừng dùng');
     await page.getByRole('dialog').getByRole('button', { name: 'Ngừng dùng' }).click();
     await expect(page.getByText('Đã đổi trạng thái luật.')).toBeVisible();
-    // "Đã tắt" là huy hiệu ở cột Trạng thái riêng, dòng KHÔNG bị làm mờ cả.
+    // Sổ mặc định chỉ bày luật đang dùng (PW-B10): luật vừa ngừng rời bảng, chip "Đã ngừng dùng"
+    // đếm nó và bật chip đó thì thấy lại.
+    await expect(row).toHaveCount(0);
+    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
+    await chips.getByRole('button', { name: /^Đã ngừng dùng/ }).click();
+    // "Đã ngừng dùng" là huy hiệu ở cột Trạng thái riêng, dòng KHÔNG bị làm mờ cả.
     await expect(row.getByText('Đã ngừng dùng', { exact: true })).toBeVisible();
 
     await rowAction(page, f.ports, 'Dùng lại');

@@ -416,9 +416,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => labelOf(page.getByRole('columnheader')), {
         message:
-          'Bảng thiết bị (Q-27): Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người dùng, bảo hành, loại · model · serial nằm ở hồ sơ',
+          'Bảng thiết bị (Q-27): [tick chọn] · Ảnh · Mã · Tên gọi · IP quản trị · Vị trí · Trạng thái · Thao tác. Người dùng, bảo hành, loại · model · serial nằm ở hồ sơ',
       })
       .toEqual([
+        // Cột tick chọn nhiều máy (UX-E25) không có chữ: tên nó nằm ở ô tick "Chọn tất cả" bên dưới.
+        '',
         'Ảnh',
         'Mã thiết bị',
         'Tên gọi',
@@ -427,6 +429,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Trạng thái',
         'Thao tác',
       ]);
+    await expect(
+      page.getByRole('columnheader').first().getByRole('checkbox', { name: 'Chọn tất cả' }),
+      'cột đầu là ô tick chọn cả trang (UX-E25)',
+    ).toBeVisible();
 
     /*
      * CỘT NÀO SẮP ĐƯỢC — chốt bằng TẬP HỢP nút trong dòng tiêu đề.
@@ -741,20 +747,24 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * `aria-describedby`, tiêu điểm về ô lỗi đầu tiên, và hộp phải còn nguyên (đóng im lặng là
      * nuốt mất mọi thứ người dùng vừa gõ). Loại thiết bị là `Select` (nút bấm) — ô dễ rơi nhất.
      */
-    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await expect(dialog, 'Bấm Lưu khi form trống: hộp PHẢI còn đó').toBeVisible();
-    await expect(
-      dialog.getByText('Còn 3 ô cần sửa trước khi lưu.'),
-      'Ba ô bắt buộc cùng thiếu thì đầu form tóm tắt số ô phải sửa',
-    ).toBeVisible();
+    /* Ô Mã được điền sẵn mã kế tiếp (FM-21), nên lúc bấm Lưu chỉ còn Tên và Loại thiếu. Chờ mã
+       về trước khi bấm: bấm sớm hơn thì số ô thiếu tuỳ vào tốc độ mạng. */
     const codeField = dialog.getByRole('textbox', { name: 'Mã thiết bị' });
-    await expect(codeField, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Mã').toHaveAccessibleDescription(
+    await expect(codeField, 'Hộp Thêm điền sẵn mã kế tiếp vào ô Mã (FM-21)').not.toHaveValue('');
+    await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(dialog, 'Bấm Lưu khi form còn thiếu: hộp PHẢI còn đó').toBeVisible();
+    await expect(
+      dialog.getByText('Còn 2 ô cần sửa trước khi lưu.'),
+      'Hai ô bắt buộc (Tên, Loại) cùng thiếu thì đầu form tóm tắt số ô phải sửa',
+    ).toBeVisible();
+    const nameField = dialog.getByRole('textbox', { name: 'Tên gọi' });
+    await expect(nameField, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Tên').toHaveAccessibleDescription(
       'Chưa nhập.',
     );
-    await expect(codeField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
+    await expect(nameField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
     await codeField.fill(`TB-E2E-HOP-${stamp}`);
-    await dialog.getByLabel('Tên gọi').fill('Máy chỉ để xem hộp thoại');
+    await nameField.fill('Máy chỉ để xem hộp thoại');
     await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
 
     await expect(
@@ -1063,7 +1073,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Sửa hồ sơ',
         `Thao tác với ${code}`,
         'Cấp IP',
-        'Bổ sung 8 ô còn thiếu',
+        'Bổ sung 6 ô còn thiếu',
         // Khu "Hình dùng trên sơ đồ" (Q-23) gập sẵn (Q-27 bổ sung): chỉ còn nút mở.
         'Mở rộng Hình dùng trên sơ đồ',
         // UX-E26: "sửa lần cuối … bởi …" ở chân thẻ phải, bấm mở tab Lịch sử.
@@ -1073,20 +1083,20 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     expect(await rowActionNames(page, code)).toEqual(['Đổi trạng thái…', 'Nhân bản', 'Thanh lý…']);
 
     /*
-     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 9 dòng, cùng thứ tự; ô trống đứng đúng
+     * THÔNG SỐ THỨ TỰ CỐ ĐỊNH (Q-27) — máy nào cũng cùng 7 dòng, cùng thứ tự; ô trống đứng đúng
      * chỗ và ghi "chưa khai" (bỏ cách ẩn ô trống: hai máy trông hai kiểu, người đọc không biết
-     * "không thấy" là chưa khai hay không có). Bảo hành chỉ ở dải 4 ô.
+     * "không thấy" là chưa khai hay không có). Bảo hành chỉ ở dải 4 ô; Nhà cung cấp (thẻ cột
+     * phải) và Phòng ban (dòng phụ ô Người dùng) không lặp ở đây (PW-A04).
      */
     const spec = panel.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
-      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Phòng ban', 'Ghi chú',
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị', 'Ngày mua', 'Ghi chú',
     ]);
     await expect(spec.getByRole('definition').first(), 'loại đã khai thì in giá trị').toHaveText('Switch');
     await expect(
       spec.getByRole('definition').filter({ hasText: 'chưa khai' }),
-      'tám ô còn lại chưa khai — mỗi ô ghi "chưa khai" đúng chỗ của nó',
-    ).toHaveCount(8);
+      'sáu ô còn lại chưa khai — mỗi ô ghi "chưa khai" đúng chỗ của nó',
+    ).toHaveCount(6);
 
     /* ===== TAB PORT MAP ===== */
     await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();

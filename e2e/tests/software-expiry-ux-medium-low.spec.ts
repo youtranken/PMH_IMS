@@ -302,8 +302,11 @@ test.describe('Sắp hết hạn', () => {
     await page.getByRole('tab', { name: 'Đã gia hạn' }).click();
     await expect(page.getByRole('row', { name: new RegExp(a) })).toBeVisible();
     await expect(page.getByRole('row', { name: new RegExp(b) })).toBeVisible();
-    // Ô số và nút Xuất Excel thuộc về tab Danh sách.
-    await expect(page.getByRole('button', { name: 'Xuất Excel' })).toHaveCount(0);
+    // Ô số thuộc về tab Danh sách; nút Xuất ở tab này xuất danh sách đã gia hạn (PW-A29).
+    await expect(page.getByRole('button', { name: /Đã quá hạn/ })).toHaveCount(0);
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Xuất Excel', exact: true }).click();
+    expect((await download).suggestedFilename()).toBe('da-gia-han.xlsx');
   });
 
   test('EX-017/EX-018/EX-025: "Thêm luật" ở đầu trang; số ngày và email sai bị báo tại ô', async ({

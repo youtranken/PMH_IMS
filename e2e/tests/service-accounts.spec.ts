@@ -347,7 +347,10 @@ test.describe('Tài khoản dịch vụ', () => {
 
     await page.goto('/service-accounts');
     const row = page.getByRole('row', { name: new RegExp(code) });
-    await expect(row.getByText('Đang dùng')).toBeVisible();
+    // Đang dùng thì ô Trạng thái để trống (PW-A24): đọc trạng thái qua menu dòng.
+    await expect(row).toBeVisible();
+    await expect(row.getByText('Đã ngừng dùng')).toHaveCount(0);
+    expect(await rowActionNames(page, code)).toEqual(['Ngừng dùng…']);
 
     // Cửa sau đã khóa: form Sửa KHÔNG có ô Trạng thái nào; Loại cũng chỉ đọc (chọn lúc tạo).
     await rowAction(page, code, 'Sửa');
@@ -372,7 +375,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
     // Cột Thao tác là menu ba chấm — mở ra mới đọc được có mục nào.
-    expect(await rowActionNames(page, code)).not.toContain('Ngừng dùng');
+    expect(await rowActionNames(page, code)).toEqual(['Dùng lại…']);
 
     // Lý do đi thẳng vào lịch sử, kèm chuyển trạng thái — đó mới là chỗ trả lời câu hỏi sáu tháng sau.
     await page.goto(`/service-accounts/${id}?tab=history`);
@@ -486,7 +489,9 @@ test.describe('Tài khoản dịch vụ', () => {
     await onForm.getByRole('button', { name: 'Dùng lại' }).click();
 
     await expect(page.getByText('Đã dùng lại tài khoản.')).toBeVisible();
-    await expect(row.getByText('Đang dùng')).toBeVisible();
+    // Đang dùng thì ô Trạng thái để trống (PW-A24): huy hiệu đóng phải mất, menu đổi chiều.
+    await expect(row.getByText('Đã ngừng dùng')).toHaveCount(0);
+    expect(await rowActionNames(page, code)).toEqual(['Ngừng dùng…']);
 
     await page.goto(`/service-accounts/${id}?tab=history`);
     const entry = page.getByRole('listitem').filter({ hasText: 'Dùng lại' });

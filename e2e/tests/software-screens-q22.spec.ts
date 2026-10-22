@@ -181,8 +181,20 @@ test.describe('Q-22 · Hợp đồng bảo trì', () => {
     await page.goto(`/maintenance?q=${encodeURIComponent(code)}`);
     await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc.')).toBeVisible();
 
+    /* Form Thêm điền sẵn mã kế tiếp của hợp đồng thêm gần nhất (FM-21), và ô Mã bị xoá trắng thì
+       tự điền lại — nên muốn ô Mã TRỐNG phải để hợp đồng mới nhất mang mã không kết thúc bằng số
+       (không đoán được mã kế tiếp). */
+    await createViaApi(page, {
+      code: `BT-E2E-Q22-CHU-${stamp}-X`,
+      name: 'Hợp đồng mang mã không đoán được mã kế tiếp',
+      kind: 'maintenance',
+      endDate: '2030-01-31',
+    });
+    const suggestion = page.waitForResponse((r) => r.url().includes('/api/v1/software/next-code'));
     await page.getByRole('button', { name: 'Thêm hợp đồng bảo trì' }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Thêm hợp đồng bảo trì' });
+    expect(((await (await suggestion).json()) as { code: string | null }).code).toBeNull();
+    await expect(dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true })).toHaveValue('');
     await dialog.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('Thiếu mã');
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu', exact: true }).click();
     await expect(dialog.getByRole('textbox', { name: 'Mã hồ sơ', exact: true })).toHaveAccessibleDescription(

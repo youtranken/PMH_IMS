@@ -203,7 +203,10 @@ test.describe('Tra IP (NET-005, UX-E19)', () => {
     await page.goto(`/ip-addresses/${f.subnetId}`);
     const filter = page.getByRole('searchbox', { name: /Lọc trong dải/ });
     await filter.fill(`10.${f.octet}.2.15`);
-    await page.getByRole('link', { name: new RegExp(`LAN khác E2E ${f.stamp}`) }).click();
+    // Neo đầu chuỗi: thẻ của dải đó trong rail cũng là link mang tên dải ("10.x.2.0/24 LAN khác…").
+    await page
+      .getByRole('link', { name: new RegExp(`^LAN khác E2E ${f.stamp} · 10\\.${f.octet}\\.2\\.0/24$`) })
+      .click();
     await expect(page).toHaveURL(new RegExp(`/ip-addresses/${otherId}\\?ip=`));
     await expect(ipRow(page, `10.${f.octet}.2.15`)).toHaveClass(/row-highlight/);
 

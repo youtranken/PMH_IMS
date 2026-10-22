@@ -765,7 +765,9 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     );
 
     // --- Bên trong hộp "Phiên đang mở". SA đang ngồi đây, nên chắc chắn có ít nhất một phiên.
-    await page.getByRole('row', { name: new RegExp(saFullName) }).getByText(saFullName, { exact: true }).click();
+    /* Bấm ô đầu của dòng chứ không bám chữ tên: ô đó còn chứa nhãn "Bạn" và dòng phụ email,
+       nên không có phần tử nào mang ĐÚNG chữ tên để `getByText(exact)` khớp. */
+    await page.getByRole('row', { name: new RegExp(saFullName) }).getByRole('cell').first().click();
     await page.getByRole('dialog', { name: saFullName }).getByRole('button', { name: 'Phiên đang mở' }).click();
     const sessionDialog = page.getByRole('dialog', { name: `Phiên đang mở: ${saFullName}` });
     await expect(

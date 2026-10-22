@@ -228,7 +228,7 @@ test.describe('Sơ đồ mạng — điện thoại, tìm, lớp, chỉ đườn
     await page.getByRole('button', { name: 'Bỏ chỉ đường' }).click();
 
     const dialog = await ask(net.pc.code, net.lap.code);
-    await expect(dialog.getByRole('alert')).toHaveText(`Không có đường nối giữa ${net.pc.code} và ${net.lap.code} trong sơ đồ cổng`);
+    await expect(dialog.getByRole('alert')).toHaveText(`Không có đường nối giữa ${net.pc.code} và ${net.lap.code} trong sơ đồ cổng.`);
   });
 
   test('không còn Trình chiếu (UX-E04, Q-32): menu cây không có mục; đường dẫn cũ /present không mở trang chiếu', async ({ page }) => {

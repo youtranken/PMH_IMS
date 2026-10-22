@@ -281,7 +281,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'phải THẤY tên gọi — không biết trong két có gì thì xin quyền cũng không biết xin cái gì',
     ).toBeVisible();
     await expect(
-      page.getByText(/cần duyệt mới xem được/i),
+      // Một dòng "Cần duyệt · n Ngăn" cạnh nút xin (UX-E17).
+      page.getByText(/^Cần duyệt · \d+ Ngăn$/),
       'panel phải nói rõ tầng của người đang xem, không để họ bấm rồi bị từ chối mà không hiểu vì sao',
     ).toBeVisible();
 

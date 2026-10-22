@@ -259,14 +259,14 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     await expect(page.getByRole('progressbar')).toHaveCount(0);
 
     // Q-27: ô chưa khai ĐỨNG ĐÚNG CHỖ trong Thông số và ghi "chưa khai", không ẩn; bảo hành chỉ ở
-    // dải 4 ô (không lặp ở Thông số); nút bổ sung đếm đúng số ô trống.
+    // dải 4 ô (không lặp ở Thông số); nút bổ sung đếm đúng số ô trống. Nhà cung cấp (thẻ cột phải)
+    // và Phòng ban (dòng phụ ô Người dùng) cũng không lặp ở Thông số (PW-A04).
     const spec = page.getByRole('group', { name: 'Thông số' });
     await expect(spec.getByRole('term')).toHaveText([
-      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị',
-      'Nhà cung cấp', 'Ngày mua', 'Phòng ban', 'Ghi chú',
+      'Loại thiết bị', 'Model', 'Serial', 'Số U', 'Truy cập quản trị', 'Ngày mua', 'Ghi chú',
     ]);
-    await expect(spec.getByRole('definition').filter({ hasText: 'chưa khai' })).toHaveCount(8);
-    await expect(page.getByRole('button', { name: 'Bổ sung 8 ô còn thiếu' })).toBeVisible();
+    await expect(spec.getByRole('definition').filter({ hasText: 'chưa khai' })).toHaveCount(6);
+    await expect(page.getByRole('button', { name: 'Bổ sung 6 ô còn thiếu' })).toBeVisible();
   });
 
   /**

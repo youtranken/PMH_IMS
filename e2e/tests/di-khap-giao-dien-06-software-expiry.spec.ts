@@ -171,7 +171,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Lúc bảng có dòng thì mỗi tiêu đề sắp-xếp-được là một nút, mỗi dòng thêm một nút ba
      * chấm, và phân trang thêm ba nút nữa — không còn đếm được cái gì. Gõ một chuỗi chắc
      * chắn không khớp là dọn sạch phần đó đi, chỉ còn lại đúng bộ đồ cố định của phòng:
-     * hai nút đầu trang + bốn ô lọc, cộng nút "Xóa bộ lọc" của câu rỗng (Q-19: câu rỗng vì
+     * ba nút đầu trang + ba ô lọc + chip gỡ lọc, cộng nút "Xóa bộ lọc" của câu rỗng (Q-19: câu rỗng vì
      * lọc phải chỉ lối ra, không bắt người dùng tự dò xem mình đã lọc gì).
      */
     await search.fill(`KHONG-CO-HO-SO-NAO-E2E-${stamp}`);
@@ -183,11 +183,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // Q-22: màn Phần mềm chỉ giữ license nên không còn ô lọc Loại.
     await expect(
       main.getByRole('button'),
-      'Phòng Phần mềm lúc rỗng chỉ được có 7 nút: Xuất Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc (1) · Xóa bộ lọc',
-    ).toHaveCount(7);
+      'Phòng Phần mềm lúc rỗng chỉ được có 8 nút: Xuất Excel · Nhập từ Excel · Thêm phần mềm · Trạng thái · Nhà cung cấp · Kỳ hạn · Xóa bộ lọc (1) · Xóa bộ lọc',
+    ).toHaveCount(8);
     await expect(main.getByRole('button', { name: 'Loại hồ sơ', exact: true })).toHaveCount(0);
     for (const name of [
       'Xuất Excel',
+      // UX-E30: nhập Excel cùng sheet + cột với file Xuất của màn.
+      'Nhập từ Excel',
       'Thêm phần mềm',
       'Trạng thái',
       'Nhà cung cấp',
@@ -374,20 +376,23 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, − / + của Số ghế, ô chọn file, và hai nút chân hộp =====
+     * ===== NÚT: ô chọn, ô ngày, nút (i), +1/+2/+3 năm, − / + của Số ghế, ô chọn file, và các nút chân hộp =====
+     *
+     * Ô Bắt đầu của hồ sơ mới điền sẵn hôm nay (FM-06), nên nó mang thêm nút "Xóa ngày".
      *
      * `<input type="file">` được trình duyệt phơi ra như một NÚT mang tên của nhãn — nên nó
      * nằm trong phép đếm này chứ không nằm trong phép đếm ô gõ chữ ở trên.
      */
     await expect(
       add.getByRole('button'),
-      'Hộp thêm hồ sơ có đúng 14 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
-    ).toHaveCount(14);
+      'Hộp thêm hồ sơ có đúng 15 nút — thừa một cái là có thứ gì đó vừa lọt vào form',
+    ).toHaveCount(15);
     for (const name of [
       'Đóng hộp thoại',
       'Nhà cung cấp',
       'Giải thích: Kỳ hạn',
       'Bắt đầu',
+      'Xóa ngày',
       'Hết hạn',
       '+1 năm',
       '+2 năm',

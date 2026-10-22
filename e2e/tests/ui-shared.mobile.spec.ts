@@ -76,7 +76,7 @@ test.describe('Thanh tab — tab đang chọn luôn nằm trong khung', () => {
 });
 
 test.describe('Hộp thoại trên điện thoại', () => {
-  test('hộp nhập Excel: câu gợi ý hàng riêng, "Xác nhận ghi" không tràn và nằm dưới cùng', async ({
+  test('hộp nhập Excel: câu gợi ý hàng riêng, nút chính của bước nằm dưới cùng, "Xác nhận ghi" không tràn', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -92,6 +92,7 @@ test.describe('Hộp thoại trên điện thoại', () => {
 
     await expect(hint).toBeVisible();
     await expectInsideViewport(confirm, 'nút Xác nhận ghi');
+    await expectInsideViewport(check, 'nút Đối chiếu');
     await expectInsideViewport(hint, 'câu gợi ý');
 
     const [hintBox, checkBox, confirmBox] = await Promise.all([
@@ -101,10 +102,11 @@ test.describe('Hộp thoại trên điện thoại', () => {
     ]);
     // Câu gợi ý không bị bóp thành cột một chữ: rộng gần hết hộp và nằm TRÊN các nút.
     expect(hintBox!.width).toBeGreaterThan(VIEWPORT_WIDTH * 0.6);
-    expect(hintBox!.y + hintBox!.height).toBeLessThanOrEqual(checkBox!.y + 1);
-    // Nút chính dưới cùng, cao đủ ngón cái.
-    expect(confirmBox!.y).toBeGreaterThan(checkBox!.y);
-    expect(confirmBox!.height).toBeGreaterThanOrEqual(47);
+    expect(hintBox!.y + hintBox!.height).toBeLessThanOrEqual(Math.min(checkBox!.y, confirmBox!.y) + 1);
+    /* Nút chính theo bước (PW-A31): chưa đối chiếu thì "Đối chiếu" là nút chính — nó nằm hàng
+       riêng dưới cùng, cao đủ ngón cái; "Xác nhận ghi" (đang tắt) lên hàng trên cùng Hủy. */
+    expect(checkBox!.y).toBeGreaterThan(confirmBox!.y);
+    expect(checkBox!.height).toBeGreaterThanOrEqual(47);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 

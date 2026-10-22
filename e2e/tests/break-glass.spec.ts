@@ -123,7 +123,8 @@ test.describe('Break-glass', () => {
     await member.goto(`/devices/${deviceId}`);
     await member.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(member.getByText(`admin web E2E ${stamp}`)).toBeVisible();
-    await expect(member.getByText(/cần duyệt mới xem được/i)).toBeVisible();
+    // Một dòng "Cần duyệt · n Ngăn" cạnh nút xin (UX-E17).
+    await expect(member.getByText(/^Cần duyệt · \d+ Ngăn$/)).toBeVisible();
 
     await member.getByRole('button', { name: 'Xin mở két' }).click();
     const form = member.getByRole('dialog');

@@ -270,9 +270,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 6 nút "Cấp IP" (một trang nên không có nút lật trang, TB-15) — cộng nút "Tra" của ô tra
-     * IP/máy cấp trang, và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp"
-     * (NET-007). 3 lựa chọn lọc (dải đang dùng không có chip hồ sơ tắt, Q-15) và cặp "Danh sách
+     * phần bảng là con số biết trước: 6 nút "Cấp IP" (một trang nên không có nút lật trang, TB-15) — cộng
+     * ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp" (NET-007). Ô "Tra IP" cấp
+     * trang đã bỏ (UX-E19: trùng Tìm nhanh Ctrl K), nên nút "Tra" phải vắng hẳn. 3 lựa chọn lọc (dải đang dùng không có chip hồ sơ tắt, Q-15) và cặp "Danh sách
      * | Bản đồ" (NET-006) là radio, đếm riêng ngay dưới.
      */
     await expectHandleCounts(
@@ -282,7 +282,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Xuất Excel', 1],
         ['Thêm dải mạng', 1],
         ['Lọc theo site', siteFilter],
-        ['Tra', 1],
+        ['Tra', 0],
         [/^Thao tác với /, cards],
         ['Giấy tờ (0)', 1],
         ['Cấp IP trống kế tiếp', 1],
@@ -795,7 +795,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ]);
     // Sổ mặc định chỉ bày rule còn hiệu lực: rule đã gỡ phải bật chip mới thấy.
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái luật' });
-    await expect(chips.getByRole('button', { name: /^Đang mở/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(chips.getByRole('button', { name: /^Đang dùng/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(chips.getByRole('button', { name: /^Đã gỡ/ })).toHaveAttribute('aria-pressed', 'false');
     await expect(
       page.getByRole('searchbox', { name: 'Tìm cổng, IP, người dùng' }),
@@ -825,12 +825,16 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       table.getByRole('columnheader'),
       'mất cột "Mở cho ai" hoặc "Lý do mở" là cuốn sổ mất đúng thứ nó sinh ra để giữ',
-      /* "Chuyển tiếp" đọc ngang ngoài → trong; trạng thái là cột riêng, không dính vào số port. */
-    ).toHaveText(['Router', 'Chuyển tiếp', 'Người dùng / phòng ban', 'Lý do mở', 'Trạng thái', 'Thao tác']);
+      /* "Chuyển tiếp" đọc ngang ngoài → trong; trạng thái là cột riêng, không dính vào số port.
+         Cột đầu là ô tick chọn nhiều luật để gỡ một lượt (UX-E25), không có chữ. */
+    ).toHaveText(['', 'Router', 'Chuyển tiếp', 'Người dùng / phòng ban', 'Lý do mở', 'Trạng thái', 'Thao tác']);
+    await expect(
+      table.getByRole('columnheader').first().getByRole('checkbox', { name: 'Chọn tất cả' }),
+    ).toBeVisible();
     const row = page.getByRole('row', { name: new RegExp(esc(fixture.routerCode)) });
     await expect(row.getByText('TCP 8080')).toBeVisible();
     await expect(row.getByText(`${fixture.internalIp}:80`)).toBeVisible();
-    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+    await expect(row.getByText('Đang dùng', { exact: true })).toBeVisible();
 
     await expect(
       page.getByRole('navigation', { name: 'Trang' }),
@@ -923,12 +927,16 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       ['Cổng ngoài', 'Cổng trong', 'IP trong', 'Lý do mở', 'Ghi chú'],
       'Hộp "Thêm luật NAT"',
     );
-    /* Dải chip lọc loại dưới ô Router (Q-20): "Tất cả loại" + mỗi loại thiết bị đang dùng —
-       danh mục của máy chạy test, nên đọc tại chỗ. */
+    /* Dải chip lọc loại dưới ô Router (Q-20): "Tất cả loại" + loại đang dùng mang cờ
+       Router/Firewall; loại khác nằm sau "Mọi loại…" (PW-B09). Danh mục chưa loại nào mang cờ
+       thì bày hết, không có "Mọi loại…". Danh mục của máy chạy test, nên đọc tại chỗ. */
     const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
-      deviceTypes: { name: string; active: boolean }[];
+      deviceTypes: { name: string; active: boolean; isRouter: boolean }[];
     };
-    const typeChips = catalog.deviceTypes.filter((type) => type.active).map((type) => type.name);
+    const activeTypes = catalog.deviceTypes.filter((type) => type.active);
+    const routerTypes = activeTypes.filter((type) => type.isRouter);
+    const typeChips = (routerTypes.length > 0 ? routerTypes : activeTypes).map((type) => type.name);
+    const moreChip = typeChips.length < activeTypes.length ? ['Mọi loại…'] : [];
     await expectHandles(
       form,
       'button',
@@ -937,6 +945,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       [
         'Tất cả loại',
         ...typeChips,
+        ...moreChip,
         'Đóng hộp thoại',
         'Giải thích: Cổng ngoài',
         'Thêm',

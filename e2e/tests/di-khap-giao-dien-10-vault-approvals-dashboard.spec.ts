@@ -177,6 +177,18 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     );
   }
 
+  /** Bảy loại chủ thể của trang tổng Két sắt, theo thứ tự khai (`OWNER_GROUPS`), và nhãn chip. */
+  const KIND_KEYS = ['device', 'software', 'domains', 'maintenance', 'services', 'service_account', 'isp'];
+  const KIND_NAMES = [
+    'Thiết bị',
+    'Phần mềm',
+    'Tên miền & SSL',
+    'Hợp đồng bảo trì',
+    'Dịch vụ có hạn khác',
+    'Tài khoản dịch vụ',
+    'Đường truyền',
+  ];
+
   /** Sắp xếp một danh sách tên để so tập hợp mà không phụ thuộc thứ tự vẽ trên màn. */
   function asSet(names: string[]): string[] {
     return [...names].sort();
@@ -222,8 +234,29 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(sw.status(), 'không dựng được hồ sơ phần mềm').toBe(201);
     await stash(page, 'software', ((await sw.json()) as { id: string }).id, `key E2E ${stamp}`);
 
-    await page.goto('/vault');
     const main = page.getByRole('main');
+
+    /*
+     * ĐỦ BẢY LOẠI: ba loại chủ thể không phải phần mềm + bốn màn phần mềm của Q-22 (K-01).
+     *
+     * Chip đếm 0 không bày (PW-C25), nên ở trang trơn số chip đi theo dữ liệu gieo. Chip đang
+     * bật từ URL thì luôn hiện, dù đếm 0 — bật cả bảy qua `?kinds=` là cách hỏi "giao diện có
+     * biết đủ mọi loại API có không" mà không phải gieo một két cho từng loại. Thiếu một loại ở
+     * đây là bật lọc nào cũng làm mọi dòng của loại đó biến mất im lặng.
+     */
+    await page.goto(`/vault?kinds=${KIND_KEYS.join(',')}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Két sắt' })).toBeVisible();
+    await expect(main.getByRole('table'), 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
+    await expect
+      .poll(() => toggleButtons(main), {
+        message: 'bật cả bảy loại qua URL: đủ tám chip, "Tất cả" tắt, bảy chip loại đều bật, đúng thứ tự khai',
+      })
+      .toEqual([
+        { toggleName: 'Tất cả', enabled: false },
+        ...KIND_NAMES.map((toggleName) => ({ toggleName, enabled: true })),
+      ]);
+
+    await page.goto('/vault');
     await expect(page.getByRole('heading', { level: 1, name: 'Két sắt' })).toBeVisible();
 
     /*
@@ -238,20 +271,25 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      */
     const table = main.getByRole('table');
     await expect(table, 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
+    await expect(main.getByRole('button', { name: /^Phần mềm \d+$/ })).toBeVisible();
+    const initial = await toggleButtons(main);
+    /* Chip bày ra theo dữ liệu (PW-C25): bài đã gieo thiết bị + phần mềm nên hai chip đó chắc
+       chắn có; loại khác có hay không tùy phần còn lại của DB — nhưng thứ tự vẫn là thứ tự khai. */
     expect(
-      await toggleButtons(main),
-      'trang tổng phải có ĐÚNG bảy nút lọc — ba loại chủ thể không phải phần mềm + bốn màn phần mềm ' +
-        'của Q-22 (K-01) — lúc mới vào đều TẮT; đứng đầu là chip "Tất cả" đang bật (soát UX 10/10)',
+      initial,
+      'lúc mới vào: "Tất cả" đứng đầu và đang bật, mọi chip loại TẮT, đúng thứ tự khai, không chip lạ (soát UX 10/10)',
     ).toEqual([
       { toggleName: 'Tất cả', enabled: true },
-      { toggleName: 'Thiết bị', enabled: false },
-      { toggleName: 'Phần mềm', enabled: false },
-      { toggleName: 'Tên miền & SSL', enabled: false },
-      { toggleName: 'Hợp đồng bảo trì', enabled: false },
-      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
-      { toggleName: 'Tài khoản dịch vụ', enabled: false },
-      { toggleName: 'Đường truyền', enabled: false },
+      ...KIND_NAMES.filter((name) => initial.some((chip) => chip.toggleName === name)).map((toggleName) => ({
+        toggleName,
+        enabled: false,
+      })),
     ]);
+    expect(initial.map((chip) => chip.toggleName)).toEqual(expect.arrayContaining(['Thiết bị', 'Phần mềm']));
+    await expect(
+      main.getByRole('group', { name: 'Lọc theo loại hồ sơ' }).getByRole('button', { name: /\s0$/ }),
+      'chip đếm 0 không bày khi không ai bật nó (PW-C25)',
+    ).toHaveCount(0);
 
     const deviceRow = table.getByRole('row', { name: new RegExp(deviceCode) });
     const swRow = table.getByRole('row', { name: new RegExp(swCode) });
@@ -275,17 +313,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     // `poll`: đọc `aria-pressed` ngay sau cú bấm là đua với lượt render của React.
     await expect.poll(
       () => toggleButtons(main),
-      { message: 'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt' },
-    ).toEqual([
-      { toggleName: 'Tất cả', enabled: false },
-      { toggleName: 'Thiết bị', enabled: true },
-      { toggleName: 'Phần mềm', enabled: false },
-      { toggleName: 'Tên miền & SSL', enabled: false },
-      { toggleName: 'Hợp đồng bảo trì', enabled: false },
-      { toggleName: 'Dịch vụ có hạn khác', enabled: false },
-      { toggleName: 'Tài khoản dịch vụ', enabled: false },
-      { toggleName: 'Đường truyền', enabled: false },
-    ]);
+      { message: 'bấm "Thiết bị" thì đúng một nút được bật, các nút kia phải giữ nguyên trạng thái tắt' },
+    ).toEqual(initial.map(({ toggleName }) => ({ toggleName, enabled: toggleName === 'Thiết bị' })));
 
     const rowsAfter = await table.getByRole('row').count();
     expect(

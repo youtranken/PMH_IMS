@@ -54,10 +54,11 @@ test.beforeEach(() => {
 
 /*
  * Bài này giả lập 500, nên câu đúng của nó là câu dành cho 500 — xem `lib/load-error-text.ts`:
- * `LoadError` chọn câu theo nguyên nhân.
+ * `LoadError` chọn câu theo nguyên nhân. Người xem là SA, nên câu là bản dành cho SA: SA chính
+ * là người vận hành, bảo họ "gửi cho Super Admin" là bảo gửi cho chính mình (ST-04).
  */
 const LOAD_ERROR =
-  'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
+  'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, xem log của dịch vụ api trên máy chủ theo mốc giờ ở "Chi tiết kỹ thuật".';
 const PICKER_ERROR = 'Không tải được danh sách. Thử lại sau.';
 
 /** Bắt một đường API trả 500. Trả về hàm gỡ, để phần sau của bài chạy trên API thật. */

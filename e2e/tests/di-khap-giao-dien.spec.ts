@@ -177,8 +177,8 @@ import { fileURLToPath } from 'node:url';
  *     → Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin ở khối "toàn quyền theo vai"
  * [x] Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và chỉ có nút Từ chối (Q-30: duyệt bằng mã)
  *     → Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và chỉ có nút Từ chối
- * [x] Bảng điều khiển: SA đủ sáu khối, Member THIẾU đúng hai khối an ninh
- *     → Bảng điều khiển: SA thấy đủ sáu khối, Member thiếu đúng hai khối an ninh
+ * [x] Bảng điều khiển: mỗi vai thấy đúng khối có dữ liệu, Member không bao giờ thấy hai khối an ninh
+ *     → Bảng điều khiển: mỗi vai thấy đúng khối có dữ liệu, Member không bao giờ thấy hai khối an ninh
  * [x] Hộp Cất vào két · Nhập mã 6 số · Hiện secret
  *     → Bên trong hộp Cất vào két, hộp Nhập mã 6 số và hộp Hiện secret
  * [x] Hộp Từ chối · gán quyền hàng loạt

@@ -307,7 +307,8 @@ test.describe('SW-043 · Tên miền dùng chứng chỉ SSL, theo từng kỳ g
     });
 
     await page.goto(`/domains/${id}`);
-    await expect(page.getByText('Chưa ghi tên miền nào.')).toBeVisible();
+    // Chưa có tên miền thì ô Tên miền của dải 4 ô nói "chưa khai"; thẻ cột phải chỉ có từ hai tên (PW-A11).
+    await expect(page.getByRole('group', { name: 'Tóm tắt hồ sơ' })).toContainText(/Tên miền\s*chưa khai/);
     await page.getByRole('button', { name: 'Gia hạn', exact: true }).first().click();
     const dialog = page.getByRole('dialog', { name: `Gia hạn — ${code}` });
     await dialog
