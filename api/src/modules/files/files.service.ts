@@ -51,6 +51,8 @@ export const FILE_OWNER_TYPES = [
   // Bản scan đã ký của kỳ phiếu ISO và của từng phiếu 0206 (Q-28) — chủ thể thuộc `iso-forms`.
   'iso_period',
   'iso_incident',
+  // Ảnh riêng của loại thiết bị (PW-A18) — chủ thể là hàng `device_type` của `catalog`.
+  'device_type',
 ] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 

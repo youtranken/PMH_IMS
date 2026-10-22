@@ -12,6 +12,8 @@ export const FILE_FEATURES: Record<FileOwnerType, readonly Feature[]> = {
   software: ['assets'],
   service_account: ['assets'],
   device_model: ['assets'],
+  // Ảnh loại hiện ở bảng thiết bị (assets) và khung máy trên sơ đồ (network).
+  device_type: ['assets', 'network'],
   software_seat: ['assets'],
   subnet: ['network'],
   nat_rule: ['network'],

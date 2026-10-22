@@ -38,6 +38,7 @@ import {
 import { normalizeKey } from '../../common/import-plan';
 import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { diagramShapeDef } from './diagram-shapes';
+import { isDeviceTypeIcon } from './device-type-icons';
 import {
   CABLE_COLOR_SLOTS,
   type CabinetRecord,
@@ -86,6 +87,8 @@ export interface CatalogInput {
   isRouter?: boolean;
   /** `null` = bỏ hình, về "Thiết bị khác". */
   diagramShape?: string | null;
+  /** `null` = biểu tượng chung. */
+  icon?: string | null;
   supplies?: string | null;
   phone?: string | null;
   contact?: string | null;
@@ -315,6 +318,13 @@ export class CatalogService {
       .leftJoin(deviceTypeIconTable, eq(deviceTypeIconTable.deviceTypeId, deviceTypeTable.id))
       .where(inArray(deviceTypeTable.id, unique));
     return new Map(rows.map((r) => [r.id, { shape: r.shape, iconSvg: r.svg }]));
+  }
+
+  /** Một loại thiết bị theo id (cả loại đã ngừng dùng); id lạ / không phải uuid thì `null`. */
+  async deviceTypeById(id: string): Promise<DeviceTypeRecord | null> {
+    if (!UUID_RE.test(id)) return null;
+    const [row] = await this.db.select().from(deviceTypeTable).where(eq(deviceTypeTable.id, id));
+    return row ?? null;
   }
 
   async diagramIcon(id: string): Promise<string | null> {
@@ -706,6 +716,7 @@ export class CatalogService {
           ...(input.isRouter !== undefined ? { isRouter: input.isRouter } : {}),
           ...(input.description !== undefined ? { description: text(input.description) } : {}),
           ...(input.diagramShape !== undefined ? { diagramShape: diagramShapeOf(input.diagramShape) } : {}),
+          ...(input.icon !== undefined ? { icon: deviceTypeIconOf(input.icon) } : {}),
         };
       case 'vendor':
         return {
@@ -1012,6 +1023,15 @@ function diagramShapeOf(value: string | null): string | null {
   if (value === null || value === '') return null;
   if (!diagramShapeDef(value)) {
     throw new BadRequestException({ code: 'DIAGRAM_SHAPE_INVALID', message: 'Hình trên sơ đồ không có trong danh sách cho phép.' });
+  }
+  return value;
+}
+
+/** Biểu tượng phải nằm trong danh sách ĐÓNG mà web vẽ được (PW-A18). */
+function deviceTypeIconOf(value: string | null): string | null {
+  if (value === null || value === '') return null;
+  if (!isDeviceTypeIcon(value)) {
+    throw new BadRequestException({ code: 'DEVICE_TYPE_ICON_INVALID', message: 'Biểu tượng không có trong danh sách cho phép.' });
   }
   return value;
 }

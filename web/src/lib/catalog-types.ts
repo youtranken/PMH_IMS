@@ -49,6 +49,10 @@ export interface DeviceTypeRow {
   diagramShape?: string | null;
   /** Có biểu tượng SVG riêng; danh sách quản trị mới trả. */
   hasDiagramIcon?: boolean;
+  /** Biểu tượng trên giao diện (`ui/device-type-icon`, PW-A18); `null` = thiết bị chung. */
+  icon?: string | null;
+  /** Ảnh riêng của loại (tệp `files`), thắng biểu tượng ở khung ảnh trống của máy. */
+  photoFileId?: string | null;
 }
 
 export interface VendorRow {

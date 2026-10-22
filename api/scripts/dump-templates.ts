@@ -52,6 +52,8 @@ async function main(): Promise<void> {
       isRouter: false,
       description,
       diagramShape: null,
+      icon: null,
+      photoFileId: null,
       active: true,
       createdAt: NOW,
       updatedAt: NOW,

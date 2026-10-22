@@ -1119,3 +1119,9 @@ button.audit-open:hover {
   background: var(--surface-2);
   border: 1px dashed var(--border-2);
 }
+/* Biểu tượng loại thay ảnh (PW-A18): cao vừa ô, màu chữ phụ — đọc là "chưa có ảnh", không lẫn ảnh thật. */
+.cell-thumb-icon {
+  display: inline-flex;
+  font-size: 1.15rem;
+  color: var(--muted);
+}
