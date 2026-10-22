@@ -52,8 +52,8 @@
   padding: clamp(16px, 5vh, 56px) var(--space-7) var(--space-7);
   overflow: hidden;
 }
-/* Logo PMH + tên hệ thống, giữa cột form, trên card. Chữ "Phu My Hung" trong logo xám sáng: chỉ
-   đọc được trên nền tối — nền cột form là ảnh làm mờ + tối (luật ngay dưới). */
+/* Logo PMH + tên hệ thống, giữa cột form, trên card. Logo đứng trên tấm nền sáng riêng: chữ
+   "Phu My Hung" xám của nó chìm trên ảnh mờ của cột form (PW-C21). */
 .auth-head {
   position: relative;
   z-index: 1;
@@ -65,7 +65,13 @@
   color: var(--auth-ink);
   text-align: center;
 }
-.auth-head-logo img { display: block; width: clamp(120px, 10vw, 168px); height: auto; }
+.auth-head-logo {
+  display: block;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--r-lg);
+  background: var(--auth-logo-plate);
+}
+.auth-head-logo img { display: block; width: clamp(104px, 9vw, 148px); height: auto; }
 .auth-head-system { font-size: var(--fs-lg); font-weight: 600; }
 /* Màn rộng: nền cột form là CHÍNH ảnh bên trái, phóng to + làm mờ + tối đi — hai nửa cùng tông
    chạng vạng nên liền một khối, thay cho nền lục riêng trông như hai trang ghép. Không trải ảnh
@@ -77,7 +83,6 @@
   inset: -40px;
   z-index: 0;
   background: url('/brand/login-photo.webp') 70% 60% / cover no-repeat;
-  /* 0,32 chứ không sáng hơn: chữ "Phu My Hung" của logo là xám sáng, nền sáng hơn thì chìm (PW-C21). */
   filter: blur(28px) brightness(0.32) saturate(1.1);
   pointer-events: none;
 }
