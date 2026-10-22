@@ -737,6 +737,17 @@ export class IpAddressService {
      *
      * Hỏi theo địa chỉ CŨ (`before.address`) vì đó là địa chỉ rule đang trỏ vào.
      */
+    // Form gửi lại đủ mọi ô: lưu mà không đổi gì thì không ghi hàng, lịch sử hay nhật ký (FM-24).
+    // So bằng CHÍNH `diffRecord` của dòng lịch sử, trên địa chỉ dạng host như `values.address`.
+    if (
+      !becomesAssigned &&
+      !hasChanges(
+        diffRecord(TRACKED, { ...before, address: hostOf(before.address) }, { ...before, ...values }),
+      )
+    ) {
+      return (await this.decorate([before]))[0];
+    }
+
     const ownerMoves =
       values.deviceId !== undefined && (values.deviceId ?? null) !== (before.deviceId ?? null);
     const addressMoves = values.address !== undefined && values.address !== before.address;

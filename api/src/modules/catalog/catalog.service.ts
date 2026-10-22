@@ -420,6 +420,10 @@ export class CatalogService {
       // "Trước khi sửa" đọc LẠI trong tx, khoá hàng: hai lượt sửa chồng nhau mà dùng `before` đọc ở
       // trên thì lượt sau ghi vào lịch sử (chỉ-thêm) giá trị cũ thay vì giá trị lượt trước vừa ghi.
       const locked = await this.requireOne(entity, id, tx);
+      // Form gửi lại đủ mọi ô: lưu mà không đổi gì thì không ghi hàng, lịch sử hay nhật ký (FM-24).
+      if (Object.keys(pickChanged(locked, values)).length === 0) {
+        return locked as unknown as CatalogRecord;
+      }
       const updated = await this.updateWithin(tx, entity, id, values);
       await this.recordWithin(tx, actor, entity, id, 'updated', {
         before: pickChanged(locked, values),
