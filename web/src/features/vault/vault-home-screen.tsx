@@ -207,7 +207,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         id: 'kind',
         accessorFn: (row) => groupOf(row),
         header: t('vaultHome.ownerKind'),
-        cell: ({ row }) => <span className="badge outline">{t(groupLabelKey(groupOf(row.original)))}</span>,
+        cell: ({ row }) => <span className="tag">{t(groupLabelKey(groupOf(row.original)))}</span>,
       },
       {
         id: 'site',

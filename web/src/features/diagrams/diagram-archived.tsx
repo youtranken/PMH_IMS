@@ -102,7 +102,7 @@ export function DiagramArchivedSection({
               <span className="dpanel-row-text">
                 <strong>
                   {node.name}{' '}
-                  <span className={node.kind === 'presentation' ? 'badge brand' : 'badge outline'}>
+                  <span className="tag">
                     {node.kind === 'presentation' ? t('diagrams.presentation.badge') : t(NODE_TYPE_KEY[node.nodeType])}
                   </span>
                 </strong>

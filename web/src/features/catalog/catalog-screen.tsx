@@ -311,7 +311,7 @@ const ENTITY_COLUMNS: Record<
       cell: ({ row }) => {
         const protocol = (row.original as ServicePortRow).protocol;
         return (
-          <span className="badge muted plain">
+          <span className="tag">
             {protocol === 'both' ? t('catalog.protocolBoth') : protocol.toUpperCase()}
           </span>
         );

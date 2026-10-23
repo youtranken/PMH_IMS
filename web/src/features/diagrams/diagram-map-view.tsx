@@ -200,10 +200,10 @@ export function DiagramListView({ nodes, selected, filter, onSelect }: Pick<View
         {node.name}
       </button>
       {node.kind === 'presentation' ? (
-        <span className="badge brand">{t('diagrams.presentation.badge')}</span>
+        <span className="tag">{t('diagrams.presentation.badge')}</span>
       ) : (
         <>
-          <span className="badge outline">{t(NODE_TYPE_KEY[node.nodeType])}</span>
+          <span className="tag">{t(NODE_TYPE_KEY[node.nodeType])}</span>
           <span className={BADGE_OF[tileTone(node)]}>{statusText(node, t, true)}</span>
         </>
       )}

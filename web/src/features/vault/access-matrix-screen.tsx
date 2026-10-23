@@ -869,7 +869,7 @@ function RoleHolders({ accounts }: { accounts: AccountRow[] }) {
         {accounts.map((account) => (
           <li key={account.id}>
             <b>{account.fullName}</b>{' '}
-            <span className="badge plain brand">
+            <span className="tag">
               {t(account.role === 'sa' ? 'accounts.roleSa' : 'accounts.roleAdmin')}
             </span>{' '}
             <span className="muted mono">{account.email}</span>

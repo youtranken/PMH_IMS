@@ -98,7 +98,7 @@ export function IncidentsScreen({ me }: { me: Me }) {
         header: t('iso.incidents.source'),
         cell: ({ row }) => <SourceCell incident={row.original} />,
       },
-      { id: 'kind', header: t('iso.incidents.kind'), cell: ({ row }) => <span className="badge outline">{KIND_LABEL[row.original.kind]}</span> },
+      { id: 'kind', header: t('iso.incidents.kind'), cell: ({ row }) => <span className="tag">{KIND_LABEL[row.original.kind]}</span> },
       {
         id: 'range',
         header: t('iso.incidents.range'),

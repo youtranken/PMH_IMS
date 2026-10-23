@@ -153,7 +153,7 @@ describe('Trang tổng Két sắt — theo màn của hồ sơ (K-01, K-02)', ()
     expect(within(table).queryByText('LIC-E2E-01')).toBeNull();
     const ssl = within(table).getByRole('link', { name: 'SSL-E2E-01' });
     expect(ssl).toHaveAttribute('href', '/domains/ssl');
-    expect(within(ssl.closest('tr') as HTMLElement).getByText('Tên miền & SSL')).toHaveClass('badge', 'outline');
+    expect(within(ssl.closest('tr') as HTMLElement).getByText('Tên miền & SSL')).toHaveClass('tag');
   });
 
   // PW-C25: 8 chip mà 7 chip đếm 0 — trên điện thoại phải cuộn ngang qua chip rỗng.
