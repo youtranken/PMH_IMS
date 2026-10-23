@@ -196,6 +196,29 @@ export function TableWrap({ children }: { children: ReactNode }) {
 }
 
 /**
+ * TB-19: thẻ dọc trên điện thoại (`.table-stack td[data-empty]`) ẩn ô chưa khai — thẻ 7 dòng toàn
+ * "—" thành 2–3 dòng. Ô là hàm render nên bảng không biết trước nó ra gì; đọc chữ đã vẽ thay vì
+ * bắt từng màn tự gắn cờ. Theo dõi bằng MutationObserver vì ô tự vẽ lại (state riêng) mà bảng
+ * không vẽ lại. Ô có nút / link / ô nhập / hình thì không trống dù không có chữ.
+ */
+const EMPTY_CELL_TEXT = new Set(['', '—']);
+function markEmptyCells(table: HTMLTableElement): void {
+  for (const cell of Array.from(table.querySelectorAll<HTMLTableCellElement>('tbody > tr > td[data-label]'))) {
+    const empty =
+      EMPTY_CELL_TEXT.has(cell.textContent?.trim() ?? '') &&
+      cell.querySelector('button, a, input, select, textarea, img, svg') === null;
+    cell.toggleAttribute('data-empty', empty);
+  }
+}
+function watchEmptyCells(table: HTMLTableElement | null): (() => void) | undefined {
+  if (!table) return undefined;
+  markEmptyCells(table);
+  const observer = new MutationObserver(() => markEmptyCells(table));
+  observer.observe(table, { childList: true, subtree: true, characterData: true });
+  return () => observer.disconnect();
+}
+
+/**
  * Bảng dùng chung (design-system, review nguyên tắc #3): sort theo cột (asc→desc→bỏ),
  * search toàn bảng, trạng thái rỗng — headless TanStack Table, GIỮ nguyên CSS `.table`.
  * Thay các <table> tự viết không sort được ("0 bảng sort được" — review mục 5.1).
@@ -321,6 +344,7 @@ export function DataTable<T>({
       )}
       <TableWrap>
         <table
+          ref={watchEmptyCells}
           className={[
             'table',
             tableClassName,
