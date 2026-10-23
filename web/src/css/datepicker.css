@@ -22,7 +22,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  /* Khớp chiều cao với <input>/<Select> (base 0.55rem) để cùng hàng không so le. */
+  /* Khớp chiều cao với <input>/<Select> để cùng hàng không so le. */
   padding: var(--space-4) var(--space-5);
   border: 1px solid var(--field-border);
   background: var(--surface);

@@ -140,8 +140,8 @@
   --r-xl: 12px;
   --radius-pill: 999px;
 
-  /* Thang cách (rem, root 14px) + cỡ chữ + độ đậm. Mọi khoảng cách đi theo các bậc này, không
-     viết giá trị lẻ. Font-weight CHỈ 3 bậc chuẩn. */
+  /* Thang cách (px) + cỡ chữ + độ đậm. Mọi khoảng cách đi theo các bậc này, không viết giá trị
+     lẻ. Độ đậm chỉ qua 4 token --fw-* (design-scale.test). */
   --space-1: 4px;
   --space-2: 6px;
   --space-3: 7px;
@@ -152,7 +152,7 @@
   --space-8: 16px;
   --space-9: 18px;
   --space-10: 21px;
-  /* Ba nấc trên. Dừng ở 1.5rem (root 14px → 21px) thì KHÔNG có khoảng nào để tách KHU với
+  /* Ba nấc trên. Dừng ở --space-10 (21px) thì KHÔNG có khoảng nào để tách KHU với
      KHU, mọi thứ trôi thành một khối. Dùng: 11 = tách hai khối trong một khu, 12 = tách khu
      với khu (và khe giữa hai cột), 13 = đệm đáy trang. */
   --space-11: 32px;

@@ -55,8 +55,8 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin: 0;
-  /* `--fs-3xl` (27,3px), KHÔNG phải `--fs-xl` (18,2px): với `--fs-xl` thì mã hồ sơ ở trang
-     CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH (`.page-header h1` dùng `--fs-2xl` = 21px), tức
+  /* `--fs-3xl` (28px), KHÔNG phải `--fs-xl` (18px): với `--fs-xl` thì mã hồ sơ ở trang
+     CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH (`.page-header h1` dùng `--fs-2xl` = 22px), tức
      cấp bậc ngược. */
   font-size: var(--fs-3xl);
   font-weight: var(--fw-bold);
@@ -647,10 +647,10 @@
 }
 /* Dải nút (`.segmented`) thì KHÔNG xuống dòng: nó tự cuộn ngang trong khung, có bóng ở mép
    (form-layout.css) — gãy hàng thì một nút lạc xuống dòng dưới. Cao bằng ô chọn / chip bên cạnh
-   (38px): thấp hơn thì cả hàng so le. */
+   (`--h-ctl`): thấp hơn thì cả hàng so le. */
 .filter-bar .segmented {
   flex-wrap: nowrap;
-  min-height: 2.375rem;
+  min-height: var(--h-ctl);
   align-items: center;
 }
 /* Chip chọn nhiều có `wrap` (lọc loại thiết bị) vẫn xuống dòng như cũ. */

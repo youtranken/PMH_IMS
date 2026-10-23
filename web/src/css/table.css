@@ -125,8 +125,8 @@ table.table tbody tr.row-danger td:first-child {
   box-shadow: inset 3px 0 0 var(--danger);
 }
 /*
- * Huy hiệu ĐỎ trên dòng ĐỎ: nền huy hiệu trùng nền dòng nên nó tan vào dòng, nhất là ở chế độ
- * tối (đỏ trên đỏ sẫm). Trả huy hiệu về nền mặt bảng + viền đỏ để nó vẫn là một "viên" đọc được.
+ * Huy hiệu đỏ ở dòng quá hạn: nền mặt bảng + viền đỏ. Vạch trái đã báo đỏ; viên tô đỏ đặc ở mọi
+ * dòng quá hạn thì cột trạng thái lại thành một mảng đỏ (TB-11).
  */
 table.table tbody tr.row-danger .badge.danger,
 table.table tbody tr.overdue .badge.danger,
@@ -892,8 +892,8 @@ table.table .col-sticky-end::after {
     display: block;
   }
 }
-/* Mũi tên của cột sắp được nhưng CHƯA sắp: ẩn, hiện mờ khi rê chuột/focus — để cột sắp được
-   không trông y hệt cột không sắp được. */
+/* Mũi tên của cột sắp được nhưng CHƯA sắp: hiện mờ sẵn, rõ lên khi rê chuột/focus — để cột sắp
+   được không trông y hệt cột không sắp được. */
 table.table thead th .sort-arrow.idle {
   /* Hiện mờ sẵn (TB-12): ẩn hẳn thì không ai biết cột nào sắp được, màn cảm ứng không có hover. */
   opacity: 0.35;
