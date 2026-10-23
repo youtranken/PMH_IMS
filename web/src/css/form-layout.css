@@ -384,8 +384,8 @@ input[list]::-webkit-calendar-picker-indicator {
 }
 .fsel-trigger:focus-visible {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--ring);
+  border-color: var(--focus);
+  box-shadow: var(--ring-field);
 }
 .fsel-trigger:disabled {
   background: var(--surface-2);

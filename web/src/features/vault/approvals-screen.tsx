@@ -242,7 +242,8 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   const items = focused
     ? [focused, ...loaded.filter((row) => row !== focused)]
     : loaded;
-  // Yêu cầu trong thư đã được người khác xử lý: nói ra, đừng để người duyệt tưởng link hỏng.
+  // Yêu cầu trong thư không còn chờ (đã duyệt / từ chối / rút / hết hạn): nói ra, đừng để người
+  // duyệt tưởng link hỏng.
   const focusGone =
     Boolean(focusId) && tab === "pending" && pending.isSuccess && !focused;
   // Hàng chờ duyệt tự giới hạn (mỗi người một yêu cầu treo trên một đối tượng) nên không phân trang.

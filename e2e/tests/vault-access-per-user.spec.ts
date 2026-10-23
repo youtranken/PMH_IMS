@@ -20,7 +20,7 @@ test.beforeEach(() => {
 
 /**
  * Quyền két theo NGƯỜI (mô hình chính): trái danh sách Thành viên, phải thẻ quyền của người đang
- * chọn; "Gán quyền khác" chọn nhiều nhóm một lượt. SA/Admin không thành dòng trống.
+ * chọn; "Gán quyền" chọn nhiều nhóm một lượt. SA/Admin không thành dòng trống.
  */
 test.describe('Quyền két sắt — theo người', () => {
   test('?user= mở sẵn người đó; thêm HAI nhóm một lượt; chip hiện ngay, số quyền cập nhật', async ({
@@ -34,7 +34,7 @@ test.describe('Quyền két sắt — theo người', () => {
     await expect(page.getByRole('heading', { name: fullName })).toBeVisible();
     await expect(page.getByText(/Chưa có quyền nào/)).toBeVisible();
 
-    await page.getByRole('button', { name: 'Gán quyền khác' }).click();
+    await page.getByRole('button', { name: 'Gán quyền', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('checkbox', { name: 'Phần mềm: License' }).check();
     await dialog.getByRole('checkbox', { name: 'Tên miền & SSL: Chứng chỉ SSL' }).check();
@@ -56,7 +56,7 @@ test.describe('Quyền két sắt — theo người', () => {
     await stepUpViaApi(page, await firstLogin(page, E2E_SA));
     const memberId = sql(`SELECT id FROM users WHERE email = '${E2E_MEMBER.email}'`);
     await page.goto(`/admin/vault-access?user=${memberId}`);
-    await page.getByRole('button', { name: 'Gán quyền khác' }).click();
+    await page.getByRole('button', { name: 'Gán quyền', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('dialog').getByRole('alert')).toHaveText('Chọn ít nhất một phạm vi.');
     expect(

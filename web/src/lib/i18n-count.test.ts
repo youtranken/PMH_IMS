@@ -28,6 +28,15 @@ describe('i18n định dạng số đếm', () => {
     );
   });
 
+  it('mọi số đếm trong cùng một câu cùng một kiểu (không "1.250 mục: 1100 đã quá hạn")', () => {
+    expect(i18n.t('digest.previewSummary', { total: 1250, expired: 1100, upcoming: 150 })).toBe(
+      'Nếu gửi lúc này, thư có 1.250 mục: 1.100 đã quá hạn, 150 sắp hết hạn.',
+    );
+    expect(i18n.t('zz.missing', { defaultValue: '{{issues}} · {{divisions}} · {{missed}}', issues: 4200, divisions: 12, missed: 1001 })).toBe(
+      '4.200 · 12 · 1.001',
+    );
+  });
+
   it('năm, số phiên bản, cổng, số thứ tự giữ nguyên', () => {
     expect(
       i18n.t('zz.missing', {

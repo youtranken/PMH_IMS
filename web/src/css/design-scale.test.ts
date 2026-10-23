@@ -199,7 +199,7 @@ describe('Độ đậm chỉ qua token', () => {
  * Vòng 1px quanh một nút, hay outline màu --primary (3,4:1) thì mắt không bắt được.
  */
 describe('Vòng focus một kiểu nhìn', () => {
-  const FIELD = /(?:input|select|textarea|\.inp|-search)(?::[\w-]+(?:\([^)]*\))?)*$/;
+  const FIELD = /(?:input|select|textarea|\.inp|-search|\.fsel-trigger|\.dp-trigger)(?::[\w-]+(?:\([^)]*\))?)*$/;
   const focusRules = () =>
     readdirSync(__dirname)
       .filter((name) => name.endsWith('.css'))

@@ -3997,7 +3997,7 @@ export default {
     memberList: 'Danh sách thành viên',
     ruleCount: '{{count}} Quyền',
     backToList: 'Danh sách thành viên',
-    addRules: 'Gán quyền khác',
+    addRules: 'Gán quyền',
     /* Chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
     copyFrom: 'Chép quyền từ…',
     copyTitle: 'Chép quyền két — {{member}}',
@@ -4123,7 +4123,7 @@ export default {
     stepUpRevoke: 'Nhập mã 6 số để thu hồi quyền mở két của {{name}}.',
     activeGroup: 'Đang có hiệu lực ({{count}})',
     focusGone:
-      'Yêu cầu trong thư không còn chờ mã — người xin đã nhập mã, đã rút hoặc yêu cầu đã hết hạn. Xem tab Nhật ký.',
+      'Yêu cầu trong thư không còn chờ mã — đã có người duyệt hoặc từ chối, người xin đã rút, hoặc yêu cầu đã hết hạn. Xem tab Nhật ký.',
     /* Đối tượng đọc được thay cho uuid: người duyệt lúc 2 giờ sáng phải biết "máy nào". */
     subjectGone: 'Hồ sơ đã bị xóa',
     secretCount: '{{count}} Ngăn két',

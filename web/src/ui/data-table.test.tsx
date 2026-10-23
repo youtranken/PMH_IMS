@@ -252,4 +252,45 @@ describe('DataTable — ô trống tự mang data-empty', () => {
     view.rerender(<DataTable data={[{ id: 'A1', site: 'HCM' }]} columns={SPOT_COLUMNS} emptyText="—" stackOnMobile />);
     await waitFor(() => expect(cellOf('Site')).not.toHaveAttribute('data-empty'));
   });
+
+  it('ô chỉ có dấu không chữ mà có tên (chấm trạng thái mang title / aria-label) không trống', async () => {
+    const columns: ColumnDef<Spot>[] = [
+      { accessorKey: 'id', header: 'Mã' },
+      { id: 'dot', header: 'Trạng thái', cell: () => <span className="dot" title="Đang chạy" /> },
+      { id: 'swatch', header: 'Màu', cell: () => <i aria-label="Xanh" /> },
+    ];
+    renderWithI18n(<DataTable data={[{ id: 'A1', site: null }]} columns={columns} emptyText="—" stackOnMobile />);
+    await waitFor(() => expect(cellOf('Mã')).toBeInTheDocument());
+    expect(cellOf('Trạng thái')).not.toHaveAttribute('data-empty');
+    expect(cellOf('Màu')).not.toHaveAttribute('data-empty');
+  });
+
+  it('không đụng ô của bảng lồng trong ô (màn tự quyết data-empty của bảng con)', async () => {
+    const columns: ColumnDef<Spot>[] = [
+      { accessorKey: 'id', header: 'Mã' },
+      {
+        id: 'inner',
+        header: 'Bảng con',
+        cell: () => (
+          <table>
+            <tbody>
+              <tr>
+                <td data-label="Con" data-testid="inner-filled">
+                  —
+                </td>
+                <td data-label="Con2" data-testid="inner-empty" data-empty="">
+                  có chữ
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ),
+      },
+    ];
+    renderWithI18n(<DataTable data={[{ id: 'A1', site: null }]} columns={columns} emptyText="—" stackOnMobile />);
+    await waitFor(() => expect(cellOf('Mã')).toBeInTheDocument());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByTestId('inner-filled')).not.toHaveAttribute('data-empty');
+    expect(screen.getByTestId('inner-empty')).toHaveAttribute('data-empty');
+  });
 });

@@ -192,9 +192,9 @@ describe('Quyền xem két sắt — theo người', () => {
     expect(switchCell.closest('td')).not.toHaveClass('access-group-start');
   });
 
-  it('"Gán quyền khác" chỉ liệt kê nhóm người đó CHƯA có', async () => {
+  it('"Gán quyền" chỉ liệt kê nhóm người đó CHƯA có', async () => {
     renderAt('/admin/vault-access?user=u-binh');
-    await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền khác' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Thiết bị loại Switch');
     expect(dialog).not.toHaveTextContent('Chứng chỉ SSL');
@@ -383,7 +383,7 @@ describe('Quyền xem két sắt — nhiều nhóm', () => {
 
   it('hộp gán quyền: họ có nhiều nhóm chia 2 cột, không cuộn trong ô nhỏ', async () => {
     renderMany('/admin/vault-access?user=u-an', []);
-    await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền khác' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Gán quyền' }));
     const dialog = await screen.findByRole('dialog');
     const types = within(dialog).getByRole('checkbox', { name: 'Thiết bị loại Switch' }).closest('ul');
     expect(types).toHaveClass('pick-list', 'cols-2');

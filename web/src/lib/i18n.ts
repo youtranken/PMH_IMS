@@ -8,7 +8,11 @@ import vi from '@/locales/vi';
  * số phiên bản, cổng, số thứ tự ghế là mã — "2.026" hay "cổng 8.080" là sai. Số nhiều của i18next
  * đọc `count` gốc trong options, không đọc chuỗi đã định dạng, nên không lệch.
  */
-const COUNT_KEYS = new Set(['count', 'total', 'used', 'free', 'days', 'done', 'seats', 'created', 'updated']);
+const COUNT_KEYS = new Set([
+  'count', 'total', 'used', 'free', 'days', 'done', 'seats', 'created', 'updated',
+  'expired', 'upcoming', 'moved', 'reattached', 'hosts', 'owners', 'secrets', 'shown',
+  'people', 'rules', 'scopes', 'adds', 'changes', 'issues', 'divisions', 'missed', 'signed',
+]);
 
 /**
  * Module formatter riêng chứ không `interpolation.format`: i18next luôn gắn Formatter mặc định đè

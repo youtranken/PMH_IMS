@@ -45,8 +45,8 @@
 }
 .dp-trigger:focus-visible {
   outline: none;
-  box-shadow: var(--ring);
-  border-color: var(--primary);
+  box-shadow: var(--ring-field);
+  border-color: var(--focus);
 }
 .dp-trigger > svg {
   width: 1.05rem;
