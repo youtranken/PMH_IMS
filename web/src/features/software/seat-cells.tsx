@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@/lib/format';
+import { formatDate, orDash } from '@/lib/format';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { PerpetualBadge } from '@/ui/perpetual-badge';
 import type { LicenseModel, SeatTerms } from './software-types';
@@ -43,5 +43,5 @@ export function SeatEndCell({
       </span>
     );
   }
-  return <span className="muted">—</span>;
+  return orDash(null);
 }

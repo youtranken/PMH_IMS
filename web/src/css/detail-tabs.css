@@ -29,7 +29,7 @@
   border-radius: 999px;
   background: var(--surface);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   text-decoration: none;
 }
 .crumbs a.crumb-back:hover {
@@ -55,15 +55,15 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin: 0;
-  /* `--fs-3xl` (27,3px), KHÔNG phải `--fs-xl` (18,2px): với `--fs-xl` thì mã hồ sơ ở trang
-     CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH (`.page-header h1` dùng `--fs-2xl` = 21px), tức
+  /* `--fs-3xl` (28px), KHÔNG phải `--fs-xl` (18px): với `--fs-xl` thì mã hồ sơ ở trang
+     CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH (`.page-header h1` dùng `--fs-2xl` = 22px), tức
      cấp bậc ngược. */
   font-size: var(--fs-3xl);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
-.detail-name { font-family: var(--font); font-size: var(--fs-md); font-weight: 500; color: var(--ink-2); }
+.detail-name { font-family: var(--font); font-size: var(--fs-md); font-weight: var(--fw-medium); color: var(--ink-2); }
 .detail-subline {
   display: flex;
   align-items: center;
@@ -217,12 +217,12 @@
 }
 .stat-k {
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);
 }
-.stat-v { font-weight: 600; overflow-wrap: anywhere; }
+.stat-v { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .stat-note { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
 
 /* --- Bố cục hai cột của trang chi tiết (ui/detail-layout.tsx) ----------------
@@ -417,7 +417,7 @@
 }
 .data-item dt {
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -430,7 +430,7 @@
      (12,3px) của thẻ cha, và hai cột trên cùng một trang, cùng loại thông tin "nhãn + giá
      trị", lại đọc ra hai cỡ chữ khác nhau. */
   font-size: var(--fs-md);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   overflow-wrap: anywhere;
 }
 /* --- Tabs (chi tiết tài sản) ---------------------------------------------- */
@@ -555,7 +555,7 @@
   background: none;
   border-radius: 0;
   color: var(--ink-3);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   margin-bottom: -1px;
 }
 .tab:hover:not(.active) {
@@ -647,10 +647,10 @@
 }
 /* Dải nút (`.segmented`) thì KHÔNG xuống dòng: nó tự cuộn ngang trong khung, có bóng ở mép
    (form-layout.css) — gãy hàng thì một nút lạc xuống dòng dưới. Cao bằng ô chọn / chip bên cạnh
-   (38px): thấp hơn thì cả hàng so le. */
+   (`--h-ctl`): thấp hơn thì cả hàng so le. */
 .filter-bar .segmented {
   flex-wrap: nowrap;
-  min-height: 2.375rem;
+  min-height: var(--h-ctl);
   align-items: center;
 }
 /* Chip chọn nhiều có `wrap` (lọc loại thiết bị) vẫn xuống dòng như cũ. */
@@ -816,7 +816,7 @@ input.search {
     justify-self: start;
     text-align: left;
     content: attr(data-label);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--ink-2);
     /* Nhãn là chữ thường của giao diện, KHÔNG thừa hưởng font của ô: ô mã/cổng/VLAN mang
        `.mono` 12px nên nhãn của chúng thành mono nhỏ, lệch hẳn các nhãn khác. */
@@ -999,7 +999,7 @@ html[data-motion='off'] .skeleton {
 .fact-v[data-blank='true'],
 .spec-row dd[data-blank='true'] {
   color: var(--ink-3);
-  font-weight: 400;
+  font-weight: var(--fw-regular);
   font-style: italic;
 }
 .fact-note { font-size: var(--fs-sm); color: var(--ink-2); }
@@ -1035,7 +1035,7 @@ html[data-motion='off'] .skeleton {
   min-width: 0;
 }
 .spec-row dt { color: var(--ink-2); font-size: var(--fs-sm); }
-.spec-row dd { margin: 0; color: var(--ink); font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
+.spec-row dd { margin: 0; color: var(--ink); font-weight: var(--fw-medium); overflow-wrap: anywhere; min-width: 0; }
 @media (max-width: 680px) {
   .spec-list { grid-template-columns: minmax(0, 1fr); }
 }

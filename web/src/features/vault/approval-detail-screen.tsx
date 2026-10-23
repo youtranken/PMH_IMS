@@ -156,7 +156,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
                   {row.requesterRole ? (
                     <>
                       {' '}
-                      <span className="badge plain">{t(ROLE_LABEL[row.requesterRole] ?? row.requesterRole)}</span>
+                      <span className="tag">{t(ROLE_LABEL[row.requesterRole] ?? row.requesterRole)}</span>
                     </>
                   ) : null}
                   {/* Chỉ con số: người duyệt nhận ra người xin quá thường mà không phải mở nhật ký. */}

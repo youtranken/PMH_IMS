@@ -65,7 +65,7 @@ export function ServicePortPicker({
           <span className="svc-name" title={service.name}>
             {service.name}
           </span>
-          <span className="badge muted plain">
+          <span className="tag">
             {service.protocol === 'both'
               ? t('catalog.protocolBoth')
               : service.protocol.toUpperCase()}

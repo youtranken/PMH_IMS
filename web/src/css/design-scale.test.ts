@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -58,6 +58,23 @@ describe('Chiều cao control: cùng hàng cùng cao', () => {
     const touch = tokens.match(/@media[^{]*pointer:\s*coarse[^{]*\{\s*:root\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(px(tokenValue(touch, 'h-ctl'))).toBeGreaterThanOrEqual(44);
     expect(px(tokenValue(touch, 'fs-input'))).toBeGreaterThanOrEqual(16);
+  });
+
+  // DS-05: token đúng mà một luật riêng đặt font-size cứng cho ô nhập là ô đó vẫn làm iOS phóng to.
+  it('không luật nào đè cỡ chữ của ô nhập / ô chọn bằng giá trị khác --fs-input', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(__dirname).filter((name) => name.endsWith('.css'))) {
+      const source = css(file).replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const [, selector, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const size = /font-size\s*:\s*([^;]+)/.exec(body)?.[1].trim();
+        if (!size || size === 'inherit' || size.includes('--fs-input')) continue;
+        const targets = selector.split(',').map((part) => part.trim());
+        if (targets.some((part) => /(?:^|[\s>])(?:input|select|textarea|\.inp)(?:[.:[][^\s]*)?$/.test(part))) {
+          offenders.push(`${file}: ${selector.trim()} → ${size}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('ô nhập, ô chọn và nút dùng chung --h-ctl', () => {
@@ -132,5 +149,86 @@ describe('Trạng thái rỗng trong khung bảng', () => {
     const body = css('shared-kit.css').match(/\.table-wrap \.empty\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(body).toMatch(/border:\s*none/);
     expect(body).toMatch(/background:\s*transparent/);
+  });
+});
+
+/**
+ * DS-18: tiêu đề thẻ / khối nhỏ hơn chữ thường (13px dưới thân 14px) đọc như chú thích, mắt
+ * không bám được vào khối. Nhãn nhóm in hoa (kicker) là kiểu khác, được phép nhỏ.
+ */
+describe('Tiêu đề không nhỏ hơn chữ thân', () => {
+  it('h1–h6 và .dash-slim-title không dùng cỡ dưới --fs-md, trừ nhãn in hoa', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(__dirname).filter((name) => name.endsWith('.css'))) {
+      const source = css(file).replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const [, selector, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const size = /font-size\s*:\s*([^;]+)/.exec(body)?.[1] ?? '';
+        if (!/--fs-(2xs|xs|sm)\b/.test(size) || /text-transform\s*:\s*uppercase/.test(body)) continue;
+        const parts = selector.split(',').map((part) => part.trim());
+        if (parts.some((part) => /(?:^|[\s>])h[1-6]$/.test(part) || /\.dash-slim-title$/.test(part))) {
+          offenders.push(`${file}: ${selector.trim()} → ${size.trim()}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * DS-29: độ đậm chỉ 4 bậc qua token (400 / 500 / 600 / 700). Số viết tay trôi dần (800 ở lịch,
+ * nhãn 500 cạnh nhãn 600) và đổi thang thì phải sửa trăm chỗ.
+ */
+describe('Độ đậm chỉ qua token', () => {
+  it('ngoài @font-face, font-weight là var(--fw-*) hoặc inherit', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(__dirname).filter((name) => name.endsWith('.css'))) {
+      const source = css(file)
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/@font-face\s*\{[^}]*\}/g, '');
+      for (const [, value] of source.matchAll(/font-weight\s*:\s*([^;}]+)/g)) {
+        if (!/^(var\(--fw-[a-z]+\)|inherit)$/.test(value.trim())) offenders.push(`${file}: ${value.trim()}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * DS-04: vòng focus một kiểu nhìn. Nút / link / thẻ: dày 2px màu --focus (outline, hoặc --ring
+ * cùng độ dày ở chỗ outline bị cắt). Ô nhập: viền đổi màu + --ring-field 1px, cộng lại cũng 2px.
+ * Vòng 1px quanh một nút, hay outline màu --primary (3,4:1) thì mắt không bắt được.
+ */
+describe('Vòng focus một kiểu nhìn', () => {
+  const FIELD = /(?:input|select|textarea|\.inp|-search|\.fsel-trigger|\.dp-trigger)(?::[\w-]+(?:\([^)]*\))?)*$/;
+  const focusRules = () =>
+    readdirSync(__dirname)
+      .filter((name) => name.endsWith('.css'))
+      .flatMap((file) =>
+        [...css(file).replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+          .filter(([, selector]) => /:focus/.test(selector))
+          .map(([, selector, body]) => ({ file, selector: selector.trim(), body })),
+      );
+
+  it('--ring dày 2px, --ring-field 1px, đều màu --focus', () => {
+    expect(tokenValue(rootBlock(), 'ring')).toBe('0 0 0 2px var(--focus)');
+    expect(tokenValue(rootBlock(), 'ring-field')).toBe('0 0 0 1px var(--focus)');
+    expect(tokenValue(rootBlock(), 'ring-inset')).toBe('inset 0 0 0 2px var(--focus)');
+  });
+
+  it('outline của focus chỉ dùng màu --focus', () => {
+    const bad = focusRules()
+      .filter(({ body }) => /outline\s*:\s*\d/.test(body) && !/outline\s*:[^;]*var\(--focus\)/.test(body))
+      .map(({ file, selector }) => `${file}: ${selector}`);
+    expect(bad).toEqual([]);
+  });
+
+  it('ô nhập dùng --ring-field, nút / thẻ không dùng', () => {
+    const bad = focusRules()
+      .filter(({ selector, body }) => {
+        const field = selector.split(',').every((part) => FIELD.test(part.trim().replace(/:focus(-visible)?$/, '')));
+        return field ? /var\(--ring\)/.test(body) : /--ring-field/.test(body);
+      })
+      .map(({ file, selector }) => `${file}: ${selector}`);
+    expect(bad).toEqual([]);
   });
 });

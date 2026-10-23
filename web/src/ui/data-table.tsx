@@ -196,6 +196,50 @@ export function TableWrap({ children }: { children: ReactNode }) {
 }
 
 /**
+ * TB-19: thẻ dọc trên điện thoại (`.table-stack td[data-empty]`) ẩn ô chưa khai — thẻ 7 dòng toàn
+ * "—" thành 2–3 dòng. Ô là hàm render nên bảng không biết trước nó ra gì; đọc chữ đã vẽ thay vì
+ * bắt từng màn tự gắn cờ. Theo dõi bằng MutationObserver vì ô tự vẽ lại (state riêng) mà bảng
+ * không vẽ lại. Ô có nút / link / ô nhập / hình, hay dấu không chữ có tên (`title`, `aria-label`)
+ * thì không trống.
+ *
+ * Chỉ ô của CHÍNH bảng này (`:scope >`): bảng con trong hàng mở rộng là của màn, màn tự quyết
+ * `data-empty` của nó. Đổi trong một ô thì chỉ đọc lại ô đó — ô đếm ngược đổi chữ mỗi phút không
+ * được kéo theo quét cả trang.
+ */
+const EMPTY_CELL_TEXT = new Set(['', '—']);
+const CELL_CONTENT = 'button, a, input, select, textarea, img, svg, [title], [aria-label], [role="img"]';
+const OWN_CELLS = ':scope > tbody > tr > td[data-label]';
+function markCell(cell: HTMLTableCellElement): void {
+  const empty = EMPTY_CELL_TEXT.has(cell.textContent?.trim() ?? '') && cell.querySelector(CELL_CONTENT) === null;
+  cell.toggleAttribute('data-empty', empty);
+}
+/** Ô của chính `table` chứa `node`, hoặc null khi `node` nằm ngoài ô (tbody, tr) hay ở bảng con. */
+function ownCellOf(table: HTMLTableElement, node: Node): HTMLTableCellElement | null {
+  let cell = (node instanceof Element ? node : node.parentElement)?.closest('td') ?? null;
+  while (cell && cell.parentElement?.parentElement?.parentElement !== table) {
+    cell = cell.parentElement?.closest('td') ?? null;
+  }
+  return cell?.hasAttribute('data-label') ? cell : null;
+}
+function watchEmptyCells(table: HTMLTableElement | null): (() => void) | undefined {
+  if (!table) return undefined;
+  const markAll = () => table.querySelectorAll<HTMLTableCellElement>(OWN_CELLS).forEach(markCell);
+  markAll();
+  const observer = new MutationObserver((records) => {
+    const cells = new Set<HTMLTableCellElement>();
+    for (const record of records) {
+      const cell = ownCellOf(table, record.target);
+      // Thêm / bớt hàng (đổi trang, lọc): mutation nằm ngoài ô → đọc lại cả bảng một lần.
+      if (!cell && record.type === 'childList') return markAll();
+      if (cell) cells.add(cell);
+    }
+    cells.forEach(markCell);
+  });
+  observer.observe(table, { childList: true, subtree: true, characterData: true });
+  return () => observer.disconnect();
+}
+
+/**
  * Bảng dùng chung (design-system, review nguyên tắc #3): sort theo cột (asc→desc→bỏ),
  * search toàn bảng, trạng thái rỗng — headless TanStack Table, GIỮ nguyên CSS `.table`.
  * Thay các <table> tự viết không sort được ("0 bảng sort được" — review mục 5.1).
@@ -321,6 +365,7 @@ export function DataTable<T>({
       )}
       <TableWrap>
         <table
+          ref={watchEmptyCells}
           className={[
             'table',
             tableClassName,

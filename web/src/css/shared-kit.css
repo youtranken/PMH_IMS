@@ -101,7 +101,7 @@ body:has(.auth) .toast-stack {
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
-.pager-size select { font-size: var(--fs-sm); padding: 0 1.6rem 0 var(--space-3); }
+.pager-size select { font-size: var(--fs-input); padding: 0 1.6rem 0 var(--space-3); }
 /* Nhãn "Số dòng" thẳng tâm ô chọn: luật `label` chung (khối, có lề dưới) đẩy nó lên cao ~6px. */
 .pager-size > label { margin: 0; line-height: 1.2; }
 /* Màn cảm ứng: ‹ › và ô "Số dòng" đủ 44px, cách nhau ≥8px — đi hiện trường bấm bằng ngón cái. */
@@ -140,11 +140,11 @@ body:has(.auth) .toast-stack {
   gap: var(--space-3);
   color: var(--ink-2);
 }
-.pager-jump .inp { width: 4.5rem; padding: 0 var(--space-3); font-size: var(--fs-sm); }
+.pager-jump .inp { width: 4.5rem; padding: 0 var(--space-3); font-size: var(--fs-input); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
-.field-error { font-size: var(--fs-xs); color: var(--danger); font-weight: 600; }
+.field-error { font-size: var(--fs-xs); color: var(--danger); font-weight: var(--fw-semibold); }
 /* Lỗi lượt trước giữ chỗ trong lúc kiểm lượt mới (ui/otp-input.tsx): ẩn chữ, giữ chiều cao. */
 .field-error.is-stale { visibility: hidden; }
 .inp[aria-invalid='true'],
@@ -444,7 +444,7 @@ html[data-motion='off'] .otp-boxes.is-busy .otp-box { opacity: 0.55; }
   padding-bottom: var(--space-7);
 }
 .history-item:last-child .history-body { padding-bottom: 0; }
-.history-action { font-weight: 600; font-size: var(--fs-sm); }
+.history-action { font-weight: var(--fw-semibold); font-size: var(--fs-sm); }
 .history-detail, .history-meta { font-size: var(--fs-xs); }
 /* Màn hẹp: cột ngày giờ bên trái ăn mất chỗ của nội dung — ngày giờ xuống dưới nội dung. */
 @media (max-width: 640px) {
@@ -960,7 +960,7 @@ p + .vault-rules {
 .import-summary .badge.is-zero {
   /* Bỏ nền chứ không làm mờ chữ: mờ chữ là rớt ngưỡng tương phản AA. */
   background: transparent;
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 /* Chip tổng kết là NÚT LỌC — giữ hình viên huy hiệu, không lấy khung của `button`. */
 .import-summary button.badge {
@@ -1196,7 +1196,7 @@ table.table tbody tr.row-muted td {
   margin-bottom: 0;
 }
 .dash-card.slim p { margin: 0; flex: 1 1 16rem; }
-.dash-slim-title { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.dash-slim-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 /* Ba tông cho dải yên: LỖI (cảnh báo + Thử lại) phải trông khác hẳn TIN TỐT (✓), và "chưa có
    phần này" là thông tin trung tính. Cùng một màu xám cho cả ba là cách để sếp yên tâm nhầm. */
 .dash-tone-ic {
@@ -1221,7 +1221,7 @@ table.table tbody tr.row-muted td {
   justify-content: space-between;
   gap: var(--space-4);
 }
-.card-head h2 { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.card-head h2 { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 .card-head-count { flex: none; font-size: var(--fs-xs); color: var(--ink-3); }
 /* Tiêu đề nhóm trong một khối ("Đã quá hạn (3)" / "Sắp tới (16)"). */
 .dash-sub {
@@ -1617,7 +1617,7 @@ table.access-grid thead .access-row-head {
   z-index: 3;
   background: var(--surface-2);
 }
-.access-person { display: block; font-weight: 600; }
+.access-person { display: block; font-weight: var(--fw-semibold); }
 .access-person-mail { display: block; font-size: var(--fs-2xs); }
 /* Cột tên người: tên và email mỗi thứ MỘT dòng (cắt … + tooltip) — ép xuống dòng giữa chừng làm
    mỗi hàng cao gấp ba chỉ vì tên. Nút gán là dấu + nhỏ bên phải, không lặp chữ ở mọi dòng. */
@@ -1747,7 +1747,7 @@ table.access-grid thead .access-row-head {
   min-width: 4.5rem;
   max-width: 8rem;
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-2);
   text-align: center;
   /*
@@ -1797,7 +1797,7 @@ table.access-grid thead tr:last-child th {
   height: 1.9rem;
   border-radius: 6px;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   border: 1px solid transparent;
 }
 .access-chip.whitelist { background: var(--ok-soft); color: var(--ok); }
@@ -1873,7 +1873,7 @@ table.access-grid thead tr:last-child th {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   border: 1px solid transparent;
   overflow-wrap: anywhere;
 }
@@ -1892,7 +1892,7 @@ table.access-grid thead tr:last-child th {
   gap: var(--space-3);
   list-style: none;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .access-role-holders summary::-webkit-details-marker { display: none; }
 .access-role-holders .summary-chev { color: var(--ink-3); transition: transform 0.18s var(--ease); }
@@ -1996,7 +1996,7 @@ table.access-grid thead tr:last-child th {
   color: var(--ink-3);
 }
 .strength-rules li { display: inline-flex; align-items: center; gap: var(--space-1); }
-.strength-rules li.met { color: var(--ok); font-weight: 600; }
+.strength-rules li.met { color: var(--ok); font-weight: var(--fw-semibold); }
 .warn-text { color: var(--warn); }
 
 /* --- Đồng hồ đếm ngược của hộp hiện secret (ui/reveal-dialog.tsx) -------------
@@ -2015,7 +2015,7 @@ table.access-grid thead tr:last-child th {
 .countdown-num {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums;
   transition: color 0.3s var(--ease);
 }
@@ -2290,7 +2290,7 @@ html[data-motion='off'] .spinner {
 }
 .error-state .error-code {
   font-size: 3.2rem;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   line-height: 1;
   letter-spacing: -0.03em;
   background: var(--grad);
@@ -2320,7 +2320,7 @@ html[data-motion='off'] .spinner {
   border: 0;
   background: transparent;
   color: var(--primary-ink);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   text-decoration: underline;
 }
 .error-search:hover:not(:disabled) {
@@ -2400,7 +2400,7 @@ html[data-motion='off'] .spinner {
   font-size: var(--fs-2xs);
   color: var(--ink-3);
 }
-.wt-ends b { color: var(--ink-2); font-weight: 600; }
+.wt-ends b { color: var(--ink-2); font-weight: var(--fw-semibold); }
 .wt-track {
   position: relative;
   height: 12px;
@@ -2412,7 +2412,7 @@ html[data-motion='off'] .spinner {
 .wt-fill.ok { background: var(--ok); }
 /* Không tính hạn (hồ sơ đã thanh lý): xám trơn, không mốc hôm nay, không màu cảnh báo. */
 .wt-fill.none { background: var(--border-2); }
-.wt-legend .right.muted { color: var(--ink-3); font-weight: 600; }
+.wt-legend .right.muted { color: var(--ink-3); font-weight: var(--fw-semibold); }
 .wt-fill.warn { background: linear-gradient(90deg, var(--ok), var(--warn)); }
 .wt-fill.crit { background: linear-gradient(90deg, var(--ok), var(--warn) 70%, var(--danger)); }
 /* Quá hạn: gạch chéo chứ không chỉ đổi màu — dấu hiệu THỨ HAI ngoài màu, cho người khó phân
@@ -2434,7 +2434,7 @@ html[data-motion='off'] .spinner {
 }
 .wt-legend { display: flex; justify-content: space-between; gap: var(--space-4); font-size: var(--fs-xs); }
 .wt-legend .left { color: var(--ink-3); }
-.wt-legend .right { font-weight: 700; }
+.wt-legend .right { font-weight: var(--fw-bold); }
 .wt-legend .right.ok { color: var(--ok); }
 .wt-legend .right.warn { color: var(--warn); }
 .wt-legend .right.crit,
@@ -2528,7 +2528,7 @@ html[data-motion='off'] .spinner {
   padding: var(--space-4) var(--space-5);
   border-radius: var(--r);
   color: var(--ink-2);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 .settings-nav button:hover { background: var(--surface-2); }

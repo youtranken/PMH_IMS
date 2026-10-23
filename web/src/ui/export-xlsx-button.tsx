@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { errorMessage } from '@/lib/api';
 import { downloadFile } from '@/lib/download-file';
 import { RowActions } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
@@ -15,7 +16,7 @@ export function useXlsxDownload(): { busy: boolean; run: (url: string, fileName:
   const run = (target: string, name: string) => {
     setBusy(true);
     void downloadFile(target, name)
-      .catch(() => toast({ message: t('common.error'), tone: 'error' }))
+      .catch((error: unknown) => toast({ message: errorMessage(error, t('common.error')), tone: 'error' }))
       .finally(() => setBusy(false));
   };
   return { busy, run };

@@ -72,7 +72,7 @@
   background: var(--auth-logo-plate);
 }
 .auth-head-logo img { display: block; width: clamp(104px, 9vw, 148px); height: auto; }
-.auth-head-system { font-size: var(--fs-lg); font-weight: 600; }
+.auth-head-system { font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
 /* Màn rộng: nền cột form là CHÍNH ảnh bên trái, phóng to + làm mờ + tối đi — hai nửa cùng tông
    chạng vạng nên liền một khối, thay cho nền lục riêng trông như hai trang ghép. Không trải ảnh
    rõ ra toàn màn: cây cầu nằm ở nửa phải ảnh, card sẽ che đúng nó. Ảnh đã được mảng trái tải nên
@@ -95,7 +95,7 @@
   gap: var(--space-4);
   text-align: center;
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: -0.01em;
 }
 .auth-emblem img { display: block; width: 64px; height: auto; }
@@ -137,17 +137,17 @@
 }
 .auth-card > .ghost.sm:hover { color: var(--auth-ink); }
 .auth-brand { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
-.auth-brand-sub { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 500; letter-spacing: 0; }
+.auth-brand-sub { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: var(--fw-medium); letter-spacing: 0; }
 /* "Bước 1/2 · …" của luồng cài đặt lần đầu: thanh mảnh + một dòng chữ. */
 .auth-steps { display: flex; flex-direction: column; gap: var(--space-3); }
 .auth-steps-bar { display: flex; gap: var(--space-2); }
 .auth-steps-bar span { flex: 1; height: 3px; border-radius: 2px; background: var(--auth-card-border); }
 .auth-steps-bar span.on { background: var(--warm); }
-.auth-steps-text { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 600; }
-.auth-title { font-size: var(--fs-lg); font-weight: 600; }
+.auth-steps-text { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.auth-title { font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
 .auth-sub { color: var(--auth-ink-2); font-size: var(--fs-sm); }
 .auth-form { display: flex; flex-direction: column; gap: var(--space-7); }
-.auth-form .lbl-t { color: var(--auth-label); font-size: var(--fs-sm); font-weight: 600; }
+.auth-form .lbl-t { color: var(--auth-label); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 .auth-form .field { gap: 6px; }
 /* Ô nhập trên nền kính: viền sáng mờ thay vì viền content */
 .auth-form .inp {
@@ -156,14 +156,14 @@
   border-color: var(--auth-card-border);
 }
 .auth-form .inp::placeholder { color: var(--auth-ink-2); }
-.auth-form .inp:focus-visible { outline: none; box-shadow: var(--ring); }
+.auth-form .inp:focus-visible { outline: none; box-shadow: var(--ring-field); }
 .auth-form .btn.primary {
   width: 100%;
   min-height: 48px;
   justify-content: center;
   padding: var(--space-5);
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 /* Vòng ô mã trên card kính tối (ui/otp-input.tsx, Q-21 mẫu "Glassy OTP"): viền cam phát sáng
    lúc quay, xanh sáng khi mã đúng. Card rộng hơn hộp thoại nên vòng to hơn. */
@@ -312,7 +312,7 @@
   flex-direction: column;
   gap: var(--space-3);
 }
-.auth-account { color: var(--auth-ink); font-weight: 600; word-break: break-all; }
+.auth-account { color: var(--auth-ink); font-weight: var(--fw-semibold); word-break: break-all; }
 /* Cài 2 lớp: hàng nút mở ứng dụng + chép khoá; QR phụ nằm trong <details>. */
 .totp-actions { display: flex; flex-direction: column; gap: var(--space-5); }
 .totp-actions .linkbtn { justify-content: center; }

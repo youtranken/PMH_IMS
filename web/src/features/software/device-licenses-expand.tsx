@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { formatDate, formatMoney } from '@/lib/format';
+import { formatDate, formatMoney, orDash } from '@/lib/format';
 import { CellNote } from '@/ui/cell-note';
 import { TableWrap } from '@/ui/data-table';
 import { PerpetualBadge } from '@/ui/perpetual-badge';
@@ -93,7 +93,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
                 data-empty={item.licenseModel === 'perpetual' && !item.contract ? true : undefined}
               >
                 {item.licenseModel === 'perpetual' ? (
-                  <span className="muted">—</span>
+                  orDash(null)
                 ) : (
                   <SeatEndCell
                     seat={item}
@@ -108,7 +108,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
                 ) : null}
               </td>
               <td data-label={t('license.note')} data-empty={item.note ? undefined : true}>
-                {item.note ? <CellNote text={item.note} /> : <span className="muted">—</span>}
+                {item.note ? <CellNote text={item.note} /> : orDash(null)}
               </td>
             </tr>
           ))}

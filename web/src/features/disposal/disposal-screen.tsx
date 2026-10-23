@@ -306,7 +306,7 @@ export function DisposalScreen() {
                 title: (item) => item.code,
                 titleIsCode: true,
                 href: (item) => LINK[item.kind](item.id),
-                badge: (item) => <span className="badge muted">{disposalItemKindLabel(item.kind, item.detail, t)}</span>,
+                badge: (item) => <span className="tag">{disposalItemKindLabel(item.kind, item.detail, t)}</span>,
                 actions: (item) => (
                   <RowActions
                     label={t('common.actionsOf', { subject: item.code })}

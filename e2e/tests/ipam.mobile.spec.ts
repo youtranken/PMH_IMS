@@ -95,7 +95,6 @@ test.describe('Địa chỉ IP ở 390px', () => {
         subnetId,
         address: `172.17.${octet}.1`,
         deviceId,
-        usedBy: 'cổng quản trị switch tầng 3',
       },
     });
 
@@ -105,7 +104,8 @@ test.describe('Địa chỉ IP ở 390px', () => {
     // của nó vẫn nằm trong DOM và vẫn mang đúng chuỗi này.
     const ipSection = page.getByRole('region', { name: 'Địa chỉ IP' });
     await expect(ipSection.getByText(`172.17.${octet}.1`)).toBeVisible();
-    await expect(ipSection.getByText('cổng quản trị switch tầng 3')).toBeVisible();
+    // LF-03: IP gắn máy lấy người dùng theo máy, nên dòng IP chỉ còn địa chỉ + trạng thái.
+    await expect(ipSection.getByRole('row', { name: `172.17.${octet}.1 Đang dùng` })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 });

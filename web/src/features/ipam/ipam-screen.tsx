@@ -7,7 +7,7 @@ import { foldSearch } from '@/lib/search-fold';
 import { Select } from '@/ui/select';
 import { useIsNarrow } from '@/ui/use-narrow';
 import { apiFetch } from '@/lib/api-client';
-import { formatDate, formatCount } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -496,7 +496,7 @@ export function SubnetCard({
           ariaLabel={t('ipam.usageOf', { cidr: subnet.cidr })}
           warnAt={fullPercent}
           dangerAt={Math.max(fullPercent, 90)}
-          label={t('ipam.usageFreeShort', { free: formatCount(subnet.free) })}
+          label={t('ipam.usageFreeShort', { free: subnet.free })}
           showPercent={false}
           title={t('ipam.usageUsed', { used: subnet.used, total: subnet.total })}
         />

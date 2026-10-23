@@ -113,7 +113,9 @@
   /* Focus màu ĐẶC (DS-03/04): vòng mờ 22% chỉ ~1,25:1 trên nền trắng, dưới 3:1 của WCAG 1.4.11.
      Nút vẽ bằng outline (base.css) — box-shadow của nút chính không đè được. */
   --focus: #0a7d54;
-  --ring: 0 0 0 1px var(--focus);
+  --ring: 0 0 0 2px var(--focus);
+  --ring-field: 0 0 0 1px var(--focus);
+  --ring-inset: inset 0 0 0 2px var(--focus);
 
   /* Thang z-index (thấp→cao). Không có thang thì nhiều lớp cùng một z tranh nhau, thứ tự
      hiển thị do DOM quyết định. Popup nổi (dropdown/popover) < modal là chủ ý:
@@ -138,8 +140,8 @@
   --r-xl: 12px;
   --radius-pill: 999px;
 
-  /* Thang cách (rem, root 14px) + cỡ chữ + độ đậm. Mọi khoảng cách đi theo các bậc này, không
-     viết giá trị lẻ. Font-weight CHỈ 3 bậc chuẩn. */
+  /* Thang cách (px) + cỡ chữ + độ đậm. Mọi khoảng cách đi theo các bậc này, không viết giá trị
+     lẻ. Độ đậm chỉ qua 4 token --fw-* (design-scale.test). */
   --space-1: 4px;
   --space-2: 6px;
   --space-3: 7px;
@@ -150,7 +152,7 @@
   --space-8: 16px;
   --space-9: 18px;
   --space-10: 21px;
-  /* Ba nấc trên. Dừng ở 1.5rem (root 14px → 21px) thì KHÔNG có khoảng nào để tách KHU với
+  /* Ba nấc trên. Dừng ở --space-10 (21px) thì KHÔNG có khoảng nào để tách KHU với
      KHU, mọi thứ trôi thành một khối. Dùng: 11 = tách hai khối trong một khu, 12 = tách khu
      với khu (và khe giữa hai cột), 13 = đệm đáy trang. */
   --space-11: 32px;
@@ -176,6 +178,7 @@
   /* Mã hồ sơ ở đầu trang chi tiết. Phải lớn hơn tiêu đề trang DANH SÁCH (--fs-2xl) — nhỏ hơn
      thì đi từ danh sách vào chi tiết tiêu đề NHỎ LẠI, tức cấp bậc ngược. */
   --fs-3xl: 28px;
+  --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
@@ -353,8 +356,8 @@ html[data-theme='dark'] {
   --info: #7fb6ea;
   --info-soft: #1b2f45;
   /* Sidebar tối hơn canvas để tách khối */
-  --sidebar-bg: #121914;
-  --sidebar-border: #243028;
+  --sidebar-bg: #0d130f;
+  --sidebar-border: #33453a;
   --sidebar-active-bg: rgba(251, 191, 36, 0.16);
   --sidebar-active-ink: #ffe1b3;
   --focus: #6ee7b7;

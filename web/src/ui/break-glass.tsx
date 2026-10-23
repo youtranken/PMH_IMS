@@ -131,7 +131,7 @@ export function BreakGlassSubject({
       ) : (
         <span className="muted">{t('approvals.subjectGone')}</span>
       )}
-      <span className="badge plain">{t(SECRET_OWNER_KIND_KEY[row.subjectType])}</span>
+      <span className="tag">{t(SECRET_OWNER_KIND_KEY[row.subjectType])}</span>
       {row.secretCount ? (
         <span className="badge muted">
           {t('approvals.secretCount', { count: row.secretCount })}

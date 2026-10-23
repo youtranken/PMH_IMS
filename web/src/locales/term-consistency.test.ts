@@ -629,6 +629,16 @@ describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
     expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két chỉ gắn nhãn "Chờ lâu"\. Không gửi mail\.$/);
   });
 
+  // TX-02: không còn nút Duyệt — người xin được mở khi NHẬP MÃ người duyệt đọc cho, và chỉ người
+  // được chọn nhận thư. Câu "chờ duyệt", "không ai duyệt", "người khác đã xử lý" tả luồng cũ.
+  it('luồng mở két không tả việc "chờ duyệt" kiểu bấm nút', () => {
+    const bad = leaves()
+      .filter(([key]) => /^(approvals|access|vault)\./.test(key))
+      .filter(([, text]) => /(xin|yêu cầu mới) và chờ duyệt|không ai duyệt|người khác đã xử lý/i.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+
   // TX-03 (Q-33): với yêu cầu mở két, tham số chỉ còn quyết nhãn "Chờ lâu" — tên nói đúng việc đó.
   it('tham số mang tên "Gắn nhãn Chờ lâu sau"', () => {
     expect(lookup('settings.approvalReminderHoursLabel')).toBe('Gắn nhãn Chờ lâu sau');
@@ -668,5 +678,32 @@ describe('Tên vai trò thống nhất', () => {
       return strings.some((text) => /\bSA ?\/ ?Admin\b|\bAdmin ?\/ ?SA\b|báo IT|team IT|(?<![\p{L}])(khoá|xoá|hoá)(?![\p{L}])/iu.test(text));
     });
     expect(bad.map((file) => file.slice(root.length + 1))).toEqual([]);
+  });
+});
+
+/**
+ * TX-17: phụ đề dưới tiêu đề màn là một cụm danh từ ngắn, không phải câu hướng dẫn. Câu dài
+ * xuống hai dòng ở 390px và đẩy bảng xuống; dấu chấm lúc có lúc không làm các màn đọc lệch nhau.
+ */
+describe('Phụ đề màn ngắn, không chấm câu', () => {
+  it('mọi khoá subtitle / subtitleMine ≤ 60 ký tự, không kết thúc bằng dấu chấm', () => {
+    const bad = leaves()
+      .filter(([key]) => /\.subtitle(Mine)?$/.test(key))
+      .filter(([, text]) => [...text].length > 60 || text.endsWith('.'))
+      .map(([key, text]) => `${key}: ${text}`);
+    expect(bad).toEqual([]);
+  });
+});
+
+/**
+ * FM-29: nút thêm viết bằng động từ ("Thêm job"), không mở đầu bằng "+ " — 91 nút "Thêm …" đã
+ * theo cách đó, một nhúm nút "+ X" làm cùng một việc trông như một loại nút khác.
+ */
+describe('Nhãn nút không mở đầu bằng "+ "', () => {
+  it('không khoá nào bắt đầu bằng "+ "', () => {
+    const bad = leaves()
+      .filter(([, text]) => text.startsWith('+ '))
+      .map(([key, text]) => `${key}: ${text}`);
+    expect(bad).toEqual([]);
   });
 });

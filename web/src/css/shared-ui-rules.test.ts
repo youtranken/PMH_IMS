@@ -103,6 +103,12 @@ describe('token màu đạt ngưỡng WCAG', () => {
     expect(luminance(hex('dark', '--sidebar-bg'))).toBeLessThan(luminance(hex('dark', '--canvas')));
   });
 
+  // PW-C17: "tối hơn" chưa đủ — 1,05:1 thì mắt không thấy ranh giới, sidebar hoà vào nội dung.
+  it('sidebar tối tách khỏi canvas thấy được bằng mắt (nền + viền)', () => {
+    expect(contrast(hex('dark', '--sidebar-bg'), hex('dark', '--canvas'))).toBeGreaterThanOrEqual(1.1);
+    expect(contrast(hex('dark', '--sidebar-border'), hex('dark', '--canvas'))).toBeGreaterThanOrEqual(1.5);
+  });
+
   it('--field-border có cặp dark khai tường minh', () => {
     expect(tokenBlock('dark').has('--field-border')).toBe(true);
   });
