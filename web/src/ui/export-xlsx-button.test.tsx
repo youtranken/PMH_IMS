@@ -20,6 +20,18 @@ describe('ExportXlsxButton', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
+  // TX-01: tải hỏng phải nói nguyên nhân (mạng đứt / máy chủ lỗi), không phải "Có lỗi xảy ra".
+  it('mất mạng khi tải: toast nói lỗi kết nối', async () => {
+    download.mockImplementationOnce(() => Promise.reject(new TypeError('Failed to fetch')));
+    renderWithI18n(
+      <ToastProvider>
+        <ExportXlsxButton url="/api/x.xlsx" fileName="x.xlsx" />
+      </ToastProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Xuất Excel' }));
+    expect(await screen.findByText('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')).toBeInTheDocument();
+  });
+
   /* Q-20: màn IP xuất được "dải đang xem" hoặc "tất cả" — hai lựa chọn trong một menu nhỏ. */
   it('có allUrl: nút mở menu hai mục; chọn "Xuất tất cả" tải file tất cả', async () => {
     renderWithI18n(
