@@ -151,3 +151,25 @@ describe('Trạng thái rỗng trong khung bảng', () => {
     expect(body).toMatch(/background:\s*transparent/);
   });
 });
+
+/**
+ * DS-18: tiêu đề thẻ / khối nhỏ hơn chữ thường (13px dưới thân 14px) đọc như chú thích, mắt
+ * không bám được vào khối. Nhãn nhóm in hoa (kicker) là kiểu khác, được phép nhỏ.
+ */
+describe('Tiêu đề không nhỏ hơn chữ thân', () => {
+  it('h1–h6 và .dash-slim-title không dùng cỡ dưới --fs-md, trừ nhãn in hoa', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(__dirname).filter((name) => name.endsWith('.css'))) {
+      const source = css(file).replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const [, selector, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const size = /font-size\s*:\s*([^;]+)/.exec(body)?.[1] ?? '';
+        if (!/--fs-(2xs|xs|sm)\b/.test(size) || /text-transform\s*:\s*uppercase/.test(body)) continue;
+        const parts = selector.split(',').map((part) => part.trim());
+        if (parts.some((part) => /(?:^|[\s>])h[1-6]$/.test(part) || /\.dash-slim-title$/.test(part))) {
+          offenders.push(`${file}: ${selector.trim()} → ${size.trim()}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

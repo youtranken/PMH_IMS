@@ -2023,7 +2023,7 @@ button.tree-summary:hover:not(:disabled) {
 }
 .dpanel-section-head h3 {
   margin: 0;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
 }
 .dpanel-drafts .dpanel-section-head h3 {
   color: var(--warn);

@@ -217,7 +217,7 @@ table.table tbody tr.row-suspended td:first-child {
 .retire-dialog p { margin: 0; }
 .retire-block h3 {
   margin: 0 0 var(--space-2);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
   font-weight: var(--fw-semibold);
 }
 .retire-block ul {

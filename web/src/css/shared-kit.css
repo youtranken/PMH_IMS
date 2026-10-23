@@ -1196,7 +1196,7 @@ table.table tbody tr.row-muted td {
   margin-bottom: 0;
 }
 .dash-card.slim p { margin: 0; flex: 1 1 16rem; }
-.dash-slim-title { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.dash-slim-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 /* Ba tông cho dải yên: LỖI (cảnh báo + Thử lại) phải trông khác hẳn TIN TỐT (✓), và "chưa có
    phần này" là thông tin trung tính. Cùng một màu xám cho cả ba là cách để sếp yên tâm nhầm. */
 .dash-tone-ic {
@@ -1221,7 +1221,7 @@ table.table tbody tr.row-muted td {
   justify-content: space-between;
   gap: var(--space-4);
 }
-.card-head h2 { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.card-head h2 { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 .card-head-count { flex: none; font-size: var(--fs-xs); color: var(--ink-3); }
 /* Tiêu đề nhóm trong một khối ("Đã quá hạn (3)" / "Sắp tới (16)"). */
 .dash-sub {
