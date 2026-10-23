@@ -1,9 +1,15 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Resvg } from '@resvg/resvg-js';
+import { Resvg, renderAsync } from '@resvg/resvg-js';
 import { PDFDocument } from 'pdf-lib';
 import { EXPORT_UNSAFE_CODE, pngToPdf, renderPng } from './diagram-render';
+
+// Vẽ thật mặc định; bài hết giờ cần một lượt vẽ không bao giờ xong (export gốc không spyOn được).
+jest.mock('@resvg/resvg-js', () => {
+  const actual = jest.requireActual<typeof import('@resvg/resvg-js')>('@resvg/resvg-js');
+  return { ...actual, renderAsync: jest.fn(actual.renderAsync) };
+});
 
 const SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect width="200" height="100" fill="#ffffff"/><text x="10" y="50" font-family="Helvetica" font-size="14">Tủ mạng Lầu 3</text></svg>';
@@ -42,7 +48,9 @@ describe('renderPng / pngToPdf — raster hoá phía server, không mạng, phô
   });
 
   it('quá thời gian cho phép: ném lỗi hết giờ, không treo', async () => {
-    await expect(renderPng(SVG, 2, 0)).rejects.toThrow('DIAGRAM_EXPORT_TIMEOUT');
+    // Luồng vẽ không bao giờ xong: hẹn giờ 0 ms đua với resvg thật thì máy nhanh vẽ xong trước.
+    jest.mocked(renderAsync).mockReturnValueOnce(new Promise(() => undefined));
+    await expect(renderPng(SVG, 2, 5)).rejects.toThrow('DIAGRAM_EXPORT_TIMEOUT');
   });
 
   it('PDF một trang chứa ảnh, cỡ trang theo điểm ảnh CSS, thông tin tài liệu là chân trang', async () => {
