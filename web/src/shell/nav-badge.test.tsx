@@ -150,7 +150,7 @@ describe('Badge "đã quá hạn" trên mục Sắp hết hạn', () => {
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
     const link = within(nav).getByRole('link', { name: 'Sắp hết hạn' });
     expect(await within(link).findByText('999+')).toHaveClass('danger');
-    expect(link).toHaveAccessibleDescription('6470 Mục đã quá hạn');
+    expect(link).toHaveAccessibleDescription('6.470 Mục đã quá hạn');
   });
 
   it('không có gì quá hạn → không vẽ badge', async () => {
