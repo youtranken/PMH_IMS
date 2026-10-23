@@ -2177,7 +2177,7 @@ button.tree-summary:hover:not(:disabled) {
   justify-content: flex-end;
 }
 
-/* Bản vẽ gốc chưa có con: băng một dòng (đệm mỏng) + nút "+ Bản vẽ con" ngay bên phải. */
+/* Bản vẽ gốc chưa có con: băng một dòng (đệm mỏng) + nút "Thêm bản vẽ con" ngay bên phải. */
 .dmap-root-compact {
   flex-direction: row;
   flex-wrap: wrap;

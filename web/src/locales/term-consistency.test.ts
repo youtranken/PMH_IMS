@@ -694,3 +694,16 @@ describe('Phụ đề màn ngắn, không chấm câu', () => {
     expect(bad).toEqual([]);
   });
 });
+
+/**
+ * FM-29: nút thêm viết bằng động từ ("Thêm job"), không mở đầu bằng "+ " — 91 nút "Thêm …" đã
+ * theo cách đó, một nhúm nút "+ X" làm cùng một việc trông như một loại nút khác.
+ */
+describe('Nhãn nút không mở đầu bằng "+ "', () => {
+  it('không khoá nào bắt đầu bằng "+ "', () => {
+    const bad = leaves()
+      .filter(([, text]) => text.startsWith('+ '))
+      .map(([key, text]) => `${key}: ${text}`);
+    expect(bad).toEqual([]);
+  });
+});

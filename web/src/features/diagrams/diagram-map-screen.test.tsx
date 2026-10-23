@@ -143,7 +143,7 @@ describe('Bản đồ — gốc là băng, con là khu, cháu là ô', () => {
     expect(banner).toHaveTextContent('#8 · Chính thức');
     const t2Tiles = within(map).getByRole('list', { name: 'Bản vẽ trong "Tầng 2 E2E"' });
     const tiles = within(t2Tiles).getAllByRole('listitem');
-    expect(tiles.map((li) => li.querySelector('.dmap-tile-name')?.textContent ?? li.textContent)).toEqual(['Phòng server E2E', 'Kế toán E2E', '+ Bản vẽ con vào Tầng 2 E2E']);
+    expect(tiles.map((li) => li.querySelector('.dmap-tile-name')?.textContent ?? li.textContent)).toEqual(['Phòng server E2E', 'Kế toán E2E', 'Thêm bản vẽ con vào Tầng 2 E2E']);
     // Trạng thái có chữ, không chỉ màu; meta ngắn "#12 · 3 Bản nháp".
     expect(tiles[0]).toHaveTextContent('Chính thức · có bản nháp');
     expect(tiles[0]).toHaveTextContent('#12 · 3 Bản nháp');
@@ -553,12 +553,12 @@ describe('Panel bản vẽ đang chọn', () => {
     routeFetch({});
     renderScreen('/diagrams');
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
-    expect(within(map).getByRole('button', { name: 'Thêm bản vẽ con vào "Tầng 1 E2E"' })).toHaveTextContent('+ Bản vẽ con vào Tầng 1 E2E');
+    expect(within(map).getByRole('button', { name: 'Thêm bản vẽ con vào "Tầng 1 E2E"' })).toHaveTextContent('Thêm bản vẽ con vào Tầng 1 E2E');
     expect(within(map).queryByRole('button', { name: 'Thêm bản vẽ con vào "Toàn công ty E2E"' })).toBeNull();
     expect(within(map).queryByText(/Khu mới/)).toBeNull();
   });
 
-  it('"+ Bản vẽ con" trên khu mở hộp thêm con đúng bản cha', async () => {
+  it('"Thêm bản vẽ con" trên khu mở hộp thêm con đúng bản cha', async () => {
     routeFetch({});
     renderScreen('/diagrams');
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Thêm bản vẽ con vào "Tầng 1 E2E"' }));
@@ -593,7 +593,7 @@ describe('Panel gọn (Q-23 05/10)', () => {
     expect(row.querySelector('.dpanel-tag')).toHaveTextContent('Lưu đè bản của E2E Super Admin');
   });
 
-  it('bản vẽ gốc chưa có con: băng một dòng kèm "+ Bản vẽ con", không có khối gợi ý lớn', async () => {
+  it('bản vẽ gốc chưa có con: băng một dòng kèm "Thêm bản vẽ con", không có khối gợi ý lớn', async () => {
     routeFetch({ '/api/v1/diagrams/archived': () => jsonResponse(200, []) });
     vi.stubGlobal(
       'fetch',
@@ -607,7 +607,7 @@ describe('Panel gọn (Q-23 05/10)', () => {
     const map = await screen.findByRole('region', { name: 'Bản đồ bản vẽ' });
     const lone = within(map).getByRole('button', { name: /^Tổng công ty Chi nhánh lẻ E2E/ }).closest('section');
     expect(lone).toHaveClass('dmap-root-compact');
-    expect(within(lone as HTMLElement).getByRole('button', { name: 'Thêm bản vẽ con vào "Chi nhánh lẻ E2E"' })).toHaveTextContent('+ Bản vẽ con vào Chi nhánh lẻ E2E');
+    expect(within(lone as HTMLElement).getByRole('button', { name: 'Thêm bản vẽ con vào "Chi nhánh lẻ E2E"' })).toHaveTextContent('Thêm bản vẽ con vào Chi nhánh lẻ E2E');
     expect(within(lone as HTMLElement).queryByText(/Chưa có bản vẽ con/)).toBeNull();
     expect((lone as HTMLElement).querySelector('.dmap-areas')).toBeNull();
   });

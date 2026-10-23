@@ -698,7 +698,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+3 năm',
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
         'Truy cập quản trị chưa khai',
-        '+ Đường truy cập',
+        'Thêm đường truy cập',
         // Khu "Ảnh thiết bị" (Q-23): ô tải ảnh hai mặt; giấy tờ cùng khối.
         'Ảnh và giấy tờ chưa khai',
         'Tải ảnh lên — Mặt trước',
@@ -934,7 +934,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         '+3 năm',
         // Khu "Truy cập quản trị" (Q-26): danh sách đường vào, mặc định trống.
         'Truy cập quản trị chưa khai',
-        '+ Đường truy cập',
+        'Thêm đường truy cập',
         'Ghi chú',
         'Hủy',
         'Lưu',

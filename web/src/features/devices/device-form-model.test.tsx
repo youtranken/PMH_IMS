@@ -140,11 +140,11 @@ describe('Form thiết bị — Model (Q-26)', () => {
     await user.click(screen.getByRole('button', { name: 'Loại thiết bị' }));
     await user.click(await screen.findByRole('option', { name: 'Switch' }));
     await user.click(screen.getByRole('button', { name: /^Truy cập quản trị/ }));
-    await user.click(screen.getByRole('button', { name: '+ Đường truy cập' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm đường truy cập' }));
     await user.type(screen.getByRole('textbox', { name: 'Địa chỉ 1' }), '10.0.1.1');
     await user.type(screen.getByRole('textbox', { name: 'Cổng 1' }), '84a43');
     expect(screen.getByRole('textbox', { name: 'Cổng 1' })).toHaveValue('8443');
-    await user.click(screen.getByRole('button', { name: '+ Đường truy cập' }));
+    await user.click(screen.getByRole('button', { name: 'Thêm đường truy cập' }));
     expect(screen.queryByLabelText(/Mật khẩu/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
     const post = calls.find((c) => c.url === '/api/v1/devices' && c.method === 'POST');

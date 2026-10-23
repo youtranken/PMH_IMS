@@ -100,11 +100,11 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await firstLogin(page, E2E_SA);
     const name = `E2E-FS-${uniqueStamp()}`;
     await page.goto('/iso/catalog');
-    await page.getByRole('button', { name: '+ Job' }).click();
+    await page.getByRole('button', { name: 'Thêm job' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('textbox', { name: /Name Job Backup/ }).fill(name);
     await dialog.getByRole('textbox', { name: 'Đối tượng con 1' }).fill('OS');
-    await dialog.getByRole('button', { name: '+ Đối tượng con' }).click();
+    await dialog.getByRole('button', { name: 'Thêm đối tượng con' }).click();
     await dialog.getByRole('textbox', { name: 'Đối tượng con 2' }).fill('Volume_E');
     // Points chỉ nhận số; Storage location tự ghi theo Points, không phải ô nhập.
     await dialog.getByRole('textbox', { name: 'Points NAS 1' }).fill('c');
@@ -239,11 +239,11 @@ test.describe('Phiếu ISO · Epic 8', () => {
     await expect(page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' })).toBeVisible();
     await writeOk(page, () => page.getByRole('button', { name: 'Other Division ngày 01/03: chưa có kết quả' }).click(), /clear-days$/);
 
-    await page.getByRole('button', { name: '+ Ghi máy có issue' }).click();
+    await page.getByRole('button', { name: 'Ghi máy có issue' }).click();
     const dialog = page.getByRole('dialog');
     await typeDate(page, dialog, /^Reported Date/, '02/03/2021');
     await dialog.getByRole('button', { name: 'Division', exact: true }).click();
-    await page.getByRole('option', { name: '+ Bộ phận mới' }).click();
+    await page.getByRole('option', { name: 'Thêm bộ phận mới' }).click();
     await dialog.getByRole('textbox', { name: /Tên bộ phận mới/ }).fill(`E2E Division ${stamp}`);
     await dialog.getByRole('textbox', { name: /Computer Name/ }).fill(`E2E-PC-${stamp}`);
     await dialog.getByRole('textbox', { name: /Incident Description/ }).fill('Trojan.Gen đã cách ly');
