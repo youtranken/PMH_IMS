@@ -173,7 +173,7 @@
   background: transparent;
   color: var(--on-brand);
   font: inherit;
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   cursor: pointer;
   padding: var(--space-2);
   border-radius: var(--r-sm);
@@ -192,7 +192,7 @@
 .dp-week span {
   text-align: center;
   font-size: var(--fs-2xs);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
   color: var(--ink-3);
   padding: var(--space-1) 0;
   text-transform: uppercase;
@@ -222,19 +222,19 @@
 .dp-grid.days .dp-cell {
   aspect-ratio: 1;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .dp-grid.months .dp-cell,
 .dp-grid.years .dp-cell {
   padding: var(--space-5) 0;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 .dp-cell:hover {
   background: var(--surface-2);
 }
 .dp-cell.dim {
   color: var(--ink-3);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 .dp-cell.today {
   background: var(--primary-soft);
@@ -243,7 +243,7 @@
 .dp-cell.sel {
   background: var(--grad);
   color: var(--on-brand);
-  font-weight: 800;
+  font-weight: var(--fw-bold);
 }
 /* Ô hôm nay / đang chọn tự có nền nên `.dp-cell:hover` không đổi được gì: báo hover bằng viền,
    giữ nguyên nền để vẫn đọc ra ô nào là hôm nay, ô nào đang chọn. */

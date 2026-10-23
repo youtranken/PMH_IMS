@@ -188,7 +188,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 .table th.panel-key {
   width: 38%;
   text-align: left;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-2);
   white-space: normal;
 }
@@ -228,7 +228,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 .subnet-rail > .rail-group {
   margin: var(--space-2) 0 0;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-3);
 }
 .subnet-card {
@@ -421,7 +421,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   background: var(--ok-soft);
   border-color: var(--ok);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .ip-cell.is-voided {
   background: var(--surface-2);
@@ -468,7 +468,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
     text-align: left;
   }
   .nat-table.table-stack td::before {
-    font-weight: 400;
+    font-weight: var(--fw-regular);
     color: var(--ink-3);
     margin-right: var(--space-3);
   }
@@ -483,7 +483,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   }
   .nat-table td.col-flow {
     grid-area: 1 / 1;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
   }
   .nat-table td.col-status {
     grid-area: 1 / 2;
@@ -545,12 +545,12 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
     content: none;
   }
   .ip-table.table-stack td::before {
-    font-weight: 400;
+    font-weight: var(--fw-regular);
     color: var(--ink-3);
     margin-right: var(--space-3);
   }
   .ip-table td.col-ip .mono {
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     font-size: var(--fs-md);
   }
   .ip-table td.col-ip {
@@ -645,7 +645,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 /* Số của chip ĐANG CHỌN đậm hơn — không thì ở chế độ tối nó chìm ngang số của chip chưa chọn. */
 .segmented button[aria-pressed='true'] .seg-count,
 .segmented button[aria-checked='true'] .seg-count {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* Dưới 1100px hai cột thành một: cột trái 300px + bảng 6 cột không còn đủ chỗ, và cột trái
@@ -694,7 +694,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   align-items: center;
   gap: var(--space-3) var(--space-5);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-2);
   margin-bottom: var(--space-5);
 }
@@ -714,7 +714,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   font-size: var(--fs-sm);
 }
 .exp-head-title {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-2);
 }
 .exp-head-count {
@@ -724,7 +724,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
 }
 .exp-head-note {
   color: var(--warn);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .exp-head > .btn:last-child {
   margin-left: auto;
@@ -779,7 +779,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   margin-bottom: 0;
 }
 .seat-mc {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -847,7 +847,7 @@ html[data-motion='off'] table.table.table-cards tbody tr:hover td { transform: n
   }
   .seat-card > [data-label]::before {
     content: attr(data-label) ': ';
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: var(--ink-2);
   }
   .seat-cost {
@@ -1476,7 +1476,7 @@ button.tree-summary {
   background: none;
   text-align: left;
   white-space: normal;
-  font-weight: 400;
+  font-weight: var(--fw-regular);
   color: var(--ink-2);
   text-decoration: underline dotted;
   text-underline-offset: 3px;

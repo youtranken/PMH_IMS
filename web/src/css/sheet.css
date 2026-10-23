@@ -341,7 +341,7 @@ button.sheet-mark:focus-visible {
   width: var(--space-6);
   text-align: center;
   color: var(--ink-3);
-  font-weight: 400;
+  font-weight: var(--fw-regular);
 }
 
 .sheet-steps li[data-done] {

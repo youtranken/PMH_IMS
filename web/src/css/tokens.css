@@ -176,6 +176,7 @@
   /* Mã hồ sơ ở đầu trang chi tiết. Phải lớn hơn tiêu đề trang DANH SÁCH (--fs-2xl) — nhỏ hơn
      thì đi từ danh sách vào chi tiết tiêu đề NHỎ LẠI, tức cấp bậc ngược. */
   --fs-3xl: 28px;
+  --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;

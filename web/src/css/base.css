@@ -187,7 +187,7 @@ button:where(:active:not(:disabled)) {
   color: var(--on-brand);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--r-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   transform: translateY(-250%);
 }
 .skip-link:focus {
@@ -341,7 +341,7 @@ a.linkbtn.sm {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: var(--fs-lg);
   letter-spacing: -0.01em;
   color: var(--sidebar-ink-2);
@@ -353,7 +353,7 @@ a.linkbtn.sm {
 .brand-emblem img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .nav-label {
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--sidebar-label);

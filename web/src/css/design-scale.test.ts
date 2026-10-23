@@ -173,3 +173,22 @@ describe('Tiêu đề không nhỏ hơn chữ thân', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * DS-29: độ đậm chỉ 4 bậc qua token (400 / 500 / 600 / 700). Số viết tay trôi dần (800 ở lịch,
+ * nhãn 500 cạnh nhãn 600) và đổi thang thì phải sửa trăm chỗ.
+ */
+describe('Độ đậm chỉ qua token', () => {
+  it('ngoài @font-face, font-weight là var(--fw-*) hoặc inherit', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(__dirname).filter((name) => name.endsWith('.css'))) {
+      const source = css(file)
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/@font-face\s*\{[^}]*\}/g, '');
+      for (const [, value] of source.matchAll(/font-weight\s*:\s*([^;}]+)/g)) {
+        if (!/^(var\(--fw-[a-z]+\)|inherit)$/.test(value.trim())) offenders.push(`${file}: ${value.trim()}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

@@ -184,7 +184,7 @@ table.table tbody tr.row-suspended td:first-child {
   align-items: flex-start;
   gap: var(--space-3);
   margin-top: var(--space-5);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: normal;
   cursor: pointer;
 }
@@ -384,7 +384,7 @@ table.table tbody tr.row-suspended td:first-child {
   margin-bottom: var(--space-1);
   border-bottom: 1px solid var(--border);
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-2);
   overflow-wrap: anywhere;
 }
@@ -433,7 +433,7 @@ table.table tbody tr.row-suspended td:first-child {
 .row-actions-menu .ra-group {
   padding: var(--space-3) var(--space-4) var(--space-1);
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--ink-2);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -456,7 +456,7 @@ table.table tbody tr.row-suspended td:first-child {
   max-width: 16rem;
   white-space: normal;
   font-size: var(--fs-2xs);
-  font-weight: 400;
+  font-weight: var(--fw-regular);
   color: var(--ink-3);
 }
 /*
@@ -527,7 +527,7 @@ button.note-toggle {
 /* Ghi chú làm dòng phụ: giữ màu/độ đậm của `.cell-sub`, không lấy màu nút của `base.css`. */
 button.cell-note.cell-sub {
   color: var(--ink-3);
-  font-weight: 400;
+  font-weight: var(--fw-regular);
 }
 .cell-note.is-open {
   max-width: 28rem;
@@ -557,7 +557,7 @@ button.cell-note.cell-sub {
   padding: var(--space-1) var(--space-3);
   border-radius: 999px;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -611,7 +611,7 @@ button.cell-note.cell-sub {
   margin-top: 2px;
   font-size: var(--fs-2xs);
   color: var(--ink-3);
-  font-weight: 400;
+  font-weight: var(--fw-regular);
 }
 /* Mã trong dòng phụ (mã máy đích dưới IP của rule NAT…) là thứ người ta BẤM và ĐỌC: không để
    nó tụt xuống ~10px (2xs × mono), và link cao đủ 24px cho ngón tay. */
@@ -627,7 +627,7 @@ button.cell-note.cell-sub {
    sáng dùng `--danger` thường thì tương phản hụt. */
 .cell-sub.is-danger {
   color: var(--danger-strong);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* Cột Tên của bảng danh sách: khi thiếu chỗ, trình duyệt ép cột chữ thường trước cột mã/mono
@@ -736,7 +736,7 @@ table.table .col-sticky-end::after {
   border-bottom: 1px solid var(--border);
   color: var(--ink-2);
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .table tr.row-group th {
   /* Cùng lề trái với ô dữ liệu: thiếu lề thì "Tháng 10/2026" dính sát viền thẻ, lệch cột. */
@@ -744,7 +744,7 @@ table.table .col-sticky-end::after {
   background: var(--surface-2);
   color: var(--ink-2);
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   text-align: left;
   text-transform: none;
   letter-spacing: normal;
@@ -788,7 +788,7 @@ table.table .col-sticky-end::after {
 }
 .list-card-title {
   min-width: 0;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   /* Hai dòng rồi "…": họ tên / nhãn hạn dài một dòng thì cắt mất nửa câu. Chữ đủ ở `title`. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -833,7 +833,7 @@ table.table .col-sticky-end::after {
   flex: none;
 }
 .list-card-sub {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   overflow-wrap: anywhere;
 }
 /* Cụm không ngắt (email) dài hơn thẻ thì cắt "…" thay vì tràn khỏi thẻ. */
@@ -916,7 +916,7 @@ table.table thead th .th-sort:focus-visible .sort-arrow.idle {
   background: var(--primary-soft);
   color: var(--primary-ink);
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 /* `.caret-btn:hover` (primitives.css, nạp SAU file này, cùng độ ưu tiên) sẽ đổi chip thành ô xám
@@ -1043,7 +1043,7 @@ table.table tbody tr.row-alert td:first-child {
 button.audit-open {
   padding: 0;
   font-size: inherit;
-  font-weight: 400;
+  font-weight: var(--fw-regular);
   color: var(--ink);
 }
 button.audit-open:hover {

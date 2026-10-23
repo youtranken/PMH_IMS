@@ -274,7 +274,7 @@
   white-space: nowrap;
   color: var(--muted);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* Nút giả ô tìm (desktop): người dùng chuột thấy có ô tìm và học phím tắt từ nó. */
@@ -290,7 +290,7 @@
   border-radius: var(--r);
   background: var(--surface-2);
   color: var(--ink-3);
-  font-weight: 400;
+  font-weight: var(--fw-regular);
   text-align: left;
 }
 .topbar-search:hover:not(:disabled) {
@@ -313,7 +313,7 @@
   padding: 1px var(--space-3);
   font: inherit;
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--ink-2);
   background: var(--surface);
   border: 1px solid var(--border-2);
@@ -342,7 +342,7 @@
   border-radius: var(--r-sm);
   background: var(--sidebar-hover);
   color: var(--sidebar-ink);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   text-align: left;
 }
 .sb-search:hover:not(:disabled) {
