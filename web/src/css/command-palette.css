@@ -61,7 +61,7 @@
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: var(--fs-md);
+  font-size: var(--fs-input);
   font-weight: 500;
   padding: 0;
 }

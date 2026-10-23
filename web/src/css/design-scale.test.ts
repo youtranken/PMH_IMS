@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -58,6 +58,23 @@ describe('Chiều cao control: cùng hàng cùng cao', () => {
     const touch = tokens.match(/@media[^{]*pointer:\s*coarse[^{]*\{\s*:root\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(px(tokenValue(touch, 'h-ctl'))).toBeGreaterThanOrEqual(44);
     expect(px(tokenValue(touch, 'fs-input'))).toBeGreaterThanOrEqual(16);
+  });
+
+  // DS-05: token đúng mà một luật riêng đặt font-size cứng cho ô nhập là ô đó vẫn làm iOS phóng to.
+  it('không luật nào đè cỡ chữ của ô nhập / ô chọn bằng giá trị khác --fs-input', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(__dirname).filter((name) => name.endsWith('.css'))) {
+      const source = css(file).replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const [, selector, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const size = /font-size\s*:\s*([^;]+)/.exec(body)?.[1].trim();
+        if (!size || size === 'inherit' || size.includes('--fs-input')) continue;
+        const targets = selector.split(',').map((part) => part.trim());
+        if (targets.some((part) => /(?:^|[\s>])(?:input|select|textarea|\.inp)(?:[.:[][^\s]*)?$/.test(part))) {
+          offenders.push(`${file}: ${selector.trim()} → ${size}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('ô nhập, ô chọn và nút dùng chung --h-ctl', () => {
