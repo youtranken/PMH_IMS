@@ -192,3 +192,43 @@ describe('Độ đậm chỉ qua token', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * DS-04: vòng focus một kiểu nhìn. Nút / link / thẻ: dày 2px màu --focus (outline, hoặc --ring
+ * cùng độ dày ở chỗ outline bị cắt). Ô nhập: viền đổi màu + --ring-field 1px, cộng lại cũng 2px.
+ * Vòng 1px quanh một nút, hay outline màu --primary (3,4:1) thì mắt không bắt được.
+ */
+describe('Vòng focus một kiểu nhìn', () => {
+  const FIELD = /(?:input|select|textarea|\.inp|-search)(?::[\w-]+(?:\([^)]*\))?)*$/;
+  const focusRules = () =>
+    readdirSync(__dirname)
+      .filter((name) => name.endsWith('.css'))
+      .flatMap((file) =>
+        [...css(file).replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+          .filter(([, selector]) => /:focus/.test(selector))
+          .map(([, selector, body]) => ({ file, selector: selector.trim(), body })),
+      );
+
+  it('--ring dày 2px, --ring-field 1px, đều màu --focus', () => {
+    expect(tokenValue(rootBlock(), 'ring')).toBe('0 0 0 2px var(--focus)');
+    expect(tokenValue(rootBlock(), 'ring-field')).toBe('0 0 0 1px var(--focus)');
+    expect(tokenValue(rootBlock(), 'ring-inset')).toBe('inset 0 0 0 2px var(--focus)');
+  });
+
+  it('outline của focus chỉ dùng màu --focus', () => {
+    const bad = focusRules()
+      .filter(({ body }) => /outline\s*:\s*\d/.test(body) && !/outline\s*:[^;]*var\(--focus\)/.test(body))
+      .map(({ file, selector }) => `${file}: ${selector}`);
+    expect(bad).toEqual([]);
+  });
+
+  it('ô nhập dùng --ring-field, nút / thẻ không dùng', () => {
+    const bad = focusRules()
+      .filter(({ selector, body }) => {
+        const field = selector.split(',').every((part) => FIELD.test(part.trim().replace(/:focus(-visible)?$/, '')));
+        return field ? /var\(--ring\)/.test(body) : /--ring-field/.test(body);
+      })
+      .map(({ file, selector }) => `${file}: ${selector}`);
+    expect(bad).toEqual([]);
+  });
+});

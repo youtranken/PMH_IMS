@@ -156,7 +156,7 @@
   border-color: var(--auth-card-border);
 }
 .auth-form .inp::placeholder { color: var(--auth-ink-2); }
-.auth-form .inp:focus-visible { outline: none; box-shadow: var(--ring); }
+.auth-form .inp:focus-visible { outline: none; box-shadow: var(--ring-field); }
 .auth-form .btn.primary {
   width: 100%;
   min-height: 48px;

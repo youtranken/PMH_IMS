@@ -39,7 +39,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--focus);
-  box-shadow: var(--ring);
+  box-shadow: var(--ring-field);
 }
 input:disabled {
   background: var(--surface-2);

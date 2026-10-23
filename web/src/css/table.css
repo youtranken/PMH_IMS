@@ -820,7 +820,7 @@ table.table .col-sticky-end::after {
   box-shadow: none;
 }
 .list-card:has(.list-card-link:focus-visible) {
-  box-shadow: inset var(--ring);
+  box-shadow: var(--ring-inset);
 }
 /* Badge, menu ⋯, khe phụ nằm TRÊN lớp phủ để bấm riêng được. */
 .list-card-end,

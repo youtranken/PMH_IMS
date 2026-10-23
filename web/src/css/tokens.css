@@ -113,7 +113,9 @@
   /* Focus màu ĐẶC (DS-03/04): vòng mờ 22% chỉ ~1,25:1 trên nền trắng, dưới 3:1 của WCAG 1.4.11.
      Nút vẽ bằng outline (base.css) — box-shadow của nút chính không đè được. */
   --focus: #0a7d54;
-  --ring: 0 0 0 1px var(--focus);
+  --ring: 0 0 0 2px var(--focus);
+  --ring-field: 0 0 0 1px var(--focus);
+  --ring-inset: inset 0 0 0 2px var(--focus);
 
   /* Thang z-index (thấp→cao). Không có thang thì nhiều lớp cùng một z tranh nhau, thứ tự
      hiển thị do DOM quyết định. Popup nổi (dropdown/popover) < modal là chủ ý:

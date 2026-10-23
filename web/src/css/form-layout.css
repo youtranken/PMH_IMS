@@ -510,8 +510,8 @@ input[list]::-webkit-calendar-picker-indicator {
 }
 .fsel-search:focus-visible {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--ring);
+  border-color: var(--focus);
+  box-shadow: var(--ring-field);
 }
 .fsel-option {
   white-space: nowrap;
@@ -627,7 +627,7 @@ input.switch:checked::before {
   transform: translateX(1.1rem);
 }
 input.switch:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 .filter-bar .fsel-trigger[data-filled] {
