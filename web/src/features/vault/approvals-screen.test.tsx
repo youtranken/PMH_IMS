@@ -63,7 +63,7 @@ describe('Màn Duyệt yêu cầu mở từ thư', () => {
 
   it('?id= không còn trong hàng chờ → nói rõ, vẫn hiện hàng chờ', async () => {
     renderAt('/approvals?id=zz');
-    expect(await screen.findByText(/không còn chờ duyệt/)).toBeInTheDocument();
+    expect(await screen.findByText(/không còn chờ mã/)).toBeInTheDocument();
     expect(screen.getByText('an@pmh.com.vn')).toBeInTheDocument();
   });
 

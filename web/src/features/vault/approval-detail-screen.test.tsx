@@ -289,10 +289,10 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
     expect(screen.queryByText(/Đã duyệt\. Mở lại/)).not.toBeInTheDocument();
   });
 
-  it('hết hạn chờ (chưa từng được duyệt): nói không ai duyệt, không nói "quyền đã tự cắt"', async () => {
+  it('hết hạn chờ (chưa từng được duyệt): nói chưa nhập mã duyệt, không nói "quyền đã tự cắt"', async () => {
     mockApi({ ...ROW, state: 'expired', decidedBy: 'system', decidedAt: '2026-09-20T09:31:00.000Z' });
     renderDetail(MEMBER);
-    expect(await screen.findByText(/không ai duyệt/)).toBeInTheDocument();
+    expect(await screen.findByText(/chưa nhập mã duyệt/)).toBeInTheDocument();
     expect(screen.queryByText(/quyền đã tự cắt/)).not.toBeInTheDocument();
   });
 

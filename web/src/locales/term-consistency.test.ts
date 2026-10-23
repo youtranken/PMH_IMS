@@ -629,6 +629,16 @@ describe('Q-30: luồng mở két không hứa thư không còn gửi', () => {
     expect(lookup('settings.approvalReminderHoursDesc')).toMatch(/mở két chỉ gắn nhãn "Chờ lâu"\. Không gửi mail\.$/);
   });
 
+  // TX-02: không còn nút Duyệt — người xin được mở khi NHẬP MÃ người duyệt đọc cho, và chỉ người
+  // được chọn nhận thư. Câu "chờ duyệt", "không ai duyệt", "người khác đã xử lý" tả luồng cũ.
+  it('luồng mở két không tả việc "chờ duyệt" kiểu bấm nút', () => {
+    const bad = leaves()
+      .filter(([key]) => /^(approvals|access|vault)\./.test(key))
+      .filter(([, text]) => /(xin|yêu cầu mới) và chờ duyệt|không ai duyệt|người khác đã xử lý/i.test(text))
+      .map(([key]) => key);
+    expect(bad).toEqual([]);
+  });
+
   // TX-03 (Q-33): với yêu cầu mở két, tham số chỉ còn quyết nhãn "Chờ lâu" — tên nói đúng việc đó.
   it('tham số mang tên "Gắn nhãn Chờ lâu sau"', () => {
     expect(lookup('settings.approvalReminderHoursLabel')).toBe('Gắn nhãn Chờ lâu sau');

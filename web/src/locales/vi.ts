@@ -3071,7 +3071,7 @@ export default {
     sessionBound: 'Quyền gắn với phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
     otherSessionHeld: 'Quyền đã duyệt đang gắn với một phiên đăng nhập khác của bạn nên không dùng được ở đây. Gửi yêu cầu mới.',
     release: 'Trả quyền',
-    releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
+    releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải xin mở két lần nữa.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
   },
   ipam: {
@@ -3960,7 +3960,7 @@ export default {
     stepUpRemove: 'Nhập mã 6 số để xác nhận gỡ quyền két.',
     confirmRemove: 'Gỡ quyền của {{member}} trên "{{scope}}"? Sau đó họ sẽ không xem và không xin được nữa.',
     tier: 'Tầng quyền',
-    tierHint: '"Xem thẳng": xem ngay, vẫn phải nhập mã 6 số. "Cần duyệt": phải xin và chờ duyệt.',
+    tierHint: '"Xem thẳng": xem ngay, vẫn phải nhập mã 6 số. "Cần duyệt": phải xin mở két và nhập mã người duyệt đọc cho.',
     tier_whitelist: 'Xem thẳng',
     tier_needs_approval: 'Cần duyệt',
     note: 'Ghi chú',
@@ -4123,7 +4123,7 @@ export default {
     stepUpRevoke: 'Nhập mã 6 số để thu hồi quyền mở két của {{name}}.',
     activeGroup: 'Đang có hiệu lực ({{count}})',
     focusGone:
-      'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
+      'Yêu cầu trong thư không còn chờ mã — người xin đã nhập mã, đã rút hoặc yêu cầu đã hết hạn. Xem tab Nhật ký.',
     /* Đối tượng đọc được thay cho uuid: người duyệt lúc 2 giờ sáng phải biết "máy nào". */
     subjectGone: 'Hồ sơ đã bị xóa',
     secretCount: '{{count}} Ngăn két',
@@ -4151,7 +4151,7 @@ export default {
     finalRevoked: 'Đã thu hồi sớm. Người duyệt: {{who}}.',
     finalExpired: 'Đã hết hạn — quyền đã tự cắt.',
     finalCancelled: 'Người xin đã rút yêu cầu.',
-    finalPendingExpired: 'Quá hạn chờ mà không ai duyệt nên yêu cầu đã tự hết hạn. Cần thì gửi yêu cầu mới.',
+    finalPendingExpired: 'Quá hạn chờ mà chưa nhập mã duyệt nên yêu cầu đã tự hết hạn. Cần thì gửi yêu cầu mới.',
     /* Q-15: được duyệt thì lần xem đầu (qua mã 6 số) gắn quyền vào phiên đang xem. */
     readyToView: 'Đã được duyệt — mở {{subject}}, bấm "Xem" ở ngăn cần mở.',
     ownRequest: 'Cần người khác duyệt',
