@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@/lib/format';
+import { formatDate, orDash } from '@/lib/format';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { PerpetualBadge } from '@/ui/perpetual-badge';
 import { UsageBar } from '@/ui/usage-bar';
@@ -113,7 +113,7 @@ export function SeatUsage({ item }: { item: SoftwareRow }) {
   /* Không có ghế (SSL, tên miền, không giới hạn) hoặc đã Thanh lý (ghế đã gỡ hết): một dấu
      gạch chữ thường như cột Nhà cung cấp — không mono, không vẽ thanh 0% trống rỗng. */
   if (!supportsSeats(item.kind) || item.seatTotal === null || item.status === 'retired') {
-    return <span className="muted">—</span>;
+    return orDash(null);
   }
   const flag = seatFlag(item.seatUsed, item.seatTotal);
   // Hết hạn mà vẫn cài trên máy là rủi ro, không phải "còn ghế": thanh xám, kèm câu nói rõ.

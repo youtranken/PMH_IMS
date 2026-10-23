@@ -158,7 +158,7 @@ function JobsTab({ me }: { me: Me }) {
           <table className="table table-stack">
             <thead>
               <tr>
-                <th>{t('iso.field.no')}</th>
+                <th className="num">{t('iso.field.no')}</th>
                 <th>{t('iso.field.jobName')}</th>
                 <th>{t('iso.catalog.subObjects')}</th>
                 <th>{t('iso.field.nas')}</th>
@@ -171,7 +171,7 @@ function JobsTab({ me }: { me: Me }) {
             <tbody>
               {list.map((job) => (
                 <tr key={job.id} className={job.stoppedOn ? 'muted' : undefined}>
-                  <td data-label={t('iso.field.no')}>{job.no}</td>
+                  <td className="num" data-label={t('iso.field.no')}>{job.no}</td>
                   <td data-label={t('iso.field.jobName')}>
                     <strong>{job.name}</strong>
                   </td>

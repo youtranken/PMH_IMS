@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
+import { formatDate, formatDateTime, formatMoney, orDash } from '@/lib/format';
 import { PATHS } from '@/lib/routes';
 import { useConfirm } from '@/ui/confirm-provider';
 import { CellNote } from '@/ui/cell-note';
@@ -158,7 +158,7 @@ export function SeatTable({
                       {t('license.overSeatReason')}: {row.overSeatReason}
                     </span>
                   ) : null}
-                  {row.note || row.overSeatReason ? null : <span className="muted">—</span>}
+                  {row.note || row.overSeatReason ? null : orDash(null)}
                 </td>
                 <td className="col-center col-sticky-end" data-label={t('common.actions')}>
                   {/* "Gỡ" nằm trong menu, không đứng cạnh "Sửa": hai nút sát nhau thì trượt tay

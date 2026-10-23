@@ -220,3 +220,36 @@ describe('DataTable — rowCurrent', () => {
     expect(within(rows.find((r) => r.getAttribute('aria-current') === 'true')!).getByText('apple')).toBeInTheDocument();
   });
 });
+
+/*
+ * TB-19: thẻ dọc trên điện thoại (`.table-stack td[data-empty]`) ẩn ô chưa khai. Bảng tự gắn
+ * `data-empty` cho ô chỉ có "—" hay rỗng — màn không phải tự nhớ gắn từng ô.
+ */
+describe('DataTable — ô trống tự mang data-empty', () => {
+  interface Spot {
+    id: string;
+    site: string | null;
+  }
+  const SPOT_COLUMNS: ColumnDef<Spot>[] = [
+    { accessorKey: 'id', header: 'Mã' },
+    { accessorKey: 'site', header: 'Site', cell: ({ row }) => row.original.site ?? '—' },
+    { id: 'blank', header: 'Ghi chú', cell: () => null },
+    { id: 'act', header: 'Thao tác', cell: () => <button type="button">Sửa</button> },
+  ];
+  const cellOf = (label: string) => screen.getAllByRole('row')[1].querySelector(`td[data-label="${label}"]`)!;
+
+  it('ô "—" và ô rỗng có data-empty; ô có chữ hay có nút thì không', async () => {
+    renderWithI18n(<DataTable data={[{ id: 'A1', site: null }]} columns={SPOT_COLUMNS} emptyText="—" stackOnMobile />);
+    await waitFor(() => expect(cellOf('Site')).toHaveAttribute('data-empty'));
+    expect(cellOf('Ghi chú')).toHaveAttribute('data-empty');
+    expect(cellOf('Mã')).not.toHaveAttribute('data-empty');
+    expect(cellOf('Thao tác')).not.toHaveAttribute('data-empty');
+  });
+
+  it('ô được điền sau đó thì bỏ data-empty', async () => {
+    const view = renderWithI18n(<DataTable data={[{ id: 'A1', site: null }]} columns={SPOT_COLUMNS} emptyText="—" stackOnMobile />);
+    await waitFor(() => expect(cellOf('Site')).toHaveAttribute('data-empty'));
+    view.rerender(<DataTable data={[{ id: 'A1', site: 'HCM' }]} columns={SPOT_COLUMNS} emptyText="—" stackOnMobile />);
+    await waitFor(() => expect(cellOf('Site')).not.toHaveAttribute('data-empty'));
+  });
+});

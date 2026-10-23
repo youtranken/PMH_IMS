@@ -201,7 +201,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           row.original.endDate ? (
             <ExpiryBadge end={row.original.endDate} notCounted={row.original.status === 'disabled'} />
           ) : (
-            <span className="muted">—</span>
+            orDash(null)
           ),
       },
       ...(canEdit
