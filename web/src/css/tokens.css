@@ -353,8 +353,8 @@ html[data-theme='dark'] {
   --info: #7fb6ea;
   --info-soft: #1b2f45;
   /* Sidebar tối hơn canvas để tách khối */
-  --sidebar-bg: #121914;
-  --sidebar-border: #243028;
+  --sidebar-bg: #0d130f;
+  --sidebar-border: #33453a;
   --sidebar-active-bg: rgba(251, 191, 36, 0.16);
   --sidebar-active-ink: #ffe1b3;
   --focus: #6ee7b7;
