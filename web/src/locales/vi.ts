@@ -2324,7 +2324,7 @@ export default {
     domains: {
       importTitle: 'Nhập tên miền & SSL từ Excel',
       title: 'Tên miền & SSL',
-      subtitle: 'Tên miền và chứng chỉ SSL — mỗi hồ sơ là các tên miền dùng chung một ngày hết hạn',
+      subtitle: 'Tên miền và chứng chỉ SSL, nhóm theo ngày hết hạn',
       add: 'Thêm tên miền / SSL',
       empty: 'Chưa có hồ sơ tên miền hay chứng chỉ SSL nào.',
       emptyHint: 'Thêm tên miền hoặc chứng chỉ SSL để được nhắc gia hạn trước khi hết hạn.',
@@ -4050,10 +4050,10 @@ export default {
   },
   approvals: {
     title: 'Yêu cầu mở két',
-    subtitle: 'Yêu cầu xin mở két để xem mật khẩu.',
+    subtitle: 'Yêu cầu xin mở két để xem mật khẩu',
     /* Member không duyệt gì — màn của họ là danh sách yêu cầu của chính mình. */
     titleMine: 'Xin mở két',
-    subtitleMine: 'Yêu cầu mở két bạn đã gửi — được duyệt chưa, còn hiệu lực tới khi nào.',
+    subtitleMine: 'Yêu cầu mở két bạn đã gửi và thời hạn còn lại',
     refreshedAt: 'Cập nhật lúc {{at}} · tự làm mới mỗi {{seconds}} giây.',
     goPending: 'Đi tới Chờ duyệt',
     colState: 'Trạng thái',
@@ -4614,7 +4614,7 @@ export default {
     },
     review: {
       title: 'Phiếu {{form}} · {{month}}',
-      subtitle: 'Đây là đúng bản sẽ in ra để ký. Gửi chốt xong phiếu chờ Super Admin / Quản trị duyệt; duyệt rồi thì khóa.',
+      subtitle: 'Bản in để ký · gửi chốt → duyệt → khóa',
       forms: 'Loại phiếu',
       crumbPeriods: 'Kỳ phiếu',
       crumbHere: 'Xem lại',

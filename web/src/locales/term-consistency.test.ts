@@ -680,3 +680,17 @@ describe('Tên vai trò thống nhất', () => {
     expect(bad.map((file) => file.slice(root.length + 1))).toEqual([]);
   });
 });
+
+/**
+ * TX-17: phụ đề dưới tiêu đề màn là một cụm danh từ ngắn, không phải câu hướng dẫn. Câu dài
+ * xuống hai dòng ở 390px và đẩy bảng xuống; dấu chấm lúc có lúc không làm các màn đọc lệch nhau.
+ */
+describe('Phụ đề màn ngắn, không chấm câu', () => {
+  it('mọi khoá subtitle / subtitleMine ≤ 60 ký tự, không kết thúc bằng dấu chấm', () => {
+    const bad = leaves()
+      .filter(([key]) => /\.subtitle(Mine)?$/.test(key))
+      .filter(([, text]) => [...text].length > 60 || text.endsWith('.'))
+      .map(([key, text]) => `${key}: ${text}`);
+    expect(bad).toEqual([]);
+  });
+});
